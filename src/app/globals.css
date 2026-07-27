@@ -1,0 +1,246 @@
+@import "tailwindcss";
+
+@layer base {
+  /* 🌤️ TEMA CLARO SUAVE (Soft Slate Mist) */
+  :root, .light {
+    --bg-main: #E2E8F0;
+    --bg-card: #F8FAFC;
+    --bg-card-hover: #FFFFFF;
+    --bg-nav: rgba(226, 232, 240, 0.95);
+    --border-card: #CBD5E1;
+    --border-card-hover: #94A3B8;
+    --text-primary: #020617;
+    --text-secondary: #1E293B;
+    --text-muted: #334155;
+    --text-heading: #020617;
+    --accent-cyan: #0284C7;
+    --accent-cyan-bg: rgba(2, 132, 199, 0.12);
+    --accent-violet: #7C3AED;
+    --accent-violet-bg: rgba(124, 58, 237, 0.12);
+    --accent-emerald: #059669;
+    --accent-emerald-bg: rgba(5, 150, 105, 0.12);
+    --accent-gold: #D97706;
+    --accent-gold-bg: rgba(217, 119, 6, 0.12);
+    --accent-crimson: #E11D48;
+    --accent-crimson-bg: rgba(225, 29, 72, 0.12);
+    --glow-opacity: 0.15;
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
+    --skeleton-from: #E2E8F0;
+    --skeleton-to: #CBD5E1;
+  }
+
+  /* ⬛ TEMA OSCURO (Onyx Carbon) */
+  .dark {
+    --bg-main: #111111;
+    --bg-card: #1A1A1A;
+    --bg-card-hover: #242424;
+    --bg-nav: rgba(17, 17, 17, 0.9);
+    --border-card: rgba(255, 255, 255, 0.1);
+    --border-card-hover: rgba(255, 255, 255, 0.3);
+    --text-primary: #FFFFFF;
+    --text-secondary: #E2E8F0;
+    --text-muted: #A0AEC0;
+    --text-heading: #FFFFFF;
+    --accent-cyan: #38BDF8;
+    --accent-cyan-bg: rgba(56, 189, 248, 0.12);
+    --accent-violet: #A855F7;
+    --accent-violet-bg: rgba(168, 85, 247, 0.12);
+    --accent-emerald: #10B981;
+    --accent-emerald-bg: rgba(16, 185, 129, 0.12);
+    --accent-gold: #F59E0B;
+    --accent-gold-bg: rgba(245, 158, 11, 0.12);
+    --accent-crimson: #EF4444;
+    --accent-crimson-bg: rgba(239, 68, 68, 0.12);
+    --glow-opacity: 0.35;
+    --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+    --skeleton-from: #1A1A1A;
+    --skeleton-to: #2A2A2A;
+  }
+
+  /* 🖤 TEMA OLED (Pitch Black) */
+  .oled {
+    --bg-main: #000000;
+    --bg-card: #0A0A0A;
+    --bg-card-hover: #141414;
+    --bg-nav: rgba(0, 0, 0, 0.9);
+    --border-card: #1F1F1F;
+    --border-card-hover: #333333;
+    --text-primary: #FFFFFF;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
+    --text-heading: #FFFFFF;
+    --accent-cyan: #00F0FF;
+    --accent-cyan-bg: rgba(0, 240, 255, 0.15);
+    --accent-violet: #A855F7;
+    --accent-violet-bg: rgba(168, 85, 247, 0.15);
+    --accent-emerald: #10B981;
+    --accent-emerald-bg: rgba(16, 185, 129, 0.15);
+    --accent-gold: #F59E0B;
+    --accent-gold-bg: rgba(245, 158, 11, 0.15);
+    --accent-crimson: #F43F5E;
+    --accent-crimson-bg: rgba(244, 63, 94, 0.15);
+    --glow-opacity: 0.45;
+    --shadow-card: none;
+    --skeleton-from: #0A0A0A;
+    --skeleton-to: #1A1A1A;
+  }
+}
+
+/* ── Global Defaults ─────────────────────────────────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────────── */
+
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-outfit), sans-serif;
+  color: var(--text-heading);
+}
+
+/* ── Selection ───────────────────────────────────────────────────────────── */
+
+::selection {
+  background: var(--accent-cyan);
+  color: #000;
+}
+
+.light ::selection, :root ::selection {
+  background: #0284C7;
+  color: #fff;
+}
+
+/* ── Glassmorphism & Semantic Utilities ───────────────────────────────────── */
+
+.glass-panel {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glass-panel-hover:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-card-hover);
+}
+
+.neon-glow-cyan {
+  box-shadow: 0 0 20px rgba(2, 132, 199, var(--glow-opacity));
+}
+
+.dark .neon-glow-cyan, .oled .neon-glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 240, 255, var(--glow-opacity));
+}
+
+.neon-border-cyan {
+  border-color: var(--accent-cyan);
+}
+
+/* ── Dynamic Input Styles ────────────────────────────────────────────────── */
+
+.input-theme {
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
+  color: var(--text-primary);
+}
+.input-theme::placeholder {
+  color: var(--text-muted);
+}
+.input-theme:focus {
+  border-color: var(--accent-cyan);
+}
+
+/* ── Skeleton Loading Animation ──────────────────────────────────────────── */
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-from) 25%,
+    var(--skeleton-to) 50%,
+    var(--skeleton-from) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ── Fade-in Animation ───────────────────────────────────────────────────── */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* ── Page Transition ─────────────────────────────────────────────────────── */
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-transition {
+  animation: pageEnter 0.3s ease-out;
+}
+
+/* ── Custom Scrollbar (Webkit + Firefox) ─────────────────────────────────── */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-card) var(--bg-main);
+}
+
+/* Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-card);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
+}
+
+/* ── Focus Visible for Accessibility ─────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}

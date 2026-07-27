@@ -1,0 +1,29 @@
+export default function EquiposLoading() {
+  return (
+    <div className="min-h-screen bg-[var(--bg-main)] page-transition">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Header */}
+        <div className="space-y-3">
+          <div className="skeleton h-6 w-52 rounded-full" />
+          <div className="skeleton h-10 w-80 rounded-xl" />
+          <div className="skeleton h-4 w-[60%] rounded" />
+        </div>
+
+        {/* Filter bar */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="skeleton h-10 w-64 rounded-lg" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="skeleton h-8 w-24 rounded-full" />
+          ))}
+        </div>
+
+        {/* Teams grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="skeleton h-56 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

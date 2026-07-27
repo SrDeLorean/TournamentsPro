@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "games": "Jogos",
+    "tournaments": "Torneios",
+    "organizations": "Organizações",
+    "transfers": "Transferências",
+    "login": "Entrar",
+    "register": "Cadastrar"
+  },
+  "hero": {
+    "title": "A Plataforma eSports Multi-Jogo",
+    "subtitle": "Gerencie organizações, ligas, estatísticas avançadas e transferências em um só lugar.",
+    "exploreTournaments": "Explorar Torneios",
+    "createOrganization": "Criar Organização"
+  },
+  "games": {
+    "title": "Catálogo de Jogos",
+    "subtitle": "Selecione um jogo para filtrar torneios e classificações",
+    "all": "Todos os Jogos",
+    "sports": "Esportes",
+    "fps": "Tactical FPS",
+    "moba": "MOBAs",
+    "racing": "Corrida"
+  },
+  "common": {
+    "status": "Status",
+    "active": "Ativo",
+    "closed": "Fechado",
+    "viewMore": "Ver Mais",
+    "search": "Buscar...",
+    "language": "Idioma"
+  }
+}

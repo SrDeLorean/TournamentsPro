@@ -1,0 +1,275 @@
+// =============================================================================
+// TOURNAMENTSPRO - ESQUEMA DE PRISMA ORM PARA HOSTINGER MYSQL
+// Compatible con Hostinger MySQL/MariaDB, Next.js API Routes y Vercel/VPS
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Jugador
+  Capitan
+  Organizador
+  Administrador
+}
+
+enum Platform {
+  PS5
+  PS4
+  XBOX
+  PC
+  CROSSPLAY
+}
+
+enum UserStatus {
+  Buscando_Club @map("Buscando Club")
+  En_Escuadra  @map("En Escuadra")
+  Organizador
+}
+
+enum RosterRole {
+  TITULAR
+  SUPLENTE
+  RESERVA
+}
+
+enum TournamentStatus {
+  RECLUTAMIENTO
+  EN_CURSO
+  FINALIZADO
+}
+
+enum ApplicationStatus {
+  PENDIENTE
+  ACEPTADO
+  RECHAZADO
+}
+
+enum ApplicationType {
+  POSTULACION_JUGADOR
+  OFERTA_CLUB
+}
+
+model User {
+  id                String       @id @default(uuid())
+  email             String       @unique
+  passwordHash      String?      @map("password_hash")
+  googleId          String?      @unique @map("google_id")
+  name              String
+  gamertag          String       @unique
+  role              Role         @default(Jugador)
+  primaryGameSlug   String       @default("eafc26") @map("primary_game_slug")
+  platform          Platform     @default(CROSSPLAY)
+  position          String       @default("DFC")
+  secondaryPosition String?      @map("secondary_position")
+  rankBadge         String?      @default("División 1") @map("rank_badge")
+  rating            Decimal      @default(9.0) @db.Decimal(3, 1)
+  status            UserStatus   @default(Buscando_Club)
+  avatarUrl         String?      @map("avatar_url") @db.Text
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  // Relationships
+  ownedOrganizations   Organization[]
+  captainedTeams       Team[]               @relation("CaptainTeams")
+  teamMemberships      TeamMember[]
+  organizedTournaments Tournament[]
+  tournamentRosters    TournamentRoster[]
+  transferApplications TransferApplication[]
+  sentMessages         Message[]
+
+  @@map("users")
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  tag         String   @unique
+  ownerId     String   @map("owner_id")
+  logoUrl     String?  @map("logo_url") @db.Text
+  bannerUrl   String?  @map("banner_url") @db.Text
+  description String?  @db.Text
+  country     String?  @default("Venezuela")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  owner User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teams Team[]
+
+  @@map("organizations")
+}
+
+model Game {
+  slug             String   @id
+  name             String
+  category         String
+  teamSize         Int      @default(11) @map("team_size")
+  maxRosterMembers Int      @default(45) @map("max_roster_members")
+  brandColor       String   @default("#00F0FF") @map("brand_color")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  teams       Team[]
+  tournaments Tournament[]
+
+  @@map("games")
+}
+
+model Team {
+  id             String   @id @default(uuid())
+  name           String
+  tag            String
+  gameSlug       String   @map("game_slug")
+  organizationId String?  @map("organization_id")
+  captainId      String   @map("captain_id")
+  captainName    String   @map("captain_name")
+  platform       Platform @default(CROSSPLAY)
+  membersCount   Int      @default(1) @map("members_count")
+  maxMembers     Int      @default(45) @map("max_members")
+  color          String   @default("#00F0FF")
+  logoText       String   @default("TP") @map("logo_text")
+  description    String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  game                 Game                  @relation(fields: [gameSlug], references: [slug], onDelete: Cascade)
+  captain              User                  @relation("CaptainTeams", fields: [captainId], references: [id], onDelete: Cascade)
+  organization         Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  members              TeamMember[]
+  vacancies            TeamVacancy[]
+  tournamentTeams      TournamentTeam[]
+  tournamentRosters    TournamentRoster[]
+  transferApplications TransferApplication[]
+
+  @@unique([name, gameSlug], name: "uk_team_name_per_game")
+  @@map("teams")
+}
+
+model TeamMember {
+  id               String   @id @default(uuid())
+  teamId           String   @map("team_id")
+  userId           String   @map("user_id")
+  jerseyNumber     Int?     @map("jersey_number")
+  tacticalPosition String   @map("tactical_position")
+  roleInTeam       String   @default("Jugador") @map("role_in_team")
+  joinedAt         DateTime @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId], name: "uk_team_user")
+  @@map("team_members")
+}
+
+model TeamVacancy {
+  id               String   @id @default(uuid())
+  teamId           String   @map("team_id")
+  gameSlug         String   @map("game_slug")
+  positionRequired String   @map("position_required")
+  status           String   @default("ABIERTA")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("team_vacancies")
+}
+
+model Tournament {
+  id                   String           @id @default(uuid())
+  name                 String
+  gameSlug             String           @map("game_slug")
+  organizerId          String           @map("organizer_id")
+  format               String           @default("11v11")
+  maxTeams             Int              @default(16) @map("max_teams")
+  registeredTeamsCount Int              @default(0) @map("registered_teams_count")
+  status               TournamentStatus @default(RECLUTAMIENTO)
+  prizePool            String?          @map("prize_pool")
+  startDate            DateTime         @map("start_date")
+  createdAt            DateTime         @default(now()) @map("created_at")
+
+  game              Game               @relation(fields: [gameSlug], references: [slug], onDelete: Cascade)
+  organizer         User               @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  tournamentTeams   TournamentTeam[]
+  tournamentRosters TournamentRoster[]
+
+  @@map("tournaments")
+}
+
+model TournamentTeam {
+  id                 String            @id @default(uuid())
+  tournamentId       String            @map("tournament_id")
+  teamId             String            @map("team_id")
+  registrationStatus ApplicationStatus @default(ACEPTADO) @map("registration_status")
+  registeredAt       DateTime          @default(now()) @map("registered_at")
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, teamId], name: "uk_tourn_team")
+  @@map("tournament_teams")
+}
+
+model TournamentRoster {
+  id               String     @id @default(uuid())
+  tournamentId     String     @map("tournament_id")
+  teamId           String     @map("team_id")
+  userId           String     @map("user_id")
+  tacticalPosition String     @map("tactical_position")
+  rosterRole       RosterRole @default(TITULAR) @map("roster_role")
+  registeredAt     DateTime   @default(now()) @map("registered_at")
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, teamId, userId], name: "uk_tourn_team_user")
+  @@map("tournament_rosters")
+}
+
+model TransferApplication {
+  id              String            @id @default(uuid())
+  teamId          String            @map("team_id")
+  applicantUserId String            @map("applicant_user_id")
+  gameSlug        String            @map("game_slug")
+  position        String
+  pitchMessage    String?           @map("pitch_message") @db.Text
+  applicationType ApplicationType   @default(POSTULACION_JUGADOR) @map("application_type")
+  status          ApplicationStatus @default(PENDIENTE)
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [applicantUserId], references: [id], onDelete: Cascade)
+
+  @@map("transfer_applications")
+}
+
+model Conversation {
+  id             String    @id @default(uuid())
+  participant1Id String    @map("participant1_id")
+  participant2Id String    @map("participant2_id")
+  gameSlug       String    @default("eafc26") @map("game_slug")
+  topic          String?
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  senderId       String   @map("sender_id")
+  text           String   @db.Text
+  isRead         Boolean  @default(false) @map("is_read")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
