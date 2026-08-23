@@ -119,8 +119,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/eafc26/competencias" className="hover:text-[var(--text-heading)] transition-colors">
-                  Competencias & Ligas
+                <Link href="/eafc26/organizaciones" className="hover:text-[var(--text-heading)] transition-colors">
+                  Torneos
                 </Link>
               </li>
               <li>

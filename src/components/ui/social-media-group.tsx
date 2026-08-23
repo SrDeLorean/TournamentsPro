@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Globe, Tv, Video, MessageSquare } from 'lucide-react';
+import { Globe } from 'lucide-react';
 
 interface SocialMediaGroupProps {
   twitter?: string;
@@ -23,54 +23,54 @@ export function SocialMediaGroup({
   const getFieldName = (key: string) => (prefixName ? `${prefixName}_${key}` : key);
 
   return (
-    <div className="space-y-3 pt-3 border-t border-white/10">
-      <h4 className="text-xs font-black uppercase text-purple-300 tracking-wider flex items-center gap-2">
-        <Globe className="w-4 h-4 text-purple-400" />
-        Redes Sociales & Presencia Digital:
+    <div className="space-y-4 pt-4 border-t border-[var(--border-card)] font-mono">
+      <h4 className="text-xs font-black uppercase text-[var(--accent-violet)] tracking-wider flex items-center gap-2">
+        <Globe className="w-4 h-4 text-[var(--accent-violet)]" />
+        Redes Sociales & Presencia Digital
       </h4>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
         <div className="space-y-1">
-          <label className="text-slate-400 block text-[11px]">Twitter / X:</label>
+          <label className="text-[var(--text-muted)] block text-[11px] font-bold uppercase">Twitter / X:</label>
           <input
             type="text"
             name={getFieldName('twitter')}
             placeholder="@NombreOficial"
             defaultValue={twitter}
-            className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-cyan-400 font-mono focus:border-cyan-400 focus:outline-none"
+            className="w-full p-2.5 rounded-xl input-theme text-[var(--accent-cyan)] font-mono text-xs font-bold"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-400 block text-[11px]">Instagram:</label>
+          <label className="text-[var(--text-muted)] block text-[11px] font-bold uppercase">Instagram:</label>
           <input
             type="text"
             name={getFieldName('instagram')}
             placeholder="@nombre_esports"
             defaultValue={instagram}
-            className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-purple-400 font-mono focus:border-purple-400 focus:outline-none"
+            className="w-full p-2.5 rounded-xl input-theme text-[var(--accent-violet)] font-mono text-xs font-bold"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-400 block text-[11px]">Canal de Twitch:</label>
+          <label className="text-[var(--text-muted)] block text-[11px] font-bold uppercase">Canal de Twitch:</label>
           <input
             type="text"
             name={getFieldName('twitch')}
             placeholder="twitch.tv/canal"
             defaultValue={twitch}
-            className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-violet-400 font-mono focus:border-violet-400 focus:outline-none"
+            className="w-full p-2.5 rounded-xl input-theme text-[var(--accent-violet)] font-mono text-xs font-bold"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-400 block text-[11px]">Servidor / Tag Discord:</label>
+          <label className="text-[var(--text-muted)] block text-[11px] font-bold uppercase">Servidor / Tag Discord:</label>
           <input
             type="text"
             name={getFieldName('discord')}
             placeholder="discord.gg/comunidad"
             defaultValue={discord}
-            className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-indigo-400 font-mono focus:border-indigo-400 focus:outline-none"
+            className="w-full p-2.5 rounded-xl input-theme text-[var(--accent-violet)] font-mono text-xs font-bold"
           />
         </div>
       </div>

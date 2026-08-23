@@ -7,7 +7,7 @@ import { TeamDirectory } from '@/components/teams/team-directory';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, ShieldAlert, Unlock, Trash2, Edit, Plus, Globe } from 'lucide-react';
+import { Shield, ShieldAlert, Unlock, Trash2, Edit, Plus, Globe, UserPlus, X } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { DataTable, ColumnDef } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
@@ -15,6 +15,10 @@ import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
+import { SquadRosterModal } from '@/components/teams/squad-roster-modal';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function TeamsModulePage() {
   const { currentUser } = useAuth();
@@ -22,10 +26,22 @@ export default function TeamsModulePage() {
   const [selectedGameSlug, setSelectedGameSlug] = useState<string>('ALL');
 
   const [teams, setTeams] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [editingTeam, setEditingTeam] = useState<any | null>(null);
   const [banConfirmTeam, setBanConfirmTeam] = useState<any | null>(null);
+  const [managingRosterTeam, setManagingRosterTeam] = useState<any | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Captain & N Encargados state for Create Modal
+  const [createCaptainId, setCreateCaptainId] = useState<string>('');
+  const [createEncargados, setCreateEncargados] = useState<any[]>([]);
+  const [createCandidateEncargadoId, setCreateCandidateEncargadoId] = useState<string>('');
+
+  // Captain & N Encargados state for Edit Modal
+  const [editCaptainId, setEditCaptainId] = useState<string>('');
+  const [editEncargados, setEditEncargados] = useState<any[]>([]);
+  const [editCandidateEncargadoId, setEditCandidateEncargadoId] = useState<string>('');
 
   // Image upload state for modals
   const [modalLogoUrl, setModalLogoUrl] = useState<string>('');
@@ -43,19 +59,42 @@ export default function TeamsModulePage() {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.users)) {
+        setUsersList(data.users);
+      }
+    } catch (e) {
+      console.error('Error cargando usuarios:', e);
+    }
+  };
+
   useEffect(() => {
     fetchTeams();
+    fetchUsers();
   }, []);
 
   useEffect(() => {
     if (editingTeam) {
       setModalLogoUrl(editingTeam.logo_url || editingTeam.logoUrl || '');
       setModalBannerUrl(editingTeam.banner_url || editingTeam.bannerUrl || '');
+      setEditCaptainId(editingTeam.captain_id || editingTeam.captainId || (usersList[0]?.id || ''));
+      setEditEncargados(Array.isArray(editingTeam.encargados) ? editingTeam.encargados : []);
     } else {
       setModalLogoUrl('');
       setModalBannerUrl('');
+      setEditCaptainId('');
+      setEditEncargados([]);
     }
-  }, [editingTeam]);
+  }, [editingTeam, usersList]);
+
+  useEffect(() => {
+    if (isCreateModalOpen && usersList.length > 0 && !createCaptainId) {
+      setCreateCaptainId(currentUser?.id || usersList[0].id);
+    }
+  }, [isCreateModalOpen, usersList, currentUser?.id]);
 
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
@@ -72,6 +111,8 @@ export default function TeamsModulePage() {
 
     startOperation(`Creación de Escuadra eSports: ${teamName}`);
 
+    const selectedCapUser = usersList.find((u) => u.id === createCaptainId);
+
     try {
       const res = await fetch('/api/admin/teams', {
         method: 'POST',
@@ -85,8 +126,9 @@ export default function TeamsModulePage() {
           description: formData.get('description'),
           clubIdEa: formData.get('clubIdEa'),
           color: brandColor,
-          captainId: currentUser?.id,
-          captainName: currentUser?.gamertag || currentUser?.name,
+          captainId: createCaptainId || currentUser?.id,
+          captainName: selectedCapUser?.name || selectedCapUser?.gamertag || currentUser?.gamertag || currentUser?.name,
+          encargados: createEncargados,
           logoUrl: modalLogoUrl,
           bannerUrl: modalBannerUrl,
           socialMedia: {
@@ -104,7 +146,8 @@ export default function TeamsModulePage() {
         setIsCreateModalOpen(false);
         setModalLogoUrl('');
         setModalBannerUrl('');
-        endSuccess(`La escuadra "${teamName}" fue registrada exitosamente en la base de datos.`);
+        setCreateEncargados([]);
+        endSuccess(`La escuadra "${teamName}" fue registrada exitosamente en la base de datos con Capitán y Encargados.`);
         fetchTeams();
       } else {
         endError(data.error || 'Error al crear la escuadra.');
@@ -127,6 +170,8 @@ export default function TeamsModulePage() {
 
     startOperation(`Edición de Escuadra eSports: ${teamName}`);
 
+    const selectedCapUser = usersList.find((u) => u.id === editCaptainId);
+
     try {
       const res = await fetch('/api/admin/teams', {
         method: 'PUT',
@@ -140,7 +185,9 @@ export default function TeamsModulePage() {
           status: formData.get('status'),
           description: formData.get('description'),
           clubIdEa: formData.get('clubIdEa'),
-          captainName: formData.get('captainName'),
+          captainId: editCaptainId,
+          captainName: selectedCapUser?.name || selectedCapUser?.gamertag || formData.get('captainName') || editingTeam.captain_name,
+          encargados: editEncargados,
           logoUrl: modalLogoUrl || editingTeam.logo_url,
           bannerUrl: modalBannerUrl || editingTeam.banner_url,
           socialMedia: {
@@ -225,8 +272,8 @@ export default function TeamsModulePage() {
               </div>
             )}
             <div>
-              <div className="font-black text-white text-xs">{r.name}</div>
-              <div className="text-[10px] font-mono text-cyan-400">[{r.tag}]</div>
+              <div className="font-black text-[var(--table-cell-heading)] text-xs">{r.name}</div>
+              <div className="text-[10px] font-mono text-[var(--accent-cyan)]">[{r.tag}]</div>
             </div>
           </div>
         );
@@ -254,8 +301,8 @@ export default function TeamsModulePage() {
         );
       },
     },
-    { header: 'Capitán Oficial', accessorKey: 'captain_name', sortable: true, className: 'font-bold text-slate-200 text-xs' },
-    { header: 'Plataforma', accessorKey: 'platform', sortable: true, className: 'font-mono text-cyan-300 text-xs' },
+    { header: 'Capitán Oficial', accessorKey: 'captain_name', sortable: true, className: 'font-bold text-[var(--table-cell-text)] text-xs' },
+    { header: 'Plataforma', accessorKey: 'platform', sortable: true, className: 'font-mono text-[var(--accent-cyan)] text-xs' },
     {
       header: 'Estado',
       sortable: true,
@@ -279,19 +326,19 @@ export default function TeamsModulePage() {
 
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => setActiveTab('directory')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'directory' ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-          }`}
-        >
-          <Shield className="w-4 h-4" />
-          1. Directorio Oficial de Escuadras
-        </button>
+      {/* Navigation Tabs (Solo para Administrador u Organizador) */}
+      {isAdminOrOrganizer && (
+        <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setActiveTab('directory')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
+              activeTab === 'directory' ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            Directorio de Escuadras
+          </button>
 
-        {isAdminOrOrganizer && (
           <button
             onClick={() => setActiveTab('crud')}
             className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
@@ -299,11 +346,9 @@ export default function TeamsModulePage() {
             }`}
           >
             <Shield className="w-4 h-4" />
-            2. Gestión de Escuadras ({teams.length})
+            Gestión de Escuadras ({teams.length})
           </button>
-        )}
 
-        {isAdminOrOrganizer && (
           <button
             onClick={() => setActiveTab('banned')}
             className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
@@ -311,52 +356,19 @@ export default function TeamsModulePage() {
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
-            3. Menú de Desbaneo de Clubes ({bannedTeams.length})
+            Menú de Desbaneo ({bannedTeams.length})
           </button>
-        )}
-      </div>
-
-      {/* TAB 1: DIRECTORIO DE ESCUADRAS CON OPCIÓN "TODAS LAS DISCIPLINAS" */}
-      {activeTab === 'directory' && (
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-2">
-            {/* Opción TODAS LAS DISCIPLINAS */}
-            <button
-              onClick={() => setSelectedGameSlug('ALL')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 border flex-shrink-0 ${
-                selectedGameSlug === 'ALL'
-                  ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-lg scale-105'
-                  : 'bg-slate-900/90 text-slate-300 border-white/10 hover:border-white/30'
-              }`}
-            >
-              <Globe className="w-4 h-4" />
-              <span>TODAS LAS DISCIPLINAS</span>
-            </button>
-
-            {Object.values(GAMES_CATALOG).map((g) => {
-              const isSelected = g.slug === selectedGameSlug;
-              return (
-                <button
-                  key={g.id}
-                  onClick={() => setSelectedGameSlug(g.slug)}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 border flex-shrink-0 ${
-                    isSelected ? 'shadow-lg text-white scale-105' : 'bg-slate-900/90 text-slate-300 border-white/10 hover:border-white/30'
-                  }`}
-                  style={isSelected ? { backgroundColor: g.brandColor, borderColor: g.brandColor } : {}}
-                >
-                  <span>{g.name}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <TeamDirectory
-            gameName={selectedGameSlug === 'ALL' ? 'Todas las Disciplinas eSports' : GAMES_CATALOG[selectedGameSlug]?.name || 'EA SPORTS FC 26'}
-            gameSlug={selectedGameSlug}
-            brandColor={selectedGameSlug === 'ALL' ? '#00F0FF' : GAMES_CATALOG[selectedGameSlug]?.brandColor || '#00F0FF'}
-            hideHeader={true}
-          />
         </div>
+      )}
+
+      {/* TAB 1: DIRECTORIO DE ESCUADRAS (TODAS LAS DISCIPLINAS DESDE LA BASE DE DATOS SIN FILTROS) */}
+      {activeTab === 'directory' && (
+        <TeamDirectory
+          gameName="Todas las Escuadras eSports"
+          gameSlug="ALL"
+          brandColor="#00F0FF"
+          hideHeader={true}
+        />
       )}
 
       {/* TAB 2: GESTIÓN DE ESCUADRAS (ADMIN & ORGANIZADOR) */}
@@ -387,11 +399,32 @@ export default function TeamsModulePage() {
             searchPlaceholder="Buscar por escuadra, capitán o tag..."
             brandColor="#A855F7"
             actions={(row) => (
-              <div className="flex items-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => setEditingTeam(row)} className="text-xs text-cyan-300 hover:bg-cyan-950 p-2">
+              <div className="flex items-center gap-1 justify-end">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setManagingRosterTeam(row)}
+                  className="text-xs text-[var(--accent-violet)] hover:bg-[var(--accent-violet-bg)] p-2 rounded-xl transition-colors"
+                  title="Gestionar Plantilla / Agregar Jugadores"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditingTeam(row)}
+                  className="text-xs text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan-bg)] p-2 rounded-xl transition-colors"
+                  title="Editar Escuadra"
+                >
                   <Edit className="w-3.5 h-3.5" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setBanConfirmTeam(row)} className="text-xs text-rose-400 hover:bg-rose-950 p-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setBanConfirmTeam(row)}
+                  className="text-xs text-[var(--accent-crimson)] hover:bg-[var(--accent-crimson-bg)] p-2 rounded-xl transition-colors"
+                  title={row.is_banned ? 'Desbanear Escuadra' : 'Banear Escuadra'}
+                >
                   <ShieldAlert className="w-3.5 h-3.5" />
                 </Button>
               </div>
@@ -437,8 +470,8 @@ export default function TeamsModulePage() {
         isSubmitting={isSubmitting}
         brandColor="#A855F7"
       >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-900 border border-white/10">
+        <div className="space-y-4 font-mono">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
             <ImageUploadCard
               label="Escudo Oficial del Club"
               subtitle="Formato WebP"
@@ -465,50 +498,115 @@ export default function TeamsModulePage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Nombre de la Escuadra:</label>
-              <input type="text" name="name" required placeholder="ViperX Gaming" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label="Nombre de la Escuadra:" name="name" required placeholder="ViperX Gaming" />
+            <Input label="Tag / Trigram:" name="tag" required maxLength={5} placeholder="VPX" className="uppercase text-[var(--accent-violet)]" />
+
+            <Select
+              label="Capitán Oficial (Seleccionar del listado de Jugadores):"
+              name="captainId"
+              value={createCaptainId}
+              onChange={(e) => setCreateCaptainId(e.target.value)}
+              required
+            >
+              {usersList.map((u) => (
+                <option key={u.id} value={u.id} className="bg-[#0b101b] text-slate-100 font-semibold">
+                  👑 {u.name} (@{u.gamertag}) — {u.role}
+                </option>
+              ))}
+            </Select>
+
+            <Select label="Disciplina eSports:" name="gameSlug" defaultValue="eafc26">
+              {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
+                <option key={slug} value={slug} className="bg-[#0b101b] text-slate-100 font-semibold">{g.name}</option>
+              ))}
+            </Select>
+
+            <Select label="Plataforma:" name="platform" defaultValue="CROSSPLAY">
+              <option value="CROSSPLAY" className="bg-[#0b101b] text-slate-100 font-semibold">CROSSPLAY</option>
+              <option value="PS5" className="bg-[#0b101b] text-slate-100 font-semibold">PlayStation 5</option>
+              <option value="PC" className="bg-[#0b101b] text-slate-100 font-semibold">PC Gaming</option>
+              <option value="XBOX" className="bg-[#0b101b] text-slate-100 font-semibold">Xbox Series X</option>
+            </Select>
+
+            <Select label="Estado del Club:" name="status" defaultValue="Reclutando">
+              <option value="Reclutando" className="bg-[#0b101b] text-slate-100 font-semibold">🟢 Reclutando</option>
+              <option value="Plantilla Completa" className="bg-[#0b101b] text-slate-100 font-semibold">🟡 Plantilla Completa</option>
+              <option value="Inactivo" className="bg-[#0b101b] text-slate-100 font-semibold">🔴 Inactivo</option>
+            </Select>
+
+            <Input label="ID EA / Tag Oficial:" name="clubIdEa" placeholder="ID Oficial EA / Faceit / Riot" />
+          </div>
+
+          {/* SECCIÓN ASIGNACIÓN DE N ENCARGADOS */}
+          <div className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-mono font-bold text-[var(--text-heading)] uppercase flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-purple-400" />
+                <span>Encargados del Equipo (Asignar N Encargados / DTs):</span>
+              </label>
+              <Badge variant="violet" className="text-[10px] uppercase font-mono">{createEncargados.length} Asignados</Badge>
             </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Tag / Trigram:</label>
-              <input type="text" name="tag" required maxLength={5} placeholder="VPX" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-purple-300 font-mono uppercase" />
+            <p className="text-[11px] text-[var(--text-muted)] font-mono">
+              Selecciona sub-capitanes, administradores o encargados con permisos de gestión para esta escuadra.
+            </p>
+
+            <div className="flex gap-2">
+              <Select
+                value={createCandidateEncargadoId}
+                onChange={(e) => setCreateCandidateEncargadoId(e.target.value)}
+                className="flex-1 text-xs"
+              >
+                <option value="" className="bg-[#0b101b] text-slate-100">-- Seleccionar Jugador para Asignar Encargado --</option>
+                {usersList
+                  .filter((u) => u.id !== createCaptainId && !createEncargados.some((e) => e.id === u.id))
+                  .map((u) => (
+                    <option key={u.id} value={u.id} className="bg-[#0b101b] text-slate-100 font-semibold">
+                      👤 {u.name} (@{u.gamertag}) — {u.role}
+                    </option>
+                  ))}
+              </Select>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (!createCandidateEncargadoId) return;
+                  const uObj = usersList.find((u) => u.id === createCandidateEncargadoId);
+                  if (uObj && !createEncargados.some((e) => e.id === uObj.id)) {
+                    setCreateEncargados((prev) => [...prev, { id: uObj.id, name: uObj.name, gamertag: uObj.gamertag }]);
+                    setCreateCandidateEncargadoId('');
+                  }
+                }}
+                className="text-xs font-bold font-mono bg-purple-600 hover:bg-purple-500 text-white shrink-0 flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Añadir Encargado
+              </Button>
             </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Disciplina eSports:</label>
-              <select name="gameSlug" defaultValue="eafc26" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
-                {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
-                  <option key={slug} value={slug}>{g.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Plataforma:</label>
-              <select name="platform" defaultValue="CROSSPLAY" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
-                <option value="CROSSPLAY">CROSSPLAY</option>
-                <option value="PS5">PlayStation 5</option>
-                <option value="PC">PC Gaming</option>
-                <option value="XBOX">Xbox Series X</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Estado del Club:</label>
-              <select name="status" defaultValue="Reclutando" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
-                <option value="Reclutando">🟢 Reclutando</option>
-                <option value="Plantilla Completa">🟡 Plantilla Completa</option>
-                <option value="Inactivo">🔴 Inactivo</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">ID EA / Tag Oficial:</label>
-              <input type="text" name="clubIdEa" placeholder="ID Oficial EA / Faceit / Riot" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              {createEncargados.map((enc) => (
+                <span
+                  key={enc.id}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/10 border border-purple-500/30 text-purple-300 font-mono shadow-sm"
+                >
+                  <span>🛡️ {enc.name} (@{enc.gamertag})</span>
+                  <button
+                    type="button"
+                    onClick={() => setCreateEncargados((prev) => prev.filter((e) => e.id !== enc.id))}
+                    className="text-purple-400 hover:text-rose-400 transition-colors p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </span>
+              ))}
+              {createEncargados.length === 0 && (
+                <span className="text-[11px] text-[var(--text-muted)] italic font-mono">Sin encargados secundarios asignados.</span>
+              )}
             </div>
           </div>
 
-          <div className="space-y-1 text-xs font-bold">
-            <label className="text-slate-300 uppercase block">Historia / Descripción del Club:</label>
-            <textarea name="description" rows={2} placeholder="Historia, logros y metas eSports..." className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-normal" />
-          </div>
+          <Textarea label="Historia / Descripción del Club:" name="description" rows={2} placeholder="Historia, logros y metas eSports..." />
 
           <SocialMediaGroup prefixName="social" />
         </div>
@@ -525,8 +623,8 @@ export default function TeamsModulePage() {
           isSubmitting={isSubmitting}
           brandColor="#00F0FF"
         >
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-900 border border-white/10">
+          <div className="space-y-4 font-mono">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
               <ImageUploadCard
                 label="Escudo Oficial del Club"
                 subtitle="Formato WebP"
@@ -555,50 +653,113 @@ export default function TeamsModulePage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
-              <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Nombre de la Escuadra:</label>
-                <input type="text" name="name" defaultValue={editingTeam.name} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input label="Nombre de la Escuadra:" name="name" defaultValue={editingTeam.name} required />
+              <Input label="Tag:" name="tag" defaultValue={editingTeam.tag} required maxLength={5} className="uppercase text-[var(--accent-cyan)]" />
+
+              <Select
+                label="Capitán Oficial (Seleccionar del listado de Jugadores):"
+                name="captainId"
+                value={editCaptainId}
+                onChange={(e) => setEditCaptainId(e.target.value)}
+                required
+              >
+                {usersList.map((u) => (
+                  <option key={u.id} value={u.id} className="bg-[#0b101b] text-slate-100 font-semibold">
+                    👑 {u.name} (@{u.gamertag}) — {u.role}
+                  </option>
+                ))}
+              </Select>
+              
+              <Select label="Disciplina eSports:" name="gameSlug" defaultValue={editingTeam.game_slug || 'eafc26'}>
+                {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
+                  <option key={slug} value={slug} className="bg-[#0b101b] text-slate-100 font-semibold">{g.name}</option>
+                ))}
+              </Select>
+
+              <Select label="Plataforma:" name="platform" defaultValue={editingTeam.platform || 'CROSSPLAY'}>
+                <option value="CROSSPLAY" className="bg-[#0b101b] text-slate-100 font-semibold">CROSSPLAY</option>
+                <option value="PS5" className="bg-[#0b101b] text-slate-100 font-semibold">PlayStation 5</option>
+                <option value="PC" className="bg-[#0b101b] text-slate-100 font-semibold">PC Gaming</option>
+                <option value="XBOX" className="bg-[#0b101b] text-slate-100 font-semibold">Xbox Series X</option>
+              </Select>
+
+              <Select label="Estado del Club:" name="status" defaultValue={editingTeam.status || 'Reclutando'}>
+                <option value="Reclutando" className="bg-[#0b101b] text-slate-100 font-semibold">🟢 Reclutando</option>
+                <option value="Plantilla Completa" className="bg-[#0b101b] text-slate-100 font-semibold">🟡 Plantilla Completa</option>
+                <option value="Inactivo" className="bg-[#0b101b] text-slate-100 font-semibold">🔴 Inactivo</option>
+              </Select>
+            </div>
+
+            {/* SECCIÓN ASIGNACIÓN DE N ENCARGADOS PARA EDICIÓN */}
+            <div className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-mono font-bold text-[var(--text-heading)] uppercase flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-cyan-400" />
+                  <span>Encargados del Equipo (Asignar N Encargados / DTs):</span>
+                </label>
+                <Badge variant="cyan" className="text-[10px] uppercase font-mono">{editEncargados.length} Asignados</Badge>
               </div>
-              <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Tag:</label>
-                <input type="text" name="tag" defaultValue={editingTeam.tag} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-purple-300 font-mono uppercase" />
+              <p className="text-[11px] text-[var(--text-muted)] font-mono">
+                Modifica los sub-capitanes o encargados secundarios con permisos sobre la escuadra.
+              </p>
+
+              <div className="flex gap-2">
+                <Select
+                  value={editCandidateEncargadoId}
+                  onChange={(e) => setEditCandidateEncargadoId(e.target.value)}
+                  className="flex-1 text-xs"
+                >
+                  <option value="" className="bg-[#0b101b] text-slate-100">-- Seleccionar Jugador para Asignar Encargado --</option>
+                  {usersList
+                    .filter((u) => u.id !== editCaptainId && !editEncargados.some((e) => e.id === u.id))
+                    .map((u) => (
+                      <option key={u.id} value={u.id} className="bg-[#0b101b] text-slate-100 font-semibold">
+                        👤 {u.name} (@{u.gamertag}) — {u.role}
+                      </option>
+                    ))}
+                </Select>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (!editCandidateEncargadoId) return;
+                    const uObj = usersList.find((u) => u.id === editCandidateEncargadoId);
+                    if (uObj && !editEncargados.some((e) => e.id === uObj.id)) {
+                      setEditEncargados((prev) => [...prev, { id: uObj.id, name: uObj.name, gamertag: uObj.gamertag }]);
+                      setEditCandidateEncargadoId('');
+                    }
+                  }}
+                  className="text-xs font-bold font-mono bg-cyan-600 hover:bg-cyan-500 text-slate-950 shrink-0 flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Añadir Encargado
+                </Button>
               </div>
-              <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Capitán Oficial:</label>
-                <input type="text" name="captainName" defaultValue={editingTeam.captain_name || editingTeam.captainName} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Disciplina eSports:</label>
-                <select name="gameSlug" defaultValue={editingTeam.game_slug || 'eafc26'} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
-                  {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
-                    <option key={slug} value={slug}>{g.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Plataforma:</label>
-                <select name="platform" defaultValue={editingTeam.platform || 'CROSSPLAY'} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
-                  <option value="CROSSPLAY">CROSSPLAY</option>
-                  <option value="PS5">PlayStation 5</option>
-                  <option value="PC">PC Gaming</option>
-                  <option value="XBOX">Xbox Series X</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Estado del Club:</label>
-                <select name="status" defaultValue={editingTeam.status || 'Reclutando'} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
-                  <option value="Reclutando">🟢 Reclutando</option>
-                  <option value="Plantilla Completa">🟡 Plantilla Completa</option>
-                  <option value="Inactivo">🔴 Inactivo</option>
-                </select>
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                {editEncargados.map((enc) => (
+                  <span
+                    key={enc.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono shadow-sm"
+                  >
+                    <span>🛡️ {enc.name} (@{enc.gamertag})</span>
+                    <button
+                      type="button"
+                      onClick={() => setEditEncargados((prev) => prev.filter((e) => e.id !== enc.id))}
+                      className="text-cyan-400 hover:text-rose-400 transition-colors p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))}
+                {editEncargados.length === 0 && (
+                  <span className="text-[11px] text-[var(--text-muted)] italic font-mono">Sin encargados secundarios asignados.</span>
+                )}
               </div>
             </div>
 
-            <div className="space-y-1 text-xs font-bold">
-              <label className="text-slate-300 uppercase block">Descripción / Historia:</label>
-              <textarea name="description" rows={2} defaultValue={editingTeam.description || ''} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-normal" />
-            </div>
+            <Textarea label="Descripción / Historia:" name="description" rows={2} defaultValue={editingTeam.description || ''} />
 
             <SocialMediaGroup
               twitter={editingTeam.social_twitter}
@@ -625,6 +786,14 @@ export default function TeamsModulePage() {
           reasonPlaceholder="Motivo de la infracción disciplinaria..."
         />
       )}
+
+      {/* MODAL GESTIÓN DE ROSTER Y AGREGACIÓN DIRECTA DE JUGADORES */}
+      <SquadRosterModal
+        isOpen={Boolean(managingRosterTeam)}
+        onClose={() => setManagingRosterTeam(null)}
+        team={managingRosterTeam}
+        onRosterUpdated={fetchTeams}
+      />
     </div>
   );
 }

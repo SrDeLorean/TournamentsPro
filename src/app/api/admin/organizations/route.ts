@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     // Fetch organizers assigned to each organization
     const parsedOrgs = await Promise.all(
       orgs.map(async (o: any) => {
-        let organizers: any[] = [];
+        let organizers: Record<string, unknown>[] = [];
         try {
           organizers = await queryDB(
             `SELECT id, name, gamertag, email, role, avatar_url, foto FROM users WHERE organization_id = ? AND role = 'Organizador'`,
@@ -33,8 +33,8 @@ export async function GET(request: Request) {
     );
 
     return NextResponse.json({ success: true, organizations: parsedOrgs });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error consultando organizaciones' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error consultando organizaciones' }, { status: 500 });
   }
 }
 
@@ -99,8 +99,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, message: 'Organización creada con éxito', organizationId: orgId });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error creando organización' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error creando organización' }, { status: 500 });
   }
 }
 
@@ -174,7 +174,7 @@ export async function PUT(request: Request) {
     }
 
     return NextResponse.json({ success: true, message: 'Organización actualizada con éxito' });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error actualizando organización' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error actualizando organización' }, { status: 500 });
   }
 }

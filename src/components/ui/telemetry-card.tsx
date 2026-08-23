@@ -28,16 +28,16 @@ export function TelemetryCard({
   brandColor = 'var(--accent-cyan)',
 }: TelemetryCardProps) {
   return (
-    <div className="inline-flex items-center gap-3 p-2 px-3.5 rounded-xl glass-panel border border-[var(--border-card)] shadow-md text-xs font-medium flex-wrap">
+    <div className="inline-flex items-center gap-3 p-2 px-3.5 rounded-xl bg-[var(--bg-card)]/40 backdrop-blur-xl border border-[var(--border-card)] shadow-sm text-xs font-medium flex-wrap transition-all">
       {/* Metrics Badges */}
       <div className="flex items-center gap-3">
         {metrics.map((m, idx) => (
           <div key={idx} className="flex items-center gap-1.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               {m.label}:
             </span>
             <span
-              className="font-black text-xs uppercase"
+              className="font-bold text-[12px] uppercase"
               style={{
                 color: m.highlight ? brandColor : 'var(--text-heading)',
               }}
@@ -54,7 +54,7 @@ export function TelemetryCard({
         <button
           onClick={onReset}
           title={resetButtonText}
-          className="p-1 px-2 rounded-lg text-[10px] font-bold text-white transition-all flex items-center gap-1 border hover:scale-105"
+          className="p-1.5 px-2.5 rounded-lg text-[11px] font-semibold text-white transition-all duration-200 flex items-center gap-1.5 border active:scale-95 shadow-sm"
           style={{
             backgroundColor: brandColor,
             borderColor: brandColor,

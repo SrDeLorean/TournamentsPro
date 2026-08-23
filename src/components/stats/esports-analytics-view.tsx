@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { GameConfig } from '@/lib/games-data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
 import { Avatar } from '@/components/ui/avatar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import {
@@ -284,37 +285,14 @@ export function EsportsAnalyticsView({ game }: EsportsAnalyticsViewProps) {
     <div className="w-full space-y-6 animate-in fade-in pb-12">
       
       {/* 1. Header Hero Banner */}
-      <div
-        className="w-full rounded-3xl p-6 sm:p-8 border backdrop-blur-xl space-y-4 shadow-2xl relative overflow-hidden"
-        style={{
-          backgroundColor: `color-mix(in srgb, ${game.brandColor} 15%, var(--bg-card))`,
-          borderColor: `${game.brandColor}40`,
-        }}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant="cyan" className="font-mono font-bold uppercase">
-                INFOGRAFÍA OFICIAL {game.name}
-              </Badge>
-              <span className="text-xs text-amber-400 font-bold flex items-center gap-1">
-                <Flame className="w-3.5 h-3.5 fill-amber-400" /> Circuito Temporada 2026
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-black uppercase text-[var(--text-heading)] tracking-tight">
-              Métricas & Análisis Gráfico por Posición
-            </h1>
-            <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-xl">
-              Selecciona una posición o rol táctico a continuación para filtrar e inspeccionar las métricas gráficas independientes de {game.name}.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-cyan-300 bg-slate-950/80 px-3.5 py-2 rounded-2xl border border-cyan-500/40 shadow-lg">
-            <Sparkles className="w-4 h-4 text-cyan-400" />
-            <span>DATOS EN TIEMPO REAL</span>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        badgeText={`INFOGRAFÍA OFICIAL ${game.name}`}
+        badgeIcon={<Flame className="w-3.5 h-3.5" style={{ color: 'var(--game-brand)', fill: 'var(--game-brand)' }} />}
+        title="Métricas & Análisis Gráfico"
+        highlightTitle="por Posición"
+        description={`Selecciona una posición o rol táctico a continuación para filtrar e inspeccionar las métricas gráficas independientes de ${game.name}.`}
+        brandColor="var(--game-brand)"
+      />
 
       {/* 2. GAME-SPECIFIC POSITION / ROLE SELECTOR BAR */}
       <div className="p-3 rounded-2xl glass-panel border border-[var(--border-card)] space-y-3 shadow-xl">
@@ -339,7 +317,7 @@ export function EsportsAnalyticsView({ game }: EsportsAnalyticsViewProps) {
                 className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 shadow-md border ${
                   isSelected
                     ? 'bg-gradient-to-r from-cyan-500 to-purple-600 text-slate-950 border-cyan-300 shadow-xl scale-[1.02]'
-                    : 'bg-slate-900/90 hover:bg-slate-800 border-white/10 text-slate-300 hover:text-white'
+                    : 'bg-[var(--bg-main)] hover:bg-[var(--bg-card-hover)] border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
                 style={
                   isSelected
@@ -372,7 +350,7 @@ export function EsportsAnalyticsView({ game }: EsportsAnalyticsViewProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {currentAnalytics.cards.map((c, idx) => (
-            <Card key={idx} className="p-5 space-y-2 glass-panel-hover border-white/10 bg-slate-950/80">
+            <Card key={idx} className="p-5 space-y-2 glass-panel-hover border-[var(--border-card)] bg-[var(--bg-card)]">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">{c.title}</span>
               <span className="text-2xl sm:text-3xl font-black font-mono block" style={{ color: c.color }}>
                 {c.value}
@@ -387,7 +365,7 @@ export function EsportsAnalyticsView({ game }: EsportsAnalyticsViewProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Visual Attributes Chart Bars */}
-        <Card className="p-6 space-y-5 border-cyan-500/30 bg-slate-950">
+        <Card className="p-6 space-y-5 border-cyan-500/30 bg-[var(--bg-card)]">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-sm font-black uppercase text-white flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-cyan-400" />
@@ -419,7 +397,7 @@ export function EsportsAnalyticsView({ game }: EsportsAnalyticsViewProps) {
         </Card>
 
         {/* Leaderboard Top Athletes in Selected Position/Role */}
-        <Card className="p-6 space-y-5 border-purple-500/30 bg-slate-950">
+        <Card className="p-6 space-y-5 border-purple-500/30 bg-[var(--bg-card)]">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-sm font-black uppercase text-white flex items-center gap-2">
               <Award className="w-4 h-4 text-amber-400" />
@@ -430,7 +408,7 @@ export function EsportsAnalyticsView({ game }: EsportsAnalyticsViewProps) {
 
           <div className="space-y-3">
             {currentAnalytics.topAthletes.map((ath) => (
-              <div key={ath.gamertag} className="p-3.5 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-between gap-3 text-xs">
+              <div key={ath.gamertag} className="p-3.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-3">
                   <span className="font-mono font-black text-amber-400 text-sm">#{ath.rank}</span>
                   <Avatar fallback={ath.name} size="sm" status="online" />

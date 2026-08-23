@@ -34,12 +34,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const fetchGlobalTeams = useCallback(() => {
-    fetch('/api/teams')
+    fetch('/api/admin/teams')
       .then((res) => res.json())
       .then((data) => {
-        const teams = data.data?.teams || data.teams;
+        const teams = data.teams || data.data?.teams;
         if (Array.isArray(teams) && teams.length > 0) {
-          setUserTeams(teams);
+          const normalizedTeams = teams.map((t: any) => ({
+            ...t,
+            gameSlug: t.game_slug || t.gameSlug || 'eafc26',
+            captainId: t.captain_id || t.captainId,
+            captainName: t.captain_name || t.captainName,
+            logoUrl: t.logo_url || t.logoUrl || t.logo,
+            bannerUrl: t.banner_url || t.bannerUrl || t.banner,
+          }));
+          setUserTeams(normalizedTeams);
         }
       })
       .catch((err) => console.error('Error fetching global teams:', err));

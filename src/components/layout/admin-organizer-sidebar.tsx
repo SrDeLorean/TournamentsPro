@@ -2,16 +2,17 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Badge } from '@/components/ui/badge';
 import {
-  Shield, Trophy, Users, Building2, LayoutDashboard, Calendar, Award, ArrowRightLeft, MessageSquare, ChevronRight, Settings, Sparkles, CheckCircle2, Menu, X, FileText, Activity, Gamepad2
+  Shield, Trophy, Users, Building2, LayoutDashboard, Calendar, Award, ArrowRightLeft, MessageSquare, ChevronRight, Settings, Sparkles, CheckCircle2, Menu, X, FileText, Activity, Gamepad2, Swords, Globe, Home, Star, PieChart, Database, Target
 } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 
 export function AdminOrganizerSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { currentUser, activeGameSlug, setActiveGameSlug } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
 
@@ -27,7 +28,8 @@ export function AdminOrganizerSidebar() {
   const currentGameObj = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG['eafc26'];
 
   // Admin Sidebar Nav Items
-  const adminNavItems = [
+  // 1. GESTIÓN GLOBAL
+  const globalNavItems = [
     {
       title: 'Dashboard Global',
       href: '/dashboard',
@@ -35,66 +37,94 @@ export function AdminOrganizerSidebar() {
       badge: 'Stats',
     },
     {
-      title: 'Gestión de Usuarios',
-      href: '/usuarios',
-      icon: <Users className="w-4 h-4 text-purple-400" />,
-      badge: 'Atletas',
+      title: 'Gestión de Competencias',
+      href: '/dashboard/competencias',
+      icon: <Swords className="w-4 h-4 text-purple-400" />,
+      badge: 'Ligas',
     },
     {
-      title: 'Gestión de Equipos',
+      title: 'Usuarios / Atletas',
+      href: '/usuarios',
+      icon: <Users className="w-4 h-4 text-emerald-400" />,
+      badge: 'Directorio',
+    },
+    {
+      title: 'Equipos / Clubes',
       href: '/equipos',
-      icon: <Shield className="w-4 h-4 text-emerald-400" />,
+      icon: <Shield className="w-4 h-4 text-amber-400" />,
+      badge: 'Escuadras',
+    },
+    {
+      title: 'Reportar Encuentros',
+      href: '/matchday',
+      icon: <CheckCircle2 className="w-4 h-4 text-rose-400" />,
+      badge: 'Matchday',
+    },
+  ];
+
+  // 2. GESTIÓN POR DISCIPLINA (Rutas públicas especializadas del submenú de la disciplina activa)
+  const disciplineNavItems = [
+    {
+      title: `Portada (${currentGameObj.name})`,
+      href: `/${activeGameSlug}`,
+      icon: <Home className="w-4 h-4 text-slate-300" />,
+      badge: 'Home',
+    },
+    {
+      title: 'Torneos',
+      href: `/${activeGameSlug}/organizaciones`,
+      icon: <Target className="w-4 h-4 text-yellow-400" />,
+      badge: 'Ligas',
+    },
+    {
+      title: `Clasificación`,
+      href: `/${activeGameSlug}/clasificacion`,
+      icon: <Award className="w-4 h-4 text-purple-400" />,
+      badge: 'Tabla',
+    },
+    {
+      title: `Partidos / Fixture`,
+      href: `/${activeGameSlug}/partidos`,
+      icon: <Calendar className="w-4 h-4 text-emerald-400" />,
+      badge: 'Partidos',
+    },
+    {
+      title: `Traspasos & Fichajes`,
+      href: `/${activeGameSlug}/traspasos`,
+      icon: <ArrowRightLeft className="w-4 h-4 text-rose-400" />,
+      badge: 'Fichajes',
+    },
+    {
+      title: `Equipos & Clubes`,
+      href: `/${activeGameSlug}/equipos`,
+      icon: <Shield className="w-4 h-4 text-amber-400" />,
       badge: 'Clubes',
     },
     {
-      title: 'Organizaciones Madre',
-      href: '/organizaciones',
-      icon: <Building2 className="w-4 h-4 text-amber-400" />,
-      badge: 'Oficial',
+      title: `Jugadores`,
+      href: `/${activeGameSlug}/jugadores`,
+      icon: <Users className="w-4 h-4 text-cyan-400" />,
+      badge: 'Atletas',
+    },
+    {
+      title: `Tops & Rankings`,
+      href: `/${activeGameSlug}/tops`,
+      icon: <Star className="w-4 h-4 text-amber-300" />,
+      badge: 'Tops',
+    },
+    {
+      title: `Infografía & Stats`,
+      href: `/${activeGameSlug}/infografia`,
+      icon: <PieChart className="w-4 h-4 text-cyan-300" />,
+      badge: 'Stats',
+    },
+    {
+      title: `Datos & Ficha Técnica`,
+      href: `/${activeGameSlug}/datos`,
+      icon: <Database className="w-4 h-4 text-slate-400" />,
+      badge: 'Datos',
     },
   ];
-
-  // Organizer Sidebar Nav Items (Filtered dynamically for active selected game)
-  const organizerNavItems = [
-    {
-      title: `Panel ${currentGameObj.name}`,
-      href: '/dashboard',
-      icon: <Trophy className="w-4 h-4 text-purple-400" />,
-      badge: currentGameObj.slug.toUpperCase(),
-    },
-    {
-      title: 'Matchday & Visto Bueno',
-      href: '/club/matchday',
-      icon: <CheckCircle2 className="w-4 h-4 text-amber-400" />,
-      badge: 'Revisión',
-    },
-    {
-      title: `Escuadras ${currentGameObj.name}`,
-      href: '/equipos',
-      icon: <Shield className="w-4 h-4 text-cyan-400" />,
-      badge: 'Equipos',
-    },
-    {
-      title: 'Directorio de Atletas',
-      href: '/usuarios',
-      icon: <Users className="w-4 h-4 text-emerald-400" />,
-      badge: 'Jugadores',
-    },
-    {
-      title: 'Organizaciones Madre',
-      href: '/organizaciones',
-      icon: <Building2 className="w-4 h-4 text-amber-400" />,
-      badge: 'Sedes',
-    },
-    {
-      title: 'Chat con Capitanes',
-      href: '/mensajes',
-      icon: <MessageSquare className="w-4 h-4 text-rose-400" />,
-      badge: 'Soporte',
-    },
-  ];
-
-  const currentNavItems = isAdmin ? adminNavItems : organizerNavItems;
 
   return (
     <>
@@ -119,14 +149,14 @@ export function AdminOrganizerSidebar() {
 
       {/* Desktop & Mobile Sidebar Container */}
       <aside
-        className={`fixed top-12 left-0 bottom-0 z-40 w-64 bg-slate-950/95 border-r border-[var(--border-card)] backdrop-blur-xl flex flex-col justify-between p-4 transition-transform duration-300 ${
+        className={`fixed top-12 left-0 bottom-0 z-40 w-64 bg-slate-950/95 border-r border-[var(--border-card)] backdrop-blur-xl flex flex-col justify-between p-4 transition-transform duration-300 overflow-y-auto ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div className="space-y-6">
+        <div className="space-y-5">
           
-          {/* Header Box with Role, User & Interactive Game Selector */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-950 to-black border border-purple-500/30 space-y-2.5 shadow-xl">
+          {/* Header Box with Role & User */}
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-950 to-black border border-purple-500/30 space-y-2 shadow-xl">
             <div className="flex items-center justify-between">
               <Badge variant={isAdmin ? 'cyan' : 'emerald'} className="text-[9px] font-mono font-black uppercase tracking-wider">
                 {isAdmin ? 'PANEL ADMINISTRATIVO' : 'PANEL ORGANIZADOR'}
@@ -142,17 +172,68 @@ export function AdminOrganizerSidebar() {
                 @{currentUser?.gamertag || 'organizador'}
               </p>
             </div>
+          </div>
 
-            {/* SELECTOR DE JUEGO / DISCIPLINA DISCIPLINARIO (VALORANT, EA FC 26, ROCKET LEAGUE, ETC) */}
-            <div className="pt-2 border-t border-white/10 space-y-1">
-              <label className="text-[9px] font-mono uppercase text-cyan-400 font-black tracking-wider block flex items-center gap-1">
-                <Gamepad2 className="w-3 h-3 text-cyan-400" />
-                DISCIPLINA GESTIONADA:
-              </label>
+          {/* 🌐 SECCIÓN 1: GESTIÓN GLOBAL */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-black uppercase text-cyan-400 tracking-wider px-2 block flex items-center gap-1">
+              <Globe className="w-3 h-3 text-cyan-400" />
+              GESTIÓN GLOBAL:
+            </span>
+
+            <nav className="space-y-1">
+              {globalNavItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.title}
+                    href={item.href}
+                    onClick={() => setIsMobileOpen(false)}
+                    className={`w-full p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between group ${
+                      isActive
+                        ? 'bg-cyan-500 text-slate-950 shadow-lg font-black'
+                        : 'text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent hover:border-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      {item.icon}
+                      <span className="truncate">{item.title}</span>
+                    </div>
+
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                        isActive ? 'bg-black/30 text-white' : 'bg-slate-900 text-slate-400 border border-white/5'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* 🏆 SECCIÓN 2: GESTIÓN POR DISCIPLINA */}
+          <div className="space-y-2 pt-3 border-t border-white/10">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase text-purple-300 tracking-wider px-2 block flex items-center gap-1">
+                <Gamepad2 className="w-3 h-3 text-purple-400" />
+                GESTIÓN POR DISCIPLINA:
+              </span>
+
+              {/* Selector de Juego / Disciplina Activa */}
               <select
                 value={activeGameSlug}
-                onChange={(e) => setActiveGameSlug(e.target.value)}
-                className="w-full p-2 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 font-mono font-bold text-[11px] outline-none cursor-pointer hover:border-cyan-400 transition-colors shadow-inner"
+                onChange={(e) => {
+                  const newSlug = e.target.value;
+                  setActiveGameSlug(newSlug);
+                  const segments = pathname.split('/').filter(Boolean);
+                  if (segments.length > 0 && GAMES_CATALOG[segments[0]]) {
+                    segments[0] = newSlug;
+                    router.push('/' + segments.join('/'));
+                  }
+                }}
+                className="w-full p-2 rounded-xl bg-slate-900 border border-purple-500/40 text-purple-300 font-mono font-bold text-xs outline-none cursor-pointer hover:border-purple-400 transition-colors shadow-inner"
               >
                 {Object.values(GAMES_CATALOG).map((g) => (
                   <option key={g.slug} value={g.slug}>
@@ -161,41 +242,30 @@ export function AdminOrganizerSidebar() {
                 ))}
               </select>
             </div>
-          </div>
 
-          {/* Navigation Category Label */}
-          <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-2 block">
-              {isAdmin ? 'MÓDULOS DEL SISTEMA:' : `GESTIÓN EXCLUSIVA ${currentGameObj.name}:`}
-            </span>
-
-            {/* Nav Items List */}
+            {/* Links de la Disciplina */}
             <nav className="space-y-1">
-              {currentNavItems.map((item) => {
+              {disciplineNavItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <Link
                     key={item.title}
                     href={item.href}
                     onClick={() => setIsMobileOpen(false)}
-                    className={`w-full p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between group ${
+                    className={`w-full p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between group ${
                       isActive
-                        ? isAdmin
-                          ? 'bg-cyan-500 text-slate-950 shadow-lg font-black'
-                          : 'bg-purple-600 text-white shadow-lg font-black'
+                        ? 'bg-purple-600 text-white shadow-lg font-black'
                         : 'text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent hover:border-white/10'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 truncate">
+                    <div className="flex items-center gap-2 truncate">
                       {item.icon}
                       <span className="truncate">{item.title}</span>
                     </div>
 
                     <span
-                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold transition-opacity ${
-                        isActive
-                          ? 'bg-black/30 text-white'
-                          : 'bg-slate-900 text-slate-400 border border-white/5'
+                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                        isActive ? 'bg-black/30 text-white' : 'bg-slate-900 text-slate-400 border border-white/5'
                       }`}
                     >
                       {item.badge}

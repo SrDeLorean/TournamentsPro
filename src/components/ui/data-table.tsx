@@ -123,11 +123,11 @@ export function DataTable<T extends { id: string | number }>({
   return (
     <div className="space-y-4">
       {/* Search & Advanced Dropdown Filters Toolbar */}
-      <div className="p-4 rounded-2xl bg-slate-950 border border-white/10 space-y-3 shadow-xl">
+      <div className="p-4 rounded-xl bg-[var(--bg-card)]/40 backdrop-blur-xl border border-[var(--border-card)] space-y-3 shadow-sm transition-all duration-300">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Search Bar */}
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
+          <div className="relative w-full max-w-sm group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] group-focus-within:text-white transition-colors" />
             <input
               type="text"
               placeholder={searchPlaceholder}
@@ -136,7 +136,7 @@ export function DataTable<T extends { id: string | number }>({
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 transition-all font-medium"
+              className="w-full h-9 pl-9 pr-4 rounded-lg bg-[var(--bg-main)]/50 border border-transparent focus:border-[var(--border-card-hover)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-all"
             />
           </div>
 
@@ -150,11 +150,13 @@ export function DataTable<T extends { id: string | number }>({
                     setActiveFilters((prev) => ({ ...prev, [f.key]: e.target.value }));
                     setCurrentPage(1);
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs font-bold text-slate-300 focus:outline-none focus:border-cyan-400"
+                  className="h-8 px-3 rounded-lg bg-[var(--bg-main)]/50 border border-transparent focus:border-[var(--border-card-hover)] text-[12px] font-semibold text-[var(--text-secondary)] focus:outline-none transition-all cursor-pointer"
                 >
-                  <option value="ALL">{f.label}: Todos</option>
+                  <option value="ALL" className="bg-[#0b101b] text-slate-100">
+                    {f.label}: Todos
+                  </option>
                   {f.options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
+                    <option key={opt.value} value={opt.value} className="bg-[#0b101b] text-slate-100">
                       {opt.label}
                     </option>
                   ))}
@@ -164,19 +166,19 @@ export function DataTable<T extends { id: string | number }>({
 
             {/* Page Size Selector */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono text-slate-400 uppercase">Filas:</span>
+              <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Filas:</span>
               <select
                 value={pageSize}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="px-2 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs font-bold text-cyan-400 focus:outline-none"
+                className="h-8 px-2 rounded-lg bg-[var(--bg-main)]/50 border border-transparent focus:border-[var(--border-card-hover)] text-[12px] font-bold text-[var(--accent-cyan)] focus:outline-none transition-all cursor-pointer"
               >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
+                <option value={5} className="bg-[#0b101b] text-slate-100">5</option>
+                <option value={10} className="bg-[#0b101b] text-slate-100">10</option>
+                <option value={20} className="bg-[#0b101b] text-slate-100">20</option>
+                <option value={50} className="bg-[#0b101b] text-slate-100">50</option>
               </select>
             </div>
           </div>
@@ -185,33 +187,33 @@ export function DataTable<T extends { id: string | number }>({
 
       {/* Standardized Table Container */}
       <div
-        className="rounded-2xl border bg-slate-950 overflow-hidden shadow-2xl transition-all"
-        style={{ borderColor: `color-mix(in srgb, ${brandColor} 30%, transparent)` }}
+        className="table-container-theme font-mono"
+        style={{ borderColor: `color-mix(in srgb, ${brandColor} 30%, var(--border-card))` }}
       >
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-medium border-collapse">
+          <table className="ui-table">
             <thead>
-              <tr className="border-b border-white/10 bg-slate-900/90 text-slate-400 uppercase text-[10px] font-mono tracking-wider">
+              <tr className="border-b border-[var(--border-card)]">
                 {columns.map((col, idx) => {
                   const isSorted = sortColumn === col.accessorKey;
                   return (
                     <th
                       key={idx}
                       onClick={() => col.sortable && handleSort(col.accessorKey)}
-                      className={`p-4 ${col.sortable ? 'cursor-pointer select-none hover:text-white' : ''} ${col.className || ''}`}
+                      className={`px-4 py-3 align-middle ${col.sortable ? 'cursor-pointer select-none hover:text-[var(--text-primary)] transition-colors' : ''} ${col.className || ''}`}
                     >
                       <div className="flex items-center gap-1.5">
                         <span>{col.header}</span>
                         {col.sortable && (
-                          <span className="text-slate-500">
+                          <span className="text-[var(--text-muted)]">
                             {isSorted ? (
                               sortDirection === 'asc' ? (
-                                <ArrowUp className="w-3 h-3 text-cyan-400" />
+                                <ArrowUp className="w-3 h-3 text-[var(--accent-cyan)]" />
                               ) : (
-                                <ArrowDown className="w-3 h-3 text-cyan-400" />
+                                <ArrowDown className="w-3 h-3 text-[var(--accent-cyan)]" />
                               )
                             ) : (
-                              <ArrowUpDown className="w-3 h-3" />
+                              <ArrowUpDown className="w-3 h-3 opacity-50 hover:opacity-100" />
                             )}
                           </span>
                         )}
@@ -219,26 +221,26 @@ export function DataTable<T extends { id: string | number }>({
                     </th>
                   );
                 })}
-                {actions && <th className="p-4 text-right">Acciones</th>}
+                {actions && <th className="px-4 py-3 text-right">Acciones</th>}
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-white/5 text-white">
+            <tbody className="divide-y divide-[var(--border-card)]">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + (actions ? 1 : 0)} className="p-8 text-center text-slate-400 text-xs italic">
+                  <td colSpan={columns.length + (actions ? 1 : 0)} className="p-8 text-center text-[var(--text-muted)] text-sm italic">
                     {emptyMessage}
                   </td>
                 </tr>
               ) : (
                 paginatedData.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-900/60 transition-colors">
+                  <tr key={row.id} className="hover:bg-[var(--bg-card-hover)] transition-colors duration-200">
                     {columns.map((col, idx) => (
-                      <td key={idx} className={`p-4 ${col.className || ''}`}>
+                      <td key={idx} className={`px-4 py-3 align-middle ${col.className || ''}`}>
                         {col.cell ? col.cell(row) : col.accessorKey ? String(row[col.accessorKey] || '') : null}
                       </td>
                     ))}
-                    {actions && <td className="p-4 text-right space-x-1.5">{actions(row)}</td>}
+                    {actions && <td className="px-4 py-3 align-middle text-right space-x-1.5">{actions(row)}</td>}
                   </tr>
                 ))
               )}
@@ -247,8 +249,8 @@ export function DataTable<T extends { id: string | number }>({
         </div>
 
         {/* Pagination Controls */}
-        <div className="p-4 border-t border-white/10 bg-slate-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <span className="text-[11px] text-slate-400 font-mono">
+        <div className="p-4 border-t border-[var(--border-card)]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
+          <span className="text-[12px] text-[var(--text-muted)] font-medium">
             Mostrando <strong>{(currentPage - 1) * pageSize + 1}</strong> a{' '}
             <strong>{Math.min(currentPage * pageSize, sortedData.length)}</strong> de{' '}
             <strong>{sortedData.length}</strong> registros
@@ -256,43 +258,43 @@ export function DataTable<T extends { id: string | number }>({
 
           <div className="flex items-center gap-1">
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(1)}
-              className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30"
+              className="w-8 h-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
             >
               <ChevronsLeft className="w-4 h-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30"
+              className="w-8 h-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
 
-            <span className="px-3 py-1 font-mono text-xs text-cyan-400 font-bold bg-slate-950 rounded-lg border border-cyan-500/30">
+            <span className="px-3 py-1 font-mono text-[12px] text-[var(--text-primary)] font-bold bg-[var(--bg-main)]/50 rounded-lg border border-[var(--border-card)]">
               {currentPage} / {totalPages}
             </span>
 
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30"
+              className="w-8 h-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(totalPages)}
-              className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30"
+              className="w-8 h-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
             >
               <ChevronsRight className="w-4 h-4" />
             </Button>

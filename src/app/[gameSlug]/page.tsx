@@ -8,6 +8,7 @@ import { getSectionMetadata } from '@/lib/section-config';
 import { GameSubNavbar, GameSection } from '@/components/layout/game-sub-navbar';
 import { PageHeader } from '@/components/ui/page-header';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
 import { TeamDirectory } from '@/components/teams/team-directory';
 import { PlayerProfileView, PlayerData } from '@/components/players/player-profile-view';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { Flame } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
+import { OrganizationDirectory } from '@/components/tournaments/organization-directory';
+import { NewUserMyTeamsView as UserMyTeamsView } from '@/components/user/new-user-my-teams';
 
 // ── Extracted Components ────────────────────────────────────────────────────
 import { GameHomeHero } from '@/components/game/game-home-hero';
@@ -52,6 +55,16 @@ const TournamentHubView = dynamic(
   { loading: () => <div className="skeleton h-64 rounded-xl" /> }
 );
 
+const FixtureScheduleView = dynamic(
+  () => import('@/components/tournaments/fixture-schedule-view').then(m => ({ default: m.FixtureScheduleView })),
+  { loading: () => <div className="skeleton h-96 rounded-xl" /> }
+);
+
+const ClassificationView = dynamic(
+  () => import('@/components/tournaments/classification-view').then(m => ({ default: m.ClassificationView })),
+  { loading: () => <div className="skeleton h-96 rounded-xl" /> }
+);
+
 const EsportsAnalyticsView = dynamic(
   () => import('@/components/stats/esports-analytics-view').then(m => ({ default: m.EsportsAnalyticsView })),
   { loading: () => <div className="skeleton h-64 rounded-xl" /> }
@@ -60,6 +73,11 @@ const EsportsAnalyticsView = dynamic(
 const TeamProfileView = dynamic(
   () => import('@/components/teams/team-profile-view').then(m => ({ default: m.TeamProfileView })),
   { loading: () => <div className="skeleton h-64 rounded-xl" /> }
+);
+
+const GameUIShowcasePage = dynamic(
+  () => import('@/app/[gameSlug]/UI/page').then(m => ({ default: m.default })),
+  { loading: () => <div className="skeleton h-96 rounded-xl" /> }
 );
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -91,6 +109,21 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPosition, setSelectedPosition] = useState<string>('ALL');
 
+  React.useEffect(() => {
+    if (initialSection) {
+      setActiveSection((prev) => (prev !== initialSection ? (initialSection as GameSection) : prev));
+    }
+  }, [initialSection]);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && ['home', 'partidos', 'competencias', 'clasificacion', 'traspasos', 'equipos', 'organizaciones', 'jugadores', 'tops', 'datos', 'infografia'].includes(hash)) {
+        setActiveSection(hash as GameSection);
+      }
+    }
+  }, []);
+
   if (!game) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-24 text-center">
@@ -114,14 +147,23 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
 
   // ── Player Data Fetching ──────────────────────────────────────────────────
   const [dbUsersList, setDbUsersList] = React.useState<PlayerCardData[]>([]);
+  const [isLoadingPlayers, setIsLoadingPlayers] = React.useState(true);
 
   React.useEffect(() => {
     if (activeSection !== 'jugadores' && activeSection !== 'tops') return;
 
-    fetch(`/api/users?gameSlug=${gameSlug}&limit=50`)
+    setIsLoadingPlayers(true);
+
+    // Minimum delay for UI synchronization and tactical skeleton showcase
+    const minDelay = new Promise(resolve => setTimeout(resolve, 50));
+    
+    const fetchPromise = fetch(`/api/users?gameSlug=${gameSlug}&limit=200`)
       .then((res) => res.json())
       .then((data) => {
-        const users = data.data?.users || data.users;
+        let users = data.data?.users || data.users || (data.success && Array.isArray(data.data) ? data.data : []);
+        return Array.isArray(users) ? users : [];
+      })
+      .then((users) => {
         if (Array.isArray(users) && users.length > 0) {
           const validPositions = game.positions || [];
           const mapped: PlayerCardData[] = users.map((u: Record<string, unknown>) => {
@@ -151,13 +193,26 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
         }
       })
       .catch((err) => console.error('Error fetching players:', err));
+
+    Promise.all([fetchPromise, minDelay]).finally(() => {
+      setIsLoadingPlayers(false);
+    });
   }, [activeSection, gameSlug, game.slug, game.positions]);
 
-  const filteredPlayers = selectedPosition === 'ALL'
-    ? dbUsersList
-    : dbUsersList.filter(p => p.pos === selectedPosition);
+  const filteredPlayers = dbUsersList.filter(p => {
+    const matchesSearch = searchTerm === '' || 
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.gamertag && p.gamertag.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.team && p.team.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.gameId && p.gameId.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+    const matchesPosition = selectedPosition === 'ALL' || p.pos === selectedPosition;
+    
+    return matchesSearch && matchesPosition;
+  });
 
   // ── Section Change Handler ────────────────────────────────────────────────
+
   const handleSectionChange = (sec: GameSection) => {
     setActiveSection(sec);
     setSearchTerm('');
@@ -176,21 +231,21 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
 
       <div className="relative w-full min-h-screen">
         {/* Fixed Background Banner */}
-        <div className="absolute top-0 left-0 right-0 h-[750px] w-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-0 left-0 right-0 h-[800px] w-full overflow-hidden pointer-events-none z-0">
           <img
             src={game.bannerUrl}
             alt={game.name}
-            className="w-full h-full object-cover object-top opacity-85 dark:opacity-55 filter contrast-115 saturate-115 brightness-100 transition-opacity duration-700"
+            className="w-full h-full object-cover object-top opacity-[0.75] dark:opacity-95 filter contrast-[1.25] saturate-[1.2] brightness-[1.25] dark:brightness-100 dark:contrast-[1.3] dark:saturate-[1.25] transition-all duration-300"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--bg-main)]/30 to-[var(--bg-main)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--bg-main)]" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 sm:pb-10 relative z-10 space-y-6 sm:space-y-10">
-          {/* Section Header (excluded for home, dashboard, ficha, atleta-ajustes, selectedPlayer) */}
+        <div className="standard-page-wrapper pt-0 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-forwards" key={activeSection}>
+          {/* Section Header (excluded for sections that have their own PageHeader) */}
           {activeSection !== 'home' &&
-            !['dashboard', 'club-dashboard', 'ficha', 'atleta-ajustes'].includes(activeSection as string) &&
+            !['dashboard', 'club-dashboard', 'ficha', 'atleta-ajustes', 'partidos', 'clasificacion', 'organizaciones', 'competencias', 'datos', 'infografia', 'traspasos'].includes(activeSection as string) &&
             !selectedPlayer && (
-              <div className="pt-4 sm:pt-6">
+              <div key={`header-${activeSection}`} className="pt-4 sm:pt-6">
                 <PageHeader
                   badgeText={meta.badgeText}
                   badgeIcon={<Flame className="w-3.5 h-3.5" style={{ color: brandColor, fill: brandColor }} />}
@@ -207,10 +262,31 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
             <GameHomeHero game={game} brandColor={brandColor} mockMatches={mockMatches} onNavigate={(s) => handleSectionChange(s as GameSection)} />
           )}
 
-          {/* ── COMPETENCIAS / CLASIFICACION / PARTIDOS ───────────────── */}
-          {['competencias', 'clasificacion', 'partidos'].includes(activeSection as string) && (
+          {/* ── PARTIDOS (Fixture & Calendario) ────────────────────────── */}
+          {activeSection === 'partidos' && (
             <div className="pt-3 sm:pt-4">
-              <TournamentHubView game={game} initialSection={activeSection as string} />
+              <FixtureScheduleView game={game} />
+            </div>
+          )}
+
+          {/* ── COMPETENCIAS ──────────────────────────────────────────── */}
+          {activeSection === 'competencias' && (
+            <div className="pt-3 sm:pt-4">
+              <TournamentHubView game={game} initialSection="competencias" />
+            </div>
+          )}
+
+          {/* ── CLASIFICACION (Posiciones, Tablas & Brackets) ───────────── */}
+          {activeSection === 'clasificacion' && (
+            <div className="pt-3 sm:pt-4">
+              <ClassificationView game={game} />
+            </div>
+          )}
+
+          {/* ── UI SHOWCASE ────────────────────────────────────────────── */}
+          {((activeSection as string) === 'UI' || (activeSection as string) === 'ui') && (
+            <div className="pt-3 sm:pt-4">
+              <GameUIShowcasePage params={Promise.resolve({ gameSlug })} />
             </div>
           )}
 
@@ -233,19 +309,35 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
             <TeamDirectory gameName={game.name} gameSlug={game.slug} brandColor={game.brandColor} hideHeader={true} />
           )}
 
+          {/* ── MIS EQUIPOS (ATLETA) ─────────────────────────────────── */}
+          {['mis-equipos', 'mis-clubes'].includes(activeSection as string) && (
+            <UserMyTeamsView />
+          )}
+
+          {/* ── ORGANIZACIONES (TORNEOS) ──────────────────────────────── */}
+          {activeSection === 'organizaciones' && (
+            <OrganizationDirectory gameSlug={game.slug} gameConfig={game} />
+          )}
+
           {/* ── JUGADORES ─────────────────────────────────────────────── */}
           {activeSection === 'jugadores' && (
             selectedPlayer ? (
               <PlayerProfileView player={selectedPlayer} brandColor={game.brandColor} onBack={() => setSelectedPlayer(null)} />
             ) : (
               <div className="space-y-6 pt-3 sm:pt-4">
-                <FilterBar
-                  searchPlaceholder={meta.searchPlaceholder}
-                  searchValue={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  brandColor={brandColor}
-                />
-                <PlayerCardGrid players={filteredPlayers} gameSlug={game.slug} brandColor={brandColor} />
+                {isLoadingPlayers ? (
+                  <TacticalLoadingSkeleton game={game} message={`SINCRONIZANDO ATLETAS DE ${game.name.toUpperCase()}...`} />
+                ) : (
+                  <>
+                    <FilterBar
+                      searchPlaceholder={meta.searchPlaceholder}
+                      searchValue={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      brandColor={brandColor}
+                    />
+                    <PlayerCardGrid players={filteredPlayers} gameSlug={game.slug} brandColor={brandColor} />
+                  </>
+                )}
               </div>
             )
           )}
@@ -253,38 +345,44 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
           {/* ── TOPS ──────────────────────────────────────────────────── */}
           {activeSection === 'tops' && (
             <div className="space-y-6 pt-3 sm:pt-4">
-              <FilterBar
-                searchPlaceholder={meta.searchPlaceholder}
-                searchValue={searchTerm}
-                onSearchChange={setSearchTerm}
-                options={[{ id: 'ALL', label: 'Todas las Posiciones' }, ...game.positions.map(p => ({ id: p, label: p }))]}
-                activeFilter={selectedPosition}
-                onFilterChange={setSelectedPosition}
-                brandColor={brandColor}
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                {filteredPlayers.map((player, idx) => (
-                  <Card key={idx} className="glass-panel-hover">
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge variant="cyan">{player.pos}</Badge>
-                        <span className="text-xs font-mono font-bold text-amber-400">★ {player.rating}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Avatar fallback={player.name} size="md" status="online" />
-                        <div>
-                          <CardTitle className="text-base">{player.name}</CardTitle>
-                          <CardDescription>{player.team}</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardFooter className="text-xs text-[var(--text-muted)] flex justify-between">
-                      <span>Efectividad:</span>
-                      <span className="font-bold text-[var(--accent-emerald)]">{player.pss}</span>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
+              {isLoadingPlayers ? (
+                <TacticalLoadingSkeleton game={game} message={`ANALIZANDO RENDIMIENTOS DE ${game.name.toUpperCase()}...`} />
+              ) : (
+                <>
+                  <FilterBar
+                    searchPlaceholder={meta.searchPlaceholder}
+                    searchValue={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    options={[{ id: 'ALL', label: 'Todas las Posiciones' }, ...game.positions.map(p => ({ id: p, label: p }))]}
+                    activeFilter={selectedPosition}
+                    onFilterChange={setSelectedPosition}
+                    brandColor={brandColor}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    {filteredPlayers.map((player, idx) => (
+                      <Card key={idx} className="glass-card-premium">
+                        <CardHeader>
+                          <div className="flex items-center justify-between mb-2">
+                            <Badge variant="cyan" style={{ backgroundColor: `color-mix(in srgb, ${brandColor} 15%, transparent)`, color: brandColor, borderColor: `color-mix(in srgb, ${brandColor} 40%, transparent)` }}>{player.pos}</Badge>
+                            <span className="text-xs font-mono font-bold text-amber-400">★ {player.rating}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Avatar fallback={player.name} size="md" status="online" />
+                            <div>
+                              <CardTitle className="text-base truncate group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r transition-all" style={{ backgroundImage: `linear-gradient(to right, ${brandColor}, #ffffff)` }}>{player.name}</CardTitle>
+                              <CardDescription>{player.team}</CardDescription>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardFooter className="text-xs text-[var(--text-muted)] flex justify-between bg-[var(--bg-main)]/40 mt-auto py-2">
+                          <span>Efectividad:</span>
+                          <span className="font-bold text-[var(--accent-emerald)]">{player.pss}</span>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -333,11 +431,10 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
             </div>
           )}
 
-          {/* ── PLANTILLA ─────────────────────────────────────────────── */}
-          {(activeSection as string) === 'plantilla' && <RosterSection game={game} currentUser={currentUser} />}
-
-          {/* ── RECLUTAMIENTO ─────────────────────────────────────────── */}
-          {(activeSection as string) === 'reclutamiento' && <RecruitmentSection game={game} />}
+          {/* ── PLANTILLA & RECLUTAMIENTO (Roster, Dorsales & Fichajes) ─────────────── */}
+          {['plantilla', 'reclutamiento'].includes(activeSection as string) && (
+            <RosterSection game={game} />
+          )}
 
           {/* ── MATCHDAY ──────────────────────────────────────────────── */}
           {(activeSection as string) === 'matchday' && <MatchdaySection game={game} currentUser={currentUser} />}

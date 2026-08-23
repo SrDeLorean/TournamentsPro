@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { compressImageToWebP } from '@/lib/image-compressor';
+import { getAuthHeaders } from '@/lib/fetch-utils';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { PositionBadge } from '@/components/ui/position-badge';
 import { Button } from '@/components/ui/button';
@@ -337,7 +338,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
 
       const res = await fetch('/api/users', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -353,8 +354,8 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
       } else {
         setSavingMsg({ type: 'error', text: data.error || 'Error actualizando el perfil en MySQL' });
       }
-    } catch (err: any) {
-      setSavingMsg({ type: 'error', text: err.message || 'Error de conexión guardando perfil' });
+    } catch (err: unknown) {
+      setSavingMsg({ type: 'error', text: err instanceof Error ? err.message : 'Error de conexión guardando perfil' });
     } finally {
       setIsSubmitting(false);
     }

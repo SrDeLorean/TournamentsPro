@@ -96,11 +96,11 @@ export function ImageUploadCard({
   const isBanner = fallbackType === 'banner' || uploadType === 'banner';
 
   return (
-    <div className="p-4 rounded-xl bg-slate-950 border border-white/10 space-y-3 flex flex-col justify-between">
-      <div className="flex items-center gap-3">
+    <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4 flex flex-col justify-between shadow-sm transition-all duration-300">
+      <div className="flex items-center gap-3.5">
         {/* Preview Frame */}
         {isBanner ? (
-          <div className="w-20 h-12 rounded-lg bg-slate-900 border border-purple-400/40 overflow-hidden flex items-center justify-center flex-shrink-0 relative">
+          <div className="w-20 h-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] overflow-hidden flex items-center justify-center flex-shrink-0 relative shadow-sm">
             {currentUrl ? (
               <img src={currentUrl} alt={label} className="w-full h-full object-cover" />
             ) : (
@@ -109,7 +109,7 @@ export function ImageUploadCard({
           </div>
         ) : (
           <div
-            className="w-14 h-14 rounded-xl bg-slate-900 border-2 overflow-hidden flex items-center justify-center flex-shrink-0"
+            className="w-14 h-14 rounded-xl bg-[var(--bg-card)] border-2 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-sm"
             style={{ borderColor: brandColor }}
           >
             {currentUrl ? (
@@ -121,31 +121,23 @@ export function ImageUploadCard({
         )}
 
         <div>
-          <span className="font-bold text-white text-xs block uppercase tracking-wide">{label}</span>
-          <span className="text-[10px] text-slate-400 block">{subtitle}</span>
-          {stats && <span className="text-[10px] font-mono text-emerald-400 font-bold block mt-0.5">{stats}</span>}
+          <span className="font-bold font-mono text-[var(--text-heading)] text-xs block uppercase tracking-wide">{label}</span>
+          <span className="text-[11px] font-mono text-[var(--text-muted)] block mt-0.5">{subtitle}</span>
+          {stats && <span className="text-[11px] font-mono text-[var(--accent-emerald)] font-bold block mt-1">{stats}</span>}
         </div>
       </div>
 
       <label
-        className="w-full py-2 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg hover:brightness-125"
-        style={
-          isBanner
-            ? {
-                backgroundColor: 'rgba(88, 28, 135, 0.4)',
-                borderColor: 'rgba(168, 85, 247, 0.4)',
-                color: '#D8B4FE',
-              }
-            : {
-                backgroundColor: `color-mix(in srgb, ${brandColor} 15%, transparent)`,
-                borderColor: `color-mix(in srgb, ${brandColor} 50%, transparent)`,
-                color: brandColor,
-              }
-        }
+        className="w-full py-2.5 px-3 rounded-xl border font-mono font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md active:scale-[0.98] hover:opacity-90"
+        style={{
+          backgroundColor: brandColor,
+          borderColor: brandColor,
+          color: '#020617',
+        }}
       >
-        <Upload className="w-3.5 h-3.5" />
-        <span>{isCompressing ? 'Comprimiendo WebP...' : buttonText}</span>
-        <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isCompressing} />
+        <Upload className="w-4 h-4" />
+        <span>{isCompressing ? 'Procesando...' : buttonText}</span>
+        <input type="file" accept="image/*" onChange={handleFileChange} disabled={isCompressing} className="hidden" />
       </label>
     </div>
   );

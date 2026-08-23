@@ -126,6 +126,64 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamHighlightTitle: 'DE ALTA VELOCIDAD.',
     teamDescription: 'Directorio de clubes de Rocket League compitiendo en arenas oficiales.',
   },
+  fortnite: {
+    id: 'fortnite',
+    slug: 'fortnite',
+    name: 'FORTNITE',
+    category: 'Battle Royale & Cero Construcción',
+    icon: '⚡',
+    tagline: 'Sobrevive y domina en la Isla',
+    description: 'El Battle Royale insignia de Epic Games. Modalidades Solo, Dúos, Tríos y Escuadrones.',
+    brandColor: '#9d4dbb',       // Fortnite Epic Purple (#9d4dbb)
+    accentColor: '#f3af19',      // Fortnite Legendary Gold (#f3af19)
+    secondaryAccent: '#4c51f7',  // Fortnite Rare Blue (#4c51f7)
+    darkBg: '#120E29',
+    bgGradient: 'from-[#9d4dbb]/30 via-[#4c51f7]/25 to-[#f3af19]/20',
+    positions: ['IGL', 'Fragger', 'Support', 'Anchor'],
+    bannerUrl: '/images/games-background/fortnite.jpg',
+    logoUrl: '/images/games/fortnite.png',
+    teamBadgeText: 'Directorio de Escuadras Battle Royale',
+    teamTitle: 'ESCUADRAS',
+    teamHighlightTitle: 'BATTLE ROYALE.',
+    teamDescription: 'Conoce las escuadras y atletas que compiten en las arenas de Fortnite.',
+  },
+};
+
+export interface GameModeOption {
+  value: string;
+  label: string;
+  isIndividual: boolean;
+}
+
+export const GAME_MODE_OPTIONS: Record<string, GameModeOption[]> = {
+  eafc26: [
+    { value: '11v11', label: 'Clubes Pro 11v11 (Equipos / Clubes)', isIndividual: false },
+    { value: '2v2', label: 'Parejas 2v2 (Jugadores Directos)', isIndividual: true },
+    { value: '1v1', label: 'Solo 1v1 (Jugadores Directos)', isIndividual: true },
+  ],
+  lol: [
+    { value: '5v5', label: 'Grieta del Invocador 5v5 (Equipos / Clubes)', isIndividual: false },
+    { value: '3v3', label: 'Bosque Retorcido / ARAM 3v3 (Equipos)', isIndividual: false },
+    { value: '1v1', label: 'Duelo 1v1 (Jugadores Directos)', isIndividual: true },
+  ],
+  rocketleague: [
+    { value: '4v4', label: 'Caos 4v4 (Equipos)', isIndividual: false },
+    { value: '3v3', label: 'Estándar 3v3 (Equipos)', isIndividual: false },
+    { value: '2v2', label: 'Parejas 2v2 (Jugadores Directos)', isIndividual: true },
+    { value: '1v1', label: 'Solo 1v1 (Jugadores Directos)', isIndividual: true },
+  ],
+  csgo: [
+    { value: '5v5', label: 'Táctico Estándar 5v5 (Equipos / Clubes)', isIndividual: false },
+  ],
+  valorant: [
+    { value: '5v5', label: 'Táctico Estándar 5v5 (Equipos / Clubes)', isIndividual: false },
+  ],
+  fortnite: [
+    { value: 'escuadrones', label: 'Escuadrones 4v4 (Equipos)', isIndividual: false },
+    { value: 'trios', label: 'Tríos 3v3 (Equipos)', isIndividual: false },
+    { value: 'duos', label: 'Dúos 2v2 (Jugadores Directos)', isIndividual: true },
+    { value: 'solo', label: 'Solo 1v1 (Jugadores Directos)', isIndividual: true },
+  ],
 };
 
 export const GAME_MODES: Record<string, { id: string; name: string; format: string; description: string }[]> = {

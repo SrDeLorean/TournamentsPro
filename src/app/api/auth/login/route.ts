@@ -32,10 +32,10 @@ export async function POST(request: Request) {
 
     const row = users[0];
 
-    // Ban check
-    if (row.is_banned === 1 || row.status === 'Baneado') {
+    // System ban / suspension check
+    if (row.status === 'Baneado' || row.status === 'Suspendido') {
       return apiError(
-        `Cuenta suspendida: ${row.ban_reason || 'Infracción a los términos de servicio'}`,
+        `Cuenta suspendida o baneada del sistema: ${row.ban_reason || 'Infracción a los términos de servicio'}`,
         403,
         'ACCOUNT_BANNED'
       );

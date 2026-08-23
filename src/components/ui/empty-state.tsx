@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 
 interface EmptyStateProps {
   icon: React.ReactNode;
@@ -24,9 +25,12 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
       className={cn(
-        'flex flex-col items-center justify-center text-center py-16 px-6 rounded-2xl glass-panel border border-[var(--border-card)] fade-in-up relative overflow-hidden',
+        'flex flex-col items-center justify-center text-center py-16 px-6 rounded-2xl bg-[var(--bg-card)]/40 backdrop-blur-xl border border-[var(--border-card)] relative overflow-hidden',
         className
       )}
     >
@@ -38,7 +42,7 @@ export function EmptyState({
 
       {/* Icon */}
       <div
-        className="relative w-16 h-16 rounded-2xl flex items-center justify-center mb-5 border border-[var(--border-card)]"
+        className="relative w-16 h-16 rounded-2xl flex items-center justify-center mb-5 border border-[var(--border-card)] shadow-sm"
         style={{
           background: `linear-gradient(135deg, color-mix(in srgb, ${brandColor} 15%, transparent), color-mix(in srgb, ${brandColor} 5%, transparent))`,
         }}
@@ -56,6 +60,6 @@ export function EmptyState({
           {actionLabel}
         </Button>
       )}
-    </div>
+    </motion.div>
   );
 }

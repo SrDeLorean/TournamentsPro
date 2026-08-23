@@ -1,41 +1,52 @@
 import { NextResponse } from 'next/server';
+import { queryDB } from '@/lib/db';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const gameSlug = searchParams.get('gameSlug');
+  const organizationId = searchParams.get('organizationId');
+  const organizationName = searchParams.get('organizationName');
 
   try {
-    const tournaments = [
-      {
-        id: 'tourn-1',
-        name: 'Liga Élite Pro 11v11 2026',
-        gameSlug: 'eafc26',
-        format: '11v11',
-        maxTeams: 16,
-        registeredTeamsCount: 12,
-        status: 'RECLUTAMIENTO',
-        prizePool: '$1,500 USD',
-        startDate: '2026-08-01',
-      },
-      {
-        id: 'tourn-2',
-        name: 'Copa Relámpago Shooters CS2',
-        gameSlug: 'csgo',
-        format: '5v5',
-        maxTeams: 8,
-        registeredTeamsCount: 8,
-        status: 'EN_CURSO',
-        prizePool: '$800 USD',
-        startDate: '2026-07-20',
-      },
-    ];
+    // Single query directly from unified 'competitions' table
+    const comps = await queryDB<any>(`
+      SELECT c.id, c.name, c.game_slug, c.organizer_id, c.mode_format as format, 
+             c.format as format_type, c.status, c.created_at, c.max_teams, c.registered_teams_count,
+             COALESCE(c.organization_id, u.organization_id, o.id) as organization_id,
+             COALESCE(o.name, u_org.name, 'Organización Oficial') as organization_name,
+             COALESCE(o.tag, u_org.tag, 'ORG') as organization_tag
+      FROM competitions c
+      LEFT JOIN users u ON c.organizer_id = u.id
+      LEFT JOIN organizations o ON c.organization_id = o.id
+      LEFT JOIN organizations u_org ON u.organization_id = u_org.id
+      ORDER BY c.created_at DESC
+    `);
 
-    const filtered = gameSlug ? tournaments.filter((t) => t.gameSlug === gameSlug) : tournaments;
+    let allTournaments = comps;
 
-    return NextResponse.json({ success: true, tournaments: filtered });
-  } catch (error: any) {
+    // Filter by game_slug
+    if (gameSlug && gameSlug !== 'ALL' && gameSlug !== 'TODOS') {
+      allTournaments = allTournaments.filter((t) => t.game_slug === gameSlug);
+    }
+
+    // Filter by organizationId or organizationName
+    if (organizationId && organizationId !== 'TODAS') {
+      allTournaments = allTournaments.filter((t) => t.organization_id === organizationId);
+    }
+
+    if (organizationName && organizationName !== 'TODAS') {
+      const orgLower = organizationName.toLowerCase();
+      allTournaments = allTournaments.filter(
+        (t) =>
+          (t.organization_name && t.organization_name.toLowerCase().includes(orgLower)) ||
+          (t.organization_tag && t.organization_tag.toLowerCase().includes(orgLower))
+      );
+    }
+
+    return NextResponse.json({ success: true, tournaments: allTournaments });
+  } catch (error: unknown) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Error al obtener torneos' },
+      { success: false, tournaments: [], error: error instanceof Error ? error.message : 'Error consultando competencias de BD' },
       { status: 500 }
     );
   }

@@ -103,10 +103,10 @@ export async function PUT(request: Request) {
       platform,
       position,
       secondaryPosition,
-      nacionalidad,
-      fechaNacimiento,
-      telefono,
-      biografia,
+      country,
+      birthDate,
+      phone,
+      bio,
       avatarUrl,
       foto,
       bannerUrl,
@@ -143,11 +143,11 @@ export async function PUT(request: Request) {
 
     const finalName = name !== undefined ? name : (u.name || 'Atleta Pro');
     const finalGamertag = gamertag !== undefined ? gamertag : (u.gamertag || 'Gamertag');
-    const userFoto = foto || avatarUrl || u.foto || u.avatar_url || '/images/default/logo-default.png';
-    const userBanner = bannerUrl || u.banner_url || '/images/default/banner-default.jpg';
+    const userFoto = foto || avatarUrl || u.avatar_url || '/images/default/logo-default.png';
+    const userBanner = bannerUrl || '/images/default/banner-default.jpg';
     const userGameProfiles = gameProfiles !== undefined
       ? (typeof gameProfiles === 'object' ? JSON.stringify(gameProfiles) : gameProfiles)
-      : (u.game_profiles || '{}');
+      : '{}';
 
     // Password update with hashing
     const pwdToUpdate = newPassword || password;
@@ -163,10 +163,10 @@ export async function PUT(request: Request) {
         platform = ?,
         position = ?,
         secondary_position = ?,
-        nacionalidad = ?,
-        fecha_nacimiento = ?,
-        telefono = ?,
-        biografia = ?,
+        country = ?,
+        birth_date = ?,
+        phone = ?,
+        bio = ?,
         avatar_url = ?,
         foto = ?,
         banner_url = ?,
@@ -188,10 +188,10 @@ export async function PUT(request: Request) {
         platform !== undefined ? platform : (u.platform || 'CROSSPLAY'),
         position !== undefined ? position : (u.position || 'DFC'),
         secondaryPosition !== undefined ? secondaryPosition : u.secondary_position,
-        nacionalidad !== undefined ? nacionalidad : u.nacionalidad,
-        fechaNacimiento !== undefined ? fechaNacimiento : u.fecha_nacimiento,
-        telefono !== undefined ? telefono : u.telefono,
-        biografia !== undefined ? biografia : u.biografia,
+        country !== undefined ? country : u.country,
+        birthDate !== undefined ? birthDate : u.birth_date,
+        phone !== undefined ? phone : u.phone,
+        bio !== undefined ? bio : u.bio,
         userFoto,
         userFoto,
         userBanner,

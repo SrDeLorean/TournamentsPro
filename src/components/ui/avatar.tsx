@@ -30,12 +30,12 @@ export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', statu
         <img
           src={src}
           alt={alt}
-          className={cn("rounded-xl object-cover border border-slate-700/80 shadow-md", sizes[size])}
+          className={cn("rounded-xl object-cover border border-[var(--border-card)] shadow-sm", sizes[size])}
         />
       ) : (
         <div
           className={cn(
-            "rounded-xl bg-gradient-to-br from-cyan-600 to-purple-600 flex items-center justify-center font-bold text-white shadow-md border border-cyan-400/30 uppercase",
+            "rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-violet)] flex items-center justify-center font-bold text-white shadow-sm border border-[var(--border-card)] uppercase",
             sizes[size]
           )}
         >

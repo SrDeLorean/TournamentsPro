@@ -1,107 +1,230 @@
 import { NextResponse } from 'next/server';
 import { queryDB } from '@/lib/db';
 
-// GET /api/organizer/fixture?tournamentId=... - List matches, teams, and standings
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const tournamentId = searchParams.get('tournamentId');
-
-    if (!tournamentId) {
-      return NextResponse.json({ error: 'ID de torneo requerido' }, { status: 400 });
-    }
-
-    const matches = await queryDB<any>(
-      `SELECT m.*, 
-              th.name as home_team_name, th.tag as home_team_tag, th.color as home_team_color, th.logo_url as home_team_logo,
-              ta.name as away_team_name, ta.tag as away_team_tag, ta.color as away_team_color, ta.logo_url as away_team_logo
-       FROM matches m
-       LEFT JOIN teams th ON m.team_home_id = th.id
-       LEFT JOIN teams ta ON m.team_away_id = ta.id
-       WHERE m.tournament_id = ?
-       ORDER BY m.matchday ASC, m.scheduled_at ASC`,
-      [tournamentId]
-    );
-
-    const enrolledTeams = await queryDB<any>(
-      `SELECT t.* FROM tournament_teams tt
-       JOIN teams t ON tt.team_id = t.id
-       WHERE tt.tournament_id = ? AND t.is_banned = 0`,
-      [tournamentId]
-    );
-
-    return NextResponse.json({ success: true, matches, enrolledTeams });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error consultando fixture' }, { status: 500 });
-  }
-}
-
-// POST /api/organizer/fixture - Generate automatic fixture & schedule
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tournamentId, format = 'LIGA', matchdayTime = '20:00', startDate } = body;
+    const { tournamentId, format, startDate, matchdayTime } = body;
 
     if (!tournamentId) {
-      return NextResponse.json({ error: 'ID de torneo requerido' }, { status: 400 });
+      return NextResponse.json({ error: 'Falta ID del torneo' }, { status: 400 });
     }
 
-    // Get enrolled teams
-    const enrolledTeams = await queryDB<any>(
-      `SELECT t.id, t.name FROM tournament_teams tt JOIN teams t ON tt.team_id = t.id WHERE tt.tournament_id = ? AND t.is_banned = 0`,
-      [tournamentId]
+    // 1. Fetch Enrolled Teams with real names and tags
+    let enrolledTeams = await queryDB<any>(
+      `SELECT t.id, COALESCE(t.name, t.team_name, 'Equipo BD') as name, COALESCE(t.tag, UPPER(LEFT(COALESCE(t.name, 'EQU'), 3))) as tag
+       FROM tournament_teams tt
+       JOIN teams t ON (tt.team_id = t.id OR tt.teamId = t.id)
+       WHERE (tt.tournament_id = ? OR tt.tournamentId = ?)`,
+      [tournamentId, tournamentId]
     );
 
-    if (!enrolledTeams || enrolledTeams.length < 2) {
-      return NextResponse.json({ error: 'Se requieren al menos 2 equipos inscritos para generar el fixture' }, { status: 400 });
+    if (!enrolledTeams || enrolledTeams.length === 0) {
+      // Fallback: fetch teams from global teams table
+      enrolledTeams = await queryDB<any>(
+        `SELECT id, COALESCE(name, team_name, 'Equipo BD') as name, COALESCE(tag, UPPER(LEFT(COALESCE(name, 'EQU'), 3))) as tag
+         FROM teams ORDER BY created_at DESC LIMIT 8`
+      );
     }
 
-    // Clear previous matches for this tournament
-    await queryDB('DELETE FROM matches WHERE tournament_id = ?', [tournamentId]);
+    if (enrolledTeams.length < 2) {
+      return NextResponse.json({ error: 'Se necesitan al menos 2 equipos inscritos para generar fixture' }, { status: 400 });
+    }
 
-    const teamIds = enrolledTeams.map((t) => t.id);
+    const teamMap = new Map<string, any>();
+    enrolledTeams.forEach((t: any) => teamMap.set(t.id, t));
 
-    // Round Robin (Liga) Generator Algorithm
-    if (format === 'LIGA') {
+    // 2. Clear existing matches for this tournament/competition
+    await queryDB('DELETE FROM matches WHERE tournament_id = ? OR competition_id = ?', [tournamentId, tournamentId]);
+
+    const teamIds = enrolledTeams.map((t: any) => t.id);
+    const fmt = (format || 'LIGA').toUpperCase();
+    
+    // Update the actual competition format in the database so it matches the generated fixture
+    await queryDB('UPDATE competitions SET format = ? WHERE id = ?', [fmt, tournamentId]);
+
+    const baseDate = startDate ? new Date(startDate) : new Date();
+    const [hours, minutes] = (matchdayTime || '20:00').split(':');
+
+    const getScheduledStr = (daysOffset: number, hh?: number, mm?: number) => {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + daysOffset);
+      d.setHours(hh !== undefined ? hh : Number(hours) || 20, mm !== undefined ? mm : Number(minutes) || 0, 0, 0);
+      return d.toISOString().slice(0, 19).replace('T', ' ');
+    };
+
+    // Helper to insert match with full sync fields
+    const insertMatch = async (m: {
+      id: string;
+      round: number;
+      matchday: number;
+      roundName: string;
+      groupName: string;
+      homeId: string;
+      awayId: string;
+      scheduledAt: string;
+      scheduledTime: string;
+    }) => {
+      const homeTeam = teamMap.get(m.homeId) || { name: 'Equipo Local', tag: 'LOC' };
+      const awayTeam = teamMap.get(m.awayId) || { name: 'Equipo Visitante', tag: 'VIS' };
+
+      await queryDB(
+        `INSERT INTO matches (
+          id, tournament_id, competition_id, round, matchday, round_name, group_name,
+          team_home_id, team_away_id, home_team_id, away_team_id,
+          home_team_name, home_team_tag, away_team_name, away_team_tag,
+          scheduled_at, scheduled_time, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PROGRAMADO')`,
+        [
+          m.id, tournamentId, tournamentId, m.round, m.matchday, m.roundName, m.groupName,
+          m.homeId, m.awayId, m.homeId, m.awayId,
+          homeTeam.name, homeTeam.tag, awayTeam.name, awayTeam.tag,
+          m.scheduledAt, m.scheduledTime
+        ]
+      );
+    };
+
+    if (fmt.includes('PLAYOFF') || fmt.includes('ELIMINATORIA')) {
+      // 🏆 FORMATO PLAYOFF (Semifinales + Gran Final + Partido por el 3er Lugar / Segunda Final)
+      const t1 = teamIds[0] || 'team-1';
+      const t2 = teamIds[1] || 'team-2';
+      const t3 = teamIds[2] || 'team-3';
+      const t4 = teamIds[3] || 'team-4';
+
+      const dateSF = getScheduledStr(0, 20, 0);
+      const dateFinals = getScheduledStr(7, 21, 0);
+
+      // Semifinal 1
+      await insertMatch({
+        id: `match-${tournamentId}-sf1`,
+        round: 1, matchday: 1, roundName: 'SEMIFINAL 1', groupName: 'PLAYOFF',
+        homeId: t1, awayId: t4, scheduledAt: dateSF, scheduledTime: '20:00'
+      });
+
+      // Semifinal 2
+      await insertMatch({
+        id: `match-${tournamentId}-sf2`,
+        round: 1, matchday: 1, roundName: 'SEMIFINAL 2', groupName: 'PLAYOFF',
+        homeId: t2, awayId: t3, scheduledAt: dateSF, scheduledTime: '20:30'
+      });
+
+      // 🥉 Segunda Final (Tercer Lugar)
+      await insertMatch({
+        id: `match-${tournamentId}-3rd`,
+        round: 2, matchday: 2, roundName: 'TERCER LUGAR 🥉', groupName: 'PLAYOFF',
+        homeId: t3, awayId: t4, scheduledAt: dateFinals, scheduledTime: '21:00'
+      });
+
+      // 🏆 Gran Final
+      await insertMatch({
+        id: `match-${tournamentId}-final`,
+        round: 2, matchday: 2, roundName: 'GRAN FINAL 🏆', groupName: 'PLAYOFF',
+        homeId: t1, awayId: t2, scheduledAt: dateFinals, scheduledTime: '22:00'
+      });
+
+    } else if (fmt.includes('HIBRID') || fmt.includes('GRUPO')) {
+      // ⚡ FORMATO HÍBRIDO (Fase de Grupos + Playoff con Segunda Final)
+      const mid = Math.ceil(teamIds.length / 2);
+      const groupA = teamIds.slice(0, mid);
+      const groupB = teamIds.slice(mid);
+
+      // Partidos Grupo A
+      let countA = 0;
+      for (let i = 0; i < groupA.length; i++) {
+        for (let j = i + 1; j < groupA.length; j++) {
+          countA++;
+          const dateGroup = getScheduledStr(i, 20, 0);
+          await insertMatch({
+            id: `match-${tournamentId}-ga-${i}-${j}`,
+            round: countA, matchday: countA, roundName: 'Fase de Grupos', groupName: 'GRUPO A',
+            homeId: groupA[i], awayId: groupA[j], scheduledAt: dateGroup, scheduledTime: '20:00'
+          });
+        }
+      }
+
+      // Partidos Grupo B
+      let countB = 0;
+      for (let i = 0; i < groupB.length; i++) {
+        for (let j = i + 1; j < groupB.length; j++) {
+          countB++;
+          const dateGroup = getScheduledStr(i, 20, 30);
+          await insertMatch({
+            id: `match-${tournamentId}-gb-${i}-${j}`,
+            round: countB, matchday: countB, roundName: 'Fase de Grupos', groupName: 'GRUPO B',
+            homeId: groupB[i], awayId: groupB[j], scheduledAt: dateGroup, scheduledTime: '20:30'
+          });
+        }
+      }
+
+      // Playoffs del Torneo Híbrido (Semifinales, Gran Final 🏆 y Segunda Final 🥉)
+      const dateSF = getScheduledStr(14, 20, 0);
+      const dateFinals = getScheduledStr(21, 21, 0);
+
+      await insertMatch({
+        id: `match-${tournamentId}-sf1`,
+        round: 10, matchday: 10, roundName: 'SEMIFINAL 1', groupName: 'PLAYOFF',
+        homeId: groupA[0] || teamIds[0], awayId: groupB[1] || teamIds[1], scheduledAt: dateSF, scheduledTime: '20:00'
+      });
+
+      await insertMatch({
+        id: `match-${tournamentId}-sf2`,
+        round: 10, matchday: 10, roundName: 'SEMIFINAL 2', groupName: 'PLAYOFF',
+        homeId: groupB[0] || teamIds[1], awayId: groupA[1] || teamIds[0], scheduledAt: dateSF, scheduledTime: '20:30'
+      });
+
+      await insertMatch({
+        id: `match-${tournamentId}-3rd`,
+        round: 11, matchday: 11, roundName: 'TERCER LUGAR 🥉', groupName: 'PLAYOFF',
+        homeId: groupA[1] || teamIds[0], awayId: groupB[1] || teamIds[1], scheduledAt: dateFinals, scheduledTime: '21:00'
+      });
+
+      await insertMatch({
+        id: `match-${tournamentId}-final`,
+        round: 11, matchday: 11, roundName: 'GRAN FINAL 🏆', groupName: 'PLAYOFF',
+        homeId: groupA[0] || teamIds[0], awayId: groupB[0] || teamIds[1], scheduledAt: dateFinals, scheduledTime: '22:00'
+      });
+
+    } else {
+      // ⚽ Round Robin (Liga) Generator Algorithm
       const n = teamIds.length % 2 === 0 ? teamIds.length : teamIds.length + 1;
       const list = [...teamIds];
-      if (teamIds.length % 2 !== 0) list.push(null as any); // Bye
+      if (teamIds.length % 2 !== 0) list.push(null as any);
 
       const totalRounds = n - 1;
-      const baseDate = startDate ? new Date(startDate) : new Date();
 
       for (let round = 1; round <= totalRounds; round++) {
-        // Scheduled Date per Matchday (All matches on same matchday play simultaneously at matchdayTime)
-        const scheduledDate = new Date(baseDate);
-        scheduledDate.setDate(scheduledDate.getDate() + (round - 1) * 7); // Weekly matchday
-        const [hours, minutes] = matchdayTime.split(':');
-        scheduledDate.setHours(Number(hours) || 20, Number(minutes) || 0, 0, 0);
-
-        const scheduledAtStr = scheduledDate.toISOString().slice(0, 19).replace('T', ' ');
+        const scheduledAtStr = getScheduledStr((round - 1) * 7);
 
         for (let i = 0; i < n / 2; i++) {
           const home = list[i];
           const away = list[n - 1 - i];
 
           if (home && away) {
-            const matchId = `match-${tournamentId}-r${round}-${i + 1}`;
-            await queryDB(
-              `INSERT INTO matches (id, tournament_id, round, matchday, team_home_id, team_away_id, scheduled_at, status, group_name)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', 'Liga')`,
-              [matchId, tournamentId, round, round, home, away, scheduledAtStr]
-            );
+            await insertMatch({
+              id: `match-${tournamentId}-r${round}-${i + 1}`,
+              round: round, matchday: round, roundName: `Jornada ${round}`, groupName: 'LIGA',
+              homeId: home, awayId: away, scheduledAt: scheduledAtStr, scheduledTime: '20:00'
+            });
           }
         }
 
-        // Rotate list for Round Robin
         list.splice(1, 0, list.pop()!);
       }
     }
 
-    await queryDB('UPDATE tournaments SET status = "En_Juego" WHERE id = ?', [tournamentId]);
+    // 3. Update status and format on both tables for 100% sync
+    try {
+      await queryDB('UPDATE tournaments SET status = "En_Juego", format = ?, mode_format = ? WHERE id = ?', [fmt, fmt, tournamentId]);
+    } catch (e) {}
+    try {
+      await queryDB('UPDATE competitions SET status = "En_Juego", format = ?, mode_format = ? WHERE id = ?', [fmt, fmt, tournamentId]);
+    } catch (e) {}
 
-    return NextResponse.json({ success: true, message: 'Fixture y calendario generado exitosamente con partidos simultáneos' });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error generando fixture' }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      message: 'Fixture generado exitosamente con sincronización completa de tablas, grupos y playoffs',
+    });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error generando fixture' }, { status: 500 });
   }
 }

@@ -4,23 +4,20 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
-import { User, BarChart2, FileText, Settings } from 'lucide-react';
+import { User, BarChart2, FileText, Settings, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export function UserAthleteSubnavbar() {
   const pathname = usePathname();
   const { currentUser, activeGameSlug } = useAuth();
 
-  // Only render for regular Users/Captains, not Admin/Organizer
-  const roleStr = (currentUser?.role || '').toLowerCase();
-  if (roleStr === 'administrador' || roleStr === 'admin' || roleStr === 'organizador') {
-    return null;
-  }
+  if (!currentUser) return null;
 
   const userId = currentUser?.id || 'usr-1784762163316';
 
   const userOptions = [
     { href: `/${activeGameSlug}/jugadores/${userId}`, label: 'Dashboard (Mi Ficha)', icon: <User className="w-3.5 h-3.5" /> },
+    { href: `/${activeGameSlug}/mis-equipos`, label: 'Mis Equipos', icon: <Shield className="w-3.5 h-3.5 text-cyan-400" /> },
     { href: `/${activeGameSlug}/stats`, label: 'Mis Stats eSports', icon: <BarChart2 className="w-3.5 h-3.5" /> },
     { href: `/${activeGameSlug}/ofertas`, label: 'Mis Ofertas & Fichajes', icon: <FileText className="w-3.5 h-3.5" /> },
     { href: `/${activeGameSlug}/atleta-ajustes`, label: 'Ajustes de Perfil', icon: <Settings className="w-3.5 h-3.5" /> },

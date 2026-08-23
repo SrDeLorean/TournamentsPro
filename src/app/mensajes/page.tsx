@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { ChatSystem } from '@/components/chat/chat-system';
 
@@ -14,7 +14,9 @@ export default function MessagesPage() {
         description="Canal de comunicación oficial entre Atletas, Capitanes de Equipos y Organizadores de Torneos."
       />
 
-      <ChatSystem />
+      <Suspense fallback={<div className="skeleton h-96 rounded-3xl" />}>
+        <ChatSystem />
+      </Suspense>
     </div>
   );
 }

@@ -75,29 +75,29 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="w-full max-w-xl glass-panel p-6 sm:p-8 rounded-3xl border border-emerald-500/40 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 dark:bg-black/80 backdrop-blur-md p-4 overflow-y-auto font-mono">
+      <div className="w-full max-w-xl bg-[var(--bg-card)] p-6 sm:p-8 rounded-3xl border border-[var(--border-card)] space-y-6 shadow-2xl animate-in fade-in zoom-in-95 my-8 text-[var(--text-primary)]">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-950 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 font-black text-xl shadow-xl">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-950/80 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 font-black text-xl shadow-xl">
               ⚽
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-xl font-black uppercase text-white">
+                <h3 className="text-lg sm:text-xl font-black uppercase text-[var(--text-heading)]">
                   Reporte de Marcador Oficial
                 </h3>
                 <Badge variant="emerald">Capitán Matchday</Badge>
               </div>
-              <p className="text-xs text-[var(--text-secondary)] font-medium">
+              <p className="text-xs text-[var(--text-muted)] font-medium">
                 {currentMatch.tournamentName}
               </p>
             </div>
           </div>
 
-          <button onClick={onClose} className="p-1 rounded-xl text-[var(--text-muted)] hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -121,7 +121,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
         <form onSubmit={handleSubmitReport} className="space-y-5">
           
           {/* Score Counter Box */}
-          <div className="p-5 rounded-2xl bg-slate-900 border border-purple-500/30 space-y-4">
+          <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4">
             <span className="text-[10px] font-black uppercase text-purple-400 block tracking-wider text-center">
               🛡️ Marcador Final del Encuentro
             </span>
@@ -129,29 +129,29 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
             <div className="grid grid-cols-5 items-center gap-2 text-center">
               {/* Home Team */}
               <div className="col-span-2 space-y-2">
-                <span className="text-xs font-black text-white uppercase block truncate">{currentMatch.homeTeam}</span>
+                <span className="text-xs font-black text-[var(--text-heading)] uppercase block truncate">{currentMatch.homeTeam}</span>
                 <input
                   type="number"
                   min="0"
                   max="99"
                   value={homeScore}
                   onChange={(e) => setHomeScore(parseInt(e.target.value) || 0)}
-                  className="w-16 h-14 mx-auto text-center rounded-xl bg-slate-950 border-2 border-cyan-400 font-black text-2xl text-cyan-400 focus:outline-none"
+                  className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-cyan-400 font-black text-2xl text-cyan-400 focus:outline-none"
                 />
               </div>
 
-              <span className="text-xl font-black text-slate-500 font-mono">VS</span>
+              <span className="text-xl font-black text-[var(--text-muted)] font-mono">VS</span>
 
               {/* Away Team */}
               <div className="col-span-2 space-y-2">
-                <span className="text-xs font-black text-white uppercase block truncate">{currentMatch.awayTeam}</span>
+                <span className="text-xs font-black text-[var(--text-heading)] uppercase block truncate">{currentMatch.awayTeam}</span>
                 <input
                   type="number"
                   min="0"
                   max="99"
                   value={awayScore}
                   onChange={(e) => setAwayScore(parseInt(e.target.value) || 0)}
-                  className="w-16 h-14 mx-auto text-center rounded-xl bg-slate-950 border-2 border-purple-400 font-black text-2xl text-purple-400 focus:outline-none"
+                  className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-purple-400 font-black text-2xl text-purple-400 focus:outline-none"
                 />
               </div>
             </div>
@@ -159,24 +159,24 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
 
           {/* MVP Selection Input */}
           <div className="space-y-1">
-            <label className="text-xs font-bold uppercase text-white block">Jugador MVP del Partido (Opcional)</label>
+            <label className="text-xs font-bold uppercase text-[var(--text-heading)] block">Jugador MVP del Partido (Opcional)</label>
             <input
               type="text"
               placeholder="ej. @SrDeLorean (3 Goles)"
               value={mvpName}
               onChange={(e) => setMvpName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl input-theme border border-[var(--border-card)] text-xs font-bold text-white"
+              className="w-full px-3.5 py-2.5 rounded-xl input-theme text-xs font-bold font-mono"
             />
           </div>
 
           {/* Upload Screenshot Evidence */}
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-white block flex items-center gap-1.5">
+            <label className="text-xs font-bold uppercase text-[var(--text-heading)] block flex items-center gap-1.5">
               <Camera className="w-4 h-4 text-emerald-400" />
               Adjuntar Captura de Pantalla / Evidencia del Marcador
             </label>
 
-            <div className="p-4 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/60 text-center hover:border-emerald-500 transition-colors">
+            <div className="p-4 rounded-2xl border-2 border-dashed border-[var(--border-card)] bg-[var(--bg-main)] text-center hover:border-emerald-500 transition-colors">
               <input
                 type="file"
                 accept="image/*"
@@ -192,9 +192,9 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    <Upload className="w-8 h-8 text-slate-400 mx-auto" />
-                    <span className="text-xs font-bold text-slate-300 block">Haz clic para subir la captura del juego</span>
-                    <span className="text-[10px] text-slate-500 block">Soporta PNG, JPG o AVIF (Máx 5MB)</span>
+                    <Upload className="w-8 h-8 text-[var(--text-muted)] mx-auto" />
+                    <span className="text-xs font-bold text-[var(--text-primary)] block">Haz clic para subir la captura del juego</span>
+                    <span className="text-[10px] text-[var(--text-muted)] block">Soporta PNG, JPG o AVIF (Máx 5MB)</span>
                   </div>
                 )}
               </label>
@@ -203,13 +203,13 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
 
           {/* Footer Submit */}
           <div className="flex items-center justify-end gap-2 border-t border-[var(--border-card)] pt-4">
-            <Button type="button" onClick={onClose} variant="ghost" className="text-xs font-bold text-slate-400">
+            <Button type="button" onClick={onClose} variant="ghost" className="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)]">
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="font-black text-xs uppercase bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-2.5"
+              className="font-black text-xs uppercase bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-2.5 rounded-xl shadow-lg"
             >
               {isSubmitting ? 'Enviando Reporte...' : 'Enviar Reporte de Marcador'}
             </Button>

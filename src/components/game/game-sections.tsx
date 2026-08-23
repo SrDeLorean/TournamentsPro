@@ -36,24 +36,12 @@ export function PlayerStatsSection({ game }: { game: GameConfig }) {
   );
 }
 
-// ── Player Offers Section ───────────────────────────────────────────────────
+import { NewUserOffersView } from '../user/new-user-offers';
 
 export function PlayerOffersSection({ game }: { game: GameConfig }) {
   return (
-    <div className="space-y-6 pt-3 sm:pt-4 animate-in fade-in duration-300">
-      <Card className="p-6 space-y-4">
-        <h3 className="text-base font-black uppercase text-white">Propuestas de Fichaje en {game.name}</h3>
-        <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/30 flex items-center justify-between">
-          <div>
-            <span className="font-extrabold text-sm text-white uppercase block">Sangre Nueva FC</span>
-            <span className="text-xs text-slate-400">Contrato de Titular ({game.name})</span>
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">Aceptar</Button>
-            <Button size="sm" variant="ghost" className="text-rose-400 font-bold text-xs">Rechazar</Button>
-          </div>
-        </div>
-      </Card>
+    <div className="pt-3 sm:pt-4 animate-in fade-in duration-300">
+      <NewUserOffersView />
     </div>
   );
 }
@@ -91,24 +79,14 @@ export function ClubDashboardSection({ game, team, TeamProfileViewComponent }: C
   return <TeamProfileViewComponent team={team} brandColor={game.brandColor} />;
 }
 
+import { NewSquadManagementView } from './new-squad-management';
+
 // ── Roster Section ──────────────────────────────────────────────────────────
 
-export function RosterSection({ game, currentUser }: { game: GameConfig; currentUser: UserProfile | null }) {
+export function RosterSection({ game }: { game: GameConfig }) {
   return (
-    <div className="space-y-6 pt-3 sm:pt-4 animate-in fade-in duration-300">
-      <Card className="p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
-          <h3 className="text-base font-black uppercase text-white">CRUD Roster Oficial ({game.name})</h3>
-          <Button size="sm" className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs">+ Añadir Integrante</Button>
-        </div>
-        <div className="p-3.5 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-3">
-            <span className="font-mono font-bold text-purple-300">#10</span>
-            <span className="font-bold text-white uppercase">{currentUser?.name}</span>
-          </div>
-          <Badge variant="violet">Capitán</Badge>
-        </div>
-      </Card>
+    <div className="pt-3 sm:pt-4 animate-in fade-in duration-300">
+      <NewSquadManagementView game={game} />
     </div>
   );
 }

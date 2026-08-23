@@ -7,17 +7,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/components/providers/auth-provider';
-import { Building2, Plus, Shield, Edit, Globe, Calendar, MapPin, Sparkles, Users, CheckCircle2 } from 'lucide-react';
+import { Building2, Plus, Shield, Edit, Globe, Calendar, MapPin, Sparkles, Users, CheckCircle2, Trophy, Star } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
+import { EsportsCard } from '@/components/ui/esports-card';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function OrganizationsModulePage() {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'directory' | 'admin'>('directory');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [availableOrganizers, setAvailableOrganizers] = useState<any[]>([]);
@@ -72,6 +78,31 @@ export default function OrganizationsModulePage() {
   }, [editingOrg]);
 
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
+
+  const filteredOrgs = organizations.filter((org) => {
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = org.name.toLowerCase().includes(term) || (org.tag && org.tag.toLowerCase().includes(term)) || (org.country && org.country.toLowerCase().includes(term));
+    const allowed = Array.isArray(org.allowedGames)
+      ? org.allowedGames
+      : (typeof org.allowedGames === 'string' ? JSON.parse(org.allowedGames || '[]') : []);
+    const matchesDiscipline = selectedDiscipline === 'ALL' || allowed.includes(selectedDiscipline) || org.game_slug === selectedDiscipline;
+    return matchesSearch && matchesDiscipline;
+  });
+
+  const itemsPerPage = 12;
+  const totalPages = Math.ceil(filteredOrgs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentOrgs = filteredOrgs.slice(startIndex, startIndex + itemsPerPage);
+
+  const DISCIPLINE_OPTIONS = [
+    { id: 'ALL', label: 'TODAS LAS DISCIPLINAS' },
+    { id: 'eafc26', label: 'EA FC 26' },
+    { id: 'valorant', label: 'VALORANT' },
+    { id: 'csgo', label: 'CS2' },
+    { id: 'lol', label: 'LOL' },
+    { id: 'rocketleague', label: 'ROCKET LEAGUE' },
+    { id: 'fortnite', label: 'FORTNITE' },
+  ];
 
   const handleCreateOrg = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -210,19 +241,19 @@ export default function OrganizationsModulePage() {
 
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => setActiveTab('directory')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'directory' ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          1. Directorio Oficial de Organizaciones ({organizations.length})
-        </button>
+      {/* Navigation Tabs (Solo para Administradores) */}
+      {isAdmin && (
+        <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setActiveTab('directory')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
+              activeTab === 'directory' ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            Directorio de Organizaciones
+          </button>
 
-        {isAdmin && (
           <button
             onClick={() => setActiveTab('admin')}
             className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
@@ -230,90 +261,130 @@ export default function OrganizationsModulePage() {
             }`}
           >
             <Shield className="w-4 h-4" />
-            2. Administración & Asignación de Organizadores (Admin Only)
+            Administración & Asignación de Organizadores
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* TAB 1: DIRECTORIO DE ORGANIZACIONES MADRE */}
       {activeTab === 'directory' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {organizations.map((org) => (
-            <Card key={org.id} className="overflow-hidden bg-slate-950 border border-white/10 space-y-0 shadow-2xl hover:border-purple-400/50 transition-all">
-              {/* Banner de Portada */}
-              <div className="h-28 relative bg-gradient-to-r from-purple-950 via-slate-900 to-cyan-950 overflow-hidden">
-                {org.banner_url ? (
-                  <img src={org.banner_url} alt={org.name} className="w-full h-full object-cover opacity-60" />
-                ) : (
-                  <div className="w-full h-full bg-purple-900/20" />
-                )}
-                <div className="absolute top-3 right-3 flex items-center gap-2">
-                  <Badge variant="cyan" className="font-mono text-[10px] uppercase font-bold">
-                    ★ {org.rating || '4.98'} Rating
-                  </Badge>
-                  <Badge className="bg-emerald-950 text-emerald-300 font-mono text-[10px] border border-emerald-500/30">
-                    🟢 {org.status || 'Activa'}
-                  </Badge>
-                </div>
-              </div>
+        <div className="space-y-6">
+          <FilterBar
+            searchPlaceholder="Buscar organizaciones madre por nombre, tag o país..."
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            options={DISCIPLINE_OPTIONS}
+            activeFilter={selectedDiscipline}
+            onFilterChange={setSelectedDiscipline}
+            renderAsSelect={true}
+            count={filteredOrgs.length}
+            countLabel="ORGANIZACIONES"
+            brandColor="#A855F7"
+          />
 
-              {/* Contenido Principal & Logo */}
-              <div className="p-6 pt-0 relative space-y-4">
-                <div className="flex items-end justify-between -mt-8 mb-2">
-                  <div className="w-16 h-16 rounded-2xl bg-slate-900 border-2 border-purple-400 overflow-hidden shadow-xl flex items-center justify-center font-black text-white text-xl">
-                    {org.logo_url ? (
-                      <img src={org.logo_url} alt={org.name} className="w-full h-full object-cover" />
-                    ) : (
-                      org.tag
-                    )}
-                  </div>
-                  <span className="text-xs font-mono text-purple-300 font-bold flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5" /> {org.country || 'Venezuela'} • Est. {org.founded_year || '2019'}
-                  </span>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {currentOrgs.map((org, index) => {
+              const bannerImg = org.banner_url || org.bannerUrl || '/images/default/banner-default.jpg';
+              const logoImg = org.logo_url || org.logoUrl || '/images/default/logo-default.png';
 
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-black text-white text-lg uppercase tracking-wider">{org.name}</h3>
-                    <Sparkles className="w-4 h-4 text-amber-400" />
-                  </div>
-                  <p className="text-xs text-slate-400 font-mono">Tag Oficial: [{org.tag}]</p>
-                </div>
+              const allowedList = Array.isArray(org.allowedGames)
+                ? org.allowedGames
+                : (typeof org.allowedGames === 'string' ? JSON.parse(org.allowedGames || '[]') : []);
 
-                {/* Organizadores Asignados */}
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 space-y-2">
-                  <span className="text-[10px] font-mono uppercase text-slate-400 font-black tracking-wider block flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-purple-400" />
-                    Organizadores Asignados:
-                  </span>
-                  {org.organizers && org.organizers.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {org.organizers.map((oUser: any) => (
-                        <div key={oUser.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-500/30">
-                          <Avatar fallback={oUser.name} src={oUser.avatar_url || oUser.foto} size="sm" />
-                          <span className="text-[11px] font-bold text-purple-200">@{oUser.gamertag || oUser.name}</span>
-                        </div>
-                      ))}
+              const primarySlug = selectedDiscipline !== 'ALL'
+                ? selectedDiscipline
+                : (allowedList[0] || org.game_slug || 'eafc26');
+
+              const gameCfg = GAMES_CATALOG[primarySlug] || GAMES_CATALOG['eafc26'];
+              const orgBrandColor = gameCfg?.brandColor || '#A855F7';
+
+              return (
+                <EsportsCard
+                  key={org.id}
+                  title={org.name}
+                  subtitle={`🎮 ${gameCfg?.name || 'eSports'} | ${org.tag ? `[${org.tag}]` : 'Madre'}`}
+                  description={org.description || `Organización oficial eSports y administradora de torneos competitivos.`}
+                  bannerUrl={bannerImg}
+                  logoUrl={logoImg}
+                  tag={org.tag}
+                  country={org.country || 'Global'}
+                  socials={
+                    org.socialMedia || org.social_media || {
+                      twitter: org.social_twitter,
+                      instagram: org.social_instagram,
+                      twitch: org.social_twitch,
+                      youtube: org.social_youtube,
+                      website: org.website,
+                    }
+                  }
+                  badges={[
+                    { text: gameCfg?.name || 'eSports', variant: 'purple' },
+                    { text: org.status || 'Activa', variant: 'emerald', pulse: true },
+                  ]}
+                  stats={[
+                    { icon: <Trophy className="w-3.5 h-3.5 text-amber-400" />, label: 'Organizadores', value: org.organizers?.length || 1 },
+                    { icon: <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />, label: 'Prestigio', value: org.rating || '4.98', highlight: true },
+                  ]}
+                  footerLeft={
+                    <span className="flex items-center gap-1">
+                      <Shield className="w-3.5 h-3.5" style={{ color: orgBrandColor }} />
+                      <span style={{ color: orgBrandColor }} className="font-bold">Est. {org.founded_year || org.foundedYear || '2019'}</span>
+                    </span>
+                  }
+                  actionText="VER DETALLES"
+                  brandColor={orgBrandColor}
+                  animationDelay={index * 50}
+                >
+                  <div className="pt-2 border-t border-[var(--border-card)]/50 space-y-1.5 font-mono">
+                    <span className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-wider block">
+                      Disciplinas Habilitadas:
+                    </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {(allowedList.length > 0 ? allowedList : ['eafc26', 'valorant', 'lol']).map((gSlug: string) => {
+                        const gConfig = GAMES_CATALOG[gSlug];
+                        if (!gConfig) return null;
+
+                        return (
+                          <div
+                            key={gSlug}
+                            title={`Disciplina: ${gConfig.name}`}
+                            className="w-7 h-7 rounded-xl bg-[var(--bg-main)]/90 border flex items-center justify-center p-1.5 hover:scale-125 transition-all duration-300 shadow-md group/logo cursor-pointer"
+                            style={{
+                              borderColor: gConfig.brandColor,
+                              boxShadow: `0 0 10px color-mix(in srgb, ${gConfig.brandColor} 35%, transparent)`,
+                            }}
+                          >
+                            {gConfig.logoUrl ? (
+                              <img
+                                src={gConfig.logoUrl}
+                                alt={gConfig.name}
+                                className="w-full h-full object-contain filter drop-shadow group-hover/logo:scale-110 transition-transform"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-xs">{gConfig.icon || '🎮'}</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ) : (
-                    <span className="text-xs text-slate-500 italic">Sin organizadores vinculados</span>
-                  )}
-                </div>
-
-                {/* Disciplinas Autorizadas */}
-                <div className="pt-2 border-t border-white/10 space-y-1.5">
-                  <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase block">Disciplinas eSports Autorizadas:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(org.allowedGames || ['eafc26', 'valorant']).map((gameSlug: string) => (
-                      <span key={gameSlug} className="px-2.5 py-1 rounded bg-purple-950 text-purple-300 font-mono text-[10px] font-bold border border-purple-500/30 uppercase">
-                        {gameSlug}
-                      </span>
-                    ))}
                   </div>
-                </div>
-              </div>
-            </Card>
-          ))}
+                </EsportsCard>
+              );
+            })}
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              brandColor="#A855F7"
+              className="pt-6 pb-2"
+            />
+          )}
         </div>
       )}
 

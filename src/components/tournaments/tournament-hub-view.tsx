@@ -290,7 +290,7 @@ export function TournamentHubView({ game, initialSection = 'competencias' }: Tou
                   <tr key={row.team} className="hover:bg-[var(--bg-card-hover)] transition-colors">
                     <td className="py-3 px-3 font-mono font-black text-amber-400">#{row.rank}</td>
                     <td className="py-3 px-3 font-extrabold text-[var(--text-heading)] flex items-center gap-2">
-                      <div className="w-6 h-6 rounded bg-slate-950 border flex items-center justify-center text-[10px] font-black" style={{ borderColor: row.color, color: row.color }}>
+                      <div className="w-6 h-6 rounded bg-[var(--bg-main)] border flex items-center justify-center text-[10px] font-black" style={{ borderColor: row.color, color: row.color }}>
                         {row.team.substring(0, 2)}
                       </div>
                       <span>{row.team}</span>
@@ -404,11 +404,11 @@ export function TournamentHubView({ game, initialSection = 'competencias' }: Tou
                 <div className="flex items-center justify-center gap-4 font-black text-sm text-[var(--text-heading)]">
                   <div className="flex items-center gap-2">
                     <span>{m.home}</span>
-                    <span className="w-6 h-6 rounded bg-slate-900 border border-slate-700 text-[10px] flex items-center justify-center font-bold text-cyan-400">{m.homeLogo}</span>
+                    <span className="w-6 h-6 rounded bg-[var(--bg-main)] border border-[var(--border-card)] text-[10px] flex items-center justify-center font-bold text-[var(--text-primary)]">{m.homeLogo}</span>
                   </div>
-                  <span className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-amber-400 font-mono text-xs">{m.score}</span>
+                  <span className="px-3 py-1 rounded bg-[var(--bg-main)] border border-[var(--border-card)] text-[var(--game-brand)] font-mono text-xs">{m.score}</span>
                   <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded bg-slate-900 border border-slate-700 text-[10px] flex items-center justify-center font-bold text-purple-400">{m.awayLogo}</span>
+                    <span className="w-6 h-6 rounded bg-[var(--bg-main)] border border-[var(--border-card)] text-[10px] flex items-center justify-center font-bold text-[var(--text-primary)]">{m.awayLogo}</span>
                     <span>{m.away}</span>
                   </div>
                 </div>
@@ -456,20 +456,20 @@ export function TournamentHubView({ game, initialSection = 'competencias' }: Tou
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-950 border-2 border-cyan-400 flex items-center justify-center font-black text-xs text-cyan-400">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--bg-main)] border-2 flex items-center justify-center font-black text-xs transition-colors" style={{ borderColor: game.brandColor, color: game.brandColor }}>
                     {myTeam.logoText}
                   </div>
                   <div>
                     <span className="font-black text-sm text-[var(--text-heading)] block">{myTeam.name}</span>
-                    <span className="text-xs text-[var(--accent-cyan)] font-mono">Capitán: {myTeam.captainName} • {game.name}</span>
+                    <span className="text-xs text-[var(--text-secondary)] font-mono">Capitán: {myTeam.captainName} • {game.name}</span>
                   </div>
                 </div>
                 <Badge variant="emerald">Habilitado</Badge>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-950 border border-purple-500/30 space-y-2 text-xs">
-                <span className="font-bold text-purple-300 uppercase block">Regla de Elegibilidad de Plantilla:</span>
-                <p className="text-slate-300">
+              <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-2 text-xs shadow-inner">
+                <span className="font-bold text-[var(--text-primary)] uppercase block">Regla de Elegibilidad de Plantilla:</span>
+                <p className="text-[var(--text-secondary)]">
                   Al confirmar la inscripción, los integrantes inscritos en la plantilla de {myTeam.name} quedarán habilitados para la {tournament.name}.
                 </p>
               </div>
@@ -484,11 +484,11 @@ export function TournamentHubView({ game, initialSection = 'competencias' }: Tou
               </Button>
             </div>
           ) : (
-            <div className="p-6 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-center space-y-4">
-              <AlertCircle className="w-10 h-10 text-amber-400 mx-auto" />
+            <div className="p-6 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] text-center space-y-4 shadow-inner">
+              <AlertCircle className="w-10 h-10 text-[var(--text-muted)] mx-auto" />
               <div>
-                <h4 className="text-sm font-black uppercase text-amber-300">No posees un club registrado en {game.name}</h4>
-                <p className="text-xs text-slate-300 max-w-md mx-auto mt-1">
+                <h4 className="text-sm font-black uppercase text-[var(--text-heading)]">No posees un club registrado en {game.name}</h4>
+                <p className="text-xs text-[var(--text-secondary)] max-w-md mx-auto mt-1">
                   Para participar en este torneo debes ser Capitán o haber fundado un club en la disciplina de {game.name}.
                 </p>
               </div>

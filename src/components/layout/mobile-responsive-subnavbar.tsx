@@ -40,9 +40,9 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
   // 1. Game Sections
   const gameSections = [
     { id: 'home', label: 'Home', href: `/${game.slug}`, icon: <Home className="w-3.5 h-3.5" /> },
-    { id: 'competencias', label: 'Ligas', href: `/${game.slug}/competencias`, icon: <Trophy className="w-3.5 h-3.5" /> },
+    { id: 'organizaciones', label: 'Torneos', href: `/${game.slug}/organizaciones`, icon: <Trophy className="w-3.5 h-3.5" /> },
     { id: 'equipos', label: 'Equipos', href: `/${game.slug}/equipos`, icon: <Users className="w-3.5 h-3.5" /> },
-    { id: 'clasificacion', label: 'Torneos', href: `/${game.slug}/clasificacion`, icon: <Award className="w-3.5 h-3.5" /> },
+    { id: 'clasificacion', label: 'Clasificación', href: `/${game.slug}/clasificacion`, icon: <Award className="w-3.5 h-3.5" /> },
     { id: 'traspasos', label: 'Fichajes', href: `/${game.slug}/traspasos`, icon: <ArrowRightLeft className="w-3.5 h-3.5" /> },
     { id: 'tops', label: 'Tops', href: `/${game.slug}/tops`, icon: <Star className="w-3.5 h-3.5" /> },
     { id: 'infografia', label: 'Stats', href: `/${game.slug}/infografia`, icon: <PieChart className="w-3.5 h-3.5" /> },

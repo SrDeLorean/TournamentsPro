@@ -12,6 +12,12 @@ import {
   Shield, Users, Calendar, ArrowRightLeft, BarChart3, History, Monitor, Tv, Filter, Award, CheckCircle2, MessageSquare, Sparkles, Settings
 } from 'lucide-react';
 
+import { getNewTeamSquadAction } from '@/app/actions/new-squads';
+import { getSentContractsByTeamAction } from '@/app/actions/new-transfers';
+import { GAMES_CATALOG } from '@/lib/games-data';
+import { ClassificationView } from '@/components/tournaments/classification-view';
+import { FixtureScheduleView } from '@/components/tournaments/fixture-schedule-view';
+
 interface TeamProfileViewProps {
   team: TeamData;
   onBack?: () => void;
@@ -22,8 +28,29 @@ export type ProfileTab = 'plantilla' | 'posiciones' | 'calendario' | 'traspasos'
 
 export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamProfileViewProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>('plantilla');
-
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+
+  const [squad, setSquad] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const [sqRes, cRes] = await Promise.all([
+          getNewTeamSquadAction(team.id),
+          getSentContractsByTeamAction(team.id)
+        ]);
+        if (sqRes.success) setSquad(sqRes.squad);
+        if (cRes.success) setContracts(cRes.offers);
+      } catch(e) {}
+      setIsLoading(false);
+    }
+    loadData();
+  }, [team.id]);
+
+  const game = GAMES_CATALOG[(team as any).gameSlug || 'eafc26'];
 
   // Dynamic theme color for team profile matching the active game
   const activeColor = brandColor || team.color || '#00F0FF';
@@ -38,25 +65,17 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
     { id: 'historico', label: 'Histórico & Palmarés', icon: <History className="w-3.5 h-3.5" /> },
   ];
 
-  // Mock Squad Roster grouped by position roles
-  const mockRoster = {
-    gk: [
-      { id: '1', name: 'AFROJIMENEZ', gamertag: 'AfroJimenez_01', pos: 'POR', number: '1', platform: 'PS5', avatar: '' },
-    ],
-    df: [
-      { id: '2', name: 'SIR RODRICK', gamertag: 'SirRodrick_FC', pos: 'DFC', number: '4', platform: 'PS5', avatar: '' },
-      { id: '3', name: 'SG Jotta', gamertag: 'SG_Jotta_16', pos: 'DFC', number: '2', platform: 'XBOX', avatar: '' },
-      { id: '4', name: 'Zatarain_04', gamertag: 'Zatarain04', pos: 'LD', number: '3', platform: 'PC', avatar: '' },
-    ],
-    mf: [
-      { id: '5', name: 'AcZinoMeme', gamertag: 'AcZinoMeme', pos: 'MCD', number: '6', platform: 'PS5', avatar: '' },
-      { id: '6', name: 'DeLorean_8', gamertag: 'SrDeLorean', pos: 'MCO', number: '8', platform: 'PS5', avatar: '' },
-    ],
-    fw: [
-      { id: '7', name: 'Caxorro', gamertag: 'Caxorro16', pos: 'DC', number: '9', platform: 'PS5', isCaptain: true, avatar: '' },
-      { id: '8', name: 'Pancho_T10', gamertag: 'Pancho10', pos: 'EI', number: '11', platform: 'PC', avatar: '' },
-    ]
-  };
+  // Group real squad by organization
+  const squadByOrg = squad.reduce((acc: any, player: any) => {
+    const orgs = player.original_orgs && player.original_orgs.length > 0 ? player.original_orgs : ['Plantilla Base'];
+    orgs.forEach((org: string) => {
+      if (!acc[org]) acc[org] = [];
+      if (!acc[org].find((p: any) => p.user_id === player.user_id)) {
+         acc[org].push(player);
+      }
+    });
+    return acc;
+  }, {});
 
   const vacantPositions = ['DFC', 'LI', 'MCD'];
 
@@ -202,33 +221,103 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
 
         {activeTab === 'plantilla' && (
           <div className="space-y-6">
-            <div className="p-4 sm:p-6 rounded-2xl glass-panel border border-[var(--border-card)] space-y-4">
-              <h3 className="font-extrabold text-base text-[var(--text-heading)] uppercase">Plantilla Oficial ({team.name})</h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(mockRoster).flatMap(([role, players]) =>
-                  players.map((p) => (
-                    <div key={p.id} className="p-3.5 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)] flex items-center justify-between gap-3 text-xs">
-                      <div className="flex items-center gap-3">
-                        <Avatar fallback={p.name} size="md" status="online" />
-                        <div>
-                          <span className="font-bold text-sm text-[var(--text-heading)] block">{p.name}</span>
-                          <span className="text-[var(--text-muted)] text-[11px] font-mono">{p.gamertag}</span>
+            {isLoading ? (
+              <div className="p-12 text-center text-[var(--text-muted)]">Cargando plantilla...</div>
+            ) : Object.keys(squadByOrg).length === 0 ? (
+              <div className="p-12 text-center text-[var(--text-muted)] glass-panel rounded-2xl border border-[var(--border-card)]">No hay jugadores registrados.</div>
+            ) : (
+              Object.entries(squadByOrg).map(([orgName, players]: any) => (
+                <div key={orgName} className="p-4 sm:p-6 rounded-2xl glass-panel border border-[var(--border-card)] space-y-4">
+                  <h3 className="font-extrabold text-base text-[var(--text-heading)] uppercase border-b border-[var(--border-card)] pb-2 mb-4">
+                    Organización: {orgName}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {players.map((p: any) => (
+                      <div key={p.id} className="p-3.5 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)] flex items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-3">
+                          <Avatar src={p.avatar_url || p.foto} fallback={p.user_name} size="md" status="online" />
+                          <div>
+                            <span className="font-bold text-sm text-[var(--text-heading)] block">{p.user_name}</span>
+                            <span className="text-[var(--text-muted)] text-[11px] font-mono">{p.gamertag}</span>
+                          </div>
                         </div>
+                        <Badge variant="cyan">{p.tactical_position || 'DFC'}</Badge>
                       </div>
-                      <Badge variant="cyan">{p.pos}</Badge>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 
-        {activeTab !== 'plantilla' && (
+        {activeTab === 'posiciones' && game && (
+          <div className="rounded-2xl glass-panel border border-[var(--border-card)] overflow-hidden">
+            <ClassificationView game={game} hideHeader={true} hideCompFilter={false} hideOrgFilter={true} targetTeamName={team.name} />
+          </div>
+        )}
+
+        {activeTab === 'calendario' && game && (
+          <div className="rounded-2xl glass-panel border border-[var(--border-card)] p-4 sm:p-6">
+             <FixtureScheduleView game={game} hideHeader={true} hideOrgFilter={true} targetTeamName={team.name} />
+          </div>
+        )}
+
+        {activeTab === 'traspasos' && (
+          <div className="rounded-2xl glass-panel border border-[var(--border-card)] p-4 sm:p-6 space-y-4">
+             <h3 className="font-extrabold text-base text-[var(--text-heading)] uppercase mb-4">Historial de Fichajes y Bajas</h3>
+             {isLoading ? (
+                <div className="p-12 text-center text-[var(--text-muted)]">Cargando historial...</div>
+             ) : contracts.length === 0 ? (
+                <div className="p-12 text-center text-[var(--text-muted)]">No hay registros de transferencias.</div>
+             ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-[var(--text-muted)] uppercase bg-black/50 border-b border-[var(--border-card)]">
+                      <tr>
+                        <th className="px-4 py-3">Jugador</th>
+                        <th className="px-4 py-3">Organización</th>
+                        <th className="px-4 py-3">Fecha</th>
+                        <th className="px-4 py-3">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contracts.map(c => {
+                        const orgMatch = c.pitch_message?.match(/\[Organización:\s*([^\]]+)\]/i);
+                        const orgName = orgMatch ? orgMatch[1] : 'General';
+                        return (
+                          <tr key={c.id} className="border-b border-[var(--border-card)] hover:bg-white/5">
+                            <td className="px-4 py-3 font-medium flex items-center gap-2">
+                              <Avatar src={c.avatar_url} fallback={c.player_name} className="w-6 h-6" /> {c.player_name}
+                            </td>
+                            <td className="px-4 py-3 text-[var(--text-muted)] uppercase text-xs font-bold">{orgName}</td>
+                            <td className="px-4 py-3 text-[var(--text-muted)]">
+                              {new Date(c.created_at).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge variant={
+                                c.status === 'ACEPTADO' ? 'emerald' : 
+                                c.status === 'RECHAZADO' ? 'rose' : 
+                                c.status === 'CONCLUIDO' ? 'slate' : 'cyan'
+                              }>
+                                {c.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+             )}
+          </div>
+        )}
+
+        {(activeTab === 'estadisticas' || activeTab === 'historico') && (
           <div className="p-6 rounded-2xl glass-panel border border-[var(--border-card)] text-center py-12 space-y-2">
             <h4 className="font-black text-lg text-[var(--text-heading)] uppercase">Sección: {activeTab}</h4>
-            <p className="text-xs text-[var(--text-muted)]">Información oficial actualizada para la escuadra {team.name}.</p>
+            <p className="text-xs text-[var(--text-muted)]">Información oficial actualizada para la escuadra {team.name} estará disponible próximamente.</p>
           </div>
         )}
       </div>

@@ -56,14 +56,26 @@ export async function POST(request: Request) {
 
       // Auto-advance in Playoffs if next_match_id exists
       if (match.next_match_id && winnerId) {
-        const nextMatch = await queryDB<any>('SELECT * FROM matches WHERE id = ?', [match.next_match_id]);
-        if (nextMatch && nextMatch.length > 0) {
-          const nm = nextMatch[0];
-          if (!nm.team_home_id) {
-            await queryDB('UPDATE matches SET team_home_id = ?, status = "PENDIENTE" WHERE id = ?', [winnerId, match.next_match_id]);
-          } else if (!nm.team_away_id) {
-            await queryDB('UPDATE matches SET team_away_id = ?, status = "PENDIENTE" WHERE id = ?', [winnerId, match.next_match_id]);
-          }
+        const teamRow = await queryDB<any>('SELECT id, name FROM teams WHERE id = ?', [winnerId]);
+        const winnerName = teamRow && teamRow.length > 0 
+          ? teamRow[0].name 
+          : (winnerId === match.team_home_id || winnerId === match.home_team_id ? match.home_team_name : match.away_team_name);
+
+        const isAwaySlot = match.next_match_slot === 'AWAY';
+        if (isAwaySlot) {
+          await queryDB(
+            `UPDATE matches 
+             SET team_away_id = ?, away_team_id = ?, away_team_name = ?
+             WHERE id = ?`,
+            [winnerId, winnerId, winnerName, match.next_match_id]
+          );
+        } else {
+          await queryDB(
+            `UPDATE matches 
+             SET team_home_id = ?, home_team_id = ?, home_team_name = ?
+             WHERE id = ?`,
+            [winnerId, winnerId, winnerName, match.next_match_id]
+          );
         }
       }
 
@@ -74,7 +86,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error procesando aprobación del partido' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error procesando aprobación del partido' }, { status: 500 });
   }
 }

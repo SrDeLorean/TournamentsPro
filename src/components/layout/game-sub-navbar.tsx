@@ -17,6 +17,7 @@ import {
 
 export type GameSection =
   | 'home'
+  | 'organizaciones'
   | 'competencias'
   | 'clasificacion'
   | 'partidos'
@@ -25,7 +26,8 @@ export type GameSection =
   | 'jugadores'
   | 'tops'
   | 'infografia'
-  | 'datos';
+  | 'datos'
+  | 'UI';
 
 interface GameSubNavbarProps {
   game: GameConfig;
@@ -42,7 +44,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
 
   const sections: { id: GameSection; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: 'Home', icon: <Home className="w-3.5 h-3.5" /> },
-    { id: 'competencias', label: 'Competencias', icon: <Trophy className="w-3.5 h-3.5" /> },
+    { id: 'organizaciones', label: 'Torneos', icon: <Trophy className="w-3.5 h-3.5" /> },
     { id: 'clasificacion', label: 'Clasificación', icon: <Award className="w-3.5 h-3.5" /> },
     { id: 'partidos', label: 'Partidos', icon: <Calendar className="w-3.5 h-3.5" /> },
     { id: 'traspasos', label: 'Traspasos', icon: <ArrowRightLeft className="w-3.5 h-3.5" /> },
@@ -97,7 +99,8 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
         <div
           className="w-full bg-[var(--bg-card)] border-b border-[var(--border-card)] backdrop-blur-xl z-40 transition-all duration-300 shadow-md"
           style={{
-            background: `linear-gradient(to right, color-mix(in srgb, ${game.brandColor} 15%, var(--bg-card)), var(--bg-card))`,
+            background: `linear-gradient(to right, color-mix(in srgb, ${game.brandColor} 25%, var(--bg-card)), var(--bg-card))`,
+            borderBottom: `2px solid color-mix(in srgb, ${game.brandColor} 40%, transparent)`
           }}
         >
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-11 flex items-center justify-between gap-2 relative">
@@ -154,10 +157,10 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
                     style={
                       isActive
                         ? {
-                            backgroundColor: `color-mix(in srgb, ${game.brandColor} 30%, var(--bg-card))`,
+                            backgroundColor: `color-mix(in srgb, ${game.brandColor} 50%, var(--bg-card))`,
                             borderColor: game.brandColor,
-                            color: game.brandColor,
-                            boxShadow: `0 2px 10px color-mix(in srgb, ${game.brandColor} 25%, transparent)`,
+                            color: `color-mix(in srgb, ${game.brandColor} 80%, var(--text-heading))`,
+                            boxShadow: `0 4px 15px color-mix(in srgb, ${game.brandColor} 30%, transparent)`,
                           }
                         : {}
                     }
@@ -183,10 +186,10 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
         </div>
 
         {/* 👤 SUB-NAVBAR NIVEL 3: OPCIONES DEL USUARIO / ATLETA */}
-        {isAuthenticated && <UserAthleteSubnavbar />}
+        {(isAuthenticated || Boolean(currentUser)) && <UserAthleteSubnavbar />}
 
         {/* 🛡️ SUB-NAVBAR NIVEL 4: OPCIONES DEL EQUIPO / CLUB */}
-        {isAuthenticated && <TeamClubSubnavbar />}
+        {(isAuthenticated || Boolean(currentUser)) && <TeamClubSubnavbar />}
       </div>
     </>
   );

@@ -46,7 +46,7 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className="relative top-0 z-50 w-full h-12 border-b border-[var(--border-card)] bg-[var(--bg-nav)] backdrop-blur-xl transition-colors duration-200 flex items-center">
+    <header className="dark relative top-0 z-50 w-full h-12 border-b border-[var(--border-card)] bg-[#05070d]/90 backdrop-blur-2xl saturate-150 transition-colors duration-300 flex items-center shadow-md">
       {/* Thin Banner Stripe (h-12 / 48px) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex items-center justify-between gap-2">
         {/* Brand Logo */}
@@ -70,7 +70,7 @@ export function Navbar() {
         <nav className="hidden lg:flex items-center gap-1">
           <Link
             href="/"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
           >
             <Home className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
             Inicio
@@ -81,7 +81,7 @@ export function Navbar() {
             <button
               onClick={() => setIsGamesOpen(!isGamesOpen)}
               onMouseEnter={() => setIsGamesOpen(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
             >
               <Gamepad2 className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
               {t('nav.games')}
@@ -128,7 +128,7 @@ export function Navbar() {
 
           <Link
             href="/equipos"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
           >
             <Shield className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
             Equipos
@@ -136,7 +136,7 @@ export function Navbar() {
 
           <Link
             href="/organizaciones"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
           >
             <Flag className="w-3.5 h-3.5 text-[var(--accent-emerald)]" />
             {t('nav.organizations')}
@@ -144,7 +144,7 @@ export function Navbar() {
 
           <Link
             href="/usuarios"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
           >
             <Users className="w-3.5 h-3.5 text-[var(--accent-violet)]" />
             Usuarios
@@ -152,7 +152,7 @@ export function Navbar() {
 
           <Link
             href="/mensajes"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
           >
             <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
             Mensajes

@@ -14,9 +14,9 @@ export async function GET(request: Request) {
     const filtered = gameSlug ? vacancies.filter((v) => v.gameSlug === gameSlug) : vacancies;
 
     return NextResponse.json({ success: true, vacancies: filtered });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Error al obtener vacantes' },
+      { success: false, error: error instanceof Error ? error.message : 'Error al obtener vacantes' },
       { status: 500 }
     );
   }
@@ -52,9 +52,9 @@ export async function POST(request: Request) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Error al procesar la postulación' },
+      { success: false, error: error instanceof Error ? error.message : 'Error al procesar la postulación' },
       { status: 500 }
     );
   }

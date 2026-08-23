@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { GameConfig } from '@/lib/games-data';
+import { cn } from '@/lib/utils';
 
 interface GameLogoProps {
   game: GameConfig;
@@ -25,14 +26,14 @@ export function GameLogo({ game, className = '', size = 'md' }: GameLogoProps) {
         src={game.logoUrl}
         alt={game.name}
         onError={() => setImageError(true)}
-        className={`object-contain transition-transform duration-300 ${sizeClasses} ${className}`}
+        className={cn("object-contain transition-all duration-300", sizeClasses, className)}
       />
     );
   }
 
   // Fallback to Icon / Emoji if image is missing
   return (
-    <span className={`inline-flex items-center justify-center ${sizeClasses} ${className}`}>
+    <span className={cn("inline-flex items-center justify-center transition-all duration-300", sizeClasses, className)}>
       {game.icon}
     </span>
   );

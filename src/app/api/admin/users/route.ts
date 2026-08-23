@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const isBannedFilter = searchParams.get('isBanned');
 
     let sql = `SELECT * FROM users WHERE 1=1`;
-    const params: any[] = [];
+    const params: (string | number | null)[] = [];
 
     if (roleFilter) {
       sql += ` AND role = ?`;
@@ -30,8 +30,8 @@ export async function GET(request: Request) {
 
     const users = await queryDB(sql, params);
     return NextResponse.json({ success: true, users });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error consultando usuarios' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error consultando usuarios' }, { status: 500 });
   }
 }
 
@@ -66,8 +66,8 @@ export async function POST(request: Request) {
     } = body;
 
     let finalRole = role || 'Jugador';
-    if (requesterRole === 'Organizador' && finalRole !== 'Jugador') {
-      return NextResponse.json({ error: 'Un Organizador solo puede crear usuarios con rol Jugador' }, { status: 403 });
+    if (requesterRole === 'Organizador' && finalRole === 'Administrador') {
+      return NextResponse.json({ error: 'Un Organizador no puede crear usuarios Administradores' }, { status: 403 });
     }
 
     const newId = `usr-${Date.now()}`;
@@ -107,8 +107,8 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({ success: true, message: 'Usuario creado exitosamente', userId: newId });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error creando usuario' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error creando usuario' }, { status: 500 });
   }
 }
 
@@ -158,9 +158,14 @@ export async function PUT(request: Request) {
 
     const targetUser = existing[0];
 
-    // Requirement 2: Organizer cannot modify Admin or Organizer roles
-    if (requesterRole === 'Organizador' && targetUser.role !== 'Jugador') {
-      return NextResponse.json({ error: 'Un Organizador solo puede gestionar Jugadores' }, { status: 403 });
+    // Permission check for role changes and admin account protection
+    if (requesterRole === 'Organizador') {
+      if (targetUser.role === 'Administrador') {
+        return NextResponse.json({ error: 'Solo un Administrador puede modificar cuentas de Administrador' }, { status: 403 });
+      }
+      if (role === 'Administrador') {
+        return NextResponse.json({ error: 'Un Organizador no puede asignar el rol Administrador' }, { status: 403 });
+      }
     }
 
     if (action === 'UNBAN') {
@@ -168,7 +173,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: true, message: 'Usuario desbaneado con éxito' });
     }
 
-    if (action === 'BAN' || isBanned === 1) {
+    if (action === 'BAN') {
       const reason = banReason || 'Infracción a las reglas eSports';
       await queryDB('UPDATE users SET is_banned = 1, status = "Baneado", ban_reason = ?, banned_at = NOW() WHERE id = ?', [reason, id]);
       return NextResponse.json({ success: true, message: 'Usuario baneado del sistema' });
@@ -176,7 +181,19 @@ export async function PUT(request: Request) {
 
     // Dynamic partial UPDATE builder
     const fieldsToUpdate: string[] = [];
-    const updateParams: any[] = [];
+    const updateParams: (string | number | null)[] = [];
+
+    if (isBanned !== undefined && isBanned !== null) {
+      const bVal = (isBanned === 1 || isBanned === true || isBanned === '1' || isBanned === 'true') ? 1 : 0;
+      fieldsToUpdate.push('is_banned = ?');
+      updateParams.push(bVal);
+      if (bVal === 1) {
+        fieldsToUpdate.push('ban_reason = ?');
+        updateParams.push(banReason || 'Sanción disciplinaria de chat eSports');
+      } else {
+        fieldsToUpdate.push('ban_reason = NULL');
+      }
+    }
 
     if (name !== undefined && name !== null && name !== '') {
       fieldsToUpdate.push('name = ?');
@@ -285,7 +302,7 @@ export async function PUT(request: Request) {
     }
 
     return NextResponse.json({ success: true, message: 'Usuario actualizado exitosamente' });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error actualizando usuario' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error actualizando usuario' }, { status: 500 });
   }
 }

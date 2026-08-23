@@ -17,6 +17,10 @@ import {
   Edit,
   UserCheck,
   Sparkles,
+  MessageSquare,
+  Star,
+  Award,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PositionBadge } from '@/components/ui/position-badge';
@@ -28,6 +32,8 @@ import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { GAMES_CATALOG } from '@/lib/games-data';
+import { EsportsCard } from '@/components/ui/esports-card';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function UsersModulePage() {
   const { currentUser } = useAuth();
@@ -36,6 +42,8 @@ export default function UsersModulePage() {
   const [usersList, setUsersList] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Selected Player for Ficha Pública view
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerData | null>(null);
@@ -49,6 +57,7 @@ export default function UsersModulePage() {
   // Image Upload State for Modals
   const [modalAvatarUrl, setModalAvatarUrl] = useState<string>('');
   const [modalBannerUrl, setModalBannerUrl] = useState<string>('');
+  const [modalIsBanned, setModalIsBanned] = useState<boolean>(false);
 
   const isAdmin = currentUser?.role === 'Administrador';
   const isOrganizer = currentUser?.role === 'Organizador';
@@ -58,8 +67,17 @@ export default function UsersModulePage() {
     try {
       const res = await fetch('/api/admin/users');
       const data = await res.json();
-      if (data.success && Array.isArray(data.users)) {
-        setUsersList(data.users);
+      const users = data.data?.users || data.users || (data.success && Array.isArray(data.data) ? data.data : []);
+      if (Array.isArray(users) && users.length > 0) {
+        setUsersList(users);
+      } else {
+        // Fallback to /api/users
+        const res2 = await fetch('/api/users?limit=200');
+        const data2 = await res2.json();
+        const users2 = data2.data?.users || data2.users || (data2.success && Array.isArray(data2.data) ? data2.data : []);
+        if (Array.isArray(users2)) {
+          setUsersList(users2);
+        }
       }
     } catch (err) {
       console.error('Error cargando usuarios desde BD MySQL:', err);
@@ -70,18 +88,63 @@ export default function UsersModulePage() {
     fetchUsers();
   }, []);
 
-  // Sync images when editing user opens
+  // Sync images and ban status when editing user opens
   useEffect(() => {
     if (editingUser) {
       setModalAvatarUrl(editingUser.avatar_url || editingUser.foto || '');
       setModalBannerUrl(editingUser.banner_url || '');
+      setModalIsBanned(Boolean(editingUser.is_banned === 1 || editingUser.is_banned === true));
     } else {
       setModalAvatarUrl('');
       setModalBannerUrl('');
+      setModalIsBanned(false);
     }
   }, [editingUser]);
 
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
+
+  const [timeFilter, setTimeFilter] = useState<'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC'>('NEWEST');
+
+  const filteredUsers = usersList.filter((user) => {
+    const matchesSearch =
+      (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.gamertag || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.position || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
+
+    const uGame = user.primaryGame || user.primary_game || user.gameSlug || user.game_slug || 'eafc26';
+    const matchesDiscipline = selectedDiscipline === 'ALL' || uGame === selectedDiscipline;
+    return matchesSearch && matchesRole && matchesDiscipline;
+  });
+
+  const activeDirectoryUsers = filteredUsers.filter((u) => u.status !== 'Baneado' && u.status !== 'Suspendido');
+
+  const sortedActiveDirectoryUsers = React.useMemo(() => {
+    let list = [...activeDirectoryUsers];
+    if (timeFilter === 'OLDEST') {
+      list.reverse();
+    } else if (timeFilter === 'NAME_ASC') {
+      list.sort((a, b) => (a.name || a.gamertag || '').localeCompare(b.name || b.gamertag || ''));
+    } else if (timeFilter === 'NAME_DESC') {
+      list.sort((a, b) => (b.name || b.gamertag || '').localeCompare(a.name || a.gamertag || ''));
+    }
+    return list;
+  }, [activeDirectoryUsers, timeFilter]);
+
+  const itemsPerPage = 12;
+  const totalPages = Math.ceil(sortedActiveDirectoryUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentDirectoryUsers = sortedActiveDirectoryUsers.slice(startIndex, startIndex + itemsPerPage);
+
+  const DISCIPLINE_OPTIONS = [
+    { id: 'ALL', label: 'TODAS LAS DISCIPLINAS' },
+    { id: 'eafc26', label: 'EA FC 26' },
+    { id: 'valorant', label: 'VALORANT' },
+    { id: 'csgo', label: 'CS2' },
+    { id: 'lol', label: 'LOL' },
+    { id: 'rocketleague', label: 'ROCKET LEAGUE' },
+    { id: 'fortnite', label: 'FORTNITE' },
+  ];
 
   // Handle Create User
   const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -162,6 +225,8 @@ export default function UsersModulePage() {
           newPassword: formData.get('newPassword'),
           role: formData.get('role'),
           status: formData.get('status'),
+          isBanned: modalIsBanned ? 1 : 0,
+          banReason: formData.get('ban_reason') ? String(formData.get('ban_reason')) : null,
           primaryGame: formData.get('primaryGame'),
           platform: formData.get('platform'),
           position: formData.get('position'),
@@ -232,15 +297,6 @@ export default function UsersModulePage() {
     }
   };
 
-  const filteredUsers = usersList.filter((user) => {
-    const matchesSearch =
-      (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.gamertag || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.position || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
-
   const bannedUsers = usersList.filter((u) => u.is_banned === 1 || u.status === 'Baneado');
 
   // Columns definition for DataTable
@@ -253,8 +309,8 @@ export default function UsersModulePage() {
         <div className="flex items-center gap-3">
           <Avatar fallback={row.name} src={row.avatar_url || row.foto} size="sm" />
           <div>
-            <div className="font-bold text-white text-xs">{row.name}</div>
-            <div className="text-[10px] font-mono text-cyan-400">@{row.gamertag}</div>
+            <div className="font-bold text-[var(--text-heading)] text-xs">{row.name}</div>
+            <div className="text-[10px] font-mono text-[var(--accent-cyan)]">@{row.gamertag}</div>
           </div>
         </div>
       ),
@@ -263,7 +319,7 @@ export default function UsersModulePage() {
       header: 'Email / Contacto',
       accessorKey: 'email',
       sortable: true,
-      className: 'font-mono text-slate-300 text-[11px]',
+      className: 'font-mono text-[var(--text-secondary)] text-[11px]',
     },
     {
       header: 'Rol eSports',
@@ -314,45 +370,43 @@ export default function UsersModulePage() {
 
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
-      {/* Navigation Tabs per Module */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => {
-            setSelectedPlayer(null);
-            setActiveTab('directory');
-          }}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'directory' ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          1. Directorio Público de Atletas ({usersList.filter((u) => !u.is_banned).length})
-        </button>
+      {/* Navigation Tabs per Module (Solo para Administrador u Organizador) */}
+      {canManage && (
+        <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3 overflow-x-auto scrollbar-none font-mono">
+          <button
+            onClick={() => {
+              setSelectedPlayer(null);
+              setActiveTab('directory');
+            }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
+              activeTab === 'directory' ? 'bg-[var(--accent-cyan)] text-slate-950 shadow-lg' : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Directorio de Atletas
+          </button>
 
-        {canManage && (
           <button
             onClick={() => setActiveTab('management')}
             className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'management' ? 'bg-purple-600 text-white shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
+              activeTab === 'management' ? 'bg-[var(--accent-violet)] text-slate-950 shadow-lg' : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             }`}
           >
             <UserCheck className="w-4 h-4" />
-            2. Gestión & Roles ({isAdmin ? 'Administrador' : 'Organizador'})
+            Gestión & Roles ({isAdmin ? 'Administrador' : 'Organizador'})
           </button>
-        )}
 
-        {canManage && (
           <button
             onClick={() => setActiveTab('banned')}
             className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'banned' ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
+              activeTab === 'banned' ? 'bg-[var(--accent-crimson)] text-white shadow-lg' : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
-            3. Menú de Desbaneo ({bannedUsers.length})
+            Menú de Desbaneo ({bannedUsers.length})
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* TAB 1: DIRECTORIO PÚBLICO DE ATLETAS */}
       {activeTab === 'directory' && (
@@ -364,42 +418,101 @@ export default function UsersModulePage() {
           />
         ) : (
           <div className="space-y-6">
-            <FilterBar
-              searchPlaceholder="Buscar por Gamertag, nombre o posición..."
-              searchValue={searchTerm}
-              onSearchChange={setSearchTerm}
-              brandColor="#00F0FF"
-            />
+            {/* BARRA UNIFICADA DE FILTRO Y ANTIGÜEDAD */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[var(--bg-card)] border border-[var(--border-card)] p-4 rounded-2xl shadow-sm backdrop-blur-md font-mono">
+              <div className="flex-1">
+                <FilterBar
+                  searchPlaceholder="Buscar por Gamertag, nombre o posición..."
+                  searchValue={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  options={DISCIPLINE_OPTIONS}
+                  activeFilter={selectedDiscipline}
+                  onFilterChange={setSelectedDiscipline}
+                  renderAsSelect={true}
+                  count={sortedActiveDirectoryUsers.length}
+                  countLabel="ATLETAS"
+                  brandColor="#00F0FF"
+                />
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredUsers
-                .filter((u) => !u.is_banned)
-                .map((user) => (
-                  <Card
+              <div className="flex items-center gap-2 shrink-0 bg-[var(--bg-main)] border border-[var(--border-card)] px-3.5 py-2 rounded-xl text-xs font-bold text-[var(--text-heading)]">
+                <Calendar className="w-4 h-4 text-[var(--accent-cyan)] shrink-0" />
+                <span className="text-xs font-bold text-[var(--text-muted)] uppercase hidden md:inline shrink-0">Antigüedad:</span>
+                <select
+                  value={timeFilter}
+                  onChange={(e) => setTimeFilter(e.target.value as any)}
+                  className="bg-transparent focus:outline-none cursor-pointer"
+                >
+                  <option value="NEWEST" className="bg-[#0b101b] text-slate-100 font-semibold">⏱️ Más recientes primero</option>
+                  <option value="OLDEST" className="bg-[#0b101b] text-slate-100 font-semibold">⌛ Más antiguos primero</option>
+                  <option value="NAME_ASC" className="bg-[#0b101b] text-slate-100 font-semibold">🔤 Gamertag A-Z</option>
+                  <option value="NAME_DESC" className="bg-[#0b101b] text-slate-100 font-semibold">🔤 Gamertag Z-A</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {currentDirectoryUsers.map((user, index) => {
+                const uGameSlug = user.primaryGame || user.primary_game || user.gameSlug || user.game_slug || 'eafc26';
+                const gameCfg = GAMES_CATALOG[uGameSlug] || GAMES_CATALOG['eafc26'];
+                const userBrandColor = gameCfg?.brandColor || '#00F0FF';
+
+                return (
+                  <EsportsCard
                     key={user.id}
                     onClick={() => setSelectedPlayer(user)}
-                    className="p-5 bg-slate-950 border border-white/10 hover:border-cyan-400/60 transition-all space-y-4 shadow-xl cursor-pointer hover:scale-[1.02] group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <Avatar fallback={user.name} src={user.avatar_url || user.foto} size="md" status="online" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-black text-white text-base uppercase group-hover:text-cyan-300 transition-colors">{user.name}</h4>
-                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                        </div>
-                        <p className="text-xs font-mono text-cyan-400">@{user.gamertag}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
-                      <PositionBadge primaryPosition={user.position} secondaryPosition={user.secondaryPosition || user.secondary_position} />
-                      <span className="text-xs font-mono font-black text-amber-400 bg-slate-900 px-2 py-0.5 rounded border border-amber-500/30">
-                        ★ {user.rating || '9.0'} OVR
+                    title={user.name}
+                    subtitle={`🎮 ${gameCfg?.name || 'FC 26'} | @${user.gamertag || user.name}`}
+                    description={user.biografia || user.bio || `Atleta eSports oficial registrado en el circuito profesional.`}
+                    bannerUrl={user.banner_url || user.bannerUrl || '/images/default/banner-default.jpg'}
+                    logoUrl={user.avatar_url || user.foto || user.avatarUrl}
+                    fallbackIcon={<Users className="w-8 h-8 text-cyan-400" />}
+                    tag={user.position || user.pos || 'DFC'}
+                    country={user.nacionalidad || user.country || 'Chile'}
+                    socials={{
+                      instagram: user.instagram,
+                      twitch: user.twitch,
+                      twitter: user.twitter,
+                      whatsapp: user.whatsapp,
+                      tiktok: user.tiktok,
+                      youtube: user.youtube,
+                      discord: user.discord,
+                    }}
+                    badges={[
+                      { text: gameCfg?.name || 'eSports', variant: 'purple' },
+                      {
+                        text: user.role === 'Administrador' ? 'ADMIN' : user.role === 'Organizador' ? 'ORGANIZADOR' : 'ATLETA PRO',
+                        variant: user.role === 'Administrador' ? 'amber' : user.role === 'Organizador' ? 'purple' : 'cyan',
+                        pulse: user.status === 'Activo' || user.status === 'Atleta Activo',
+                      },
+                    ]}
+                    stats={[
+                      { icon: <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />, label: 'Rating', value: user.rating || '9.0', highlight: true },
+                      { icon: <Award className="w-3.5 h-3.5 text-cyan-400" />, label: 'Posición', value: user.position || 'MCO' },
+                    ]}
+                    footerLeft={
+                      <span className="flex items-center gap-1">
+                        <Shield className="w-3.5 h-3.5" style={{ color: userBrandColor }} />
+                        <span style={{ color: userBrandColor }} className="font-bold">{user.teamName || user.team || 'Agencia Libre'}</span>
                       </span>
-                    </div>
-                  </Card>
-                ))}
+                    }
+                    actionText="VER FICHA"
+                    brandColor={userBrandColor}
+                    animationDelay={index * 50}
+                  />
+                );
+              })}
             </div>
+
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                brandColor="#00F0FF"
+                className="pt-6 pb-2"
+              />
+            )}
           </div>
         )
       )}
@@ -459,7 +572,8 @@ export default function UsersModulePage() {
                   size="sm"
                   variant="ghost"
                   onClick={() => setEditingUser(row)}
-                  className="text-xs text-purple-300 hover:bg-purple-950 p-2"
+                  className="text-xs text-[var(--accent-violet)] hover:bg-[var(--accent-violet-bg)] p-2 rounded-xl transition-colors"
+                  title="Editar datos del usuario"
                 >
                   <Edit className="w-3.5 h-3.5" />
                 </Button>
@@ -468,11 +582,14 @@ export default function UsersModulePage() {
                   size="sm"
                   variant="ghost"
                   onClick={() => setBanConfirmUser(row)}
-                  className={`text-xs p-2 ${
-                    row.is_banned ? 'text-emerald-400 hover:bg-emerald-950' : 'text-rose-400 hover:bg-rose-950'
+                  className={`text-xs p-2 rounded-xl transition-colors ${
+                    row.is_banned 
+                      ? 'text-[var(--accent-emerald)] hover:bg-[var(--accent-emerald-bg)]' 
+                      : 'text-[var(--accent-crimson)] hover:bg-[var(--accent-crimson-bg)]'
                   }`}
+                  title={row.is_banned ? 'Desbanear usuario' : 'Banear usuario'}
                 >
-                  {row.is_banned ? <Unlock className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  <ShieldAlert className="w-3.5 h-3.5" />
                 </Button>
               </div>
             )}
@@ -660,13 +777,47 @@ export default function UsersModulePage() {
                 <input type="password" name="newPassword" placeholder="Dejar en blanco para conservar" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Estado:</label>
-                <select name="status" defaultValue={editingUser.status || 'Activo'} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
-                  <option value="Activo">🟢 Activo</option>
+                <label className="text-slate-300 uppercase block font-bold">Estado del Usuario en Sistema:</label>
+                <select name="status" defaultValue={editingUser.status || 'Activo'} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono">
+                  <option value="Activo">🟢 Activo (Acceso Permitido)</option>
                   <option value="Inactivo">🟡 Inactivo</option>
-                  <option value="Suspendido">🔴 Suspendido</option>
+                  <option value="Suspendido">🟠 Suspendido (Acceso Suspendido)</option>
+                  <option value="Baneado">🔴 Baneado (Bloqueo Total del Sistema)</option>
                 </select>
               </div>
+            </div>
+
+            {/* 🚫 SANCIÓN Y BANEO DE CHAT ESPORTS */}
+            <div className="p-3.5 rounded-2xl bg-slate-900 border border-white/10 space-y-3 font-mono">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-rose-400">
+                  <MessageSquare className="w-4 h-4 text-rose-400" />
+                  <span className="text-xs font-bold uppercase text-white">Sanción de Mensajería / Silenciar Chat</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="is_banned"
+                    checked={modalIsBanned}
+                    onChange={(e) => setModalIsBanned(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-600" />
+                </label>
+              </div>
+
+              {modalIsBanned && (
+                <div className="space-y-1 text-xs">
+                  <label className="text-rose-300 uppercase block font-bold">Motivo de Sanción / Silencio de Chat:</label>
+                  <input
+                    type="text"
+                    name="ban_reason"
+                    defaultValue={editingUser.ban_reason || 'Infracción disciplinaria del reglamento eSports'}
+                    placeholder="Razón del silencio en chat..."
+                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-rose-500/40 text-rose-200 font-mono"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-1 text-xs font-bold">

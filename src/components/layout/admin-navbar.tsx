@@ -26,7 +26,6 @@ export function AdminNavbar() {
   const { currentUser, activeGameSlug, setActiveGameSlug, logout, login, userTeams } = useAuth();
   const userRoleStr = (currentUser?.role || '').toLowerCase();
   const isAdmin = userRoleStr === 'administrador' || userRoleStr === 'admin';
-  const isCaptain = userRoleStr === 'capitán' || userRoleStr === 'capitan';
   const isOrganizer = userRoleStr === 'organizador';
   const currentGameObj = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG['eafc26'];
 
@@ -63,18 +62,60 @@ export function AdminNavbar() {
   }, []);
 
   const teamsPool = userTeams && userTeams.length > 0 ? userTeams : initialTeams;
-  const disciplineFilteredTeams = teamsPool.filter((t) => t.gameSlug === activeGameSlug);
+  const disciplineFilteredTeams = teamsPool.filter((t) => {
+    const slug = (t as any).game_slug || t.gameSlug || 'eafc26';
+    return slug === activeGameSlug || activeGameSlug === 'ALL';
+  });
 
-  const myTeamInActiveDiscipline = disciplineFilteredTeams.find(
-    (t) =>
-      t.captainName?.toLowerCase() === currentUser?.name?.toLowerCase() ||
-      t.captainName?.toLowerCase() === currentUser?.gamertag?.toLowerCase() ||
-      t.id === currentUser?.teamId
-  );
+  const isUserTeamManager = (team: any, user: any, strictSpecific = false) => {
+    if (!team || !user) return false;
+
+    const uId = user.id;
+    const uName = user.name?.toLowerCase();
+    const uGamer = user.gamertag?.toLowerCase();
+
+    const cId = team.captain_id || team.captainId;
+    const cName = (team.captain_name || team.captainName || '').toLowerCase();
+
+    if (cId && cId === uId) return true;
+    if (cName && (cName === uName || cName === uGamer)) return true;
+    if (user.teamId && team.id === user.teamId) return true;
+
+    const encs = team.encargados || team.encargados_json;
+    if (encs) {
+      try {
+        const arr = typeof encs === 'string' ? JSON.parse(encs) : encs;
+        if (Array.isArray(arr)) {
+          const isEnc = arr.some((enc: any) => {
+            if (typeof enc === 'string') return enc === uId || enc.toLowerCase() === uName || enc.toLowerCase() === uGamer;
+            return (
+              enc.id === uId ||
+              (enc.name && uName && enc.name.toLowerCase() === uName) ||
+              (enc.gamertag && uGamer && enc.gamertag.toLowerCase() === uGamer)
+            );
+          });
+          if (isEnc) return true;
+        }
+      } catch (e) {}
+    }
+
+    if (!strictSpecific && (user.role === 'Administrador' || user.role === 'Organizador')) {
+      return true;
+    }
+
+    return false;
+  };
+
+  let myTeamInActiveDiscipline = disciplineFilteredTeams.find((t) => isUserTeamManager(t, currentUser, true));
+  if (!myTeamInActiveDiscipline && (isAdmin || isOrganizer)) {
+    myTeamInActiveDiscipline = disciplineFilteredTeams[0] || teamsPool[0];
+  }
+
+  const isCaptain = userRoleStr === 'capitán' || userRoleStr === 'capitan' || userRoleStr === 'encargado' || Boolean(myTeamInActiveDiscipline);
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-[var(--bg-nav)] border-b border-[var(--border-card)] backdrop-blur-xl transition-all duration-300 shadow-lg">
+      <header className="dark sticky top-0 z-50 w-full bg-[#05070d]/90 border-b border-[var(--border-card)] backdrop-blur-xl transition-all duration-300 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between gap-3">
           
           {/* 1. Left Brand & Admin Badge */}
@@ -158,11 +199,7 @@ export function AdminNavbar() {
                 <div className="space-y-1.5">
                   {Object.values(GAMES_CATALOG).map((gameItem) => {
                     const teamForGame = teamsPool.find(
-                      (t) =>
-                        t.gameSlug === gameItem.slug &&
-                        (t.captainName?.toLowerCase() === currentUser?.name?.toLowerCase() ||
-                          t.captainName?.toLowerCase() === currentUser?.gamertag?.toLowerCase() ||
-                          t.id === currentUser?.teamId)
+                      (t) => t.gameSlug === gameItem.slug && isUserTeamManager(t, currentUser)
                     );
 
                     const isSelected = activeGameSlug === gameItem.slug;
@@ -419,6 +456,19 @@ export function AdminNavbar() {
                       <MessageSquare className="w-4 h-4 text-emerald-400" />
                       Centro de Mensajes
                     </Link>
+
+                    {myTeamInActiveDiscipline && (
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          setIsClubManageOpen(true);
+                        }}
+                        className="w-full text-left flex items-center gap-2.5 p-2 rounded-xl text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 transition-all font-bold"
+                      >
+                        <Shield className="w-4 h-4 text-purple-400" />
+                        <span>Opciones del Club (Gestión Capitán/Staff)</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {

@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const orgId = searchParams.get('organizationId');
 
     let sql = `SELECT * FROM seasons WHERE 1=1`;
-    const params: any[] = [];
+    const params: (string | number | null)[] = [];
 
     if (orgId) {
       sql += ` AND organization_id = ?`;
@@ -27,8 +27,8 @@ export async function GET(request: Request) {
     }));
 
     return NextResponse.json({ success: true, seasons: seasonsWithTournaments, tournaments });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error consultando temporadas' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error consultando temporadas' }, { status: 500 });
   }
 }
 
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({ success: true, message: 'Temporada creada exitosamente', seasonId });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Error creando temporada' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error creando temporada' }, { status: 500 });
   }
 }

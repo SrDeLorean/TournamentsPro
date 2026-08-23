@@ -23,7 +23,7 @@ export function PositionBadge({
   if (!cleanPrimary && !cleanSecondary) {
     return (
       <Badge
-        className={`font-mono uppercase text-[10px] bg-slate-900 border border-slate-700 text-slate-400 ${className}`}
+        className={`font-mono uppercase text-[10px] bg-[var(--bg-card)]/80 border border-[var(--border-card)] text-[var(--text-muted)] ${className}`}
       >
         Sin Posición
       </Badge>
@@ -36,10 +36,10 @@ export function PositionBadge({
         <Badge
           className="font-mono uppercase text-[10px] font-black tracking-wider transition-all"
           style={{
-            backgroundColor: `color-mix(in srgb, ${brandColor} 20%, transparent)`,
+            backgroundColor: `color-mix(in srgb, ${brandColor} 15%, transparent)`,
             color: brandColor,
-            borderColor: `color-mix(in srgb, ${brandColor} 50%, transparent)`,
-            boxShadow: `0 0 10px ${brandColor}1A`,
+            borderColor: `color-mix(in srgb, ${brandColor} 40%, transparent)`,
+            boxShadow: `0 0 12px ${brandColor}1A`,
           }}
         >
           {cleanPrimary}
@@ -48,7 +48,7 @@ export function PositionBadge({
 
       {cleanSecondary && (
         <Badge
-          className="font-mono uppercase text-[10px] font-bold bg-slate-900/80 border border-slate-700 text-slate-300"
+          className="font-mono uppercase text-[10px] font-bold bg-[var(--bg-card)]/60 border border-[var(--border-card)] text-[var(--text-secondary)]"
         >
           {cleanSecondary}
         </Badge>

@@ -4,6 +4,7 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Sun, Moon, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 export function ThemeSwitcher({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
@@ -14,19 +15,35 @@ export function ThemeSwitcher({ className }: { className?: string }) {
   }, []);
 
   if (!mounted) {
-    return <div className="w-24 h-9 rounded-lg bg-[var(--bg-card-hover)] animate-pulse" />;
+    return <div className="w-[180px] h-9 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] animate-pulse" />;
   }
 
+  const handleThemeChange = (newTheme: string) => {
+    if (newTheme === theme) return;
+    
+    // Fallback if View Transitions API is not supported
+    if (!document.startViewTransition) {
+      setTheme(newTheme);
+      return;
+    }
+
+    // Ultra-smooth native crossfade for theme switching (Linear/Vercel aesthetic)
+    document.startViewTransition(() => {
+      // flushSync isn't strictly necessary with next-themes, but it ensures the DOM updates instantly inside the transition
+      setTheme(newTheme);
+    });
+  };
+
   return (
-    <div className={cn("inline-flex items-center p-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] backdrop-blur-md shadow-sm", className)}>
+    <div className={cn("inline-flex items-center p-1 rounded-xl bg-[var(--bg-card)]/60 border border-[var(--border-card)] backdrop-blur-xl shadow-sm transition-all duration-300", className)}>
       <button
-        onClick={() => setTheme('light')}
+        onClick={() => handleThemeChange('light')}
         title="Modo Claro"
         className={cn(
-          "px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5",
+          "px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all duration-200 flex items-center gap-1.5 relative",
           theme === 'light'
-            ? "bg-amber-500/10 text-amber-700 border border-amber-500/30 shadow-sm"
-            : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            ? "text-amber-600 bg-white shadow-sm border border-black/5"
+            : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
         )}
       >
         <Sun className="w-3.5 h-3.5 text-amber-500" />
@@ -34,13 +51,13 @@ export function ThemeSwitcher({ className }: { className?: string }) {
       </button>
 
       <button
-        onClick={() => setTheme('dark')}
+        onClick={() => handleThemeChange('dark')}
         title="Modo Oscuro"
         className={cn(
-          "px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5",
+          "px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all duration-200 flex items-center gap-1.5 relative",
           theme === 'dark'
-            ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-sm"
-            : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            ? "text-white bg-slate-800 shadow-sm border border-white/10"
+            : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
         )}
       >
         <Moon className="w-3.5 h-3.5 text-cyan-400" />
@@ -48,13 +65,13 @@ export function ThemeSwitcher({ className }: { className?: string }) {
       </button>
 
       <button
-        onClick={() => setTheme('oled')}
+        onClick={() => handleThemeChange('oled')}
         title="Modo OLED (Pitch Black)"
         className={cn(
-          "px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5",
+          "px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all duration-200 flex items-center gap-1.5 relative",
           theme === 'oled'
-            ? "bg-purple-950/80 text-purple-300 border border-purple-500/40 shadow-sm"
-            : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            ? "text-purple-300 bg-black shadow-sm border border-purple-500/30"
+            : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
         )}
       >
         <Zap className="w-3.5 h-3.5 text-purple-400 fill-purple-400/20" />
