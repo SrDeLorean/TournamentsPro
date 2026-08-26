@@ -38,13 +38,23 @@ jobs:
       - name: 📂 Prepare deployment folder (Standalone)
         run: |
           # Copy static files to the standalone directory
-          # Hostinger's Node.js runs the standalone server.js
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/
-          # Copy package files just in case
           cp package.json .next/standalone/
-          # Ensure migrations are included if you run them remotely via SSH
           cp -r database .next/standalone/
+          
+          # Create .env file for runtime
+          cat <<EOF > .next/standalone/.env
+          DB_HOST=127.0.0.1
+          DB_PORT=${{ secrets.DB_PORT }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          EOF
 
       - name: 🚀 Deploy to Hostinger via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
