@@ -1,16 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { GameConfig } from '@/lib/games-data';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Avatar } from '@/components/ui/avatar';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { 
-  Users, UserPlus, FileText, Layers, Ban, CheckSquare, Search, Send, Clock, X, Trophy
+  Users, UserPlus, FileText, Layers, Ban, CheckSquare, Search, Send, Clock, X
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
@@ -25,6 +24,45 @@ import {
 } from '@/app/actions/new-transfers';
 import { getAllPlayersForContractOfferAction } from '@/app/actions/squads'; // reuse the simple search
 
+interface SquadMember {
+  user_id: string;
+  user_name: string;
+  gamertag?: string;
+  avatar_url?: string;
+  foto?: string;
+  original_orgs?: string[];
+}
+
+interface MatrixOrganization {
+  name: string;
+}
+
+interface MatrixRow {
+  user_id: string;
+  user_name: string;
+  organizations: MatrixOrganization[];
+}
+
+interface ContractOffer {
+  id: string;
+  pitch_message?: string;
+  avatar_url?: string;
+  player_name: string;
+  created_at: string;
+  status: string;
+}
+
+interface SearchablePlayer {
+  id: string;
+  name: string;
+  gamertag: string;
+  avatar_url?: string;
+  foto?: string;
+  position?: string;
+}
+
+const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : 'Error desconocido';
+
 export function NewSquadManagementView({ game }: { game: GameConfig }) {
   const { currentUser, userTeams } = useAuth();
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
@@ -34,39 +72,33 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
   const myTeam = userTeams?.find(t => t.captainId === currentUser?.id) || userTeams?.[0];
   const teamId = myTeam?.id;
 
-  const [squad, setSquad] = useState<any[]>([]);
-  const [matrix, setMatrix] = useState<any[]>([]);
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [searchablePlayers, setSearchablePlayers] = useState<any[]>([]);
+  const [squad, setSquad] = useState<SquadMember[]>([]);
+  const [matrix, setMatrix] = useState<MatrixRow[]>([]);
+  const [contracts, setContracts] = useState<ContractOffer[]>([]);
+  const [searchablePlayers, setSearchablePlayers] = useState<SearchablePlayer[]>([]);
 
   // Roster Filters
   const [rosterSearch, setRosterSearch] = useState('');
   const [rosterOrgFilter, setRosterOrgFilter] = useState('ALL');
 
   // Recruit Form
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<SearchablePlayer | null>(null);
   const [recruitSearch, setRecruitSearch] = useState('');
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([]);
   const availableOrgs = ['comunidad amc', 'gamer cup', 'pgl', 'fgl']; // Stub or fetch from team comps
 
-  useEffect(() => {
-    if (teamId) {
-      loadData();
-    }
-  }, [teamId, activeTab]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!teamId) return;
     try {
       if (activeTab === 'roster') {
         const res = await getNewTeamSquadAction(teamId);
-        if (res.success) setSquad(res.squad);
+        if (res.success) setSquad(res.squad as unknown as SquadMember[]);
       } else if (activeTab === 'matrix') {
         const res = await getNewPlayerInscriptionsMatrixAction(teamId);
         if (res.success) setMatrix(res.data);
       } else if (activeTab === 'contracts') {
         const res = await getSentContractsByTeamAction(teamId);
-        if (res.success) setContracts(res.offers);
+        if (res.success) setContracts(res.offers as unknown as ContractOffer[]);
       } else if (activeTab === 'recruit') {
         const res = await getAllPlayersForContractOfferAction(game.slug, recruitSearch);
         if (res.success) {
@@ -88,8 +120,16 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
           setSearchablePlayers(allPlayers);
         }
       }
-    } catch (err) {}
-  };
+    } catch (error) {
+      console.error('Error cargando la gestión de plantilla:', error);
+    }
+  }, [activeTab, currentUser, game.slug, recruitSearch, teamId]);
+
+  useEffect(() => {
+    if (teamId) {
+      void Promise.resolve().then(loadData);
+    }
+  }, [teamId, activeTab, loadData]);
 
   const handleIssueContract = async () => {
     if (!selectedPlayer || selectedOrgs.length === 0) return;
@@ -111,8 +151,8 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
       } else {
         endError(res.error || 'Error');
       }
-    } catch (err: any) {
-      endError(err.message || 'Error desconocido');
+    } catch (error: unknown) {
+      endError(getErrorMessage(error));
     }
   };
 
@@ -126,8 +166,8 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
       } else {
         endError(res.error || 'Error al expulsar');
       }
-    } catch (err: any) {
-      endError(err.message || 'Error desconocido');
+    } catch (error: unknown) {
+      endError(getErrorMessage(error));
     }
   };
 
@@ -347,7 +387,7 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
                   <tr key={row.user_id} className={`border-b border-white/5 ${idx % 2 === 0 ? 'bg-black/20' : ''}`}>
                     <td className="p-3 font-medium border-r border-white/5">{row.user_name}</td>
                     {availableOrgs.map(org => {
-                      const isActive = row.organizations.some((o: any) => o.name.toLowerCase() === org.toLowerCase());
+                      const isActive = row.organizations.some((organization) => organization.name.toLowerCase() === org.toLowerCase());
                       return (
                         <td key={org} className="p-3 text-center border-l border-white/5">
                           {isActive ? (

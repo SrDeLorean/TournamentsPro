@@ -1,8 +1,9 @@
 'use client';
 
-import React, { use, useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import React, { use, useState, useMemo } from 'react';
+import Image from 'next/image';
 import { GAMES_CATALOG, GameConfig } from '@/lib/games-data';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
 import { DateCarousel, CalendarDayItem } from '@/components/tournaments/date-carousel';
@@ -16,14 +17,10 @@ import { Button } from '@/components/ui/button';
 import {
   Flame,
   Shield,
-  Trophy,
   Zap,
-  Activity,
   Layers,
   Lock,
-  Eye,
   RefreshCw,
-  CheckCircle2,
   Sliders,
   Sparkles,
   Sun,
@@ -172,10 +169,14 @@ export default function GameUIShowcasePage({ params }: GameUIPageProps) {
       {/* BACKGROUND BANNER WITH TACTICAL ATMOSPHERE */}
       <div className="relative w-full min-h-screen">
         <div className="absolute top-0 left-0 right-0 h-[650px] w-full overflow-hidden pointer-events-none z-0">
-          <img
+          <Image
             src={game.bannerUrl}
             alt={game.name}
-            className="w-full h-full object-cover object-top opacity-20 dark:opacity-45 filter contrast-105 saturate-110 brightness-100 transition-opacity duration-700"
+            fill
+            sizes="100vw"
+            priority
+            unoptimized={shouldBypassImageOptimization(game.bannerUrl)}
+            className="object-cover object-top opacity-20 dark:opacity-45 filter contrast-105 saturate-110 brightness-100 transition-opacity duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--bg-main)]/50 to-[var(--bg-main)]" />
         </div>
@@ -397,7 +398,7 @@ export default function GameUIShowcasePage({ params }: GameUIPageProps) {
                       <span>2. GOBERNANZA Y SEGURIDAD (RBAC)</span>
                     </h3>
                     <ul className="text-xs text-[var(--text-secondary)] space-y-2 list-disc list-inside font-sans">
-                      <li><strong>Validación de Roles en Cliente & Backend</strong>: Restricción del botón "REPORTAR" a Capitanes, Entrenadores u Organizadores.</li>
+                      <li><strong>Validación de Roles en Cliente & Backend</strong>: Restricción del botón &quot;REPORTAR&quot; a Capitanes, Entrenadores u Organizadores.</li>
                       <li><strong>Protección contra Manipulación</strong>: Verificación de tokens de sesión y firmas en `POST /api/matches/approval`.</li>
                       <li><strong>Sanitización de Consultas SQL</strong>: Parametrización estricta en `/api/matches`.</li>
                     </ul>

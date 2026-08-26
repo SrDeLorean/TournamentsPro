@@ -79,7 +79,7 @@ export function RegenerateWarningModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-300 uppercase block font-mono">
-              Escribe exactamente <span className="text-cyan-400 font-black">"{competitionName}"</span> para confirmar:
+              Escribe exactamente <span className="text-cyan-400 font-black">&quot;{competitionName}&quot;</span> para confirmar:
             </label>
 
             <input

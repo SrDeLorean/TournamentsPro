@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 
 interface TelemetryMetric {
@@ -21,7 +20,6 @@ interface TelemetryCardProps {
 }
 
 export function TelemetryCard({
-  categoryTitle = "Telemetría",
   metrics,
   onReset,
   resetButtonText = "Reiniciar",

@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useTranslation } from '@/components/providers/language-provider';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
@@ -15,14 +14,8 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { AdminNavbar } from '@/components/layout/admin-navbar';
 
 export function Navbar() {
-  const pathname = usePathname();
   const { t } = useTranslation();
   const { currentUser, isAuthenticated } = useAuth();
-
-  // If user is authenticated, render the dynamic AdminNavbar
-  if (isAuthenticated) {
-    return <AdminNavbar />;
-  }
 
   const [isGamesOpen, setIsGamesOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -44,6 +37,11 @@ export function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Keep hook ordering stable across authentication changes.
+  if (isAuthenticated) {
+    return <AdminNavbar />;
+  }
 
   return (
     <header className="dark relative top-0 z-50 w-full h-12 border-b border-[var(--border-card)] bg-[#05070d]/90 backdrop-blur-2xl saturate-150 transition-colors duration-300 flex items-center shadow-md">

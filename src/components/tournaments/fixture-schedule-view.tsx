@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { GameConfig } from '@/lib/games-data';
 import { getSectionMetadata } from '@/lib/section-config';
 import { PageHeader } from '@/components/ui/page-header';
@@ -14,12 +15,10 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Shield,
   Trophy,
   Calendar,
   RefreshCw,
   Flame,
-  BarChart2,
   Building2,
   Database,
   Clock,
@@ -31,7 +30,7 @@ import {
 import { MatchReportModal } from '@/components/matches/match-report-modal';
 import { CountryFlag } from '@/components/ui/country-flag';
 import { TacticalLoadingSkeleton } from './tactical-loading-skeleton';
-import { DateCarousel } from './date-carousel';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
 export interface FixtureMatchItem {
   id: string;
@@ -67,6 +66,69 @@ interface TournamentOption {
   gameSlug: string;
   organizationName?: string;
   logoUrl?: string;
+}
+
+interface OrganizationApiItem {
+  id?: string;
+  name: string;
+  tag?: string;
+  logo_url?: string | null;
+  logoUrl?: string | null;
+}
+
+interface TournamentApiItem {
+  id?: string;
+  name: string;
+  game_slug?: string;
+  organization_name?: string;
+  logo_url?: string;
+  logoUrl?: string;
+  banner_url?: string;
+  bannerUrl?: string;
+}
+
+interface FixtureApiMatch {
+  id?: string;
+  match_date?: string;
+  scheduled_at?: string;
+  scheduled_time?: string;
+  transmission_time?: string;
+  time?: string;
+  home_team_name?: string;
+  home_team_tag?: string;
+  home_team_logo?: string;
+  home_logo_url?: string;
+  homeLogoUrl?: string;
+  home_logo?: string;
+  homeLogo?: string;
+  away_team_name?: string;
+  away_team_tag?: string;
+  away_team_logo?: string;
+  away_logo_url?: string;
+  awayLogoUrl?: string;
+  away_logo?: string;
+  awayLogo?: string;
+  score_home?: number | string | null;
+  score_away?: number | string | null;
+  status?: string;
+  organization_name?: string;
+  tournament_name?: string;
+  round_name?: string;
+  matchday?: number;
+  matchday_number?: number;
+}
+
+function upperTag(str?: string) {
+  if (!str) return 'TPG';
+  return str.substring(0, 3).toUpperCase();
+}
+
+function getLocalDateStr() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 interface FixtureScheduleViewProps {
@@ -143,9 +205,10 @@ export function FixtureScheduleView({
   const [statusFilter, setStatusFilter] = useState<'TODOS' | 'EN_VIVO' | 'PROXIMOS' | 'FINALIZADOS'>('TODOS');
   const [selectedOrgName, setSelectedOrgName] = useState<string>(initialOrgName || 'TODAS');
   const [selectedTournName, setSelectedTournName] = useState<string>(initialTournName || 'TODAS');
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('TODOS');
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [datePage, setDatePage] = useState(0);
+  const [selectedTimeSlotInput, setSelectedTimeSlot] = useState<string>('TODOS');
+  const [selectedDateInput, setSelectedDate] = useState<string>('');
+  const [todayDate] = useState(getLocalDateStr);
+  const [, setDatePage] = useState(0);
   const dateCarouselRef = useRef<HTMLDivElement>(null);
 
   const scrollDateCarousel = (direction: 'left' | 'right') => {
@@ -155,31 +218,15 @@ export function FixtureScheduleView({
     }
   };
 
-  const handlePrevDate = () => {
-    const currIdx = calendarDays.findIndex((d) => d.dateStr === selectedDate);
-    if (currIdx > 0) {
-      setSelectedDate(calendarDays[currIdx - 1].dateStr);
-    }
-    scrollDateCarousel('left');
-  };
-
-  const handleNextDate = () => {
-    const currIdx = calendarDays.findIndex((d) => d.dateStr === selectedDate);
-    if (currIdx >= 0 && currIdx < calendarDays.length - 1) {
-      setSelectedDate(calendarDays[currIdx + 1].dateStr);
-    }
-    scrollDateCarousel('right');
-  };
-
   // 1. Fetch Real Organizations from Local Database API via Server Action
   const fetchOrganizationsFromDB = useCallback(async () => {
     try {
       const res = await getOrganizationsWithStatsAction(game.slug);
       if (res.success && res.organizations) {
-        const fetchedOrgs: OrganizationOption[] = res.organizations.map((o: any) => ({
+        const fetchedOrgs: OrganizationOption[] = (res.organizations as OrganizationApiItem[]).map((o) => ({
           id: o.id || o.name,
           name: o.name,
-          tag: o.tag || UPPER_TAG(o.name),
+          tag: o.tag || upperTag(o.name),
           logoUrl: o.logo_url || o.logoUrl || '/images/default/logo-default.png',
         }));
         setOrganizations(fetchedOrgs);
@@ -200,7 +247,7 @@ export function FixtureScheduleView({
       const data = await res.json();
       const rawList = data.tournaments || data.competitions || data.data || (Array.isArray(data) ? data : []);
       if (Array.isArray(rawList)) {
-        const fetchedTourns: TournamentOption[] = rawList.map((t: any) => ({
+        const fetchedTourns: TournamentOption[] = (rawList as TournamentApiItem[]).map((t) => ({
           id: t.id || t.name,
           name: t.name,
           gameSlug: t.game_slug || game.slug,
@@ -215,7 +262,7 @@ export function FixtureScheduleView({
   }, [game.slug]);
 
   // Clean helper functions for date and time formatting
-  function parseCleanDateStr(m: any): string {
+  function parseCleanDateStr(m: FixtureApiMatch): string {
     if (m.match_date && typeof m.match_date === 'string' && m.match_date.length >= 10) {
       return m.match_date.slice(0, 10);
     }
@@ -226,7 +273,7 @@ export function FixtureScheduleView({
     return new Date().toISOString().slice(0, 10);
   }
 
-  function parseCleanTimeStr(m: any): string {
+  function parseCleanTimeStr(m: FixtureApiMatch): string {
     const rawTime = m.scheduled_time || m.transmission_time || m.time;
     if (typeof rawTime === 'string' && rawTime.trim()) {
       const hhmmMatch = rawTime.trim().match(/^(\d{1,2}):(\d{2})/);
@@ -283,17 +330,17 @@ export function FixtureScheduleView({
       const data = await res.json();
 
       if (data.success && Array.isArray(data.matches)) {
-        let rawMatches = data.matches;
+        let rawMatches = data.matches as FixtureApiMatch[];
         if (targetTeamName && queryText) {
           const lowerQuery = queryText.toLowerCase();
-          rawMatches = rawMatches.filter((m: any) => 
+          rawMatches = rawMatches.filter((m) =>
             (m.home_team_name || '').toLowerCase().includes(lowerQuery) ||
             (m.away_team_name || '').toLowerCase().includes(lowerQuery) ||
             (m.tournament_name || '').toLowerCase().includes(lowerQuery)
           );
         }
 
-        const mapped: FixtureMatchItem[] = rawMatches.map((m: any, idx: number) => {
+        const mapped: FixtureMatchItem[] = rawMatches.map((m, idx) => {
           const dateStr = parseCleanDateStr(m);
           const timeStr = parseCleanTimeStr(m);
           const dayDateLabel = formatMatchDayDateLabel(dateStr);
@@ -302,10 +349,10 @@ export function FixtureScheduleView({
           return {
             id: m.id || `M-${idx + 1}`,
             homeTeam: m.home_team_name || 'Equipo Local',
-            homeTag: m.home_team_tag || UPPER_TAG(m.home_team_name),
+            homeTag: m.home_team_tag || upperTag(m.home_team_name),
             homeLogoUrl: m.home_team_logo || m.home_logo_url || m.homeLogoUrl || m.home_logo || m.homeLogo,
             awayTeam: m.away_team_name || 'Equipo Visitante',
-            awayTag: m.away_team_tag || UPPER_TAG(m.away_team_name),
+            awayTag: m.away_team_tag || upperTag(m.away_team_name),
             awayLogoUrl: m.away_team_logo || m.away_logo_url || m.awayLogoUrl || m.away_logo || m.awayLogo,
             homeScore: m.score_home !== undefined && m.score_home !== null ? Number(m.score_home) : null,
             awayScore: m.score_away !== undefined && m.score_away !== null ? Number(m.score_away) : null,
@@ -328,7 +375,7 @@ export function FixtureScheduleView({
       console.error('Error fetching matches:', err);
       setMatches([]);
     }
-  }, [game.slug]);
+  }, [game.slug, initialTournId, targetTeamName]);
 
   // Initial Load from Local DB - Synchronized with Promise.all
   useEffect(() => {
@@ -355,7 +402,7 @@ export function FixtureScheduleView({
     return () => {
       isMounted = false;
     };
-  }, [fetchOrganizationsFromDB, fetchTournamentsFromDB, fetchMatchesFromDB]);
+  }, [fetchOrganizationsFromDB, fetchTournamentsFromDB, fetchMatchesFromDB, initialOrgName, initialTournName]);
 
   // Cascading Selection: Click Organization -> Fetch linked Tournaments & Matches from Local DB
   const handleSelectOrganization = (orgName: string) => {
@@ -376,26 +423,6 @@ export function FixtureScheduleView({
     setDatePage(0);
     fetchMatchesFromDB(selectedOrgName, tournName, searchQuery, statusFilter);
   };
-
-  // Helper function for tag fallback
-  function UPPER_TAG(str?: string) {
-    if (!str) return 'TPG';
-    return str.substring(0, 3).toUpperCase();
-  }
-
-  // Helper function to format match day/time e.g., "Martes 10/08 23:00"
-  const formatMatchDateTime = useCallback((m: FixtureMatchItem) => {
-    if (m.exactDateDisplay && m.exactDateDisplay.includes(':')) {
-      return m.exactDateDisplay;
-    }
-    if (!m.matchDate) return `Martes 10/08 ${m.transmissionTime || '22:00'}`;
-    const daysFull = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const dateObj = new Date(m.matchDate + 'T00:00:00');
-    const dayNameCap = daysFull[dateObj.getDay()] || 'Martes';
-    const dayDD = String(dateObj.getDate()).padStart(2, '0');
-    const monthMM = String(dateObj.getMonth() + 1).padStart(2, '0');
-    return `${dayNameCap} ${dayDD}/${monthMM} ${m.transmissionTime || '22:00'}`;
-  }, []);
 
   // Dynamically computed list of Organizations (API + loaded matches fallback)
   const availableOrganizations = useMemo(() => {
@@ -442,7 +469,7 @@ export function FixtureScheduleView({
   }, [tournaments, matches, game.slug]);
 
   // Calendar dates derived dynamically from real DB matches & sorted chronologically
-  const calendarDays = useMemo(() => {
+  const calendarDays = (() => {
     const datesMap: { [key: string]: { dateStr: string; label: string; dayName: string; dayDDMM: string; dayNumber: number; count: number } } = {};
     const daysFull = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -468,43 +495,30 @@ export function FixtureScheduleView({
     });
 
     return Object.values(datesMap).sort((a, b) => a.dateStr.localeCompare(b.dateStr));
-  }, [matches]);
+  })();
 
-  // Helper to get local date string YYYY-MM-DD
-  const getLocalDateStr = () => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const selectedDate = calendarDays.some((day) => day.dateStr === selectedDateInput)
+    ? selectedDateInput
+    : calendarDays.reduce((closest, day) => {
+        if (!closest) return day.dateStr;
+        const dayDifference = Math.abs(new Date(`${day.dateStr}T00:00:00`).getTime() - new Date(`${todayDate}T00:00:00`).getTime());
+        const closestDifference = Math.abs(new Date(`${closest}T00:00:00`).getTime() - new Date(`${todayDate}T00:00:00`).getTime());
+        return dayDifference < closestDifference ? day.dateStr : closest;
+      }, '');
+
+  const handlePrevDate = () => {
+    const currIdx = calendarDays.findIndex((day) => day.dateStr === selectedDate);
+    if (currIdx > 0) setSelectedDate(calendarDays[currIdx - 1].dateStr);
+    scrollDateCarousel('left');
   };
 
-  // Auto-select date closest to today (exact match or minimum absolute difference)
-  useEffect(() => {
-    if (calendarDays.length === 0) {
-      setSelectedDate('');
-      return;
+  const handleNextDate = () => {
+    const currIdx = calendarDays.findIndex((day) => day.dateStr === selectedDate);
+    if (currIdx >= 0 && currIdx < calendarDays.length - 1) {
+      setSelectedDate(calendarDays[currIdx + 1].dateStr);
     }
-
-    const todayStr = getLocalDateStr();
-    const isValid = calendarDays.some((d) => d.dateStr === selectedDate);
-
-    if (!selectedDate || !isValid) {
-      const todayTime = new Date(todayStr + 'T00:00:00').getTime();
-      let bestDate = calendarDays[0].dateStr;
-      let minDiff = Math.abs(new Date(calendarDays[0].dateStr + 'T00:00:00').getTime() - todayTime);
-
-      calendarDays.forEach((d) => {
-        const diff = Math.abs(new Date(d.dateStr + 'T00:00:00').getTime() - todayTime);
-        if (diff < minDiff) {
-          minDiff = diff;
-          bestDate = d.dateStr;
-        }
-      });
-
-      setSelectedDate(bestDate);
-    }
-  }, [calendarDays, selectedDate]);
+    scrollDateCarousel('right');
+  };
 
   // Auto-scroll selected date into view in carousel
   useEffect(() => {
@@ -531,13 +545,9 @@ export function FixtureScheduleView({
     });
     return Array.from(timesSet).sort((a, b) => a.localeCompare(b));
   }, [matches, selectedDate]);
-
-  // Reset selectedTimeSlot if it's not valid for the newly selected date
-  useEffect(() => {
-    if (selectedTimeSlot !== 'TODOS' && !availableTimeSlots.includes(selectedTimeSlot)) {
-      setSelectedTimeSlot('TODOS');
-    }
-  }, [selectedDate, availableTimeSlots, selectedTimeSlot]);
+  const selectedTimeSlot = selectedTimeSlotInput === 'TODOS' || availableTimeSlots.includes(selectedTimeSlotInput)
+    ? selectedTimeSlotInput
+    : 'TODOS';
 
   // Compute status counters from real DB matches
   const statusCounts = useMemo(() => {
@@ -589,10 +599,6 @@ export function FixtureScheduleView({
     return groups;
   }, [displayMatches]);
 
-  const handleOpenReportModal = (match: FixtureMatchItem) => {
-    setSelectedMatchForReport(match);
-    setIsReportModalOpen(true);
-  };
   const getEmptyStateMessage = () => {
     if (searchQuery) {
       return {
@@ -880,9 +886,12 @@ export function FixtureScheduleView({
                   }
                 >
                   {org.logoUrl ? (
-                    <img
+                    <Image
                       src={org.logoUrl}
                       alt={org.name}
+                      width={16}
+                      height={16}
+                      unoptimized={shouldBypassImageOptimization(org.logoUrl)}
                       className="w-4 h-4 object-contain rounded-full filter drop-shadow shrink-0"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
@@ -957,9 +966,12 @@ export function FixtureScheduleView({
                   }
                 >
                   {comp.logoUrl ? (
-                    <img
+                    <Image
                       src={comp.logoUrl}
                       alt={comp.name}
+                      width={16}
+                      height={16}
+                      unoptimized={shouldBypassImageOptimization(comp.logoUrl)}
                       className="w-4 h-4 object-contain rounded-full filter drop-shadow shrink-0"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';

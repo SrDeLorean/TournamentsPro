@@ -1,9 +1,6 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { GAMES_CATALOG } from '@/lib/games-data';
 import {
   CompetitionData,
   CompetitionTeamData,
@@ -14,10 +11,8 @@ import {
   distributeTeamsIntoGroups,
   generatePlayoffBracket,
   generateHybridCrossSeedings,
-  getRoundNameByTeamCount,
   TeamItem,
   GroupDistributionResult,
-  PlayoffMatchNode,
 } from '@/lib/matchmaking-bracket';
 import { RegenerateWarningModal } from './regenerate-warning-modal';
 import { MatchmakingPreview } from './matchmaking-preview';
@@ -26,27 +21,36 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Calendar, Clock, CheckCircle2, Play, Sparkles, Trophy, Shield, Swords, Layers, Settings, Eye, Check, AlertTriangle, FileText, Edit3, RotateCcw, RefreshCw, ArrowRight, Award
+  Calendar, Clock, Sparkles, Trophy, Swords, Layers, Settings, Check, RefreshCw
 } from 'lucide-react';
 
 interface FixtureGeneratorProps {
   competition: CompetitionData;
   enrolledTeams: CompetitionTeamData[];
-  matches?: any[];
+  matches?: StoredMatch[];
+}
+
+interface StoredMatch {
+  id: string;
+  status?: string | null;
+  reported_score_home?: number | null;
+  reported_score_away?: number | null;
+  matchday_number?: number | null;
+  matchday?: number | null;
+  scheduled_time?: string | null;
+  scheduled_at?: string | null;
+  home_team_name?: string | null;
+  home_team_id?: string | null;
+  team_home_id?: string | null;
+  away_team_name?: string | null;
+  away_team_id?: string | null;
+  team_away_id?: string | null;
+  score_home?: number | null;
+  score_away?: number | null;
 }
 
 export type TournamentFormat = 'Liga' | 'Playoff' | 'Hibrido';
 export type MatchMode = 'IdaVuelta' | 'PartidoUnico';
-
-export interface MatchPreviewItem {
-  id: string;
-  jornada: number;
-  homeTeamName: string;
-  awayTeamName: string;
-  scheduledDate: string;
-  scheduledTime: string;
-  stage: string;
-}
 
 export interface TimeSlotConfig {
   dayLabel: string;
@@ -282,13 +286,8 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
   const availableTimes = ['19:00', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30'];
   const [selectedTimes, setSelectedTimes] = useState<string[]>(['20:00', '21:30']);
 
-  const [previewMatches, setPreviewMatches] = useState<MatchPreviewItem[] | null>(null);
-
   const [isPending, startTransition] = useTransition();
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
-
-  const gameConfig = GAMES_CATALOG[competition.game_slug] || GAMES_CATALOG['eafc26'];
-  const brandColor = gameConfig?.brandColor || '#00F0FF';
 
   // Mapear equipos inscritos para el algoritmo puro
   const teamsList: TeamItem[] = enrolledTeams.map((t) => ({
@@ -303,24 +302,13 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
     groupCount
   );
 
-  // 📌 2. Cálculo en tiempo real de Llaves de Playoff (Bracket Tree)
-  const totalPlayoffTeamsCount = format === 'Hibrido' ? groupCount * qualifiersPerGroup : teamsList.length;
-  const playoffBracketNodes: PlayoffMatchNode[] = generatePlayoffBracket(
-    competition.id,
-    teamsList.slice(0, totalPlayoffTeamsCount),
-    matchMode,
-    format === 'Hibrido',
-    groupCount,
-    qualifiersPerGroup
-  );
-
   // Cruces de Sembrados Híbridos
   const hybridSeedings = generateHybridCrossSeedings(groupDistributionPreview, qualifiersPerGroup);
 
   // Verificar si hay resultados reportados en partidos guardados
   const hasReportedResults = matches.some(
     (m) =>
-      ['POR_REVISAR', 'TERMINADO', 'DISPUTADO', 'FINALIZADO'].includes(m.status) ||
+      ['POR_REVISAR', 'TERMINADO', 'DISPUTADO', 'FINALIZADO'].includes(m.status ?? '') ||
       (m.reported_score_home !== null && m.reported_score_home !== undefined) ||
       (m.reported_score_away !== null && m.reported_score_away !== undefined)
   );
@@ -346,8 +334,6 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
     }
   };
 
-  const sortedTimes = [...selectedTimes].sort();
-
   const handleStartRegeneration = () => {
     if (hasReportedResults) {
       setIsWarningModalOpen(true);
@@ -356,88 +342,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
     }
   };
 
-  // Previsualización en memoria
-  const handleGeneratePreview = () => {
-    if (enrolledTeams.length < 2) {
-      startOperation('Previsualización de Fixture');
-      endError('Se requieren al menos 2 equipos inscritos confirmados para previsualizar el fixture.');
-      return;
-    }
-
-    const timeSlotsConfig: TimeSlotConfig[] = [];
-    selectedDays.forEach((day) => {
-      sortedTimes.forEach((time) => {
-        timeSlotsConfig.push({ dayLabel: day, time });
-      });
-    });
-
-    if (timeSlotsConfig.length === 0) {
-      timeSlotsConfig.push({ dayLabel: selectedDays[0] || 'Martes', time: '20:00' });
-    }
-
-    const scheduledMatches = generateFixtureSchedule(
-      teamsList,
-      startDate,
-      timeSlotsConfig,
-      matchMode,
-      format,
-      groupCount,
-      qualifiersPerGroup
-    );
-
-    const matchesList: MatchPreviewItem[] = scheduledMatches.map((m) => ({
-      id: m.id,
-      jornada: m.matchdayNumber,
-      homeTeamName: m.homeTeamName,
-      awayTeamName: m.awayTeamName,
-      scheduledDate: m.scheduledDateLabel,
-      scheduledTime: `${m.scheduledTime} hrs (Simultáneo)`,
-      stage: format === 'Hibrido' ? 'Fase de Grupos / Playoffs' : format === 'Playoff' ? 'Llave Eliminatoria' : 'Fase Regular',
-    }));
-
-    setPreviewMatches(matchesList);
-    startOperation('Previsualización Generada');
-    endSuccess(`Previsualización generada (${format}): ${scheduledMatches.length} enfrentamientos simultáneos (${matchMode === 'IdaVuelta' ? 'Ida y Vuelta' : 'Partido Único'}).`);
-  };
-
-  // ⚡ RECARGA AUTOMÁTICA EN TIEMPO REAL DESDE EL INICIO
-  React.useEffect(() => {
-    if (enrolledTeams.length >= 2) {
-      const timeSlotsConfig: TimeSlotConfig[] = [];
-      selectedDays.forEach((day) => {
-        sortedTimes.forEach((time) => {
-          timeSlotsConfig.push({ dayLabel: day, time });
-        });
-      });
-      if (timeSlotsConfig.length === 0) {
-        timeSlotsConfig.push({ dayLabel: selectedDays[0] || 'Martes', time: '20:00' });
-      }
-
-      const scheduledMatches = generateFixtureSchedule(
-        teamsList,
-        startDate,
-        timeSlotsConfig,
-        matchMode,
-        format,
-        groupCount,
-        qualifiersPerGroup,
-        selectedDays,
-        selectedTimes
-      );
-
-      const matchesList: MatchPreviewItem[] = scheduledMatches.map((m) => ({
-        id: m.id,
-        jornada: m.matchdayNumber,
-        homeTeamName: m.homeTeamName,
-        awayTeamName: m.awayTeamName,
-        scheduledDate: m.scheduledDateLabel,
-        scheduledTime: `${m.scheduledTime} hrs (Simultáneo)`,
-        stage: format === 'Hibrido' ? 'Fase de Grupos / Playoffs' : format === 'Playoff' ? 'Llave Eliminatoria' : 'Fase Regular',
-      }));
-
-      setPreviewMatches(matchesList);
-    }
-  }, [format, groupCount, qualifiersPerGroup, matchMode, startDate, selectedDays, selectedTimes, enrolledTeams.length]);
+  const hasPreview = enrolledTeams.length >= 2;
 
   // Guardar y Confirmar en MySQL
   const handleConfirmSaveFixture = (confirmedNameCheck?: string) => {
@@ -456,9 +361,8 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
 
       if (res.success) {
         setIsWarningModalOpen(false);
-        setPreviewMatches(null);
         setIsFormMode(false);
-        endSuccess((res as any).message || 'El fixture fue guardado exitosamente en la base de datos MySQL.');
+        endSuccess(res.message || 'El fixture fue guardado exitosamente en la base de datos MySQL.');
       } else {
         endError(res.error || 'Error al guardar el fixture en MySQL.');
       }
@@ -479,7 +383,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
   };
 
   // Agrupar partidos por Jornada para la Tabla
-  const matchesByMatchday: Record<number, any[]> = {};
+  const matchesByMatchday: Record<number, StoredMatch[]> = {};
   matches.forEach((m) => {
     const num = m.matchday_number || m.matchday || 1;
     if (!matchesByMatchday[num]) matchesByMatchday[num] = [];
@@ -878,7 +782,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
           </Card>
 
           {/* 📌 2. PREVISUALIZACIÓN DE MATCHMAKING DINÁMICA SEGÚN FORMATO */}
-          {previewMatches && (
+          {hasPreview && (
             <div id="matchmaking-preview-container">
               <MatchmakingPreview
                 format={format}

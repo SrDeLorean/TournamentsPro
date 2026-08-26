@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { TeamData } from '@/lib/data-store';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { SubSubNavbar, SubSubTabOption } from '@/components/layout/sub-sub-navbar';
 import { ClubManagementModal } from '@/components/teams/club-management-modal';
 import {
-  Shield, Users, Calendar, ArrowRightLeft, BarChart3, History, Monitor, Tv, Filter, Award, CheckCircle2, MessageSquare, Sparkles, Settings
+  Users, Calendar, ArrowRightLeft, BarChart3, History, Monitor, Award, CheckCircle2, MessageSquare, Sparkles, Settings
 } from 'lucide-react';
 
 import { getNewTeamSquadAction } from '@/app/actions/new-squads';
@@ -17,6 +18,7 @@ import { getSentContractsByTeamAction } from '@/app/actions/new-transfers';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { ClassificationView } from '@/components/tournaments/classification-view';
 import { FixtureScheduleView } from '@/components/tournaments/fixture-schedule-view';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
 interface TeamProfileViewProps {
   team: TeamData;
@@ -24,14 +26,36 @@ interface TeamProfileViewProps {
   brandColor?: string;
 }
 
+interface TeamProfileSquadMember {
+  id: string;
+  user_id: string;
+  user_name: string;
+  gamertag: string;
+  tactical_position?: string | null;
+  avatar_url?: string | null;
+  foto?: string | null;
+  original_orgs?: string[];
+}
+
+interface TeamContract {
+  id: string;
+  player_name: string;
+  avatar_url?: string;
+  pitch_message?: string;
+  created_at: string | Date;
+  status: string;
+}
+
+type LegacyTeamData = TeamData & { captain?: string; logo?: string };
+
 export type ProfileTab = 'plantilla' | 'posiciones' | 'calendario' | 'traspasos' | 'estadisticas' | 'historico';
 
-export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamProfileViewProps) {
+export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileViewProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>('plantilla');
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
-  const [squad, setSquad] = useState<any[]>([]);
-  const [contracts, setContracts] = useState<any[]>([]);
+  const [squad, setSquad] = useState<TeamProfileSquadMember[]>([]);
+  const [contracts, setContracts] = useState<TeamContract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {
@@ -42,15 +66,15 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
           getNewTeamSquadAction(team.id),
           getSentContractsByTeamAction(team.id)
         ]);
-        if (sqRes.success) setSquad(sqRes.squad);
-        if (cRes.success) setContracts(cRes.offers);
-      } catch(e) {}
+        if (sqRes.success) setSquad(sqRes.squad as TeamProfileSquadMember[]);
+        if (cRes.success) setContracts(cRes.offers as unknown as TeamContract[]);
+      } catch {}
       setIsLoading(false);
     }
     loadData();
   }, [team.id]);
 
-  const game = GAMES_CATALOG[(team as any).gameSlug || 'eafc26'];
+  const game = GAMES_CATALOG[team.gameSlug || 'eafc26'];
 
   // Dynamic theme color for team profile matching the active game
   const activeColor = brandColor || team.color || '#00F0FF';
@@ -66,11 +90,11 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
   ];
 
   // Group real squad by organization
-  const squadByOrg = squad.reduce((acc: any, player: any) => {
+  const squadByOrg = squad.reduce<Record<string, TeamProfileSquadMember[]>>((acc, player) => {
     const orgs = player.original_orgs && player.original_orgs.length > 0 ? player.original_orgs : ['Plantilla Base'];
     orgs.forEach((org: string) => {
       if (!acc[org]) acc[org] = [];
-      if (!acc[org].find((p: any) => p.user_id === player.user_id)) {
+      if (!acc[org].find((member) => member.user_id === player.user_id)) {
          acc[org].push(player);
       }
     });
@@ -80,6 +104,7 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
   const vacantPositions = ['DFC', 'LI', 'MCD'];
 
   const teamBanner = team?.bannerUrl || '/images/hero.jpg';
+  const teamLogo = team?.logoUrl || (team as LegacyTeamData).logo;
   const teamLogoText = team?.logoText || team?.tag || team?.name?.substring(0, 3)?.toUpperCase() || 'TP';
   const teamName = team?.name || 'Escuadra eSports';
   const teamTag = team?.tag || 'TP';
@@ -91,13 +116,17 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
       <div className="relative w-full left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-slate-950 border-b border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[240px] sm:min-h-[340px] flex flex-col justify-end">
         {/* Full Bleed Banner Image Graphic (Pure 100% Opacity, Zero Filter) */}
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src={teamBanner}
             alt={teamName}
+            fill
+            sizes="100vw"
+            priority
+            unoptimized={shouldBypassImageOptimization(teamBanner)}
             onError={(e) => {
               e.currentTarget.src = '/images/default/banner-default.jpg';
             }}
-            className="w-full h-full object-cover opacity-100"
+            className="object-cover opacity-100"
           />
           {/* Bottom Fade gradient for text readability only */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
@@ -108,17 +137,20 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
           <div className="flex flex-row items-center gap-3 sm:gap-6">
             {/* Team Crest Shield */}
             <div
-              className="w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl bg-slate-950 border-2 sm:border-4 flex items-center justify-center font-black text-lg sm:text-3xl shadow-2xl flex-shrink-0 overflow-hidden"
+              className="relative w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl bg-slate-950 border-2 sm:border-4 flex items-center justify-center font-black text-lg sm:text-3xl shadow-2xl flex-shrink-0 overflow-hidden"
               style={{ borderColor: activeColor, color: activeColor }}
             >
-              {team?.logoUrl || (team as any)?.logo ? (
-                <img
-                  src={team?.logoUrl || (team as any)?.logo}
+              {teamLogo ? (
+                <Image
+                  src={teamLogo}
                   alt={teamName}
+                  fill
+                  sizes="96px"
+                  unoptimized={shouldBypassImageOptimization(teamLogo)}
                   onError={(e) => {
                     e.currentTarget.src = '/images/default/logo-default.png';
                   }}
-                  className="w-full h-full object-cover"
+                  className="object-cover"
                 />
               ) : (
                 teamLogoText
@@ -158,7 +190,7 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
                   {team.status}
                 </span>
                 <span>•</span>
-                <span>Capitán: <strong className="text-white">{team.captainName || (team as any).captain}</strong></span>
+                <span>Capitán: <strong className="text-white">{team.captainName || (team as LegacyTeamData).captain}</strong></span>
               </div>
             </div>
           </div>
@@ -178,7 +210,7 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
                 className="font-extrabold text-xs uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-xl flex items-center gap-2"
               >
                 <MessageSquare className="w-4 h-4" />
-                Contactar Capitán ({team.captainName || (team as any).captain})
+                Contactar Capitán ({team.captainName || (team as LegacyTeamData).captain})
               </Button>
             </Link>
           </div>
@@ -226,17 +258,17 @@ export function TeamProfileView({ team, onBack, brandColor = '#00F0FF' }: TeamPr
             ) : Object.keys(squadByOrg).length === 0 ? (
               <div className="p-12 text-center text-[var(--text-muted)] glass-panel rounded-2xl border border-[var(--border-card)]">No hay jugadores registrados.</div>
             ) : (
-              Object.entries(squadByOrg).map(([orgName, players]: any) => (
+              Object.entries(squadByOrg).map(([orgName, players]) => (
                 <div key={orgName} className="p-4 sm:p-6 rounded-2xl glass-panel border border-[var(--border-card)] space-y-4">
                   <h3 className="font-extrabold text-base text-[var(--text-heading)] uppercase border-b border-[var(--border-card)] pb-2 mb-4">
                     Organización: {orgName}
                   </h3>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {players.map((p: any) => (
+                    {players.map((p) => (
                       <div key={p.id} className="p-3.5 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)] flex items-center justify-between gap-3 text-xs">
                         <div className="flex items-center gap-3">
-                          <Avatar src={p.avatar_url || p.foto} fallback={p.user_name} size="md" status="online" />
+                          <Avatar src={p.avatar_url || p.foto || undefined} fallback={p.user_name} size="md" status="online" />
                           <div>
                             <span className="font-bold text-sm text-[var(--text-heading)] block">{p.user_name}</span>
                             <span className="text-[var(--text-muted)] text-[11px] font-mono">{p.gamertag}</span>

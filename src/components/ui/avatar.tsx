@@ -1,5 +1,7 @@
 import React from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
 export interface AvatarProps {
   src?: string;
@@ -23,13 +25,18 @@ export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', statu
     offline: 'bg-slate-500',
     away: 'bg-amber-500',
   };
+  const pixels = { sm: 32, md: 40, lg: 48, xl: 64 }[size];
 
   return (
     <div className={cn("relative inline-flex flex-shrink-0", className)}>
       {src ? (
-        <img
+        <Image
           src={src}
           alt={alt}
+          width={pixels}
+          height={pixels}
+          sizes={`${pixels}px`}
+          unoptimized={shouldBypassImageOptimization(src)}
           className={cn("rounded-xl object-cover border border-[var(--border-card)] shadow-sm", sizes[size])}
         />
       ) : (

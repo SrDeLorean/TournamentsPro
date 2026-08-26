@@ -1,5 +1,3 @@
-'use client';
-
 import React, { Suspense } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { ChatSystem } from '@/components/chat/chat-system';

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
 import { queryDB } from '@/lib/db';
-import { authenticateRequest } from '@/lib/auth';
+import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
+import { teamCreateBodySchema, teamUpdateBodySchema } from '@/lib/api-schemas';
+import { canManageTeam, isAdministrator } from '@/lib/authorization';
 import {
   TeamRow,
   mapTeamRowToData,
@@ -9,6 +10,28 @@ import {
   parsePaginationParams,
   buildPaginationMeta,
 } from '@/lib/api-types';
+import { createTeamService, updateManagedTeamService } from '@/lib/services';
+
+async function loadTeamScope(teamId: string) {
+  const teams = await queryDB<{
+    organization_id: string | null;
+    captain_id: string | null;
+    encargados_json: string | null;
+  }>('SELECT organization_id, captain_id, encargados_json FROM teams WHERE id = ? LIMIT 1', [teamId]);
+  const team = teams[0];
+  if (!team) return null;
+
+  const managers = await queryDB<{ user_id: string }>(
+    `SELECT user_id FROM team_members
+      WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán')`,
+    [teamId],
+  );
+  return {
+    organizationId: team.organization_id,
+    captainId: team.captain_id,
+    managerIds: managers.map((manager) => manager.user_id),
+  };
+}
 
 // GET /api/teams — List teams with optional game filter and pagination
 export async function GET(request: Request) {
@@ -40,7 +63,7 @@ export async function GET(request: Request) {
     const meta = buildPaginationMeta(page, limit, total);
 
     return apiSuccess({ teams }, undefined, meta);
-  } catch (error) {
+  } catch {
     // If table doesn't exist yet, return clean empty list
     return apiSuccess({ teams: [] });
   }
@@ -49,61 +72,58 @@ export async function GET(request: Request) {
 // POST /api/teams — Create team
 export async function POST(request: Request) {
   try {
-    // Auth check - must be authenticated to create a team
-    const authPayload = authenticateRequest(request);
-    if (!authPayload) {
-      return apiError('Autenticación requerida para crear un equipo', 401, 'UNAUTHORIZED');
-    }
+    const actor = await requireRequestActor(request);
 
-    const body = await request.json();
-    const { id, name, tag, gameSlug, gameName, captainId, captainName, platform, color, logoText, logoUrl, bannerUrl, description, vacantPositions } = body;
+    const parsedBody = teamCreateBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) return apiError('Nombre y tag del equipo son requeridos', 400);
+    const body = parsedBody.data;
+    const { id, name, tag, gameSlug, captainId, captainName, platform, color, logoText, logoUrl, bannerUrl, description, vacantPositions } = body;
 
     if (!name || !tag) {
       return apiError('Nombre y tag del equipo son requeridos', 400);
     }
 
-    const teamId = id || `team-${Date.now()}`;
-    const vacantsJson = JSON.stringify(vacantPositions || []);
+    const teamId = id || undefined;
     const teamDesc = description || 'Escuadra oficial del circuito eSports.';
 
     // Check if user already owns a team in this discipline
-    const effectiveCaptainId = captainId || authPayload.userId;
-    if (effectiveCaptainId) {
-      try {
-        const existing = await queryDB<TeamRow>(
-          'SELECT id, name FROM teams WHERE game_slug = ? AND captain_id = ? LIMIT 1',
-          [gameSlug || 'eafc26', effectiveCaptainId]
-        );
-        if (existing && existing.length > 0) {
-          return apiError(
-            `Ya posees el club "${existing[0].name}" en esta disciplina. Solo se permite 1 club por disciplina por usuario.`,
-            400,
-            'DUPLICATE_TEAM'
-          );
-        }
-      } catch (e) {
-        // Table might not exist yet
-      }
+    const existingById = teamId
+      ? await queryDB<{ id: string }>('SELECT id FROM teams WHERE id = ? LIMIT 1', [teamId])
+      : [];
+    if (existingById.length > 0) {
+      return apiError('Ya existe un equipo con ese ID', 409, 'DUPLICATE_TEAM');
     }
 
-    try {
-      await queryDB(
-        `INSERT INTO teams (id, name, tag, game_slug, captain_id, captain_name, platform, color, logo_text, logo_url, banner_url, description, vacant_positions)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE name=VALUES(name), captain_name=VALUES(captain_name), color=VALUES(color), logo_url=VALUES(logo_url), banner_url=VALUES(banner_url)`,
-        [teamId, name, tag || 'TP', gameSlug || 'eafc26', effectiveCaptainId, captainName || authPayload.gamertag || 'Capitán', platform || 'CROSSPLAY', color || '#00F0FF', logoText || 'TP', logoUrl || '', bannerUrl || '', teamDesc, vacantsJson]
-      );
-    } catch (insertErr) {
-      await queryDB(
-        `INSERT INTO teams (id, name, tag, game_slug, captain_id, captain_name, platform, color, logo_text, description)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE name=VALUES(name), captain_name=VALUES(captain_name), color=VALUES(color)`,
-        [teamId, name, tag || 'TP', gameSlug || 'eafc26', effectiveCaptainId, captainName || authPayload.gamertag || 'Capitán', platform || 'CROSSPLAY', color || '#00F0FF', logoText || 'TP', teamDesc]
-      );
-    }
-
-    return apiSuccess({ team: { id: teamId, ...body } }, 'Equipo creado exitosamente');
+    const effectiveCaptainId = isAdministrator(actor) && captainId ? captainId : actor.userId;
+    const captainUsers = await queryDB<{ name: string; gamertag: string }>(
+      'SELECT name, gamertag FROM users WHERE id = ? LIMIT 1',
+      [effectiveCaptainId],
+    );
+    const effectiveCaptainName = isAdministrator(actor) && captainName
+      ? captainName
+      : (captainUsers[0]?.gamertag || captainUsers[0]?.name || 'Capitán');
+    const allowedGames = ['eafc26', 'valorant', 'csgo', 'lol', 'rocketleague', 'fortnite'] as const;
+    const effectiveGameSlug = allowedGames.find((slug) => slug === gameSlug) || 'eafc26';
+    const allowedPlatforms = ['PS5', 'PS4', 'XBOX', 'PC', 'CROSSPLAY'] as const;
+    const effectivePlatform = allowedPlatforms.find((item) => item === platform) || 'CROSSPLAY';
+    const result = await createTeamService({
+      id: teamId,
+      name,
+      tag: tag || 'TP',
+      gameSlug: effectiveGameSlug,
+      platform: effectivePlatform,
+      color: color || '#00F0FF',
+      logoText: logoText || 'TP',
+      logoUrl: logoUrl || null,
+      bannerUrl: bannerUrl || null,
+      description: teamDesc,
+      vacantPositions: vacantPositions || [],
+    }, effectiveCaptainId, effectiveCaptainName);
+    if (!result.success) return apiError(result.error || 'No se pudo crear el equipo', 409, result.code);
+    return apiSuccess({ team: result.team }, 'Equipo creado exitosamente');
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Teams POST error:', error);
     const message = error instanceof Error ? error.message : 'Error guardando equipo';
     return apiError(message, 500);
@@ -113,31 +133,42 @@ export async function POST(request: Request) {
 // PUT /api/teams — Update team
 export async function PUT(request: Request) {
   try {
-    const body = await request.json();
-    let { id, name, tag, description, platform, clubIdEa, socialMedia, color, logoText, logoUrl, bannerUrl, status, gameSlug, captainId, captainName } = body;
+    const actor = await requireRequestActor(request);
+    const parsedBody = teamUpdateBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) return apiError('ID del club requerido', 400);
+    const body = parsedBody.data;
+    const { id, name, tag, description, platform, clubIdEa, color, logoText, logoUrl, bannerUrl, status, gameSlug, captainId, captainName } = body;
 
     const teamId = (id || '').trim().slice(0, 36);
     if (!teamId) {
       return apiError('ID del club requerido', 400);
     }
 
-    // Check if team exists
+    // Check if team exists and enforce ownership before applying changes
     const existingRows = await queryDB<TeamRow>('SELECT * FROM teams WHERE id = ?', [teamId]);
-    const t = (existingRows && existingRows.length > 0) ? existingRows[0] : null;
+    const existingTeam = existingRows[0];
+    if (!existingTeam) {
+      return apiError('Equipo no encontrado', 404);
+    }
+    const t = existingTeam;
+    const teamScope = await loadTeamScope(teamId);
+    if (!teamScope || !canManageTeam(actor, teamScope)) {
+      return apiError('No tienes permisos para gestionar este equipo', 403, 'FORBIDDEN');
+    }
 
-    const safeName = (name !== undefined ? name : (t?.name || 'Escuadra Pro')).slice(0, 100);
-    const safeTag = (tag !== undefined ? tag : (t?.tag || 'TP')).slice(0, 10);
-    const safeDescription = description !== undefined ? description : (t?.description || 'Escuadra oficial del circuito eSports.');
-    const safePlatform = (platform !== undefined ? platform : (t?.platform || 'CROSSPLAY')).slice(0, 20);
-    const safeColor = (color !== undefined ? color : (t?.color || '#00F0FF')).slice(0, 20);
-    const safeLogoText = (logoText !== undefined ? logoText : (t?.logo_text || safeTag || 'TP')).slice(0, 5);
-    const safeStatus = status !== undefined ? status : (t?.status || 'Escuadra Activa');
+    const safeName = (name ?? t?.name ?? 'Escuadra Pro').slice(0, 100);
+    const safeTag = (tag ?? t?.tag ?? 'TP').slice(0, 10);
+    const safeDescription = description ?? t.description ?? 'Escuadra oficial del circuito eSports.';
+    const safePlatform = (platform ?? t?.platform ?? 'CROSSPLAY').slice(0, 20);
+    const safeColor = (color ?? t?.color ?? '#00F0FF').slice(0, 20);
+    const safeLogoText = (logoText ?? t?.logo_text ?? safeTag ?? 'TP').slice(0, 5);
+    const safeStatus = status ?? t.status ?? 'Escuadra Activa';
     const safeLogoUrl = (logoUrl && typeof logoUrl === 'string' && logoUrl.trim() !== '') ? logoUrl : (t?.logo_url || '');
     const safeBannerUrl = (bannerUrl && typeof bannerUrl === 'string' && bannerUrl.trim() !== '') ? bannerUrl : (t?.banner_url || '');
-    const safeSocialJson = socialMedia !== undefined ? JSON.stringify(socialMedia) : '{}';
     const safeGameSlug = (gameSlug || t?.game_slug || 'eafc26').slice(0, 50);
-    let safeCaptainId = (captainId !== undefined ? captainId : (t?.captain_id || 'usr-1')).slice(0, 36);
-    const safeCaptainName = (captainName !== undefined ? captainName : (t?.captain_name || 'Administrador')).slice(0, 100);
+    let safeCaptainId = (isAdministrator(actor) ? captainId : null) ?? t.captain_id ?? actor.userId;
+    safeCaptainId = safeCaptainId.slice(0, 36);
+    const safeCaptainName = ((isAdministrator(actor) ? captainName : null) ?? t.captain_name ?? actor.userId).slice(0, 100);
 
     // Validate captain exists
     try {
@@ -148,22 +179,24 @@ export async function PUT(request: Request) {
           safeCaptainId = firstUser[0].id;
         }
       }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
 
-    if (t) {
-      await queryDB(
-        `UPDATE teams 
-         SET name = ?, tag = ?, description = ?, platform = ?, color = ?, logo_text = ?, status = ?, club_id_ea = ?, redes_sociales = ?, logo_url = ?, banner_url = ?, captain_id = ?, captain_name = ?, updated_at = NOW()
-         WHERE id = ?`,
-        [safeName, safeTag, safeDescription, safePlatform, safeColor, safeLogoText, safeStatus, clubIdEa || '', safeSocialJson, safeLogoUrl, safeBannerUrl, safeCaptainId, safeCaptainName, teamId]
-      );
-    } else {
-      await queryDB(
-        `INSERT INTO teams (id, name, tag, game_slug, captain_id, captain_name, platform, color, logo_text, description, status, logo_url, banner_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [teamId, safeName, safeTag, safeGameSlug, safeCaptainId, safeCaptainName, safePlatform, safeColor, safeLogoText, safeDescription, safeStatus, safeLogoUrl, safeBannerUrl]
-      );
-    }
+    const result = await updateManagedTeamService(teamId, {
+      name: safeName,
+      tag: safeTag,
+      description: safeDescription,
+      platform: safePlatform,
+      color: safeColor,
+      logoText: safeLogoText,
+      status: safeStatus,
+      clubIdEa: clubIdEa || '',
+      logoUrl: safeLogoUrl,
+      bannerUrl: safeBannerUrl,
+      captainId: isAdministrator(actor) && captainId !== undefined ? safeCaptainId : undefined,
+      captainName: isAdministrator(actor) && captainName !== undefined ? safeCaptainName : undefined,
+      gameSlug: safeGameSlug,
+    });
+    if (!result.success) return apiError(result.error || 'No se pudo actualizar el equipo', 409);
 
     return apiSuccess({
       team: {
@@ -174,6 +207,8 @@ export async function PUT(request: Request) {
       }
     }, 'Ajustes del club actualizados con éxito');
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Teams PUT error:', error);
     const message = error instanceof Error ? error.message : 'Error guardando equipo';
     return apiError(message, 500);

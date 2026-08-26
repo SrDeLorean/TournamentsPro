@@ -1,6 +1,9 @@
-import { NextResponse } from 'next/server';
 import { queryDB } from '@/lib/db';
-import { authenticateRequest, hashPassword } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
+import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
+import { canManageUser, isAdministrator } from '@/lib/authorization';
+import { revokeUserSessions, writeSecurityAudit } from '@/lib/security';
+import { userCreateBodySchema, userUpdateBodySchema } from '@/lib/api-schemas';
 import {
   UserRow,
   mapUserRowToProfile,
@@ -65,7 +68,10 @@ export async function GET(request: Request) {
 // POST /api/users — Create user
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const actor = await requireRequestActor(request, ['Administrador']);
+    const parsedBody = userCreateBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) return apiError('Nombre y gamertag son requeridos', 400);
+    const body = parsedBody.data;
     const { id, name, email, gamertag, role, primaryGame, platform, position, rankBadge, status } = body;
 
     if (!gamertag || !name) {
@@ -84,8 +90,19 @@ export async function POST(request: Request) {
       [newId, name, email || `${gamertag.toLowerCase().replace(/[^a-z0-9]/g, '')}@tournamentspro.com`, gamertag, userRole, gameSlug, userPlatform, position || 'DFC', rankBadge || 'División 1', status || 'Buscando Club']
     );
 
+    await writeSecurityAudit({
+      actor,
+      request,
+      action: 'ADMIN_USER_CREATED',
+      resourceType: 'user',
+      resourceId: newId,
+      metadata: { assignedRole: userRole },
+    });
+
     return apiSuccess({ user: { id: newId, ...body } }, 'Usuario creado exitosamente');
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Users POST error:', error);
     const message = error instanceof Error ? error.message : 'Error guardando usuario';
     return apiError(message, 500);
@@ -95,7 +112,10 @@ export async function POST(request: Request) {
 // PUT /api/users — Update user profile
 export async function PUT(request: Request) {
   try {
-    const body = await request.json();
+    const actor = await requireRequestActor(request);
+    const parsedBody = userUpdateBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) return apiError('Falta ID de usuario', 400);
+    const body = parsedBody.data;
     const {
       id,
       name,
@@ -128,32 +148,38 @@ export async function PUT(request: Request) {
       return apiError('Falta ID de usuario', 400);
     }
 
-    // Optional: Auth check - user can only update their own profile
-    const authPayload = authenticateRequest(request);
-    if (authPayload && authPayload.userId !== id) {
-      // Allow if admin
-      if (authPayload.role !== 'Administrador' && authPayload.role !== 'Admin') {
-        return apiError('Solo puedes editar tu propio perfil', 403);
-      }
-    }
-
     // Lookup existing user to merge missing fields
     const existingRows = await queryDB<UserRow>('SELECT * FROM users WHERE id = ?', [id]);
+    if (!existingRows || existingRows.length === 0) {
+      return apiError('Usuario no encontrado', 404);
+    }
     const u = existingRows && existingRows.length > 0 ? existingRows[0] : {} as Partial<UserRow>;
+
+    if (!canManageUser(actor, {
+      userId: u.id || id,
+      role: u.role || 'Jugador',
+      organizationId: u.organization_id,
+    })) {
+      return apiError('No tienes permisos para editar este perfil', 403, 'FORBIDDEN');
+    }
 
     const finalName = name !== undefined ? name : (u.name || 'Atleta Pro');
     const finalGamertag = gamertag !== undefined ? gamertag : (u.gamertag || 'Gamertag');
     const userFoto = foto || avatarUrl || u.avatar_url || '/images/default/logo-default.png';
     const userBanner = bannerUrl || '/images/default/banner-default.jpg';
-    const userGameProfiles = gameProfiles !== undefined
-      ? (typeof gameProfiles === 'object' ? JSON.stringify(gameProfiles) : gameProfiles)
-      : '{}';
+    const userGameProfiles = typeof gameProfiles === 'string'
+      ? gameProfiles
+      : JSON.stringify(gameProfiles ?? {});
 
     // Password update with hashing
     const pwdToUpdate = newPassword || password;
+    if (pwdToUpdate && !isAdministrator(actor) && actor.userId !== id) {
+      return apiError('No puedes cambiar la contraseña de otro usuario', 403, 'FORBIDDEN');
+    }
     if (pwdToUpdate && typeof pwdToUpdate === 'string' && pwdToUpdate.trim().length >= 6) {
       const hashed = await hashPassword(pwdToUpdate.trim());
       await queryDB('UPDATE users SET password_hash = ? WHERE id = ?', [hashed, id]);
+      await revokeUserSessions(id);
     }
 
     await queryDB(
@@ -214,6 +240,8 @@ export async function PUT(request: Request) {
       'Perfil actualizado correctamente'
     );
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Users PUT error:', error);
     const message = error instanceof Error ? error.message : 'Error guardando perfil';
     return apiError(message, 500);

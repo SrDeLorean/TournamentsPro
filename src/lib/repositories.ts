@@ -1,4 +1,41 @@
-import { queryDB, dbPool } from '@/lib/db';
+import type { RowDataPacket } from 'mysql2';
+import { queryDB, dbPool, executeCommand, type DatabaseParams } from '@/lib/db';
+
+type MutableDatabaseParams = Array<DatabaseParams[number]>;
+
+interface UserRow extends RowDataPacket {
+  id: string; email: string; password_hash: string | null; google_id: string | null; name: string;
+  gamertag: string; role: string; primary_game_slug: string; platform: string; position: string;
+  secondary_position: string | null; rank_badge: string; rating: number; status: string;
+  avatar_url: string | null; organization_id: string | null; is_banned: number; ban_reason: string | null;
+  created_at: string; updated_at: string;
+}
+
+interface OrganizationRow extends RowDataPacket {
+  id: string; name: string; tag: string; owner_id: string; logo_url: string | null;
+  banner_url: string | null; description: string | null; country: string;
+  allowed_games: string | null; created_at: string;
+}
+
+interface TeamRow extends RowDataPacket {
+  id: string; name: string; tag: string; game_slug: string; organization_id: string | null;
+  captain_id: string; captain_name: string; platform: string; members_count: number; max_members: number;
+  color: string; logo_text: string; description: string | null; vacant_positions: string | null;
+  logo_url: string | null; banner_url: string | null; status: string; club_id_ea: string | null;
+  created_at: string; updated_at: string;
+}
+
+interface CompetitionRow extends RowDataPacket {
+  id: string; name: string; game_slug: string; organizer_id: string | null; organizer_name: string | null;
+  organization_id: string | null; season_id: string | null; prize_pool: string | null;
+  transfer_market_mode: string; mode_format: string; status: string; fecha_limite_inscripcion: string | null;
+  fecha_inicio: string; fecha_termino: string | null; description: string | null; created_at: string;
+}
+
+interface SeasonRow extends RowDataPacket {
+  id: string; name: string; organization_id: string | null; start_date: string | null;
+  end_date: string | null; status: string; created_at: string;
+}
 
 export interface Repository<T> {
   findById(id: string): Promise<T | null>;
@@ -20,10 +57,10 @@ export interface FindOptions {
 export abstract class BaseRepository<T extends { id: string }> implements Repository<T> {
   protected abstract tableName: string;
   protected abstract primaryKey: string;
-  protected abstract mapRow(row: any): T;
+  protected abstract mapRow(row: RowDataPacket): T;
 
   async findById(id: string): Promise<T | null> {
-    const rows = await queryDB<any>(`SELECT * FROM \`${this.tableName}\` WHERE \`${this.primaryKey}\` = ? LIMIT 1`, [id]);
+    const rows = await queryDB<RowDataPacket>(`SELECT * FROM \`${this.tableName}\` WHERE \`${this.primaryKey}\` = ? LIMIT 1`, [id]);
     return rows.length > 0 ? this.mapRow(rows[0]) : null;
   }
 
@@ -31,41 +68,41 @@ export abstract class BaseRepository<T extends { id: string }> implements Reposi
     const { where = {}, orderBy = 'created_at', orderDirection = 'DESC', limit = 50, offset = 0 } = options;
     
     const whereClauses: string[] = [];
-    const params: any[] = [];
+    const params: MutableDatabaseParams = [];
     
     for (const [key, value] of Object.entries(where)) {
       if (value === null) {
         whereClauses.push(`\`${key}\` IS NULL`);
       } else if (Array.isArray(value)) {
         whereClauses.push(`\`${key}\` IN (${value.map(() => '?').join(',')})`);
-        params.push(...value);
+        params.push(...value.map((item) => item as DatabaseParams[number]));
       } else {
         whereClauses.push(`\`${key}\` = ?`);
-        params.push(value);
+        params.push(value as DatabaseParams[number]);
       }
     }
     
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
     const sql = `SELECT * FROM \`${this.tableName}\` ${whereSql} ORDER BY \`${orderBy}\` ${orderDirection} LIMIT ? OFFSET ?`;
     
-    const rows = await queryDB<any>(sql, [...params, limit, offset]);
+    const rows = await queryDB<RowDataPacket>(sql, [...params, limit, offset]);
     return rows.map(this.mapRow);
   }
 
   async count(options: FindOptions = {}): Promise<number> {
     const { where = {} } = options;
     const whereClauses: string[] = [];
-    const params: any[] = [];
+    const params: MutableDatabaseParams = [];
     
     for (const [key, value] of Object.entries(where)) {
       if (value === null) {
         whereClauses.push(`\`${key}\` IS NULL`);
       } else if (Array.isArray(value)) {
         whereClauses.push(`\`${key}\` IN (${value.map(() => '?').join(',')})`);
-        params.push(...value);
+        params.push(...value.map((item) => item as DatabaseParams[number]));
       } else {
         whereClauses.push(`\`${key}\` = ?`);
-        params.push(value);
+        params.push(value as DatabaseParams[number]);
       }
     }
     
@@ -78,12 +115,12 @@ export abstract class BaseRepository<T extends { id: string }> implements Reposi
   abstract update(id: string, data: Partial<T>): Promise<T | null>;
   abstract delete(id: string): Promise<boolean>;
 
-  protected async executeTransaction(queries: { sql: string; params: any[] }[]): Promise<void> {
+  protected async executeTransaction(queries: { sql: string; params: DatabaseParams }[]): Promise<void> {
     const connection = await dbPool.getConnection();
     try {
       await connection.beginTransaction();
       for (const { sql, params } of queries) {
-        await connection.execute(sql, params);
+        await connection.execute(sql, params.map((param) => param === undefined ? null : param));
       }
       await connection.commit();
     } catch (error) {
@@ -99,7 +136,7 @@ export class UserRepository extends BaseRepository<User> {
   protected tableName = 'users';
   protected primaryKey = 'id';
 
-  protected mapRow(row: any): User {
+  protected mapRow(row: UserRow): User {
     return {
       id: row.id,
       email: row.email,
@@ -125,17 +162,17 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const rows = await queryDB<any>('SELECT * FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1', [email]);
+    const rows = await queryDB<UserRow>('SELECT * FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1', [email]);
     return rows.length > 0 ? this.mapRow(rows[0]) : null;
   }
 
   async findByGamertag(gamertag: string): Promise<User | null> {
-    const rows = await queryDB<any>('SELECT * FROM users WHERE LOWER(gamertag) = LOWER(?) LIMIT 1', [gamertag]);
+    const rows = await queryDB<UserRow>('SELECT * FROM users WHERE LOWER(gamertag) = LOWER(?) LIMIT 1', [gamertag]);
     return rows.length > 0 ? this.mapRow(rows[0]) : null;
   }
 
   async findByEmailOrGamertag(identifier: string): Promise<User | null> {
-    const rows = await queryDB<any>(
+    const rows = await queryDB<UserRow>(
       'SELECT * FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(gamertag) = LOWER(?) LIMIT 1',
       [identifier, identifier]
     );
@@ -178,7 +215,7 @@ export class UserRepository extends BaseRepository<User> {
 
   async update(id: string, data: Partial<User>): Promise<User | null> {
     const fields: string[] = [];
-    const params: any[] = [];
+    const params: MutableDatabaseParams = [];
     
     const allowedFields = [
       'email', 'password_hash', 'google_id', 'name', 'gamertag', 'role',
@@ -204,8 +241,8 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async delete(id: string): Promise<boolean> {
-    const result = await queryDB('DELETE FROM users WHERE id = ?', [id]);
-    return true;
+    const result = await executeCommand('DELETE FROM users WHERE id = ?', [id]);
+    return result.affectedRows > 0;
   }
 }
 
@@ -213,7 +250,7 @@ export class OrganizationRepository extends BaseRepository<Organization> {
   protected tableName = 'organizations';
   protected primaryKey = 'id';
 
-  protected mapRow(row: any): Organization {
+  protected mapRow(row: OrganizationRow): Organization {
     return {
       id: row.id,
       name: row.name,
@@ -229,7 +266,7 @@ export class OrganizationRepository extends BaseRepository<Organization> {
   }
 
   async findByOwnerId(ownerId: string): Promise<Organization | null> {
-    const rows = await queryDB<any>('SELECT * FROM organizations WHERE owner_id = ? LIMIT 1', [ownerId]);
+    const rows = await queryDB<OrganizationRow>('SELECT * FROM organizations WHERE owner_id = ? LIMIT 1', [ownerId]);
     return rows.length > 0 ? this.mapRow(rows[0]) : null;
   }
 
@@ -250,7 +287,7 @@ export class OrganizationRepository extends BaseRepository<Organization> {
 
   async update(id: string, data: Partial<Organization>): Promise<Organization | null> {
     const fields: string[] = [];
-    const params: any[] = [];
+    const params: MutableDatabaseParams = [];
     
     const fieldMap: Record<string, string> = {
       name: 'name', tag: 'tag', logoUrl: 'logo_url', bannerUrl: 'banner_url',
@@ -273,8 +310,8 @@ export class OrganizationRepository extends BaseRepository<Organization> {
   }
 
   async delete(id: string): Promise<boolean> {
-    await queryDB('DELETE FROM organizations WHERE id = ?', [id]);
-    return true;
+    const result = await executeCommand('DELETE FROM organizations WHERE id = ?', [id]);
+    return result.affectedRows > 0;
   }
 }
 
@@ -282,7 +319,7 @@ export class TeamRepository extends BaseRepository<Team> {
   protected tableName = 'teams';
   protected primaryKey = 'id';
 
-  protected mapRow(row: any): Team {
+  protected mapRow(row: TeamRow): Team {
     return {
       id: row.id,
       name: row.name,
@@ -309,22 +346,22 @@ export class TeamRepository extends BaseRepository<Team> {
 
   async findByCaptain(captainId: string, gameSlug?: string): Promise<Team[]> {
     let sql = 'SELECT * FROM teams WHERE captain_id = ?';
-    const params: any[] = [captainId];
+    const params: MutableDatabaseParams = [captainId];
     if (gameSlug) {
       sql += ' AND game_slug = ?';
       params.push(gameSlug);
     }
-    const rows = await queryDB<any>(sql, params);
+    const rows = await queryDB<TeamRow>(sql, params);
     return rows.map(this.mapRow);
   }
 
   async findByOrganization(orgId: string): Promise<Team[]> {
-    const rows = await queryDB<any>('SELECT * FROM teams WHERE organization_id = ? ORDER BY created_at DESC', [orgId]);
+    const rows = await queryDB<TeamRow>('SELECT * FROM teams WHERE organization_id = ? ORDER BY created_at DESC', [orgId]);
     return rows.map(this.mapRow);
   }
 
   async findByGameSlug(gameSlug: string): Promise<Team[]> {
-    const rows = await queryDB<any>('SELECT * FROM teams WHERE game_slug = ? AND is_banned = 0 ORDER BY name ASC', [gameSlug]);
+    const rows = await queryDB<TeamRow>('SELECT * FROM teams WHERE game_slug = ? AND is_banned = 0 ORDER BY name ASC', [gameSlug]);
     return rows.map(this.mapRow);
   }
 
@@ -353,7 +390,7 @@ export class TeamRepository extends BaseRepository<Team> {
 
   async update(id: string, data: Partial<Team>): Promise<Team | null> {
     const fields: string[] = [];
-    const params: any[] = [];
+    const params: MutableDatabaseParams = [];
     
     const fieldMap: Record<string, string> = {
       name: 'name', tag: 'tag', gameSlug: 'game_slug', organizationId: 'organization_id',
@@ -381,8 +418,8 @@ export class TeamRepository extends BaseRepository<Team> {
   }
 
   async delete(id: string): Promise<boolean> {
-    await queryDB('DELETE FROM teams WHERE id = ?', [id]);
-    return true;
+    const result = await executeCommand('DELETE FROM teams WHERE id = ?', [id]);
+    return result.affectedRows > 0;
   }
 
   async updateMembersCount(teamId: string): Promise<void> {
@@ -397,7 +434,7 @@ export class CompetitionRepository extends BaseRepository<Competition> {
   protected tableName = 'competitions';
   protected primaryKey = 'id';
 
-  protected mapRow(row: any): Competition {
+  protected mapRow(row: CompetitionRow): Competition {
     return {
       id: row.id,
       name: row.name,
@@ -419,17 +456,17 @@ export class CompetitionRepository extends BaseRepository<Competition> {
   }
 
   async findByOrganizer(organizerId: string): Promise<Competition[]> {
-    const rows = await queryDB<any>('SELECT * FROM competitions WHERE organizer_id = ? ORDER BY created_at DESC', [organizerId]);
+    const rows = await queryDB<CompetitionRow>('SELECT * FROM competitions WHERE organizer_id = ? ORDER BY created_at DESC', [organizerId]);
     return rows.map(this.mapRow);
   }
 
   async findByOrganization(orgId: string): Promise<Competition[]> {
-    const rows = await queryDB<any>('SELECT * FROM competitions WHERE organization_id = ? ORDER BY created_at DESC', [orgId]);
+    const rows = await queryDB<CompetitionRow>('SELECT * FROM competitions WHERE organization_id = ? ORDER BY created_at DESC', [orgId]);
     return rows.map(this.mapRow);
   }
 
   async findByGameSlug(gameSlug: string): Promise<Competition[]> {
-    const rows = await queryDB<any>('SELECT * FROM competitions WHERE game_slug = ? ORDER BY created_at DESC', [gameSlug]);
+    const rows = await queryDB<CompetitionRow>('SELECT * FROM competitions WHERE game_slug = ? ORDER BY created_at DESC', [gameSlug]);
     return rows.map(this.mapRow);
   }
 
@@ -454,7 +491,7 @@ export class CompetitionRepository extends BaseRepository<Competition> {
 
   async update(id: string, data: Partial<Competition>): Promise<Competition | null> {
     const fields: string[] = [];
-    const params: any[] = [];
+    const params: MutableDatabaseParams = [];
     
     const fieldMap: Record<string, string> = {
       name: 'name', gameSlug: 'game_slug', organizerId: 'organizer_id',
@@ -484,8 +521,8 @@ export class CompetitionRepository extends BaseRepository<Competition> {
   }
 
   async delete(id: string): Promise<boolean> {
-    await queryDB('DELETE FROM competitions WHERE id = ?', [id]);
-    return true;
+    const result = await executeCommand('DELETE FROM competitions WHERE id = ?', [id]);
+    return result.affectedRows > 0;
   }
 }
 
@@ -493,7 +530,7 @@ export class SeasonRepository extends BaseRepository<Season> {
   protected tableName = 'seasons';
   protected primaryKey = 'id';
 
-  protected mapRow(row: any): Season {
+  protected mapRow(row: SeasonRow): Season {
     return {
       id: row.id,
       name: row.name,
@@ -506,7 +543,7 @@ export class SeasonRepository extends BaseRepository<Season> {
   }
 
   async findByOrganization(orgId: string): Promise<Season[]> {
-    const rows = await queryDB<any>('SELECT * FROM seasons WHERE organization_id = ? OR organization_id IS NULL ORDER BY created_at DESC', [orgId]);
+    const rows = await queryDB<SeasonRow>('SELECT * FROM seasons WHERE organization_id = ? OR organization_id IS NULL ORDER BY created_at DESC', [orgId]);
     return rows.map(this.mapRow);
   }
 
@@ -523,7 +560,7 @@ export class SeasonRepository extends BaseRepository<Season> {
 
   async update(id: string, data: Partial<Season>): Promise<Season | null> {
     const fields: string[] = [];
-    const params: any[] = [];
+    const params: MutableDatabaseParams = [];
     const fieldMap: Record<string, string> = { name: 'name', organizationId: 'organization_id', startDate: 'start_date', endDate: 'end_date', status: 'status' };
     
     for (const [key, value] of Object.entries(data)) {
@@ -541,8 +578,8 @@ export class SeasonRepository extends BaseRepository<Season> {
   }
 
   async delete(id: string): Promise<boolean> {
-    await queryDB('DELETE FROM seasons WHERE id = ?', [id]);
-    return true;
+    const result = await executeCommand('DELETE FROM seasons WHERE id = ?', [id]);
+    return result.affectedRows > 0;
   }
 }
 

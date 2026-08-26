@@ -1,10 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { queryDB } from '@/lib/db';
 import { validateSchema, requiredIdSchema } from '@/lib/validation';
 import { z } from 'zod';
 import { submitMatchReportService, getTeamRosterForMatchReportService } from '@/lib/services';
+import { requireMatchReporter, requireTeamManager } from '@/lib/auth-server';
+import { getActionErrorMessage } from '@/lib/action-utils';
 
 export interface PlayerStatInput {
   userId: string;
@@ -28,6 +29,7 @@ export interface SubmitMatchReportInput {
 
 export async function submitMatchReportAction(input: SubmitMatchReportInput) {
   try {
+    const actor = await requireMatchReporter(input.matchId);
     const validation = validateSchema(
       z.object({
         matchId: requiredIdSchema,
@@ -53,7 +55,10 @@ export async function submitMatchReportAction(input: SubmitMatchReportInput) {
       return { success: false, error: validation.errors.join(', '), code: 'VALIDATION_ERROR' };
     }
 
-    const result = await submitMatchReportService(validation.data);
+    const result = await submitMatchReportService({
+      ...validation.data,
+      reportedByUserId: actor.userId,
+    });
 
     if (result.success) {
       revalidatePath('/dashboard/competencias');
@@ -61,9 +66,9 @@ export async function submitMatchReportAction(input: SubmitMatchReportInput) {
     }
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en submitMatchReportAction:', error);
-    return { success: false, error: error?.message || 'Error al enviar el reporte del partido.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al enviar el reporte del partido.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -73,10 +78,12 @@ export async function getTeamRosterForMatchReportAction(teamId: string) {
       return { success: false, roster: [], error: 'ID de equipo requerido.', code: 'MISSING_PARAMS' };
     }
 
+    await requireTeamManager(teamId);
+
     const result = await getTeamRosterForMatchReportService(teamId);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getTeamRosterForMatchReportAction:', error);
-    return { success: false, roster: [], error: error?.message || 'Error al cargar plantilla.', code: 'INTERNAL_ERROR' };
+    return { success: false, roster: [], error: getActionErrorMessage(error, 'Error al cargar plantilla.'), code: 'INTERNAL_ERROR' };
   }
 }

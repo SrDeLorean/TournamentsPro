@@ -6,11 +6,9 @@ import { usePathname } from 'next/navigation';
 import { GameConfig } from '@/lib/games-data';
 import { GameLogo } from '@/components/ui/game-logo';
 import { useAuth } from '@/components/providers/auth-provider';
-import { initialTeams, TeamData } from '@/lib/data-store';
 import { UserAthleteSubnavbar } from '@/components/layout/user-athlete-subnavbar';
 import { TeamClubSubnavbar } from '@/components/layout/team-club-subnavbar';
 import { MobileResponsiveSubnavbar } from '@/components/layout/mobile-responsive-subnavbar';
-import { ClubManagementModal } from '@/components/teams/club-management-modal';
 import {
   Trophy, Award, Calendar, ArrowRightLeft, Users, UserCheck, Star, PieChart, Database, Home, ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -144,7 +142,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
                   <Link
                     key={sec.id}
                     href={href}
-                    onClick={(e) => {
+                    onClick={() => {
                       if (onSelectSection) {
                         onSelectSection(sec.id);
                       }

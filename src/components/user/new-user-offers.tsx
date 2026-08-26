@@ -1,33 +1,41 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
-import { Inbox, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Inbox, CheckCircle2, XCircle } from 'lucide-react';
 import { getUserOffersAction, respondNewContractOfferService } from '@/app/actions/new-transfers';
 
 export function NewUserOffersView() {
   const { currentUser } = useAuth();
-  const [offers, setOffers] = useState<any[]>([]);
+  type UserOffer = Awaited<ReturnType<typeof getUserOffersAction>>['offers'][number] & {
+    id: string;
+    pitch_message?: string;
+    created_at: string;
+    logo_url?: string;
+    team_name: string;
+    team_tag?: string;
+  };
+  const [offers, setOffers] = useState<UserOffer[]>([]);
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
-  useEffect(() => {
-    if (currentUser?.id) {
-      loadOffers();
-    }
-  }, [currentUser]);
-
-  const loadOffers = async () => {
+  const loadOffers = useCallback(async () => {
     if (!currentUser?.id) return;
     try {
       const res = await getUserOffersAction(currentUser.id);
-      if (res.success) setOffers(res.offers);
-    } catch (err) {}
-  };
+      if (res.success) setOffers(res.offers as UserOffer[]);
+    } catch {}
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const timer = window.setTimeout(() => void loadOffers(), 0);
+    return () => window.clearTimeout(timer);
+  }, [currentUser?.id, loadOffers]);
 
   const handleResponse = async (offerId: string, action: 'ACEPTADO' | 'RECHAZADO') => {
     startOperation(`Responder Oferta`);
@@ -39,8 +47,8 @@ export function NewUserOffersView() {
       } else {
         endError(res.error || 'Error al procesar el contrato.');
       }
-    } catch (err: any) {
-      endError(err.message);
+    } catch (error: unknown) {
+      endError(error instanceof Error ? error.message : 'Error al procesar el contrato.');
     }
   };
 

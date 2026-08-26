@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ import {
   createOrGetDirectThreadAction,
   getUsersByRoleAction,
   banUserFromChatAction,
-  unbanUserFromChatAction,
   checkUserBanStatusAction,
   updateTypingStatusAction,
   clearTypingStatusAction,
@@ -26,7 +25,6 @@ import {
   ShieldCheck,
   User,
   Trophy,
-  CheckCheck,
   Sparkles,
   X,
   Plus,
@@ -36,11 +34,9 @@ import {
   Crown,
   Search,
   RefreshCw,
-  Megaphone,
   ShieldAlert,
   Users,
   Ban,
-  ShieldBan,
 } from 'lucide-react';
 
 import { useSearchParams } from 'next/navigation';
@@ -51,6 +47,34 @@ interface ChatSystemProps {
   onClose?: () => void;
 }
 
+interface ChatThread {
+  id: string;
+  title: string;
+  participantId: string;
+  participantName: string;
+  participantRole: string;
+  lastMessageAt: string;
+  lastMessageText: string;
+  unreadCount: number;
+}
+
+interface ChatMessageRecord {
+  id: string;
+  threadId?: string;
+  senderId: string;
+  senderName: string;
+  senderRole: string;
+  text: string;
+  timestamp: string;
+}
+
+interface RoleUser {
+  id: string;
+  name: string;
+  gamertag: string;
+  role: string;
+}
+
 export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemProps) {
   const { currentUser, activeGameSlug } = useAuth();
   const currentGameSlug = activeGameSlug || 'eafc26';
@@ -59,12 +83,12 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
   const urlTargetUserId = searchParams.get('targetUserId');
   const urlTargetUserName = searchParams.get('targetUserName');
   const urlTargetUserRole = searchParams.get('targetUserRole');
-  const urlTopic = searchParams.get('topic');
+  const urlTopic = searchParams.get('topic') || initialTopic || '';
 
-  const [threads, setThreads] = useState<any[]>([]);
+  const [threads, setThreads] = useState<ChatThread[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string>(activeConvId || '');
   const [channelFilter, setChannelFilter] = useState<'ALL' | 'DIRECTO' | 'SOPORTE_ORGANIZADOR' | 'ANUNCIO_ADMIN'>('ALL');
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessageRecord[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [loadingThreads, setLoadingThreads] = useState(true);
@@ -81,7 +105,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
   const [showBanModal, setShowBanModal] = useState(false);
   const [banReasonInput, setBanReasonInput] = useState('Infracción disciplinaria del reglamento eSports.');
   const [banningUser, setBanningUser] = useState(false);
-  const [actionNotification, setActionNotification] = useState<string | null>(null);
+  const [, setActionNotification] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -97,16 +121,26 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
 
   // New Chat Form State
   const [newChatRole, setNewChatRole] = useState<'Organizador' | 'Administrador' | 'Capitan' | 'Jugador'>('Organizador');
-  const [availableUsersForRole, setAvailableUsersForRole] = useState<any[]>([]);
+  const [availableUsersForRole, setAvailableUsersForRole] = useState<RoleUser[]>([]);
   const [selectedTargetUserId, setSelectedTargetUserId] = useState<string>('');
   const [loadingRoleUsers, setLoadingRoleUsers] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
+  const openNewChat = () => {
+    setLoadingRoleUsers(true);
+    setUserSearchQuery('');
+    setShowNewChatModal(true);
+  };
+
+  const selectNewChatRole = (role: typeof newChatRole) => {
+    setLoadingRoleUsers(true);
+    setUserSearchQuery('');
+    setNewChatRole(role);
+  };
+
   // Fetch users matching selected role whenever modal opens or role changes
   useEffect(() => {
     if (showNewChatModal) {
-      setLoadingRoleUsers(true);
-      setUserSearchQuery('');
       getUsersByRoleAction(newChatRole)
         .then((res) => {
           if (res.success && res.data && res.data.length > 0) {
@@ -126,22 +160,18 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
     return u.name.toLowerCase().includes(q) || u.gamertag.toLowerCase().includes(q);
   });
 
-  useEffect(() => {
-    if (filteredRoleUsers.length > 0) {
-      if (!selectedTargetUserId || !filteredRoleUsers.some((u) => u.id === selectedTargetUserId)) {
-        setSelectedTargetUserId(filteredRoleUsers[0].id);
-      }
-    }
-  }, [userSearchQuery, availableUsersForRole]);
+  const effectiveTargetUserId = filteredRoleUsers.some((user) => user.id === selectedTargetUserId)
+    ? selectedTargetUserId
+    : filteredRoleUsers[0]?.id || '';
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   // Load threads from MySQL DB
-  const loadThreads = () => {
+  const loadThreads = useCallback(() => {
     if (!currentUser) return;
     getChatThreadsAction(currentUser.id, currentUser.role || 'Jugador', currentGameSlug, channelFilter)
       .then((res) => {
@@ -153,11 +183,11 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
         }
       })
       .finally(() => setLoadingThreads(false));
-  };
+  }, [channelFilter, currentGameSlug, currentUser, selectedThreadId]);
 
   useEffect(() => {
     loadThreads();
-  }, [currentUser?.id, currentGameSlug, channelFilter]);
+  }, [loadThreads]);
 
   // Auto-create or select thread if targetUserId is passed via URL query parameters (e.g. from Transfer Market)
   useEffect(() => {
@@ -184,10 +214,10 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
         }
       });
     }
-  }, [currentUser?.id, urlTargetUserId, urlTargetUserName, urlTargetUserRole, urlTopic, currentGameSlug]);
+  }, [currentUser, urlTargetUserId, urlTargetUserName, urlTargetUserRole, urlTopic, currentGameSlug, loadThreads]);
 
   // Load messages for selected thread
-  const loadMessages = (threadId: string) => {
+  const loadMessages = useCallback((threadId: string) => {
     if (!threadId) return;
     setLoadingMessages(true);
     getThreadMessagesAction(threadId)
@@ -198,13 +228,13 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
         }
       })
       .finally(() => setLoadingMessages(false));
-  };
+  }, [scrollToBottom]);
 
   useEffect(() => {
     if (selectedThreadId) {
-      loadMessages(selectedThreadId);
+      void Promise.resolve().then(() => loadMessages(selectedThreadId));
     }
-  }, [selectedThreadId]);
+  }, [selectedThreadId, loadMessages]);
 
   // Live Auto-Refresh Polling every 1.5 seconds (Optimized for Hostinger shared servers)
   useEffect(() => {
@@ -235,7 +265,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [selectedThreadId, currentUser]);
+  }, [selectedThreadId, currentUser, scrollToBottom]);
 
   const activeThread = threads.find((t) => t.id === selectedThreadId) || threads[0];
 
@@ -313,36 +343,18 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
     }
   };
 
-  const handleUnbanTargetUser = async () => {
-    if (!activeThread?.participantId) return;
-    const res = await unbanUserFromChatAction(activeThread.participantId);
-    if (res.success) {
-      setActionNotification(`La sanción para ${activeThread.participantName} ha sido levantada.`);
-      loadThreads();
-    }
-  };
-
   const handleCreateNewChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
 
-    const targetUserObj = filteredRoleUsers.find((u) => u.id === selectedTargetUserId) || filteredRoleUsers[0] || availableUsersForRole[0];
+    const targetUserObj = filteredRoleUsers.find((u) => u.id === effectiveTargetUserId) || filteredRoleUsers[0] || availableUsersForRole[0];
+    if (!targetUserObj) {
+      setActionNotification('No hay un usuario real disponible para iniciar este chat.');
+      return;
+    }
 
-    const targetId = targetUserObj?.id || (
-      newChatRole === 'Organizador'
-        ? 'usr-organizer'
-        : newChatRole === 'Administrador'
-        ? 'usr-admin'
-        : `usr-direct-${Date.now()}`
-    );
-
-    const targetName = targetUserObj?.name || (
-      newChatRole === 'Organizador'
-        ? 'Organizador Oficial'
-        : newChatRole === 'Administrador'
-        ? 'Administrador Principal'
-        : 'Atleta eSports'
-    );
+    const targetId = targetUserObj.id;
+    const targetName = targetUserObj.name;
 
     const channelTypeVal =
       newChatRole === 'Organizador'
@@ -453,7 +465,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
 
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setShowNewChatModal(true)}
+                onClick={openNewChat}
                 className="p-1.5 rounded-xl bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)]/20 transition-all text-xs font-bold flex items-center gap-1"
                 title="Nuevo Chat Directo"
               >
@@ -690,7 +702,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                     🚫 CUENTA SANCIONADA Y BANEADA DEL CHAT ESPORTS
                   </strong>
                   <p className="text-[10px] text-rose-200">
-                    Has sido sancionado por la administración y tus privilegios de envío de mensajes se encuentran suspendidos. Motivo: "{userBanInfo.reason || 'Infracción de reglamento eSports.'}"
+                    Has sido sancionado por la administración y tus privilegios de envío de mensajes se encuentran suspendidos. Motivo: &quot;{userBanInfo.reason || 'Infracción de reglamento eSports.'}&quot;
                   </p>
                 </div>
               </div>
@@ -745,7 +757,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
             </p>
             <Button
               size="sm"
-              onClick={() => setShowNewChatModal(true)}
+              onClick={openNewChat}
               className="text-xs font-mono font-bold bg-[var(--accent-cyan)] text-slate-950"
             >
               + Iniciar Nuevo Chat
@@ -778,7 +790,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setNewChatRole('Organizador')}
+                    onClick={() => selectNewChatRole('Organizador')}
                     className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
                       newChatRole === 'Organizador'
                         ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-sm'
@@ -791,7 +803,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
 
                   <button
                     type="button"
-                    onClick={() => setNewChatRole('Administrador')}
+                    onClick={() => selectNewChatRole('Administrador')}
                     className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
                       newChatRole === 'Administrador'
                         ? 'bg-rose-950/80 border-rose-500 text-rose-300 shadow-sm'
@@ -804,7 +816,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
 
                   <button
                     type="button"
-                    onClick={() => setNewChatRole('Capitan')}
+                    onClick={() => selectNewChatRole('Capitan')}
                     className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
                       newChatRole === 'Capitan'
                         ? 'bg-amber-950/80 border-amber-500 text-amber-300 shadow-sm'
@@ -817,7 +829,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
 
                   <button
                     type="button"
-                    onClick={() => setNewChatRole('Jugador')}
+                    onClick={() => selectNewChatRole('Jugador')}
                     className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
                       newChatRole === 'Jugador'
                         ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300 shadow-sm'
@@ -854,7 +866,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                   </div>
                 ) : filteredRoleUsers.length > 0 ? (
                   <select
-                    value={selectedTargetUserId}
+                    value={effectiveTargetUserId}
                     onChange={(e) => setSelectedTargetUserId(e.target.value)}
                     className="w-full h-10 px-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] cursor-pointer font-mono"
                   >

@@ -9,39 +9,63 @@ import {
   Shield,
   Building2,
   ShieldAlert,
-  CheckCircle2,
-  XCircle,
   Plus,
-  Edit,
   Trash2,
   Unlock,
-  Gamepad2,
-  Sparkles,
-  AlertTriangle,
-  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
+
+interface AdminUser {
+  id: string;
+  name: string;
+  gamertag: string;
+  email: string;
+  role: string;
+  status: string;
+  is_banned: number;
+  ban_reason?: string | null;
+  banned_at?: string | null;
+}
+
+interface AdminOrganization {
+  id: string;
+  name: string;
+  tag: string;
+  status?: string;
+  organizers_count?: number;
+  teams_count?: number;
+  allowed_games?: string | string[] | null;
+  allowedGames?: string[];
+}
+
+interface AdminTeam {
+  id: string;
+  name: string;
+  tag: string;
+  game_slug: string;
+  status?: string;
+  is_banned: number;
+  ban_reason?: string | null;
+  captain_name?: string;
+}
 
 export function AdminDashboardView() {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'users' | 'banned' | 'organizations' | 'teams'>('users');
 
   // Users State
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [userRoleFilter, setUserRoleFilter] = useState<string>('');
-  const [isCreatingUser, setIsCreatingUser] = useState<boolean>(false);
-  const [editingUser, setEditingUser] = useState<any | null>(null);
 
   // Organizations State
-  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<AdminOrganization[]>([]);
   const [isCreatingOrg, setIsCreatingOrg] = useState<boolean>(false);
 
   // Teams State
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<AdminTeam[]>([]);
 
   const isAdmin = currentUser?.role === 'Administrador';
-  const isOrganizer = currentUser?.role === 'Organizador';
 
   // Fetch Users
   const fetchUsers = async () => {
@@ -77,10 +101,23 @@ export function AdminDashboardView() {
   };
 
   useEffect(() => {
-    fetchUsers();
-    fetchOrganizations();
-    fetchTeams();
+    void fetch(`/api/admin/users${userRoleFilter ? `?role=${userRoleFilter}` : ''}`)
+      .then((res) => res.json())
+      .then((data: { success?: boolean; users?: AdminUser[] }) => {
+        if (data.success) setUsers(data.users ?? []);
+      })
+      .catch((error: unknown) => console.error('Error cargando usuarios:', error));
   }, [userRoleFilter]);
+
+  useEffect(() => {
+    void Promise.all([
+      fetch('/api/admin/organizations').then((res) => res.json()) as Promise<{ success?: boolean; organizations?: AdminOrganization[] }>,
+      fetch('/api/admin/teams').then((res) => res.json()) as Promise<{ success?: boolean; teams?: AdminTeam[] }>,
+    ]).then(([organizationData, teamData]) => {
+      if (organizationData.success) setOrganizations(organizationData.organizations ?? []);
+      if (teamData.success) setTeams(teamData.teams ?? []);
+    }).catch((error: unknown) => console.error('Error cargando datos administrativos:', error));
+  }, []);
 
   // Handle Ban / Unban User
   const handleBanUser = async (userId: string, isCurrentlyBanned: boolean) => {
@@ -96,7 +133,6 @@ export function AdminDashboardView() {
           id: userId,
           action,
           banReason: reason,
-          requesterRole: currentUser?.role,
         }),
       });
       if (res.ok) fetchUsers();
@@ -147,7 +183,6 @@ export function AdminDashboardView() {
           tag: formData.get('tag'),
           ownerId: currentUser?.id,
           allowedGames: selectedGames,
-          requesterRole: currentUser?.role,
         }),
       });
 

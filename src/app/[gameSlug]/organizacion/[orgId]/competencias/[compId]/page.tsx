@@ -5,7 +5,12 @@ import { GAMES_CATALOG } from '@/lib/games-data';
 import { Trophy } from 'lucide-react';
 
 import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
-import { PublicCompetitionDetailView } from '@/components/tournaments/public-competition-detail-view';
+import {
+  PublicCompetitionDetailView,
+  type CompetitionDetail,
+  type CompetitionMatch,
+  type ConfirmedTeam,
+} from '@/components/tournaments/public-competition-detail-view';
 
 export const revalidate = 0;
 
@@ -18,7 +23,7 @@ export default async function PublicCompetitionDetailPage({
   const gameConfig = GAMES_CATALOG[gameSlug] || GAMES_CATALOG['eafc26'];
 
   // Clean compId matching (supports exact compId or prefix matching)
-  const compRows = await queryDB<any>(
+  const compRows = await queryDB<CompetitionDetail>(
     `SELECT c.*, 
             COALESCE(o.name, u_org.name, 'Organización Oficial') as org_name, 
             COALESCE(o.logo_url, u_org.logo_url, '/images/default/logo-default.png') as org_logo, 
@@ -60,14 +65,14 @@ export default async function PublicCompetitionDetailPage({
   const actualCompId = competition.id;
 
   const [teamRows, matchRows] = await Promise.all([
-    queryDB<any>(
+    queryDB<ConfirmedTeam>(
       `SELECT ct.*, t.logo_url as team_logo, t.captain_name 
        FROM competition_teams ct 
        LEFT JOIN teams t ON ct.team_id = t.id 
        WHERE ct.competition_id = ? AND ct.status = 'CONFIRMADO'`,
       [actualCompId]
     ),
-    queryDB<any>(
+    queryDB<CompetitionMatch>(
       `SELECT m.*, 
               th.name as home_team_name, 
               th.tag as home_team_tag, 

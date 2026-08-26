@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { FilterBar } from '@/components/ui/filter-bar';
-import { Card } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,11 +11,9 @@ import {
   Shield,
   ShieldAlert,
   Unlock,
-  Trash2,
   Plus,
   Edit,
   UserCheck,
-  Sparkles,
   MessageSquare,
   Star,
   Award,
@@ -35,13 +32,91 @@ import { GAMES_CATALOG } from '@/lib/games-data';
 import { EsportsCard } from '@/components/ui/esports-card';
 import { Pagination } from '@/components/ui/pagination';
 
+interface UserRecord {
+  id: string;
+  name: string;
+  gamertag: string;
+  email?: string;
+  role?: string;
+  status?: string;
+  position?: string;
+  secondary_position?: string;
+  primaryGame?: string;
+  primary_game?: string;
+  gameSlug?: string;
+  game_slug?: string;
+  platform?: string;
+  rating?: string | number;
+  teamName?: string;
+  team?: string;
+  avatar_url?: string;
+  avatarUrl?: string;
+  foto?: string;
+  banner_url?: string;
+  bannerUrl?: string;
+  biografia?: string;
+  bio?: string;
+  nacionalidad?: string;
+  country?: string;
+  is_banned?: boolean | number;
+  ban_reason?: string;
+  instagram?: string;
+  twitch?: string;
+  twitter?: string;
+  whatsapp?: string;
+  tiktok?: string;
+  youtube?: string;
+  discord?: string;
+  pos?: string;
+}
+
+interface UsersResponse {
+  success?: boolean;
+  users?: UserRecord[];
+  data?: UserRecord[] | { users?: UserRecord[] };
+}
+
+type TimeFilter = 'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC';
+
+const extractUsers = (data: UsersResponse): UserRecord[] => {
+  if (Array.isArray(data.data)) return data.data;
+  if (data.data?.users) return data.data.users;
+  return data.users ?? [];
+};
+
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+const toPlayerData = (user: UserRecord): PlayerData => ({
+  id: user.id,
+  name: user.name,
+  gamertag: user.gamertag,
+  position: user.position || user.pos || 'DFC',
+  secondaryPosition: user.secondary_position,
+  nacionalidad: user.nacionalidad || user.country,
+  whatsapp: user.whatsapp,
+  instagram: user.instagram,
+  twitch: user.twitch,
+  youtube: user.youtube,
+  discord: user.discord,
+  teamName: user.teamName || user.team || 'Agencia Libre',
+  rating: Number(user.rating) || 9,
+  platform: user.platform || 'CROSSPLAY',
+  avatarUrl: user.avatar_url || user.foto || user.avatarUrl,
+  bannerUrl: user.banner_url || user.bannerUrl,
+  gameSlug: user.primaryGame || user.primary_game || user.gameSlug || user.game_slug || 'eafc26',
+  role: user.role,
+  status: user.status,
+  bio: user.biografia || user.bio,
+});
+
 export default function UsersModulePage() {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'directory' | 'management' | 'banned'>('directory');
 
-  const [usersList, setUsersList] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<UserRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const roleFilter = 'ALL';
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -50,8 +125,8 @@ export default function UsersModulePage() {
 
   // CRUD Modals State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
-  const [editingUser, setEditingUser] = useState<any | null>(null);
-  const [banConfirmUser, setBanConfirmUser] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
+  const [banConfirmUser, setBanConfirmUser] = useState<UserRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Image Upload State for Modals
@@ -63,47 +138,47 @@ export default function UsersModulePage() {
   const isOrganizer = currentUser?.role === 'Organizador';
   const canManage = isAdmin || isOrganizer;
 
-  const fetchUsers = async () => {
+  const fetchUsers = React.useCallback(async (): Promise<UserRecord[]> => {
     try {
       const res = await fetch('/api/admin/users');
-      const data = await res.json();
-      const users = data.data?.users || data.users || (data.success && Array.isArray(data.data) ? data.data : []);
+      const data: UsersResponse = await res.json();
+      const users = extractUsers(data);
       if (Array.isArray(users) && users.length > 0) {
-        setUsersList(users);
+        return users;
       } else {
         // Fallback to /api/users
         const res2 = await fetch('/api/users?limit=200');
-        const data2 = await res2.json();
-        const users2 = data2.data?.users || data2.users || (data2.success && Array.isArray(data2.data) ? data2.data : []);
-        if (Array.isArray(users2)) {
-          setUsersList(users2);
-        }
+        const data2: UsersResponse = await res2.json();
+        return extractUsers(data2);
       }
     } catch (err) {
       console.error('Error cargando usuarios desde BD MySQL:', err);
+      return [];
     }
-  };
-
-  useEffect(() => {
-    fetchUsers();
   }, []);
 
-  // Sync images and ban status when editing user opens
+  const refreshUsers = () => void fetchUsers().then(setUsersList);
+
   useEffect(() => {
-    if (editingUser) {
-      setModalAvatarUrl(editingUser.avatar_url || editingUser.foto || '');
-      setModalBannerUrl(editingUser.banner_url || '');
-      setModalIsBanned(Boolean(editingUser.is_banned === 1 || editingUser.is_banned === true));
-    } else {
-      setModalAvatarUrl('');
-      setModalBannerUrl('');
-      setModalIsBanned(false);
-    }
-  }, [editingUser]);
+    void fetchUsers().then(setUsersList);
+  }, [fetchUsers]);
+
+  const openCreateModal = () => {
+    setModalAvatarUrl('');
+    setModalBannerUrl('');
+    setIsCreateModalOpen(true);
+  };
+
+  const openEditModal = (user: UserRecord) => {
+    setModalAvatarUrl(user.avatar_url || user.foto || '');
+    setModalBannerUrl(user.banner_url || '');
+    setModalIsBanned(Boolean(user.is_banned === 1 || user.is_banned === true));
+    setEditingUser(user);
+  };
 
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
-  const [timeFilter, setTimeFilter] = useState<'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC'>('NEWEST');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('NEWEST');
 
   const filteredUsers = usersList.filter((user) => {
     const matchesSearch =
@@ -120,7 +195,7 @@ export default function UsersModulePage() {
   const activeDirectoryUsers = filteredUsers.filter((u) => u.status !== 'Baneado' && u.status !== 'Suspendido');
 
   const sortedActiveDirectoryUsers = React.useMemo(() => {
-    let list = [...activeDirectoryUsers];
+    const list = [...activeDirectoryUsers];
     if (timeFilter === 'OLDEST') {
       list.reverse();
     } else if (timeFilter === 'NAME_ASC') {
@@ -181,7 +256,6 @@ export default function UsersModulePage() {
           discord: formData.get('social_discord'),
           youtube: formData.get('social_youtube'),
           whatsapp: formData.get('social_whatsapp'),
-          requesterRole: currentUser?.role,
         }),
       });
 
@@ -191,12 +265,12 @@ export default function UsersModulePage() {
         setModalAvatarUrl('');
         setModalBannerUrl('');
         endSuccess(`El usuario @${userGamertag} fue creado exitosamente en la base de datos MySQL.`);
-        fetchUsers();
+        refreshUsers();
       } else {
         endError(data.error || 'Error al crear usuario.');
       }
-    } catch (err: any) {
-      endError(err?.message || 'Error en la conexión con el servidor.');
+    } catch (err: unknown) {
+      endError(errorMessage(err, 'Error en la conexión con el servidor.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -241,7 +315,6 @@ export default function UsersModulePage() {
           discord: formData.get('social_discord'),
           youtube: formData.get('social_youtube'),
           whatsapp: formData.get('social_whatsapp'),
-          requesterRole: currentUser?.role,
         }),
       });
 
@@ -251,12 +324,12 @@ export default function UsersModulePage() {
         setModalAvatarUrl('');
         setModalBannerUrl('');
         endSuccess(`Los cambios en el usuario @${userGamertag} fueron guardados correctamente.`);
-        fetchUsers();
+        refreshUsers();
       } else {
         endError(data.error || 'Error al actualizar usuario.');
       }
-    } catch (err: any) {
-      endError(err?.message || 'Error en la conexión al actualizar usuario.');
+    } catch (err: unknown) {
+      endError(errorMessage(err, 'Error en la conexión al actualizar usuario.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -280,7 +353,6 @@ export default function UsersModulePage() {
           id: banConfirmUser.id,
           action,
           banReason: reason || 'Infracción disciplinaria',
-          requesterRole: currentUser?.role,
         }),
       });
 
@@ -288,19 +360,19 @@ export default function UsersModulePage() {
       if (res.ok && data.success) {
         setBanConfirmUser(null);
         endSuccess(isCurrentlyBanned ? `El usuario @${userGamertag} ha sido desbaneado y activado.` : `El usuario @${userGamertag} ha sido baneado del sistema.`);
-        fetchUsers();
+        refreshUsers();
       } else {
         endError(data.error || `Error al procesar el ${actionLabel.toLowerCase()}.`);
       }
-    } catch (err: any) {
-      endError(err?.message || 'Error al conectar con el servidor.');
+    } catch (err: unknown) {
+      endError(errorMessage(err, 'Error al conectar con el servidor.'));
     }
   };
 
   const bannedUsers = usersList.filter((u) => u.is_banned === 1 || u.status === 'Baneado');
 
   // Columns definition for DataTable
-  const userColumns: ColumnDef<any>[] = [
+  const userColumns: ColumnDef<UserRecord>[] = [
     {
       header: 'Usuario / Gamertag',
       sortable: true,
@@ -440,7 +512,7 @@ export default function UsersModulePage() {
                 <span className="text-xs font-bold text-[var(--text-muted)] uppercase hidden md:inline shrink-0">Antigüedad:</span>
                 <select
                   value={timeFilter}
-                  onChange={(e) => setTimeFilter(e.target.value as any)}
+                  onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
                   className="bg-transparent focus:outline-none cursor-pointer"
                 >
                   <option value="NEWEST" className="bg-[#0b101b] text-slate-100 font-semibold">⏱️ Más recientes primero</option>
@@ -460,7 +532,7 @@ export default function UsersModulePage() {
                 return (
                   <EsportsCard
                     key={user.id}
-                    onClick={() => setSelectedPlayer(user)}
+                    onClick={() => setSelectedPlayer(toPlayerData(user))}
                     title={user.name}
                     subtitle={`🎮 ${gameCfg?.name || 'FC 26'} | @${user.gamertag || user.name}`}
                     description={user.biografia || user.bio || `Atleta eSports oficial registrado en el circuito profesional.`}
@@ -527,11 +599,7 @@ export default function UsersModulePage() {
             </h3>
 
             <Button
-              onClick={() => {
-                setModalAvatarUrl('');
-                setModalBannerUrl('');
-                setIsCreateModalOpen(true);
-              }}
+              onClick={openCreateModal}
               className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
@@ -571,7 +639,7 @@ export default function UsersModulePage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => setEditingUser(row)}
+                  onClick={() => openEditModal(row)}
                   className="text-xs text-[var(--accent-violet)] hover:bg-[var(--accent-violet-bg)] p-2 rounded-xl transition-colors"
                   title="Editar datos del usuario"
                 >
@@ -681,7 +749,7 @@ export default function UsersModulePage() {
             </div>
             <div className="space-y-1">
               <label className="text-slate-300 uppercase block">Contraseña:</label>
-              <input type="password" name="password" required defaultValue="123456" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+              <input type="password" name="password" required minLength={10} autoComplete="new-password" placeholder="Mínimo 10 caracteres" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
             </div>
             <div className="space-y-1">
               <label className="text-slate-300 uppercase block">Rol eSports:</label>

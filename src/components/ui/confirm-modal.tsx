@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, ShieldAlert, CheckCircle2, X } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, CheckCircle2 } from 'lucide-react';
 
 export interface ConfirmModalProps {
   isOpen: boolean;

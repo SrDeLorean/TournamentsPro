@@ -3,6 +3,7 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
+import { GameLogo } from '@/components/ui/game-logo';
 
 export interface FilterOption {
   id: string;
@@ -75,14 +76,7 @@ export function FilterBar({
             {/* Selected Game PNG Logo or Icon */}
             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10 flex items-center justify-center">
               {activeGame?.logoUrl ? (
-                <img
-                  src={activeGame.logoUrl}
-                  alt={activeGame.name}
-                  className="w-5 h-5 object-contain filter drop-shadow"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
+                <GameLogo game={activeGame} size="sm" className="filter drop-shadow" />
               ) : (
                 <span className="text-xs font-mono">
                   {activeGame?.icon || (['ALL', 'TODOS'].includes(activeFilter) ? '🌐' : '🎮')}

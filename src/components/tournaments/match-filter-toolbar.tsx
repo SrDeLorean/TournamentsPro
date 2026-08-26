@@ -3,8 +3,7 @@
 import React from 'react';
 import { GameConfig } from '@/lib/games-data';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Search, Building2, Trophy, Flame, Filter, X } from 'lucide-react';
+import { Search, Building2, Trophy, X } from 'lucide-react';
 
 export interface OrgOption {
   id: string;
@@ -34,7 +33,6 @@ interface MatchFilterToolbarProps {
 }
 
 export function MatchFilterToolbar({
-  game,
   searchQuery,
   setSearchQuery,
   statusFilter,
@@ -47,8 +45,6 @@ export function MatchFilterToolbar({
   availableTournaments,
   totalMatchesCount,
 }: MatchFilterToolbarProps) {
-  const brandColor = game?.brandColor || '#FF4654';
-
   return (
     <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xl space-y-4 font-mono backdrop-blur-md">
       {/* 1. Search Bar + Status Filter Pills */}

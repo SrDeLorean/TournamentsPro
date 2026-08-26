@@ -39,7 +39,6 @@ export async function GET(request: Request, { params }: Params) {
       '.jpeg': 'image/jpeg',
       '.webp': 'image/webp',
       '.gif': 'image/gif',
-      '.svg': 'image/svg+xml',
     };
 
     const contentType = contentTypes[ext] || 'image/webp';
@@ -57,7 +56,7 @@ export async function GET(request: Request, { params }: Params) {
         'X-Content-Type-Options': 'nosniff',
       },
     });
-  } catch (error) {
+  } catch {
     return new NextResponse('Error al leer imagen', { status: 500 });
   }
 }

@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Globe } from 'lucide-react';
 
 interface SocialMediaGroupProps {
@@ -71,6 +70,17 @@ export function SocialMediaGroup({
             placeholder="discord.gg/comunidad"
             defaultValue={discord}
             className="w-full p-2.5 rounded-xl input-theme text-[var(--accent-violet)] font-mono text-xs font-bold"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[var(--text-muted)] block text-[11px] font-bold uppercase">Canal de YouTube:</label>
+          <input
+            type="text"
+            name={getFieldName('youtube')}
+            placeholder="youtube.com/@canal"
+            defaultValue={youtube}
+            className="w-full p-2.5 rounded-xl input-theme text-rose-400 font-mono text-xs font-bold"
           />
         </div>
       </div>

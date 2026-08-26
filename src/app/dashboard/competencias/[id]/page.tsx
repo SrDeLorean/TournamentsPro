@@ -3,11 +3,17 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { queryDB } from '@/lib/db';
 import { CompetitionData, CompetitionTeamData } from '@/app/actions/competitions';
-import { CompetitionTabs } from './competition-tabs';
+import {
+  CompetitionTabs,
+  type AvailableTeam,
+  type AvailableUser,
+  type CompetitionMatch,
+} from './competition-tabs';
 import { GAMES_CATALOG, GAME_MODE_OPTIONS } from '@/lib/games-data';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
+import { requireCompetitionManager } from '@/lib/auth-server';
 
 export const revalidate = 0; // Dynamic RSC rendering
 
@@ -37,16 +43,16 @@ async function getCompetitionDetails(id: string) {
     // RSC Parallel Database Queries (Vercel Best Practice async-parallel)
     const [teamRows, availableRows, availableUsers, matchRows] = await Promise.all([
       queryDB<CompetitionTeamData>(`SELECT * FROM competition_teams WHERE competition_id = ? ORDER BY enrolled_at ASC`, [id]),
-      queryDB<any>(
+      queryDB<AvailableTeam>(
         `SELECT id, name, tag, platform, game_slug FROM teams WHERE is_banned = 0 AND game_slug = ? ORDER BY name ASC`,
         [competition.game_slug]
       ),
       isIndividual
-        ? queryDB<any>(
+        ? queryDB<AvailableUser>(
             `SELECT id, name, gamertag, position, rating, primary_game_slug FROM users WHERE (is_banned IS NULL OR is_banned = 0) ORDER BY gamertag ASC`
           )
         : Promise.resolve([]),
-      queryDB<any>(`SELECT * FROM matches WHERE competition_id = ? OR tournament_id = ? ORDER BY COALESCE(matchday_number, matchday, 1) ASC, created_at ASC`, [id, id]),
+      queryDB<CompetitionMatch>(`SELECT * FROM matches WHERE competition_id = ? OR tournament_id = ? ORDER BY COALESCE(matchday_number, matchday, 1) ASC, created_at ASC`, [id, id]),
     ]);
 
     return {
@@ -65,6 +71,7 @@ async function getCompetitionDetails(id: string) {
 
 export default async function CompetitionDetailPage({ params }: DetailPageProps) {
   const { id } = await params;
+  await requireCompetitionManager(id);
   const data = await getCompetitionDetails(id);
 
   if (!data) {

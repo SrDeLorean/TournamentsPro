@@ -1,33 +1,39 @@
 {
-  "name": "temp-app",
+  "name": "tournamentspro",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "db:migrate": "node database/migrate.mjs migrate",
+    "db:migrate:verify": "node database/migrate.mjs verify",
+    "db:migrate:check": "node database/migrate.mjs --check-files",
+    "security:housekeeping": "node database/security-housekeeping.mjs",
+    "security:housekeeping:check": "node database/security-housekeeping.mjs --check"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.3",
-    "@supabase/supabase-js": "^2.110.8",
-    "@tanstack/react-query": "^5.101.4",
+    "@next/env": "^16.3.2",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "framer-motion": "^12.42.2",
+    "google-auth-library": "^11.0.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.25.0",
     "mysql2": "^3.23.1",
-    "next": "16.2.11",
-    "next-intl": "^4.13.3",
+    "next": "^16.3.2",
     "next-themes": "^0.4.6",
-    "nuqs": "^2.9.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.6.0",
-    "zustand": "^5.0.14"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
@@ -35,8 +41,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.11",
+    "eslint-config-next": "^16.3.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

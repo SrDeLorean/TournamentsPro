@@ -3,6 +3,16 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { UserProfile, TeamData, initialTeams } from '@/lib/data-store';
 
+type TeamApiRecord = TeamData & {
+  game_slug?: string;
+  captain_id?: string;
+  captain_name?: string;
+  logo_url?: string;
+  banner_url?: string;
+  logo?: string;
+  banner?: string;
+};
+
 // ── Separate Contexts to prevent unnecessary re-renders ─────────────────────
 
 interface AuthContextType {
@@ -14,7 +24,7 @@ interface AuthContextType {
   updateCurrentUser: (updatedData: Partial<UserProfile>) => void;
   refetchUser: () => Promise<void>;
   login: (emailOrGamertag: string, password?: string) => Promise<boolean>;
-  loginWithGoogle: (googleData?: { name?: string; email?: string; picture?: string }) => Promise<boolean>;
+  loginWithGoogle: (credential: string) => Promise<boolean>;
   register: (data: Partial<UserProfile> & { password?: string }) => Promise<boolean>;
   logout: () => void;
 }
@@ -33,19 +43,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userTeams, setUserTeams] = useState<TeamData[]>(initialTeams);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const applyAuthenticatedUser = useCallback((user: UserProfile) => {
+    setCurrentUser(user);
+    if (user.primaryGame) {
+      setActiveGameSlug(user.primaryGame);
+    }
+  }, []);
+
   const fetchGlobalTeams = useCallback(() => {
     fetch('/api/admin/teams')
       .then((res) => res.json())
       .then((data) => {
         const teams = data.teams || data.data?.teams;
         if (Array.isArray(teams) && teams.length > 0) {
-          const normalizedTeams = teams.map((t: any) => ({
+          const normalizedTeams = (teams as TeamApiRecord[]).map((t): TeamData => ({
             ...t,
-            gameSlug: t.game_slug || t.gameSlug || 'eafc26',
+            gameSlug: (t.game_slug || t.gameSlug || 'eafc26') as TeamData['gameSlug'],
             captainId: t.captain_id || t.captainId,
             captainName: t.captain_name || t.captainName,
             logoUrl: t.logo_url || t.logoUrl || t.logo,
-            bannerUrl: t.banner_url || t.bannerUrl || t.banner,
+            bannerUrl: t.banner_url || t.bannerUrl || t.banner || '',
           }));
           setUserTeams(normalizedTeams);
         }
@@ -57,23 +74,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchGlobalTeams();
   }, [fetchGlobalTeams]);
 
-  // Restore session from localStorage on initial mount
+  // The HttpOnly cookie is the source of truth. Never hydrate identity or roles
+  // from browser-controlled storage.
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem('tournamentspro_session');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        setCurrentUser(parsed);
-        if (parsed.primaryGame) {
-          setActiveGameSlug(parsed.primaryGame);
+    let cancelled = false;
+
+    async function hydrateSession() {
+      try {
+        const response = await fetch('/api/auth/session', { cache: 'no-store' });
+        if (!response.ok) {
+          if (!cancelled) setCurrentUser(null);
+          return;
         }
+
+        const payload = await response.json();
+        const user = payload.data?.user || payload.user;
+        if (!cancelled && user) {
+          applyAuthenticatedUser(user);
+        }
+      } catch (error) {
+        console.error('Error verificando la sesión:', error);
+        if (!cancelled) setCurrentUser(null);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-    } catch (e) {
-      console.error('Error loading session from localStorage:', e);
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+
+    void hydrateSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyAuthenticatedUser]);
 
   const login = useCallback(async (emailOrGamertag: string, password?: string): Promise<boolean> => {
     setIsLoading(true);
@@ -87,81 +118,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       // Support both old { user } and new { data: { user } } response formats
       const user = data.data?.user || data.user;
-      const token = data.data?.token || data.token;
 
       if (res.ok && user) {
-        setCurrentUser(user);
-        localStorage.setItem('tournamentspro_session', JSON.stringify(user));
-        if (token) {
-          localStorage.setItem('tournamentspro_token', token);
-        }
-        if (user.primaryGame) {
-          setActiveGameSlug(user.primaryGame);
-        }
-        setIsLoading(false);
+        applyAuthenticatedUser(user);
         return true;
       } else {
         console.warn('Login falló:', data.error);
-        setIsLoading(false);
         return false;
       }
     } catch (err) {
       console.error('Error de red en login:', err);
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [applyAuthenticatedUser]);
 
-  const loginWithGoogle = useCallback(async (googleData?: { name?: string; email?: string; picture?: string }): Promise<boolean> => {
+  const loginWithGoogle = useCallback(async (credential: string): Promise<boolean> => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(googleData || { name: 'Atleta Google', email: 'google.user@esports.com' }),
+        body: JSON.stringify({ credential }),
       });
 
-      let user: UserProfile;
-
-      if (res.ok) {
-        const data = await res.json();
-        user = data.data?.user || data.user;
-      } else {
-        user = {
-          id: `usr-google-${Date.now()}`,
-          name: googleData?.name || 'Atleta Google',
-          gamertag: googleData?.name ? googleData.name.replace(/\s+/g, '') : 'GoogleGamer',
-          role: 'Jugador',
-          primaryGame: 'eafc26',
-          platform: 'CROSSPLAY',
-          position: 'DFC',
-          status: 'Buscando Club',
-          rating: '9.8',
-        };
+      const data = await res.json();
+      const user = data.data?.user || data.user;
+      if (!res.ok || !user) {
+        console.warn('Login de Google falló:', data.error);
+        return false;
       }
 
-      setCurrentUser(user);
-      localStorage.setItem('tournamentspro_session', JSON.stringify(user));
-      setIsLoading(false);
+      applyAuthenticatedUser(user);
       return true;
     } catch (err) {
-      const fallbackGoogleUser: UserProfile = {
-        id: `usr-google-${Date.now()}`,
-        name: 'Atleta Google',
-        gamertag: 'GoogleGamer',
-        role: 'Jugador',
-        primaryGame: 'eafc26',
-        platform: 'CROSSPLAY',
-        position: 'DFC',
-        status: 'Buscando Club',
-        rating: '9.8',
-      };
-      setCurrentUser(fallbackGoogleUser);
-      localStorage.setItem('tournamentspro_session', JSON.stringify(fallbackGoogleUser));
+      console.error('Error de red en login de Google:', err);
+      return false;
+    } finally {
       setIsLoading(false);
-      return true;
     }
-  }, []);
+  }, [applyAuthenticatedUser]);
 
   const register = useCallback(async (data: Partial<UserProfile> & { password?: string }): Promise<boolean> => {
     setIsLoading(true);
@@ -174,35 +171,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const result = await res.json();
       const user = result.data?.user || result.user;
-      const token = result.data?.token || result.token;
 
       if (res.ok && user) {
-        setCurrentUser(user);
-        localStorage.setItem('tournamentspro_session', JSON.stringify(user));
-        if (token) {
-          localStorage.setItem('tournamentspro_token', token);
-        }
-        if (user.primaryGame) {
-          setActiveGameSlug(user.primaryGame);
-        }
-        setIsLoading(false);
+        applyAuthenticatedUser(user);
         return true;
       } else {
         console.warn('Register falló:', result.error);
-        setIsLoading(false);
         return false;
       }
     } catch (err) {
       console.error('Error de red en register:', err);
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [applyAuthenticatedUser]);
 
   const updateCurrentUser = useCallback((updatedData: Partial<UserProfile>) => {
     setCurrentUser((prev) => {
       const newUser = prev ? { ...prev, ...updatedData } : (updatedData as UserProfile);
-      localStorage.setItem('tournamentspro_session', JSON.stringify(newUser));
       window.dispatchEvent(new Event('user_profile_updated'));
       return newUser;
     });
@@ -218,20 +205,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         const user = data.data?.user || data.user;
         if (user) {
-          setCurrentUser(user);
-          localStorage.setItem('tournamentspro_session', JSON.stringify(user));
+          applyAuthenticatedUser(user);
           window.dispatchEvent(new Event('user_profile_updated'));
         }
       }
     } catch (err) {
       console.error('Error recargando perfil de usuario:', err);
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, applyAuthenticatedUser]);
 
   const logout = useCallback(() => {
     setCurrentUser(null);
-    localStorage.removeItem('tournamentspro_session');
-    localStorage.removeItem('tournamentspro_token');
     // Clear HttpOnly cookie by calling logout endpoint
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   }, []);

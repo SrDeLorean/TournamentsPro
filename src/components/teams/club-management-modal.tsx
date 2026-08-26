@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TeamData, UserProfile } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import {
-  Shield, Users, Plus, Trash2, CheckCircle2, UserCheck, Settings, ArrowRightLeft, Sparkles, X, Edit3, Award, Calendar, AlertCircle, User, BarChart2, FileText, Check, XCircle
+  Users, Plus, Trash2, CheckCircle2, Settings, Sparkles, X, Award, User, BarChart2, FileText, Check
 } from 'lucide-react';
 
 interface ClubManagementModalProps {
@@ -28,13 +28,9 @@ export function ClubManagementModal({
   onUpdateTeam,
 }: ClubManagementModalProps) {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<TeamAdminSection>(initialTab);
-
-  useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
+  const [tabSelection, setTabSelection] = useState({ initialTab, value: initialTab });
+  const activeTab = tabSelection.initialTab === initialTab ? tabSelection.value : initialTab;
+  const setActiveTab = (value: TeamAdminSection) => setTabSelection({ initialTab, value });
 
   // Local state for editable team data
   const [currentTeam, setCurrentTeam] = useState<TeamData>(team);
@@ -126,7 +122,7 @@ export function ClubManagementModal({
     if (offer) {
       setOffersList(offersList.map((o) => o.id === offId ? { ...o, status: 'ACEPTADO' } : o));
       const newMember: UserProfile = {
-        id: `usr-${Date.now()}`,
+        id: `usr-${offId}`,
         name: offer.athleteName,
         gamertag: offer.gamertag,
         role: 'Jugador',

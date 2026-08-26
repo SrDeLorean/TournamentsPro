@@ -7,6 +7,7 @@ import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { PlayerProfileView, PlayerData } from '@/components/players/player-profile-view';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
+import type { UserProfile } from '@/lib/data-store';
 
 interface PlayerPageProps {
   params: Promise<{ gameSlug: string; playerId: string }>;
@@ -24,13 +25,13 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
   const normalizedId = playerId?.toLowerCase();
   const isSelf = normalizedId === 'me' || normalizedId === 'ficha' || (currentUser?.id && normalizedId === currentUser.id.toLowerCase());
 
-  const [dbUser, setDbUser] = React.useState<any | null>(null);
+  const [dbUser, setDbUser] = React.useState<UserProfile | null>(null);
 
   React.useEffect(() => {
     if (!playerId) return;
     fetch(`/api/users?id=${playerId}`)
       .then((res) => res.json())
-      .then((data) => {
+      .then((data: { success?: boolean; user?: UserProfile }) => {
         if (data.success && data.user) {
           setDbUser(data.user);
         }
@@ -41,7 +42,7 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
   const activeUser = isSelf ? currentUser : (dbUser || (currentUser?.id && currentUser.id.toLowerCase() === normalizedId ? currentUser : null));
 
   const validPositions = game?.positions || [];
-  const rawPos = activeUser?.gameProfiles?.[gameSlug]?.position || (gameSlug === activeUser?.primaryGame ? activeUser?.position : undefined) || (validPositions.includes(activeUser?.position) ? activeUser?.position : undefined);
+  const rawPos = activeUser?.gameProfiles?.[gameSlug]?.position || (gameSlug === activeUser?.primaryGame ? activeUser?.position : undefined) || (validPositions.includes(activeUser?.position ?? '') ? activeUser?.position : undefined);
   const resolvedPosition = (rawPos && validPositions.includes(rawPos)) ? rawPos : validPositions[0] || 'DFC';
 
   const rawSecPos = activeUser?.gameProfiles?.[gameSlug]?.secondaryPosition || (gameSlug === activeUser?.primaryGame ? activeUser?.secondaryPosition : undefined);

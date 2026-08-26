@@ -2,13 +2,12 @@
 
 import React, { useState } from 'react';
 import { GameConfig } from '@/lib/games-data';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/page-header';
 import { Avatar } from '@/components/ui/avatar';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
-  BarChart2, PieChart, Star, Trophy, Award, Flame, Zap, Shield, TrendingUp, Users, Target, Activity, Filter, Sparkles, CheckCircle2, ChevronRight
+  Award, Flame, TrendingUp, Activity, Filter, CheckCircle2
 } from 'lucide-react';
 
 interface EsportsAnalyticsViewProps {

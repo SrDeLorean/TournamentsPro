@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { checkTeamNameAvailability, initialTeams, TeamData } from '@/lib/data-store';
@@ -8,10 +9,11 @@ import { getAuthHeaders } from '@/lib/fetch-utils';
 import { GameLogo } from '@/components/ui/game-logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Sparkles, AlertCircle, CheckCircle2, X, Gamepad2, Monitor } from 'lucide-react';
+import { Shield, Sparkles, AlertCircle, X } from 'lucide-react';
 
 import { compressImageToWebP } from '@/lib/image-compressor';
 import { Upload, Image as ImageIcon } from 'lucide-react';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
 interface CreateTeamModalProps {
   isOpen: boolean;
@@ -21,15 +23,15 @@ interface CreateTeamModalProps {
 }
 
 export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 'eafc26' }: CreateTeamModalProps) {
-  const { currentUser, loginWithGoogle, register } = useAuth();
+  const { currentUser, updateCurrentUser } = useAuth();
 
   const [teamName, setTeamName] = useState('');
   const [tag, setTag] = useState('');
-  const [gameSlug, setGameSlug] = useState<string>(defaultGameSlug);
-
-  React.useEffect(() => {
-    if (defaultGameSlug) setGameSlug(defaultGameSlug);
-  }, [defaultGameSlug]);
+  const [gameSelection, setGameSelection] = useState({ defaultGameSlug, value: defaultGameSlug });
+  const gameSlug = gameSelection.defaultGameSlug === defaultGameSlug
+    ? gameSelection.value
+    : defaultGameSlug;
+  const setGameSlug = (value: string) => setGameSelection({ defaultGameSlug, value });
   const [platform, setPlatform] = useState<'PS5' | 'PS4' | 'XBOX' | 'PC' | 'CROSSPLAY'>('CROSSPLAY');
   const [description, setDescription] = useState('');
   const [includeSelfAsPlayer, setIncludeSelfAsPlayer] = useState(true);
@@ -44,14 +46,12 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [color, setColor] = useState('#00F0FF');
+  const color = '#00F0FF';
 
   if (!isOpen) return null;
 
   const selectedGameObj = GAMES_CATALOG[gameSlug] || GAMES_CATALOG['eafc26'];
   const logoTextPreview = tag.trim() ? tag.trim().substring(0, 3).toUpperCase() : 'TP';
-
-  const brandColors = ['#00F0FF', '#A855F7', '#10B981', '#F59E0B', '#EF4444', '#EC4899'];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,44 +118,14 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
 
       const createdTeam: TeamData = data.team;
 
-      // Promote currentUser to Capitán
-      if (currentUser) {
-        currentUser.role = 'Capitán';
-        currentUser.teamId = createdTeam.id;
-        currentUser.teamName = createdTeam.name;
-        localStorage.setItem('tournamentspro_session', JSON.stringify(currentUser));
-      }
+      updateCurrentUser({ role: 'Capitán', teamId: createdTeam.id, teamName: createdTeam.name });
 
       setIsSubmitting(false);
       if (onSuccess) onSuccess(createdTeam);
       onClose();
-    } catch (err: any) {
-      // Fallback local
-      const fallbackTeam: TeamData = {
-        id: `team-${Date.now()}`,
-        name: teamName.trim().toUpperCase(),
-        tag: tag.trim().toUpperCase(),
-        gameSlug: gameSlug as any,
-        captainId: currentUser?.id || 'usr-current',
-        captainName: currentUser?.name || 'Nuevo Capitán',
-        membersCount: includeSelfAsPlayer ? 1 : 0,
-        maxMembers: gameSlug === 'eafc26' ? 45 : 7,
-        description: description.trim() || `Escuadra registrada en el circuito ${selectedGameObj.name}.`,
-        bannerUrl: selectedGameObj.bannerUrl,
-        logoText: logoTextPreview,
-        platform: platform,
-        status: 'ACTIVO',
-        disputando: 'Inscripción Abierta',
-        palmares: 'Nueva Escuadra',
-        color: color,
-        vacantPositions: selectedGameObj.positions.slice(0, 3),
-        members: includeSelfAsPlayer && currentUser ? [currentUser] : [],
-      };
-
-      initialTeams.unshift(fallbackTeam);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'No se pudo crear el equipo');
       setIsSubmitting(false);
-      if (onSuccess) onSuccess(fallbackTeam);
-      onClose();
     }
   };
 
@@ -202,7 +172,14 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
               style={{ borderColor: color, color: color, boxShadow: `0 0 20px ${color}33` }}
             >
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                <Image
+                  src={logoUrl}
+                  alt="Logo"
+                  width={56}
+                  height={56}
+                  unoptimized={shouldBypassImageOptimization(logoUrl)}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 logoTextPreview
               )}
@@ -431,7 +408,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
             </label>
             <select
               value={platform}
-              onChange={(e) => setPlatform(e.target.value as any)}
+              onChange={(e) => setPlatform(e.target.value as typeof platform)}
               className="w-full px-3.5 py-2 rounded-xl input-theme border border-[var(--border-card)] text-xs font-bold"
             >
               <option value="CROSSPLAY">CROSSPLAY (Todas las plataformas)</option>

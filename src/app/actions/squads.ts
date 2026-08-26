@@ -4,16 +4,21 @@ import { revalidatePath } from 'next/cache';
 import { queryDB } from '@/lib/db';
 import { z } from 'zod';
 import { validateSchema, requiredIdSchema } from '@/lib/validation';
-import { getServerUserSession } from '@/lib/auth-server';
+import {
+  getServerUserSession,
+  requireServerActor,
+  requireTeamManager,
+  requireUserManager,
+} from '@/lib/auth-server';
 import {
   getTeamSquadService,
   getAvailablePlayersForSquadService,
   getAllPlayersForContractOfferService,
   addPlayerToSquadService,
   removePlayerFromSquadService,
-  isUserTeamManagerOrCaptainService,
   updateSquadMemberJerseyService,
 } from '@/lib/services';
+import { getActionErrorMessage } from '@/lib/action-utils';
 
 export interface SquadMemberData {
   id: string;
@@ -42,15 +47,43 @@ export interface AvailablePlayerData {
   foto?: string | null;
 }
 
+interface OrganizationEntry { id: string; name: string; acronym: string; competitionName: string | null }
+interface PlayerMatrixRow {
+  user_id: string; user_name: string; gamertag: string; team_id: string; team_name: string;
+  jersey_number: number | null; tactical_position: string | null; member_org_name: string | null;
+  organization_id: string | null; organization_name: string | null; organization_acronym: string | null;
+  competition_name: string | null;
+}
+interface PlayerMatrixEntry {
+  user_id: string; user_name: string; gamertag: string; team_id: string; team_name: string;
+  jersey_number: number | null; tactical_position: string | null; organizations: OrganizationEntry[];
+}
+interface AcceptedPlayerOffer { player_user_id: string; pitch_message: string | null }
+interface UserNameRow { name: string | null; gamertag: string | null }
+interface EnrolledTeamRow {
+  team_id: string; team_name: string; team_tag: string | null; logo_url: string | null; banner_url: string | null;
+  captain_id: string | null; captain_name: string | null; game_slug: string | null; jersey_number: number | null;
+  tactical_position: string | null; role_in_team: string | null; competition_id: string | null;
+  competition_name: string | null; organization_id: string | null; organization_name: string | null;
+  organization_acronym: string | null;
+}
+interface AcceptedTeamOffer { team_id: string; pitch_message: string | null }
+interface TeamOrganizationEntry { id: string; name: string; acronym: string; competitions: string[] }
+interface EnrolledTeamEntry {
+  id: string; name: string; tag: string; logoUrl: string | null; bannerUrl: string | null;
+  captainId: string | null; captainName: string; gameSlug: string; jerseyNumber: number | null;
+  tacticalPosition: string; roleInTeam: string; organizationsMap: Record<string, TeamOrganizationEntry>;
+}
+
 export async function getTeamSquadAction(teamId: string) {
   try {
     if (!teamId) return { success: false, squad: [], error: 'ID de equipo requerido.', code: 'MISSING_PARAMS' };
 
     const result = await getTeamSquadService(teamId);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getTeamSquadAction:', error);
-    return { success: false, squad: [], error: error?.message || 'Error al obtener la plantilla.', code: 'INTERNAL_ERROR' };
+    return { success: false, squad: [], error: getActionErrorMessage(error, 'Error al obtener la plantilla.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -59,17 +92,19 @@ export async function getAvailablePlayersForSquadAction(
   searchQuery?: string,
   organizerUserId?: string
 ) {
+  void organizerUserId;
   try {
     if (!teamId) return { success: false, players: [], error: 'ID de equipo requerido.', code: 'MISSING_PARAMS' };
 
+    await requireTeamManager(teamId);
     const session = await getServerUserSession();
-    const effectiveOrganizerId = organizerUserId || session?.userId;
+    const effectiveOrganizerId = session?.userId;
 
     const result = await getAvailablePlayersForSquadService(teamId, searchQuery, effectiveOrganizerId);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getAvailablePlayersForSquadAction:', error);
-    return { success: false, players: [], error: error?.message || 'Error al buscar jugadores.', code: 'INTERNAL_ERROR' };
+    return { success: false, players: [], error: getActionErrorMessage(error, 'Error al buscar jugadores.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -83,6 +118,8 @@ export async function addPlayerToSquadAction(
     if (!teamId || !userId) {
       return { success: false, error: 'Equipo y Usuario son requeridos.', code: 'MISSING_PARAMS' };
     }
+
+    await requireTeamManager(teamId);
 
     const validation = validateSchema(
       z.object({
@@ -106,9 +143,9 @@ export async function addPlayerToSquadAction(
     }
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en addPlayerToSquadAction:', error);
-    return { success: false, error: error?.message || 'Error al agregar jugador a la escuadra.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al agregar jugador a la escuadra.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -118,6 +155,8 @@ export async function removePlayerFromSquadAction(teamId: string, userId: string
       return { success: false, error: 'Equipo y Usuario son requeridos.', code: 'MISSING_PARAMS' };
     }
 
+    await requireTeamManager(teamId);
+
     const result = await removePlayerFromSquadService(teamId, userId);
 
     if (result.success) {
@@ -126,37 +165,41 @@ export async function removePlayerFromSquadAction(teamId: string, userId: string
     }
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en removePlayerFromSquadAction:', error);
-    return { success: false, error: error?.message || 'Error al remover jugador.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al remover jugador.'), code: 'INTERNAL_ERROR' };
   }
 }
 
 export async function checkTeamManagementPermissionAction(userId: string, teamId: string) {
   try {
-    const isManager = await isUserTeamManagerOrCaptainService(userId, teamId);
-    return { success: true, isManager };
-  } catch (error: any) {
+    const actor = await requireTeamManager(teamId);
+    return { success: true, isManager: actor.userId === userId || actor.role === 'Administrador' || actor.role === 'Organizador' };
+  } catch {
     return { success: false, isManager: false };
   }
 }
 
 export async function updateSquadMemberJerseyAction(memberId: string, jerseyNumber: number | null) {
   try {
+    const members = await queryDB<{ team_id: string }>('SELECT team_id FROM team_members WHERE id = ? LIMIT 1', [memberId]);
+    if (!members[0]) return { success: false, error: 'Miembro no encontrado.' };
+    await requireTeamManager(members[0].team_id);
     const res = await updateSquadMemberJerseyService(memberId, jerseyNumber);
     if (res.success) {
       revalidatePath('/equipos');
       revalidatePath('/club/plantilla');
     }
     return res;
-  } catch (error: any) {
-    return { success: false, error: error?.message || 'Error al actualizar dorsal.' };
+  } catch (error: unknown) {
+    return { success: false, error: getActionErrorMessage(error, 'Error al actualizar dorsal.') };
   }
 }
 
 export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug: string) {
   try {
-    const rows = await queryDB<any>(
+    await requireTeamManager(teamId);
+    const rows = await queryDB<PlayerMatrixRow>(
       `SELECT 
         u.id as user_id,
         u.name as user_name,
@@ -181,12 +224,12 @@ export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug
     );
 
     // Fetch accepted contract offers for this team
-    const acceptedOffers = await queryDB<any>(
+    const acceptedOffers = await queryDB<AcceptedPlayerOffer>(
       `SELECT player_user_id, pitch_message FROM transfer_offers WHERE team_id = ? AND status = 'ACEPTADO'`,
       [teamId]
     );
 
-    const userMap: Record<string, any> = {};
+    const userMap: Record<string, PlayerMatrixEntry> = {};
     for (const r of rows) {
       if (!userMap[r.user_id]) {
         userMap[r.user_id] = {
@@ -205,7 +248,7 @@ export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug
       if (effectiveOrgName || r.organization_id) {
         const orgId = r.organization_id || effectiveOrgName || 'org-gen';
         const exists = userMap[r.user_id].organizations.some(
-          (org: any) => org.id === orgId || org.name.toLowerCase() === (effectiveOrgName || '').toLowerCase()
+          (organization) => organization.id === orgId || organization.name.toLowerCase() === (effectiveOrgName || '').toLowerCase()
         );
         if (!exists) {
           userMap[r.user_id].organizations.push({
@@ -225,7 +268,7 @@ export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug
         if (match && match[1]) {
           const orgVal = match[1].trim();
           const exists = userMap[off.player_user_id].organizations.some(
-            (org: any) => org.name.toLowerCase() === orgVal.toLowerCase() || org.id === orgVal
+            (organization) => organization.name.toLowerCase() === orgVal.toLowerCase() || organization.id === orgVal
           );
           if (!exists) {
             userMap[off.player_user_id].organizations.push({
@@ -240,31 +283,33 @@ export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug
     }
 
     return { success: true, data: Object.values(userMap) };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getPlayerInscriptionsMatrixAction:', error);
-    return { success: false, error: error?.message || 'Error al obtener matriz de inscripciones.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al obtener matriz de inscripciones.') };
   }
 }
 
 export async function getAllPlayersForContractOfferAction(gameSlug: string, searchQuery?: string) {
   try {
+    await requireServerActor();
     const res = await getAllPlayersForContractOfferService(gameSlug, searchQuery);
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getAllPlayersForContractOfferAction:', error);
-    return { success: false, players: [], error: error?.message || 'Error al obtener jugadores.' };
+    return { success: false, players: [], error: getActionErrorMessage(error, 'Error al obtener jugadores.') };
   }
 }
 
 export async function getUserEnrolledTeamsAction(userId: string, gameSlug: string) {
   try {
+    await requireUserManager(userId);
     if (!userId) return { success: false, teams: [], error: 'ID de usuario requerido' };
 
-    const userRows = await queryDB<any>(`SELECT name, gamertag FROM users WHERE id = ? LIMIT 1`, [userId]);
+    const userRows = await queryDB<UserNameRow>(`SELECT name, gamertag FROM users WHERE id = ? LIMIT 1`, [userId]);
     const uName = userRows[0]?.name || '';
     const uGamertag = userRows[0]?.gamertag || uName;
 
-    const rows = await queryDB<any>(
+    const rows = await queryDB<EnrolledTeamRow>(
       `SELECT 
         t.id as team_id,
         t.name as team_name,
@@ -294,12 +339,12 @@ export async function getUserEnrolledTeamsAction(userId: string, gameSlug: strin
     );
 
     // Also fetch accepted contract offers for this user
-    const acceptedOffers = await queryDB<any>(
+    const acceptedOffers = await queryDB<AcceptedTeamOffer>(
       `SELECT team_id, pitch_message FROM transfer_offers WHERE player_user_id = ? AND status = 'ACEPTADO'`,
       [userId]
     );
 
-    const teamMap: Record<string, any> = {};
+    const teamMap: Record<string, EnrolledTeamEntry> = {};
     for (const r of rows) {
       if (!teamMap[r.team_id]) {
         teamMap[r.team_id] = {
@@ -355,14 +400,14 @@ export async function getUserEnrolledTeamsAction(userId: string, gameSlug: strin
       }
     }
 
-    const resultTeams = Object.values(teamMap).map((team: any) => ({
+    const resultTeams = Object.values(teamMap).map((team) => ({
       ...team,
       organizations: Object.values(team.organizationsMap),
     }));
 
     return { success: true, teams: resultTeams };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getUserEnrolledTeamsAction:', error);
-    return { success: false, teams: [], error: error?.message || 'Error al obtener equipos del usuario.' };
+    return { success: false, teams: [], error: getActionErrorMessage(error, 'Error al obtener equipos del usuario.') };
   }
 }

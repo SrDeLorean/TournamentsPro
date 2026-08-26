@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { GameConfig } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
-import { Building2, Trophy, Users, Shield, Award, Search, Crown, X, Star, Globe, ArrowRight } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Trophy, Shield, Star } from 'lucide-react';
 import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
 import { getOrganizationsWithStatsAction, OrgWithStats } from '@/app/actions/organizations';
 import { Pagination } from '@/components/ui/pagination';
@@ -17,6 +15,21 @@ interface OrganizationDirectoryProps {
   gameSlug: string;
   gameConfig: GameConfig;
 }
+
+type OrganizationDisplayData = OrgWithStats & {
+  banner_url?: string | null;
+  logo_url?: string | null;
+  rating?: string;
+  socialMedia?: Record<string, string | undefined>;
+  whatsapp?: string;
+  instagram?: string;
+  twitter?: string;
+  twitch?: string;
+  discord?: string;
+  tiktok?: string;
+  youtube?: string;
+  website?: string;
+};
 
 export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDirectoryProps) {
   const [orgs, setOrgs] = useState<OrgWithStats[]>([]);
@@ -51,12 +64,9 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
 
   const itemsPerPage = 12;
   const totalPages = Math.ceil(filteredOrgs.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const visiblePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (visiblePage - 1) * itemsPerPage;
   const currentOrgs = filteredOrgs.slice(startIndex, startIndex + itemsPerPage);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, orgs]);
 
   return (
     <div className="animate-in fade-in duration-300">
@@ -82,7 +92,10 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
             <FilterBar
               searchPlaceholder="Buscar organizaciones o comunidades por nombre o tag..."
               searchValue={searchTerm}
-              onSearchChange={setSearchTerm}
+              onSearchChange={(value) => {
+                setSearchTerm(value);
+                setCurrentPage(1);
+              }}
               count={filteredOrgs.length}
               countLabel="ORGS ENCONTRADAS"
               brandColor="var(--game-brand)"
@@ -92,10 +105,11 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
           {/* ── GRID ────────────────────────────── */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8 mt-6 pb-8">
             {currentOrgs.map((org, index) => {
-              const bannerImg = (org as any).banner_url || (org as any).bannerUrl || gameConfig.bannerUrl || '/images/default/banner-default.jpg';
-              const logoImg = (org as any).logo_url || (org as any).logoUrl || '/images/default/logo-default.png';
-              const countryStr = (org as any).country || 'Global';
-              const ratingStr = (org as any).rating || '4.98';
+              const displayOrg = org as OrganizationDisplayData;
+              const bannerImg = displayOrg.banner_url || displayOrg.bannerUrl || gameConfig.bannerUrl || '/images/default/banner-default.jpg';
+              const logoImg = displayOrg.logo_url || displayOrg.logoUrl || '/images/default/logo-default.png';
+              const countryStr = displayOrg.country || 'Global';
+              const ratingStr = displayOrg.rating || '4.98';
 
               return (
                 <EsportsCard
@@ -109,15 +123,15 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
                   tag={org.tag}
                   country={countryStr}
                   socials={
-                    (org as any).socialMedia || {
-                      whatsapp: (org as any).whatsapp,
-                      instagram: (org as any).instagram,
-                      twitter: (org as any).twitter,
-                      twitch: (org as any).twitch,
-                      discord: (org as any).discord,
-                      tiktok: (org as any).tiktok,
-                      youtube: (org as any).youtube,
-                      website: (org as any).website,
+                    displayOrg.socialMedia || {
+                      whatsapp: displayOrg.whatsapp,
+                      instagram: displayOrg.instagram,
+                      twitter: displayOrg.twitter,
+                      twitch: displayOrg.twitch,
+                      discord: displayOrg.discord,
+                      tiktok: displayOrg.tiktok,
+                      youtube: displayOrg.youtube,
+                      website: displayOrg.website,
                     }
                   }
                   badges={[{ text: 'VERIFICADA', variant: 'emerald', pulse: true }]}
@@ -149,7 +163,7 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
           {/* Pagination Controls */}
           {totalPages > 1 && (
             <Pagination
-              currentPage={currentPage}
+            currentPage={visiblePage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
             />

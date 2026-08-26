@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { TeamProfileView } from '@/components/teams/team-profile-view';
-import { initialTeams } from '@/lib/data-store';
+import { initialTeams, type TeamData } from '@/lib/data-store';
 import { Button } from '@/components/ui/button';
 
 interface TeamPageProps {
@@ -17,7 +17,7 @@ export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
   const { gameSlug, teamId } = use(params);
   const router = useRouter();
 
-  const [fetchedTeam, setFetchedTeam] = React.useState<any>(null);
+  const [fetchedTeam, setFetchedTeam] = React.useState<TeamData | null>(null);
 
   // Support game slugs including csgo / cs2 alias
   let game = GAMES_CATALOG[gameSlug];
@@ -28,10 +28,10 @@ export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
   React.useEffect(() => {
     fetch(`/api/teams`)
       .then((res) => res.json())
-      .then((data) => {
+      .then((data: { success?: boolean; teams?: TeamData[] }) => {
         if (data.success && Array.isArray(data.teams)) {
           const matched = data.teams.find(
-            (t: any) =>
+            (t) =>
               t.id?.toLowerCase() === teamId.toLowerCase() ||
               t.tag?.toLowerCase() === teamId.toLowerCase() ||
               t.name?.toLowerCase()?.replace(/\s+/g, '-') === teamId.toLowerCase()
@@ -52,7 +52,7 @@ export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
     id: teamId,
     name: 'Escuadra eSports',
     tag: 'TP',
-    gameSlug: gameSlug as any,
+    gameSlug: gameSlug as TeamData['gameSlug'],
     gameName: game?.name || 'EA SPORTS FC 26',
     captainId: 'usr-admin',
     captainName: 'Administrador',
@@ -64,7 +64,7 @@ export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
     description: 'Escuadra oficial registrada en el circuito eSports.',
     logoUrl: '/images/default/logo-default.png',
     bannerUrl: '/images/default/banner-default.jpg',
-    status: 'Escuadra Activa',
+    status: 'ACTIVO',
     disputando: 'Torneo Oficial',
     palmares: 'Club Registrado',
     vacantPositions: ['DFC', 'LI', 'MCD'],

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { GameConfig } from '@/lib/games-data';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { CountryFlag } from '@/components/ui/country-flag';
@@ -10,14 +9,10 @@ import {
   Trophy,
   Award,
   Building2,
-  RefreshCw,
   Flame,
   Shield,
   Layers,
   ChevronRight,
-  TrendingUp,
-  CheckCircle2,
-  HelpCircle,
   Zap,
 } from 'lucide-react';
 
@@ -59,6 +54,49 @@ export interface BracketMatch {
   timeDisplay?: string;
 }
 
+interface TournamentOption {
+  id: string;
+  name: string;
+  format: string;
+  mode_format?: string;
+  description?: string;
+  organizationName: string;
+  organization_name?: string;
+}
+
+interface StandingsMatch {
+  id: string;
+  organization_name?: string;
+  tournament_name?: string;
+  group_name?: string;
+  round_name?: string;
+  home_team_name?: string;
+  home_team_tag?: string;
+  away_team_name?: string;
+  away_team_tag?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  score_home?: number | string | null;
+  score_away?: number | string | null;
+  status?: string;
+  scheduled_time?: string;
+  transmission_time?: string;
+}
+
+interface OrganizationApiItem {
+  id?: string;
+  name: string;
+  tag?: string;
+}
+
+interface TournamentApiItem {
+  id: string;
+  name: string;
+  format?: string;
+  mode_format?: string;
+  organization_name?: string;
+}
+
 // Helper to filter out placeholder entries like "1° de Grupo B", "Por Definir", "TBD"
 function isPlaceholderTeam(name?: string): boolean {
   if (!name) return true;
@@ -84,12 +122,12 @@ export function StandingsView({ game }: StandingsViewProps) {
 
   // Real Database Filters State
   const [organizations, setOrganizations] = useState<{ id: string; name: string; tag: string }[]>([]);
-  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [tournaments, setTournaments] = useState<TournamentOption[]>([]);
   const [selectedOrgName, setSelectedOrgName] = useState<string>('TODAS');
   const [selectedTournName, setSelectedTournName] = useState<string>('');
 
   // Real Database Loaded Data
-  const [dbMatches, setDbMatches] = useState<any[]>([]);
+  const [dbMatches, setDbMatches] = useState<StandingsMatch[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
 
@@ -109,7 +147,7 @@ export function StandingsView({ game }: StandingsViewProps) {
       const data = await res.json();
       const raw = data.organizations || data.data || (Array.isArray(data) ? data : []);
       if (Array.isArray(raw)) {
-        return raw.map((o: any) => ({
+        return (raw as OrganizationApiItem[]).map((o) => ({
           id: o.id || o.name,
           name: o.name,
           tag: o.tag || UPPER_TAG(o.name),
@@ -133,7 +171,7 @@ export function StandingsView({ game }: StandingsViewProps) {
         const data = await res.json();
         const raw = data.tournaments || data.competitions || data.data || (Array.isArray(data) ? data : []);
         if (Array.isArray(raw)) {
-          return raw.map((t: any) => ({
+          return (raw as TournamentApiItem[]).map((t) => ({
             id: t.id,
             name: t.name,
             format: (t.format || t.mode_format || 'LIGA').toUpperCase(),
@@ -222,7 +260,7 @@ export function StandingsView({ game }: StandingsViewProps) {
 
   // Derive available tournaments (API + matches fallback)
   const availableTournaments = useMemo(() => {
-    const map = new Map<string, any>();
+    const map = new Map<string, TournamentOption>();
     tournaments.forEach((t) => {
       if (selectedOrgName === 'TODAS' || (t.organizationName && t.organizationName.toUpperCase() === selectedOrgName.toUpperCase())) {
         map.set(t.name.toUpperCase(), t);
@@ -374,7 +412,7 @@ export function StandingsView({ game }: StandingsViewProps) {
       else row.statusZone = 'NEUTRAL';
       return row;
     });
-  }, [dbMatches, selectedTournName]);
+  }, [dbMatches]);
 
   // Compute Real Group Standings dynamically grouped by m.group_name or split into Grupo A & B
   const groupStandingsMap = useMemo(() => {

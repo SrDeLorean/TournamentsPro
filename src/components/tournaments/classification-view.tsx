@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, Building2, Trophy, ArrowUpDown, Info, RefreshCw, BarChart2, GitCommit, LayoutGrid } from 'lucide-react';
+import Image from 'next/image';
+import { Search, Building2, Trophy, RefreshCw, BarChart2 } from 'lucide-react';
 import { GameConfig } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { TacticalLoadingSkeleton } from './tactical-loading-skeleton';
 import { PlayoffBracket } from './playoff-bracket';
 import { getOrganizationsWithStatsAction } from '@/app/actions/organizations';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
 interface ClassificationViewProps {
   game: GameConfig;
@@ -57,6 +59,44 @@ interface TeamStanding {
   groupName: string;
 }
 
+interface ClassificationMatch {
+  id: string | number;
+  home_team_name: string;
+  home_team_tag: string;
+  away_team_name: string;
+  away_team_tag: string;
+  score_home: number | null;
+  score_away: number | null;
+  status: string;
+  round_name: string;
+  tournament_name?: string;
+  tournament_id?: string | number;
+  competition_id?: string | number;
+  organization_name?: string;
+  group_name?: string;
+  matchday?: number;
+}
+
+interface TournamentApiItem {
+  id: string | number;
+  name: string;
+  organization_name?: string;
+  format_type?: string;
+  format?: string;
+  logo_url?: string;
+  logoUrl?: string;
+  banner_url?: string;
+  bannerUrl?: string;
+}
+
+interface OrganizationApiItem {
+  id: string | number;
+  name: string;
+  tag?: string;
+  logo_url?: string | null;
+  logoUrl?: string | null;
+}
+
 export function ClassificationView({
   game,
   initialOrgName,
@@ -79,17 +119,17 @@ export function ClassificationView({
   const [searchQuery, setSearchQuery] = useState('');
   
   const [standings, setStandings] = useState<TeamStanding[]>([]);
-  const [allMatches, setAllMatches] = useState<any[]>([]);
+  const [allMatches, setAllMatches] = useState<ClassificationMatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [activeTabs, setActiveTabs] = useState<Record<string, 'LIGA' | 'PLAYOFF'>>({});
 
   // 1. Fetch Organizations
-  const fetchOrganizationsFromDB = async () => {
+  const fetchOrganizationsFromDB = useCallback(async () => {
     try {
       const res = await getOrganizationsWithStatsAction(game.slug);
       if (res.success && res.organizations) {
-        const mapped = res.organizations.map((o: any) => ({
+        const mapped = (res.organizations as OrganizationApiItem[]).map((o) => ({
           id: o.id || o.name,
           name: o.name,
           tag: o.tag,
@@ -100,17 +140,17 @@ export function ClassificationView({
     } catch (err) {
       console.error('Error fetching orgs:', err);
     }
-  };
+  }, [game.slug]);
 
   // 2. Fetch Tournaments
-  const fetchTournamentsFromDB = async (orgName: string) => {
+  const fetchTournamentsFromDB = useCallback(async (orgName: string) => {
     try {
       let url = `/api/tournaments?gameSlug=${game.slug}&_t=${Date.now()}`;
       if (orgName !== 'TODAS') url += `&organizationName=${encodeURIComponent(orgName)}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success && Array.isArray(data.tournaments)) {
-        const mapped = data.tournaments.map((t: any) => {
+        const mapped = (data.tournaments as TournamentApiItem[]).map((t) => {
           // The API swaps them: c.format is returned as format_type, and c.mode_format is returned as format
           let rawFormat = (t.format_type || t.format || 'LIGA').toUpperCase();
           rawFormat = rawFormat.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // HÍBRIDO -> HIBRIDO
@@ -135,10 +175,12 @@ export function ClassificationView({
              const mRes = await fetch(`/api/matches?gameSlug=${game.slug}&search=${encodeURIComponent(targetTeamName)}`);
              const mData = await mRes.json();
              if (mData.success && Array.isArray(mData.matches)) {
-                const teamTournaments = new Set(mData.matches.map((m: any) => m.tournament_name));
-                filteredMapped = mapped.filter((t: any) => teamTournaments.has(t.name));
+                const teamTournaments = new Set(
+                  (mData.matches as Pick<ClassificationMatch, 'tournament_name'>[]).map((m) => m.tournament_name)
+                );
+                filteredMapped = mapped.filter((t) => teamTournaments.has(t.name));
              }
-           } catch(e) {}
+           } catch {}
         }
         setTournaments(filteredMapped);
       } else {
@@ -147,7 +189,7 @@ export function ClassificationView({
     } catch (err) {
       console.error('Error fetching tournaments:', err);
     }
-  };
+  }, [game.slug, targetTeamName]);
 
   // 3. Fetch Matches & Calculate Standings
   const fetchAndCalculateStandings = useCallback(async (orgName: string, tournName: string, queryText: string) => {
@@ -163,10 +205,11 @@ export function ClassificationView({
       const data = await res.json();
 
       if (data.success && Array.isArray(data.matches)) {
-        setAllMatches(data.matches);
+        const matches = data.matches as ClassificationMatch[];
+        setAllMatches(matches);
         const standingsMap = new Map<string, TeamStanding>();
 
-        data.matches.forEach((m: any) => {
+        matches.forEach((m) => {
           const homeName = m.home_team_name || 'Equipo Local';
           const homeTag = m.home_team_tag || 'LOC';
           const awayName = m.away_team_name || 'Equipo Visitante';
@@ -245,7 +288,7 @@ export function ClassificationView({
       console.error('Error fetching standings matches:', err);
       setStandings([]);
     }
-  }, [game.slug]);
+  }, [game.slug, initialTournId]);
 
   // Initial Load
   useEffect(() => {
@@ -267,7 +310,7 @@ export function ClassificationView({
     };
     loadAllInitialData();
     return () => { isMounted = false; };
-  }, [game.slug, fetchAndCalculateStandings, initialOrgName, initialTournName]);
+  }, [fetchAndCalculateStandings, fetchOrganizationsFromDB, fetchTournamentsFromDB, initialOrgName, initialTournName]);
 
   // Handlers
   const handleSelectOrganization = (orgName: string) => {
@@ -321,7 +364,7 @@ export function ClassificationView({
       map[orgName].push(t);
     });
     return map;
-  }, [tournaments, allMatches, selectedOrgName, selectedTournName, game.slug]);
+  }, [tournaments, allMatches, selectedOrgName, selectedTournName, game.slug, targetTeamName]);
 
   // Motor de Estados Vacíos
   const getEmptyStateMessage = () => {
@@ -452,9 +495,12 @@ export function ClassificationView({
                           }
                         >
                           {org.logoUrl ? (
-                            <img
+                            <Image
                               src={org.logoUrl}
                               alt={org.name}
+                              width={16}
+                              height={16}
+                              unoptimized={shouldBypassImageOptimization(org.logoUrl)}
                               className="w-4 h-4 object-contain rounded-full filter drop-shadow shrink-0"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
@@ -530,9 +576,12 @@ export function ClassificationView({
                           }
                         >
                           {comp.logoUrl ? (
-                            <img
+                            <Image
                               src={comp.logoUrl}
                               alt={comp.name}
+                              width={16}
+                              height={16}
+                              unoptimized={shouldBypassImageOptimization(comp.logoUrl)}
                               className="w-4 h-4 object-contain rounded-full filter drop-shadow shrink-0"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
@@ -704,7 +753,10 @@ export function ClassificationView({
                                         <td className="p-3.5">
                                           <div className="flex items-center gap-3">
                                             <Avatar fallback={team.tag} size="sm" className="ring-1 ring-[var(--border-card)] shrink-0" />
-                                            <span className={`font-extrabold font-display text-sm truncate max-w-[200px] transition-colors ${position <= 3 ? 'text-[var(--text-primary)] group-hover:text-amber-400' : 'text-[var(--text-heading)]'}`} style={{ ':hover': { color: brandColor } } as any}>
+                                            <span
+                                              className={`font-extrabold font-display text-sm truncate max-w-[200px] transition-colors group-hover:text-[var(--team-hover)] ${position <= 3 ? 'text-[var(--text-primary)]' : 'text-[var(--text-heading)]'}`}
+                                              style={{ '--team-hover': brandColor } as React.CSSProperties & Record<'--team-hover', string>}
+                                            >
                                               {team.name}
                                             </span>
                                           </div>

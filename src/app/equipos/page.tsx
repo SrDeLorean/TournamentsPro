@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
 import { TeamDirectory } from '@/components/teams/team-directory';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, ShieldAlert, Unlock, Trash2, Edit, Plus, Globe, UserPlus, X } from 'lucide-react';
+import { Shield, ShieldAlert, Unlock, Edit, Plus, UserPlus, X } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { DataTable, ColumnDef } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
@@ -19,28 +19,67 @@ import { SquadRosterModal } from '@/components/teams/squad-roster-modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
+
+interface TeamManager {
+  id: string;
+  name: string;
+  gamertag?: string;
+}
+
+interface AdminUser extends TeamManager {
+  role?: string;
+}
+
+interface AdminTeam {
+  id: string;
+  name: string;
+  tag: string;
+  game_slug: string;
+  platform?: string;
+  status?: string;
+  description?: string;
+  captain_id?: string;
+  captainId?: string;
+  captain_name?: string;
+  members_count?: number;
+  max_members?: number;
+  logo_text?: string;
+  logo_url?: string;
+  logoUrl?: string;
+  banner_url?: string;
+  bannerUrl?: string;
+  organization_id?: string | null;
+  encargados?: TeamManager[];
+  is_banned?: boolean | number;
+  social_twitter?: string;
+  social_instagram?: string;
+  social_twitch?: string;
+  social_discord?: string;
+}
+
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export default function TeamsModulePage() {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'directory' | 'crud' | 'banned'>('directory');
-  const [selectedGameSlug, setSelectedGameSlug] = useState<string>('ALL');
-
-  const [teams, setTeams] = useState<any[]>([]);
-  const [usersList, setUsersList] = useState<any[]>([]);
+  const [teams, setTeams] = useState<AdminTeam[]>([]);
+  const [usersList, setUsersList] = useState<AdminUser[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
-  const [editingTeam, setEditingTeam] = useState<any | null>(null);
-  const [banConfirmTeam, setBanConfirmTeam] = useState<any | null>(null);
-  const [managingRosterTeam, setManagingRosterTeam] = useState<any | null>(null);
+  const [editingTeam, setEditingTeam] = useState<AdminTeam | null>(null);
+  const [banConfirmTeam, setBanConfirmTeam] = useState<AdminTeam | null>(null);
+  const [managingRosterTeam, setManagingRosterTeam] = useState<AdminTeam | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Captain & N Encargados state for Create Modal
   const [createCaptainId, setCreateCaptainId] = useState<string>('');
-  const [createEncargados, setCreateEncargados] = useState<any[]>([]);
+  const [createEncargados, setCreateEncargados] = useState<TeamManager[]>([]);
   const [createCandidateEncargadoId, setCreateCandidateEncargadoId] = useState<string>('');
 
   // Captain & N Encargados state for Edit Modal
   const [editCaptainId, setEditCaptainId] = useState<string>('');
-  const [editEncargados, setEditEncargados] = useState<any[]>([]);
+  const [editEncargados, setEditEncargados] = useState<TeamManager[]>([]);
   const [editCandidateEncargadoId, setEditCandidateEncargadoId] = useState<string>('');
 
   // Image upload state for modals
@@ -49,52 +88,51 @@ export default function TeamsModulePage() {
 
   const isAdminOrOrganizer = currentUser?.role === 'Administrador' || currentUser?.role === 'Organizador';
 
-  const fetchTeams = async () => {
+  const fetchTeams = React.useCallback(async (): Promise<AdminTeam[]> => {
     try {
       const res = await fetch('/api/admin/teams');
-      const data = await res.json();
-      if (data.success) setTeams(data.teams);
+      const data: { success?: boolean; teams?: AdminTeam[] } = await res.json();
+      return data.success && Array.isArray(data.teams) ? data.teams : [];
     } catch (e) {
       console.error('Error cargando equipos:', e);
+      return [];
     }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch('/api/admin/users');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.users)) {
-        setUsersList(data.users);
-      }
-    } catch (e) {
-      console.error('Error cargando usuarios:', e);
-    }
-  };
-
-  useEffect(() => {
-    fetchTeams();
-    fetchUsers();
   }, []);
 
-  useEffect(() => {
-    if (editingTeam) {
-      setModalLogoUrl(editingTeam.logo_url || editingTeam.logoUrl || '');
-      setModalBannerUrl(editingTeam.banner_url || editingTeam.bannerUrl || '');
-      setEditCaptainId(editingTeam.captain_id || editingTeam.captainId || (usersList[0]?.id || ''));
-      setEditEncargados(Array.isArray(editingTeam.encargados) ? editingTeam.encargados : []);
-    } else {
-      setModalLogoUrl('');
-      setModalBannerUrl('');
-      setEditCaptainId('');
-      setEditEncargados([]);
+  const fetchUsers = React.useCallback(async (): Promise<AdminUser[]> => {
+    try {
+      const res = await fetch('/api/admin/users');
+      const data: { success?: boolean; users?: AdminUser[] } = await res.json();
+      return data.success && Array.isArray(data.users) ? data.users : [];
+    } catch (e) {
+      console.error('Error cargando usuarios:', e);
+      return [];
     }
-  }, [editingTeam, usersList]);
+  }, []);
+
+  const refreshTeams = () => void fetchTeams().then(setTeams);
 
   useEffect(() => {
-    if (isCreateModalOpen && usersList.length > 0 && !createCaptainId) {
-      setCreateCaptainId(currentUser?.id || usersList[0].id);
-    }
-  }, [isCreateModalOpen, usersList, currentUser?.id]);
+    void Promise.all([fetchTeams(), fetchUsers()]).then(([teamRows, userRows]) => {
+      setTeams(teamRows);
+      setUsersList(userRows);
+    });
+  }, [fetchTeams, fetchUsers]);
+
+  const openCreateModal = () => {
+    setModalLogoUrl('');
+    setModalBannerUrl('');
+    setCreateCaptainId(currentUser?.id || usersList[0]?.id || '');
+    setIsCreateModalOpen(true);
+  };
+
+  const openEditModal = (team: AdminTeam) => {
+    setModalLogoUrl(team.logo_url || team.logoUrl || '');
+    setModalBannerUrl(team.banner_url || team.bannerUrl || '');
+    setEditCaptainId(team.captain_id || team.captainId || usersList[0]?.id || '');
+    setEditEncargados(Array.isArray(team.encargados) ? team.encargados : []);
+    setEditingTeam(team);
+  };
 
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
@@ -148,12 +186,12 @@ export default function TeamsModulePage() {
         setModalBannerUrl('');
         setCreateEncargados([]);
         endSuccess(`La escuadra "${teamName}" fue registrada exitosamente en la base de datos con Capitán y Encargados.`);
-        fetchTeams();
+        refreshTeams();
       } else {
         endError(data.error || 'Error al crear la escuadra.');
       }
-    } catch (e: any) {
-      endError(e?.message || 'Error de conexión al crear escuadra.');
+    } catch (e: unknown) {
+      endError(errorMessage(e, 'Error de conexión al crear escuadra.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -206,12 +244,12 @@ export default function TeamsModulePage() {
         setModalLogoUrl('');
         setModalBannerUrl('');
         endSuccess(`Los cambios en la escuadra "${teamName}" fueron actualizados con éxito.`);
-        fetchTeams();
+        refreshTeams();
       } else {
         endError(data.error || 'Error al actualizar la escuadra.');
       }
-    } catch (e: any) {
-      endError(e?.message || 'Error de conexión al actualizar escuadra.');
+    } catch (e: unknown) {
+      endError(errorMessage(e, 'Error de conexión al actualizar escuadra.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -242,30 +280,35 @@ export default function TeamsModulePage() {
       if (res.ok && data.success) {
         setBanConfirmTeam(null);
         endSuccess(isCurrentlyBanned ? `La escuadra "${teamName}" fue desbaneada y activada.` : `La escuadra "${teamName}" ha sido baneada.`);
-        fetchTeams();
+        refreshTeams();
       } else {
         endError(data.error || `Error al procesar el ${actionLabel.toLowerCase()}.`);
       }
-    } catch (e: any) {
-      endError(e?.message || 'Error al conectar con el servidor.');
+    } catch (e: unknown) {
+      endError(errorMessage(e, 'Error al conectar con el servidor.'));
     }
   };
 
   const bannedTeams = teams.filter((t) => t.is_banned === 1);
 
   // DataTable columns definition with Game Badge
-  const teamColumns: ColumnDef<any>[] = [
+  const teamColumns: ColumnDef<AdminTeam>[] = [
     {
       header: 'Escuadra / Tag',
       sortable: true,
       accessorKey: 'name',
       cell: (r) => {
-        const gameConfig = GAMES_CATALOG[r.game_slug];
-        const gColor = gameConfig?.brandColor || '#00F0FF';
         return (
           <div className="flex items-center gap-3">
             {r.logo_url ? (
-              <img src={r.logo_url} alt={r.name} className="w-8 h-8 rounded-lg object-cover border border-white/10" />
+              <Image
+                src={r.logo_url}
+                alt={r.name}
+                width={32}
+                height={32}
+                unoptimized={shouldBypassImageOptimization(r.logo_url)}
+                className="w-8 h-8 rounded-lg object-cover border border-white/10"
+              />
             ) : (
               <div className="w-8 h-8 rounded-lg bg-slate-900 border border-purple-400/40 flex items-center justify-center font-black text-[10px] text-purple-400">
                 {r.tag}
@@ -381,11 +424,7 @@ export default function TeamsModulePage() {
             </h3>
 
             <Button
-              onClick={() => {
-                setModalLogoUrl('');
-                setModalBannerUrl('');
-                setIsCreateModalOpen(true);
-              }}
+              onClick={openCreateModal}
               className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
@@ -412,7 +451,7 @@ export default function TeamsModulePage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => setEditingTeam(row)}
+                  onClick={() => openEditModal(row)}
                   className="text-xs text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan-bg)] p-2 rounded-xl transition-colors"
                   title="Editar Escuadra"
                 >
@@ -792,7 +831,7 @@ export default function TeamsModulePage() {
         isOpen={Boolean(managingRosterTeam)}
         onClose={() => setManagingRosterTeam(null)}
         team={managingRosterTeam}
-        onRosterUpdated={fetchTeams}
+        onRosterUpdated={refreshTeams}
       />
     </div>
   );

@@ -7,22 +7,17 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { NotificationCenter } from '@/components/notifications/notification-center';
-import { useTheme } from 'next-themes';
-import { useTranslation } from '@/components/providers/language-provider';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import {
-  Trophy, Shield, Settings, LogOut, LayoutDashboard, User, MessageSquare, Sun, Moon, Globe, CheckCircle2, ChevronDown, Sparkles, Home, Gamepad2, Swords, Users, ArrowRightLeft
+  Trophy, Shield, Settings, LogOut, CheckCircle2, ChevronDown, Sparkles, Home, Gamepad2, Swords, Users, ArrowRightLeft
 } from 'lucide-react';
 
 export function AdminOrganizerHeader() {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, logout, login, activeGameSlug, setActiveGameSlug } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const { language, setLanguage } = useTranslation();
-
+  const { currentUser, logout, activeGameSlug, setActiveGameSlug } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGamesOpen, setIsGamesOpen] = useState(false);
@@ -270,36 +265,6 @@ export function AdminOrganizerHeader() {
                     </Badge>
                     <span className="text-slate-400 font-mono">{currentUser?.email}</span>
                   </div>
-                </div>
-
-                {/* Role Switcher Pills */}
-                <div className="p-2 rounded-xl bg-slate-900 border border-white/10 space-y-1.5 text-[10px]">
-                  <span className="font-bold text-slate-400 block uppercase px-1">Cambiar Rol / Perfil:</span>
-                  <button
-                    onClick={async () => {
-                      await login('admin@tournamentspro.com', '123456');
-                      setIsUserMenuOpen(false);
-                    }}
-                    className={`w-full p-1.5 rounded-lg flex items-center justify-between font-bold transition-all ${
-                      isAdmin ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50' : 'text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    <span>🛡️ Administrador</span>
-                    {isAdmin && <CheckCircle2 className="w-3 h-3 text-cyan-400" />}
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      await login('organizador@tournamentspro.com', '123456');
-                      setIsUserMenuOpen(false);
-                    }}
-                    className={`w-full p-1.5 rounded-lg flex items-center justify-between font-bold transition-all ${
-                      isOrganizer ? 'bg-purple-950 text-purple-300 border border-purple-500/50' : 'text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    <span>🏆 Organizador</span>
-                    {isOrganizer && <CheckCircle2 className="w-3 h-3 text-purple-400" />}
-                  </button>
                 </div>
 
                 {/* Logout Button */}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { TeamData } from '@/lib/data-store';
 import { useAuth } from '@/components/providers/auth-provider';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
 interface ClubSettingsViewProps {
   team?: TeamData | null;
@@ -30,17 +32,14 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [syncedTeam, setSyncedTeam] = useState(team);
 
-  // Sync state if team prop changes
-  const initialSyncRef = React.useRef(false);
-  React.useEffect(() => {
-    if (team) {
-      if (team.id) setCurrentTeamId(team.id);
-      if (team.logoUrl && !initialSyncRef.current) setLogoUrl(team.logoUrl);
-      if (team.bannerUrl && !initialSyncRef.current) setBannerUrl(team.bannerUrl);
-      initialSyncRef.current = true;
-    }
-  }, [team]);
+  if (team !== syncedTeam) {
+    setSyncedTeam(team);
+    if (team?.id) setCurrentTeamId(team.id);
+    setLogoUrl(team?.logoUrl || '');
+    setBannerUrl(team?.bannerUrl || '');
+  }
 
   // Unified persistent image update handler
   const persistImageUpdate = async (type: 'logo' | 'banner', newUrl: string) => {
@@ -139,7 +138,14 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
             style={{ borderColor: brandColor }}
           >
             {logoUrl ? (
-              <img src={logoUrl} alt="Logo Club" className="w-full h-full object-cover" />
+              <Image
+                src={logoUrl}
+                alt="Logo Club"
+                width={48}
+                height={48}
+                unoptimized={shouldBypassImageOptimization(logoUrl)}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <Shield className="w-6 h-6 text-slate-500" />
             )}

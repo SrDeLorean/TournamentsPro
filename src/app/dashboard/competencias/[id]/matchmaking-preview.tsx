@@ -7,22 +7,17 @@ import { Button } from '@/components/ui/button';
 import {
   Trophy,
   Calendar,
-  Clock,
   CheckCircle2,
   Sparkles,
-  Shield,
-  Swords,
   Layers,
   Award,
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Users,
 } from 'lucide-react';
 import {
   distributeTeamsIntoGroups,
   generatePlayoffBracket,
-  generateHybridCrossSeedings,
   TeamItem,
   GroupDistributionResult,
   PlayoffMatchNode,
@@ -452,7 +447,7 @@ export function MatchmakingPreview({
       startDateISO,
       timeSlotsConfig,
       matchMode,
-      format as any,
+      normFormat === 'playoff' ? 'Playoff' : normFormat === 'hibrido' ? 'Hibrido' : 'Liga',
       groupCount,
       qualifiersPerGroup
     );

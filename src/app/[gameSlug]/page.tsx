@@ -2,6 +2,7 @@
 
 import React, { use, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import Link from 'next/link';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { getSectionMetadata } from '@/lib/section-config';
@@ -17,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { Flame } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
+import { fetchJson } from '@/lib/fetch-utils';
 import { OrganizationDirectory } from '@/components/tournaments/organization-directory';
 import { NewUserMyTeamsView as UserMyTeamsView } from '@/components/user/new-user-my-teams';
 
@@ -28,7 +30,6 @@ import {
   PlayerOffersSection,
   ClubDashboardSection,
   RosterSection,
-  RecruitmentSection,
   MatchdaySection,
   GameDataSection,
   PlayerFichaCrudSection,
@@ -108,21 +109,61 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
   const [activeSection, setActiveSection] = useState<GameSection>(defaultSection);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPosition, setSelectedPosition] = useState<string>('ALL');
+  const [dbUsersList, setDbUsersList] = React.useState<PlayerCardData[]>([]);
+  const [isLoadingPlayers, setIsLoadingPlayers] = React.useState(true);
 
   React.useEffect(() => {
-    if (initialSection) {
-      setActiveSection((prev) => (prev !== initialSection ? (initialSection as GameSection) : prev));
-    }
-  }, [initialSection]);
+    if (!game || (activeSection !== 'jugadores' && activeSection !== 'tops')) return;
 
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash.replace('#', '');
-      if (hash && ['home', 'partidos', 'competencias', 'clasificacion', 'traspasos', 'equipos', 'organizaciones', 'jugadores', 'tops', 'datos', 'infografia'].includes(hash)) {
-        setActiveSection(hash as GameSection);
-      }
-    }
-  }, []);
+    let cancelled = false;
+    const minDelay = new Promise(resolve => setTimeout(resolve, 50));
+    const fetchPromise = fetchJson<Record<string, unknown>>(`/api/users?gameSlug=${gameSlug}&limit=200`)
+      .then((data) => {
+        const responseData = data.data as { users?: Record<string, unknown>[] } | Record<string, unknown>[] | undefined;
+        const users = (!Array.isArray(responseData) && responseData?.users)
+          || data.users
+          || (data.success && Array.isArray(responseData) ? responseData : []);
+        return Array.isArray(users) ? users : [];
+      })
+      .then((users) => {
+        if (cancelled || users.length === 0) return;
+
+        const validPositions = game.positions || [];
+        const mapped: PlayerCardData[] = users.map((u: Record<string, unknown>) => {
+          const rawPos = (u.gameProfiles as Record<string, { position?: string }>)?.[game.slug]?.position
+            || (game.slug === u.primaryGame ? u.position as string : undefined)
+            || (validPositions.includes(u.position as string) ? u.position as string : undefined);
+          const pos = (rawPos && validPositions.includes(rawPos)) ? rawPos : validPositions[0] || 'DFC';
+
+          return {
+            id: u.id as string,
+            name: u.name as string,
+            gamertag: (u.gamertag || u.name) as string,
+            pos,
+            secPos: undefined,
+            gameId: (u.gameProfiles as Record<string, { gameId?: string }>)?.[game.slug]?.gameId || `${game.slug.toUpperCase()}-ID #${(u.id as string).substring(0, 6)}`,
+            team: (u.teamName || 'Agencia Libre') as string,
+            rating: (u.rating || '9.2') as string,
+            pss: '92%',
+            nacionalidad: (u.nacionalidad || 'Chile') as string,
+            bannerUrl: (u.bannerUrl || '/images/default/banner-default.jpg') as string,
+            avatarUrl: (u.avatarUrl || u.foto || '/images/default/logo-default.png') as string,
+            status: (u.status || 'Atleta Activo') as string,
+            platform: (u.platform || 'CROSSPLAY') as string,
+          };
+        });
+        setDbUsersList(mapped);
+      })
+      .catch((err) => console.error('Error fetching players:', err));
+
+    Promise.all([fetchPromise, minDelay]).finally(() => {
+      if (!cancelled) setIsLoadingPlayers(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, gameSlug, game]);
 
   if (!game) {
     return (
@@ -145,60 +186,6 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
     { id: 2, home: 'Highfield XX', homeTag: 'HFX', away: 'Torneos Pro Gaming', awayTag: 'TPG', date: 'Hoy - 22:30 hrs', jornada: 'Jornada 11', status: 'ESTELAR', score: 'VS' },
   ];
 
-  // ── Player Data Fetching ──────────────────────────────────────────────────
-  const [dbUsersList, setDbUsersList] = React.useState<PlayerCardData[]>([]);
-  const [isLoadingPlayers, setIsLoadingPlayers] = React.useState(true);
-
-  React.useEffect(() => {
-    if (activeSection !== 'jugadores' && activeSection !== 'tops') return;
-
-    setIsLoadingPlayers(true);
-
-    // Minimum delay for UI synchronization and tactical skeleton showcase
-    const minDelay = new Promise(resolve => setTimeout(resolve, 50));
-    
-    const fetchPromise = fetch(`/api/users?gameSlug=${gameSlug}&limit=200`)
-      .then((res) => res.json())
-      .then((data) => {
-        let users = data.data?.users || data.users || (data.success && Array.isArray(data.data) ? data.data : []);
-        return Array.isArray(users) ? users : [];
-      })
-      .then((users) => {
-        if (Array.isArray(users) && users.length > 0) {
-          const validPositions = game.positions || [];
-          const mapped: PlayerCardData[] = users.map((u: Record<string, unknown>) => {
-            const rawPos = (u.gameProfiles as Record<string, { position?: string }>)?.[game.slug]?.position
-              || (game.slug === u.primaryGame ? u.position as string : undefined)
-              || (validPositions.includes(u.position as string) ? u.position as string : undefined);
-            const pos = (rawPos && validPositions.includes(rawPos)) ? rawPos : validPositions[0] || 'DFC';
-
-            return {
-              id: u.id as string,
-              name: u.name as string,
-              gamertag: (u.gamertag || u.name) as string,
-              pos,
-              secPos: undefined,
-              gameId: (u.gameProfiles as Record<string, { gameId?: string }>)?.[game.slug]?.gameId || `${game.slug.toUpperCase()}-ID #${(u.id as string).substring(0, 6)}`,
-              team: (u.teamName || 'Agencia Libre') as string,
-              rating: (u.rating || '9.2') as string,
-              pss: '92%',
-              nacionalidad: (u.nacionalidad || 'Chile') as string,
-              bannerUrl: (u.bannerUrl || '/images/default/banner-default.jpg') as string,
-              avatarUrl: (u.avatarUrl || u.foto || '/images/default/logo-default.png') as string,
-              status: (u.status || 'Atleta Activo') as string,
-              platform: (u.platform || 'CROSSPLAY') as string,
-            };
-          });
-          setDbUsersList(mapped);
-        }
-      })
-      .catch((err) => console.error('Error fetching players:', err));
-
-    Promise.all([fetchPromise, minDelay]).finally(() => {
-      setIsLoadingPlayers(false);
-    });
-  }, [activeSection, gameSlug, game.slug, game.positions]);
-
   const filteredPlayers = dbUsersList.filter(p => {
     const matchesSearch = searchTerm === '' || 
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -214,6 +201,9 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
   // ── Section Change Handler ────────────────────────────────────────────────
 
   const handleSectionChange = (sec: GameSection) => {
+    if (sec === 'jugadores' || sec === 'tops') {
+      setIsLoadingPlayers(true);
+    }
     setActiveSection(sec);
     setSearchTerm('');
     setSelectedPlayer(null);
@@ -232,9 +222,11 @@ export default function GameDedicatedPortalPage({ params, initialSection }: Game
       <div className="relative w-full min-h-screen">
         {/* Fixed Background Banner */}
         <div className="absolute top-0 left-0 right-0 h-[800px] w-full overflow-hidden pointer-events-none z-0">
-          <img
+          <Image
             src={game.bannerUrl}
             alt={game.name}
+            fill
+            sizes="100vw"
             className="w-full h-full object-cover object-top opacity-[0.75] dark:opacity-95 filter contrast-[1.25] saturate-[1.2] brightness-[1.25] dark:brightness-100 dark:contrast-[1.3] dark:saturate-[1.25] transition-all duration-300"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--bg-main)]" />

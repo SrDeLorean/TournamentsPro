@@ -1,19 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
+import { UserProfile } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { compressImageToWebP } from '@/lib/image-compressor';
 import { getAuthHeaders } from '@/lib/fetch-utils';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
-import { PositionBadge } from '@/components/ui/position-badge';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import {
-  User, Shield, Settings, Upload, Image as ImageIcon, CheckCircle2, AlertCircle, Sparkles, Monitor, Globe, Share2, Video, Tv, MessageSquare, Phone, Calendar, Hash, Tag, Save, ArrowLeft, Gamepad2, ShieldAlert, Key
+  User, Shield, Settings, Upload, Image as ImageIcon, CheckCircle2, AlertCircle, Sparkles, Globe, Share2, Video, Tv, MessageSquare, Phone, Hash, Tag, Save, ArrowLeft, Gamepad2, Key
 } from 'lucide-react';
 
 interface UserProfileSettingsViewProps {
@@ -89,7 +91,8 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
 
   // Synchronize state if currentUser updates
   useEffect(() => {
-    if (currentUser) {
+    if (!currentUser) return;
+    const timer = window.setTimeout(() => {
       setName(currentUser.name || '');
       setEmail(currentUser.email || '');
       setGamertag(currentUser.gamertag || '');
@@ -127,7 +130,8 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
         };
       });
       setGameProfiles(updatedGameProfiles);
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [currentUser]);
 
   // Position change handlers per game
@@ -173,10 +177,9 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
 
       const cleanUserSlug = (gamertag || name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('tournamentspro_token') : null;
       const res = await fetch('/api/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileBase64: compressedRes.base64,
           fileName: `avatar-${Date.now()}.webp`,
@@ -234,10 +237,9 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
 
       const cleanUserSlug = (gamertag || name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-      const bannerToken = typeof window !== 'undefined' ? localStorage.getItem('tournamentspro_token') : null;
       const res = await fetch('/api/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(bannerToken ? { 'Authorization': `Bearer ${bannerToken}` } : {}) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileBase64: compressedRes.base64,
           fileName: `banner-${Date.now()}.webp`,
@@ -348,7 +350,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
         setSavingMsg({ type: 'success', text: '¡Perfil de atleta y posiciones por juego actualizados en MySQL!' });
         // Synchronize in-memory session, local storage and trigger real-time route refresh
         const updatedUser = { ...currentUser, ...payload };
-        updateCurrentUser(updatedUser as any);
+        updateCurrentUser({ ...updatedUser, primaryGame: primaryGame as UserProfile['primaryGame'] });
         await refetchUser();
         router.refresh();
       } else {
@@ -367,13 +369,17 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
       <div className="relative w-full left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-slate-950 border-b border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[260px] sm:min-h-[320px] flex flex-col justify-end">
         {/* Full Bleed Banner Image Graphic */}
         <div className="absolute inset-0 z-0 group">
-          <img
+          <Image
             src={bannerUrl || '/images/default/banner-default.jpg'}
             alt="Portada"
+            fill
+            sizes="100vw"
+            priority
+            unoptimized={shouldBypassImageOptimization(bannerUrl)}
             onError={(e) => {
               e.currentTarget.src = '/images/default/banner-default.jpg';
             }}
-            className="w-full h-full object-cover opacity-90"
+            className="object-cover opacity-90"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
           
@@ -396,13 +402,16 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
                 style={{ borderColor: brandColor, boxShadow: `0 0 25px ${brandColor}44` }}
               >
                 {avatarUrl ? (
-                  <img
+                  <Image
                     src={avatarUrl}
                     alt={name}
+                    fill
+                    sizes="112px"
+                    unoptimized={shouldBypassImageOptimization(avatarUrl)}
                     onError={(e) => {
                       e.currentTarget.src = '/images/default/logo-default.png';
                     }}
-                    className="w-full h-full object-cover"
+                    className="object-cover"
                   />
                 ) : (
                   <Avatar fallback={name} size="lg" status="online" />
@@ -740,7 +749,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
                   <label className="font-bold text-slate-300 uppercase block">Plataforma Principal de Juego</label>
                   <select
                     value={platform}
-                    onChange={(e) => setPlatform(e.target.value as any)}
+                    onChange={(e) => setPlatform(e.target.value as typeof platform)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none font-semibold"
                   >
                     <option value="CROSSPLAY">CROSSPLAY (Todas las Plataformas)</option>
@@ -941,7 +950,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
                     </label>
                     <select
                       value={role}
-                      onChange={(e) => setRole(e.target.value as any)}
+                      onChange={(e) => setRole(e.target.value as UserProfile['role'])}
                       className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-amber-500/40 text-amber-300 font-bold focus:outline-none"
                     >
                       <option value="Jugador">Jugador / Atleta</option>
@@ -967,7 +976,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
                   <label className="font-bold text-slate-300 uppercase block">Estado en el Sistema</label>
                   <select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
+                    onChange={(e) => setStatus(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-emerald-400 font-semibold"
                   >
                     <option value="Buscando Club">Buscando Club (Agente Libre)</option>

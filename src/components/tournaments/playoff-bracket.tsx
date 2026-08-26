@@ -51,7 +51,7 @@ function getRoundWeight(roundName: string): number {
   return 0;
 }
 
-export function PlayoffBracket({ matches, brandColor = '#06b6d4' }: PlayoffBracketProps) {
+export function PlayoffBracket({ matches }: PlayoffBracketProps) {
   // 1. Group matches by Base Round (e.g. "Cuartos" instead of "Cuartos (Ida)")
   const matchesByBaseRound = new Map<string, PlayoffMatch[]>();
 

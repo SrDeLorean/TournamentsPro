@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Check, Trash2, ArrowRightLeft, Calendar, Trophy, Sparkles, X, Shield, ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Bell, Check, Trash2, ArrowRightLeft, Calendar, Trophy, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 export interface NotificationItem {
@@ -16,9 +14,11 @@ export interface NotificationItem {
   actionUrl?: string;
 }
 
+type NotificationFilter = 'ALL' | Exclude<NotificationItem['type'], 'SYSTEM'>;
+
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'TRANSFER' | 'MATCH' | 'TOURNAMENT'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<NotificationFilter>('ALL');
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([
@@ -120,15 +120,15 @@ export function NotificationCenter() {
 
           {/* Filter Pills */}
           <div className="flex items-center gap-1 text-[10px] font-bold overflow-x-auto scrollbar-none pb-1">
-            {[
+            {([
               { id: 'ALL', label: 'Todas' },
               { id: 'TRANSFER', label: '🔄 Fichajes' },
               { id: 'MATCH', label: '📅 Partidos' },
               { id: 'TOURNAMENT', label: '🏆 Torneos' },
-            ].map((tab) => (
+            ] satisfies Array<{ id: NotificationFilter; label: string }>).map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveFilter(tab.id as any)}
+                onClick={() => setActiveFilter(tab.id)}
                 className={`px-2.5 py-1 rounded-lg transition-all flex-shrink-0 border ${
                   activeFilter === tab.id
                     ? 'bg-cyan-500 text-slate-950 font-black border-cyan-400 shadow-sm'

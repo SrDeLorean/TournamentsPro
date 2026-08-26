@@ -10,11 +10,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Filter,
-  SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 export interface ColumnDef<T> {
   header: string;
@@ -63,7 +60,7 @@ export function DataTable<T extends { id: string | number }>({
 
   // Filter & Search Logic
   const filteredData = useMemo(() => {
-    return data.filter((row: any) => {
+    return data.filter((row) => {
       // Search term filter
       if (searchTerm) {
         let matches = false;
@@ -81,7 +78,7 @@ export function DataTable<T extends { id: string | number }>({
 
       // Additional dropdown filters
       for (const [key, val] of Object.entries(activeFilters)) {
-        if (val && val !== 'ALL' && String(row[key] || '').toLowerCase() !== val.toLowerCase()) {
+        if (val && val !== 'ALL' && String(row[key as keyof T] || '').toLowerCase() !== val.toLowerCase()) {
           return false;
         }
       }
@@ -93,9 +90,11 @@ export function DataTable<T extends { id: string | number }>({
   // Sorting Logic
   const sortedData = useMemo(() => {
     if (!sortColumn) return filteredData;
-    return [...filteredData].sort((a: any, b: any) => {
-      const valA = a[sortColumn] || '';
-      const valB = b[sortColumn] || '';
+    return [...filteredData].sort((a, b) => {
+      const rawA = a[sortColumn];
+      const rawB = b[sortColumn];
+      const valA = typeof rawA === 'number' ? rawA : String(rawA ?? '');
+      const valB = typeof rawB === 'number' ? rawB : String(rawB ?? '');
       if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
       if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
       return 0;

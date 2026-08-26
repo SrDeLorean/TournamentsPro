@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { GameConfig } from '@/lib/games-data';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import { SubSubNavbar, SubSubTabOption } from '@/components/layout/sub-sub-navbar';
 import {
-  Building2, Trophy, Users, Shield, Calendar, ArrowLeft, Gamepad2, Award,
-  Globe, Star, ExternalLink, CheckCircle2, UserCheck, Activity, Flame, Mail, Sparkles, MapPin, BarChart2
+  Building2, Trophy, Shield, ArrowLeft, Gamepad2, Award,
+  Globe, Star, ExternalLink, UserCheck, Activity, Mail, MapPin, BarChart2
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { FixtureScheduleView } from '@/components/tournaments/fixture-schedule-view';
 import { ClassificationView } from '@/components/tournaments/classification-view';
 import { EsportsCard } from '@/components/ui/esports-card';
@@ -143,13 +143,17 @@ export function OrganizationProfileView({
       <div className="relative w-full left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-slate-950 border-b border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[260px] sm:min-h-[360px] flex flex-col justify-end">
         {/* Full-bleed background graphic with gradient overlay */}
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src={orgBanner}
             alt={org.name}
+            fill
+            sizes="100vw"
+            priority
+            unoptimized={shouldBypassImageOptimization(orgBanner)}
             onError={(e) => {
               e.currentTarget.src = '/images/default/banner-default.jpg';
             }}
-            className="w-full h-full object-cover opacity-90 filter contrast-[1.1] brightness-[0.85]"
+            className="object-cover opacity-90 filter contrast-[1.1] brightness-[0.85]"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-transparent to-slate-950/90" />
@@ -164,13 +168,16 @@ export function OrganizationProfileView({
               style={{ borderColor: brandColor, boxShadow: `0 0 30px ${brandColor}40` }}
             >
               {orgLogo ? (
-                <img
+                <Image
                   src={orgLogo}
                   alt={org.name}
+                  fill
+                  sizes="112px"
+                  unoptimized={shouldBypassImageOptimization(orgLogo)}
                   onError={(e) => {
                     e.currentTarget.src = '/images/default/logo-default.png';
                   }}
-                  className="w-full h-full object-contain p-2 filter drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+                  className="object-contain p-2 filter drop-shadow-md group-hover:scale-105 transition-transform duration-300"
                 />
               ) : (
                 <Building2 className="w-10 h-10 sm:w-14 sm:h-14" style={{ color: brandColor }} />
@@ -356,9 +363,16 @@ export function OrganizationProfileView({
                   key={orgUser.id}
                   className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xl flex items-center gap-4 hover:border-[var(--game-brand)] transition-all group"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-[var(--bg-main)] border-2 border-[var(--border-card)] flex items-center justify-center overflow-hidden shrink-0 shadow-lg group-hover:border-[var(--game-brand)] transition-colors">
+                  <div className="relative w-16 h-16 rounded-2xl bg-[var(--bg-main)] border-2 border-[var(--border-card)] flex items-center justify-center overflow-hidden shrink-0 shadow-lg group-hover:border-[var(--game-brand)] transition-colors">
                     {orgUser.avatar_url || orgUser.foto ? (
-                      <img src={orgUser.avatar_url || orgUser.foto} alt={orgUser.name} className="w-full h-full object-cover" />
+                      <Image
+                        src={orgUser.avatar_url || orgUser.foto || '/images/default/logo-default.png'}
+                        alt={orgUser.name}
+                        fill
+                        sizes="64px"
+                        unoptimized={shouldBypassImageOptimization(orgUser.avatar_url || orgUser.foto || '')}
+                        className="object-cover"
+                      />
                     ) : (
                       <UserCheck className="w-8 h-8 text-[var(--text-muted)]" />
                     )}
@@ -421,9 +435,16 @@ export function OrganizationProfileView({
                 >
                   <div className="glass-panel p-5 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-card)]/60 backdrop-blur-xl relative overflow-hidden flex flex-col h-full hover:-translate-y-1 hover:border-[var(--game-brand)] hover:shadow-[0_0_20px_var(--game-brand)] transition-all">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="w-14 h-14 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-center p-1 shrink-0 overflow-hidden shadow-lg group-hover:border-[var(--game-brand)] transition-colors">
+                      <div className="relative w-14 h-14 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-center p-1 shrink-0 overflow-hidden shadow-lg group-hover:border-[var(--game-brand)] transition-colors">
                         {team.logo_url ? (
-                          <img src={team.logo_url} alt={team.name} className="w-full h-full object-contain filter group-hover:drop-shadow-[0_0_8px_var(--game-brand)]" />
+                          <Image
+                            src={team.logo_url}
+                            alt={team.name}
+                            fill
+                            sizes="56px"
+                            unoptimized={shouldBypassImageOptimization(team.logo_url)}
+                            className="object-contain p-1 filter group-hover:drop-shadow-[0_0_8px_var(--game-brand)]"
+                          />
                         ) : (
                           <Shield className="w-7 h-7 text-[var(--game-brand)]" />
                         )}

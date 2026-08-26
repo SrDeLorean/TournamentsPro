@@ -3,7 +3,7 @@ import { TeamData } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { TeamManagementModal, TeamTabOption } from '@/components/teams/team-management-modal';
 import { AthleteManagementModal, AthleteTabOption } from '@/components/teams/athlete-management-modal';
-import { Shield, Users, Sparkles, Award, User, Settings, BarChart2, FileText, CheckCircle2 } from 'lucide-react';
+import { Users, Sparkles, Award, User, Settings, BarChart2, FileText, CheckCircle2 } from 'lucide-react';
 
 export type TeamAdminSection =
   | 'EQUIPO_ROSTER'
@@ -23,7 +23,6 @@ interface TeamAdminSubnavbarProps {
 
 export function TeamAdminSubnavbar({
   team,
-  activeSection,
   onSelectSection,
   brandColor = '#00F0FF',
 }: TeamAdminSubnavbarProps) {

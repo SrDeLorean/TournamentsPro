@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,11 +9,7 @@ import { Avatar } from '@/components/ui/avatar';
 import {
   Trophy,
   Calendar,
-  Users,
   CheckCircle2,
-  AlertCircle,
-  Plus,
-  Play,
   Clock,
   Sparkles,
   Shield,
@@ -29,6 +26,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
 // Catalog of Game Modes (Modalidades de Juego) per eSports Game
 export const GAME_MODES: Record<string, { id: string; name: string; format: string; description: string }[]> = {
@@ -57,45 +55,91 @@ export const GAME_MODES: Record<string, { id: string; name: string; format: stri
   ],
 };
 
+interface OrganizationUser {
+  id: string;
+  name: string;
+  gamertag?: string;
+  avatar_url?: string;
+  foto?: string;
+}
+
+interface OrganizerOrganization {
+  id: string;
+  name: string;
+  tag: string;
+  banner_url?: string;
+  logo_url?: string;
+  country?: string;
+  founded_year?: string | number;
+  rating?: string | number;
+  organizers?: OrganizationUser[];
+}
+
+interface OrganizerTournament {
+  id: string;
+  name: string;
+  game_slug?: string;
+  primary_game_slug?: string;
+  status?: string;
+}
+
+interface OrganizerMatch {
+  id: string;
+  matchday?: number;
+  home_team_name: string;
+  away_team_name: string;
+  reported_score_home?: number | null;
+  reported_score_away?: number | null;
+  proof_url?: string | null;
+  match_date?: string;
+  score_home?: number | null;
+  score_away?: number | null;
+  status: string;
+}
+
+interface EnrolledTeam {
+  id: string;
+  name: string;
+  tag: string;
+  game_slug?: string;
+  captain_name?: string;
+  status?: string;
+}
+
 export function OrganizerDashboardView() {
   const { currentUser, activeGameSlug, setActiveGameSlug } = useAuth();
   const [activeTab, setActiveTab] = useState<'approvals' | 'fixture' | 'enrolled' | 'seasons'>('approvals');
 
   // Selected Game State for Organizer (Synced with global activeGameSlug)
   const selectedGameSlug = activeGameSlug || 'eafc26';
-  const setSelectedGameSlug = (slug: string) => setActiveGameSlug(slug);
+  const setSelectedGameSlug = (slug: string) => {
+    setActiveGameSlug(slug);
+    setSelectedGameModeId((GAME_MODES[slug] || GAME_MODES.eafc26)[0].id);
+  };
   const activeGame = GAMES_CATALOG[selectedGameSlug] || GAMES_CATALOG['eafc26'];
 
   // Selected Game Mode State (Modalidad de Juego)
   const availableGameModes = GAME_MODES[selectedGameSlug] || GAME_MODES['eafc26'];
   const [selectedGameModeId, setSelectedGameModeId] = useState<string>(availableGameModes[0].id);
 
-  // Sync mode when game changes
-  useEffect(() => {
-    const modes = GAME_MODES[selectedGameSlug];
-    if (modes && modes.length > 0) {
-      setSelectedGameModeId(modes[0].id);
-    }
-  }, [selectedGameSlug]);
-
   const activeGameMode = availableGameModes.find((m) => m.id === selectedGameModeId) || availableGameModes[0];
 
   // Organization & Seasons State
-  const [userOrg, setUserOrg] = useState<any | null>(null);
-  const [seasons, setSeasons] = useState<any[]>([]);
-  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [userOrg, setUserOrg] = useState<OrganizerOrganization | null>(null);
+  const [, setSeasons] = useState<unknown[]>([]);
+  const [tournaments, setTournaments] = useState<OrganizerTournament[]>([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('tourn-eafc-liga');
 
   // Fixture & Matches State
-  const [matches, setMatches] = useState<any[]>([]);
-  const [enrolledTeams, setEnrolledTeams] = useState<any[]>([]);
+  const [matches, setMatches] = useState<OrganizerMatch[]>([]);
+  const [enrolledTeams, setEnrolledTeams] = useState<EnrolledTeam[]>([]);
   const [isGeneratingFixture, setIsGeneratingFixture] = useState<boolean>(false);
 
   // Approval Modal State
-  const [selectedMatchForApproval, setSelectedMatchForApproval] = useState<any | null>(null);
+  const [selectedMatchForApproval, setSelectedMatchForApproval] = useState<OrganizerMatch | null>(null);
   const [actionMsg, setActionMsg] = useState<string>('');
 
-  const fetchSeasonsAndTournaments = async () => {
+  const fetchSeasonsAndTournaments = useCallback(async () => {
     try {
       const res = await fetch('/api/organizer/seasons');
       const data = await res.json();
@@ -109,24 +153,24 @@ export function OrganizerDashboardView() {
     } catch (e) {
       console.error('Error cargando temporadas:', e);
     }
-  };
+  }, [selectedTournamentId]);
 
-  const fetchUserOrganization = async () => {
+  const fetchUserOrganization = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/organizations');
       const data = await res.json();
       if (data.success && Array.isArray(data.organizations)) {
-        const found = data.organizations.find(
-          (o: any) => o.id === currentUser?.organizationId || o.organizers?.some((orgUser: any) => orgUser.id === currentUser?.id)
+        const found = (data.organizations as OrganizerOrganization[]).find(
+          (o) => o.id === currentUser?.organizationId || o.organizers?.some((orgUser) => orgUser.id === currentUser?.id)
         ) || data.organizations[0];
         setUserOrg(found);
       }
     } catch (e) {
       console.error('Error cargando organización del usuario:', e);
     }
-  };
+  }, [currentUser?.id, currentUser?.organizationId]);
 
-  const fetchFixtureData = async () => {
+  const fetchFixtureData = useCallback(async () => {
     if (!selectedTournamentId) return;
     try {
       const res = await fetch(`/api/organizer/fixture?tournamentId=${selectedTournamentId}`);
@@ -138,16 +182,18 @@ export function OrganizerDashboardView() {
     } catch (e) {
       console.error('Error cargando fixture:', e);
     }
-  };
-
-  useEffect(() => {
-    fetchSeasonsAndTournaments();
-    fetchUserOrganization();
-  }, [currentUser]);
-
-  useEffect(() => {
-    fetchFixtureData();
   }, [selectedTournamentId]);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => Promise.all([
+      fetchSeasonsAndTournaments(),
+      fetchUserOrganization(),
+    ]));
+  }, [fetchSeasonsAndTournaments, fetchUserOrganization]);
+
+  useEffect(() => {
+    void Promise.resolve().then(fetchFixtureData);
+  }, [fetchFixtureData]);
 
   // Filtered Tournaments and Teams by Selected Game & Mode
   const filteredTournaments = tournaments.filter(
@@ -198,7 +244,6 @@ export function OrganizerDashboardView() {
           action: 'APPROVE',
           scoreHome: selectedMatchForApproval.reported_score_home || 0,
           scoreAway: selectedMatchForApproval.reported_score_away || 0,
-          requesterRole: currentUser?.role || 'Organizador',
         }),
       });
 
@@ -222,7 +267,14 @@ export function OrganizerDashboardView() {
         {/* Banner Image */}
         {userOrg?.banner_url && (
           <div className="h-32 w-full relative overflow-hidden bg-slate-900">
-            <img src={userOrg.banner_url} alt={userOrg.name} className="w-full h-full object-cover opacity-50" />
+            <Image
+              src={userOrg.banner_url}
+              alt={userOrg.name}
+              fill
+              sizes="100vw"
+              unoptimized={shouldBypassImageOptimization(userOrg.banner_url)}
+              className="object-cover opacity-50"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
           </div>
         )}
@@ -230,9 +282,16 @@ export function OrganizerDashboardView() {
         <div className="p-6 pt-4 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-slate-900 border-2 border-purple-400 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xl">
+              <div className="relative w-16 h-16 rounded-2xl bg-slate-900 border-2 border-purple-400 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xl">
                 {userOrg?.logo_url ? (
-                  <img src={userOrg.logo_url} alt={userOrg.name} className="w-full h-full object-cover" />
+                  <Image
+                    src={userOrg.logo_url}
+                    alt={userOrg.name}
+                    fill
+                    sizes="64px"
+                    unoptimized={shouldBypassImageOptimization(userOrg.logo_url)}
+                    className="object-cover"
+                  />
                 ) : (
                   <Building2 className="w-8 h-8 text-purple-300" />
                 )}
@@ -261,7 +320,7 @@ export function OrganizerDashboardView() {
               <div className="p-3 rounded-xl bg-slate-900/90 border border-white/10 space-y-1">
                 <span className="text-[10px] font-mono uppercase text-slate-400 font-black block">Co-Organizadores Asignados:</span>
                 <div className="flex items-center gap-2">
-                  {userOrg.organizers.map((oUser: any) => (
+                  {userOrg.organizers.map((oUser) => (
                     <div key={oUser.id} className="flex items-center gap-1 text-[11px] font-bold text-cyan-300">
                       <Avatar fallback={oUser.name} src={oUser.avatar_url || oUser.foto} size="sm" />
                       <span>@{oUser.gamertag || oUser.name}</span>

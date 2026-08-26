@@ -1,18 +1,15 @@
 'use client';
 
 import { useTheme } from 'next-themes';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Sun, Moon, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+
+const subscribeToHydration = () => () => {};
 
 export function ThemeSwitcher({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(subscribeToHydration, () => true, () => false);
 
   if (!mounted) {
     return <div className="w-[180px] h-9 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] animate-pulse" />;

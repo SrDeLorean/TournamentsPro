@@ -1,16 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { GAMES_CATALOG, GameConfig } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { TeamProfileView } from './team-profile-view';
-import { TeamData } from '@/lib/data-store';
+import { TeamData, UserProfile } from '@/lib/data-store';
 import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
-import { CountryFlag } from '@/components/ui/country-flag';
 import { Pagination } from '@/components/ui/pagination';
 import { EsportsCard } from '@/components/ui/esports-card';
 import { FilterBar } from '@/components/ui/filter-bar';
@@ -18,18 +14,11 @@ import {
   Flame,
   Shield,
   Users,
-  Trophy,
-  ChevronRight,
-  Monitor,
-  Search,
-  Building2,
-  X,
-  Sparkles,
-  Award,
   Crown,
 } from 'lucide-react';
 
 import { useAuth } from '@/components/providers/auth-provider';
+import { fetchJson } from '@/lib/fetch-utils';
 
 interface TeamDirectoryProps {
   gameName?: string;
@@ -39,16 +28,41 @@ interface TeamDirectoryProps {
   myTeamsOnly?: boolean;
 }
 
+interface DirectoryMember extends Partial<UserProfile> {
+  user_id?: string;
+  userId?: string;
+}
+
+type DirectoryManager = string | { id?: string };
+
+interface DirectoryTeam extends TeamData {
+  game_slug?: TeamData['gameSlug'];
+  captain_id?: string;
+  captain_name?: string;
+  captain?: string;
+  membersList?: DirectoryMember[];
+  encargados?: DirectoryManager[] | string;
+  encargados_json?: DirectoryManager[] | string;
+  logo?: string;
+  country?: string;
+  countryCode?: string;
+  whatsapp?: string;
+  instagram?: string;
+  twitter?: string;
+  twitch?: string;
+  discord?: string;
+  members_count?: number;
+}
+
 export function TeamDirectory({
-  gameName = 'Todas las Disciplinas',
   gameSlug = 'ALL',
   brandColor = '#077D7E',
   hideHeader = false,
   myTeamsOnly = false,
 }: TeamDirectoryProps) {
   const { currentUser } = useAuth();
-  const [teamsList, setTeamsList] = useState<TeamData[]>([]);
-  const [selectedTeam, setSelectedTeam] = useState<TeamData | null>(null);
+  const [teamsList, setTeamsList] = useState<DirectoryTeam[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<DirectoryTeam | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<string>('TODOS');
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('ALL');
@@ -62,15 +76,16 @@ export function TeamDirectory({
     let isMounted = true;
     const fetchAllTeams = async () => {
       try {
-        const res = await fetch(`/api/teams?gameSlug=${gameSlug}&limit=200`);
-        const data = await res.json();
+        const data = await fetchJson<{ data?: { teams?: DirectoryTeam[] }; teams?: DirectoryTeam[]; success?: boolean }>(
+          `/api/teams?gameSlug=${gameSlug}&limit=200`,
+        );
         let teams = data.data?.teams || data.teams || (data.success && Array.isArray(data.data) ? data.data : []);
         if (!Array.isArray(teams)) {
           teams = [];
         }
 
         if (isMounted) {
-          setTeamsList(teams);
+          setTeamsList(teams as DirectoryTeam[]);
         }
       } catch (err) {
         console.error('Error fetching teams from DB:', err);
@@ -97,9 +112,22 @@ export function TeamDirectory({
     ? `Todas las escuadras eSports en las que estás registrado como capitán, encargado o jugador de plantilla.`
     : gameConfig?.teamDescription || `Conoce todas las organizaciones, clubes de élite y plantillas registradas en ${gameConfig?.name || 'la plataforma'}.`;
 
+  // Pagination hooks must run before the optional profile early return.
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleDisciplineChange = (value: string) => {
+    setSelectedDiscipline(value);
+    setCurrentPage(1);
+  };
+
   // If a team is selected in-page, show the Team Profile View
   if (selectedTeam) {
-    const tGameConfig = GAMES_CATALOG[selectedTeam.gameSlug || (selectedTeam as any).game_slug || 'eafc26'];
+    const tGameConfig = GAMES_CATALOG[selectedTeam.gameSlug || selectedTeam.game_slug || 'eafc26'];
     const tBrandColor = tGameConfig?.brandColor || activeBrandColor;
     return (
       <TeamProfileView
@@ -116,22 +144,22 @@ export function TeamDirectory({
       const uName = currentUser.name?.toLowerCase();
       const uGamer = currentUser.gamertag?.toLowerCase();
 
-      const cId = team.captainId || (team as any).captain_id;
-      const cName = ((team as any).captainName || (team as any).captain_name || (team as any).captain || '').toLowerCase();
+      const cId = team.captainId || team.captain_id;
+      const cName = (team.captainName || team.captain_name || team.captain || '').toLowerCase();
       const isCaptain = (cId && cId === uId) || (cName && (cName === uName || cName === uGamer));
 
-      const members = (team as any).members || (team as any).membersList || [];
-      const isMember = Array.isArray(members) && members.some((m: any) => m.id === uId || m.user_id === uId || m.userId === uId);
+      const members: DirectoryMember[] = team.members || team.membersList || [];
+      const isMember = members.some((member) => member.id === uId || member.user_id === uId || member.userId === uId);
 
-      const encs = (team as any).encargados || (team as any).encargados_json;
+      const encs = team.encargados || team.encargados_json;
       let isEncargado = false;
       if (encs) {
         try {
           const arr = typeof encs === 'string' ? JSON.parse(encs) : encs;
-          if (Array.isArray(arr) && arr.some((e: any) => (typeof e === 'string' ? e === uId : e.id === uId))) {
+          if (Array.isArray(arr) && (arr as DirectoryManager[]).some((manager) => (typeof manager === 'string' ? manager === uId : manager.id === uId))) {
             isEncargado = true;
           }
-        } catch (e) {}
+        } catch {}
       }
 
       if (!isCaptain && !isMember && !isEncargado && currentUser.teamId !== team.id) {
@@ -142,24 +170,18 @@ export function TeamDirectory({
     const matchesSearch =
       team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       team.tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (team.captainName || (team as any).captain || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (team.captainName || team.captain || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlatform = selectedPlatform === 'TODOS' || team.platform === selectedPlatform;
-    const tSlug = team.gameSlug || (team as any).game_slug || 'eafc26';
+    const tSlug = team.gameSlug || team.game_slug || 'eafc26';
     const matchesDiscipline = selectedDiscipline === 'ALL' || tSlug === selectedDiscipline;
     return matchesSearch && matchesPlatform && matchesDiscipline;
   });
 
   // --- Pagination Logic ---
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
   const totalPages = Math.ceil(filteredTeams.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentTeams = filteredTeams.slice(startIndex, startIndex + itemsPerPage);
-
-  // Reset page when search or platform/discipline changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedPlatform, selectedDiscipline, teamsList]);
 
   const DISCIPLINE_OPTIONS = [
     { id: 'ALL', label: 'TODAS LAS DISCIPLINAS' },
@@ -196,10 +218,10 @@ export function TeamDirectory({
             <FilterBar
               searchPlaceholder="Buscar por club, tag de escuadra o capitán..."
               searchValue={searchTerm}
-              onSearchChange={setSearchTerm}
+              onSearchChange={handleSearchChange}
               options={isSpecificGame ? [] : DISCIPLINE_OPTIONS}
               activeFilter={selectedDiscipline}
-              onFilterChange={setSelectedDiscipline}
+              onFilterChange={handleDisciplineChange}
               renderAsSelect={!isSpecificGame}
               count={filteredTeams.length}
               countLabel="EQUIPOS"
@@ -224,6 +246,7 @@ export function TeamDirectory({
                   setSearchTerm('');
                   setSelectedPlatform('TODOS');
                   setSelectedDiscipline('ALL');
+                  setCurrentPage(1);
                 }}
                 className="text-xs font-mono gap-1.5"
               >
@@ -234,7 +257,7 @@ export function TeamDirectory({
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {currentTeams.map((team, index) => {
-                  const tGameSlug = team.gameSlug || (team as any).game_slug || 'eafc26';
+                  const tGameSlug = team.gameSlug || team.game_slug || 'eafc26';
                   const tGameConfig = GAMES_CATALOG[tGameSlug] || gameConfig;
                   const tBrandColor = tGameConfig?.brandColor || activeBrandColor;
 
@@ -246,17 +269,17 @@ export function TeamDirectory({
                       subtitle={`🎮 ${tGameConfig?.name || 'FC 26'} | 🖥️ ${team.platform || 'CROSSPLAY'}`}
                       description={team.description || 'Escuadra oficial compitiendo en el circuito eSports profesional.'}
                       bannerUrl={team.bannerUrl || '/images/default/banner-default.jpg'}
-                      logoUrl={team.logoUrl || (team as any).logo}
+                      logoUrl={team.logoUrl || team.logo}
                       tag={team.tag}
-                      country={(team as any).country || 'Chile'}
-                      countryCode={(team as any).countryCode}
+                      country={team.country || 'Chile'}
+                      countryCode={team.countryCode}
                       socials={
-                        (team as any).socialMedia || {
-                          whatsapp: (team as any).whatsapp,
-                          instagram: (team as any).instagram,
-                          twitter: (team as any).twitter,
-                          twitch: (team as any).twitch,
-                          discord: (team as any).discord,
+                        team.socialMedia || {
+                          whatsapp: team.whatsapp,
+                          instagram: team.instagram,
+                          twitter: team.twitter,
+                          twitch: team.twitch,
+                          discord: team.discord,
                         }
                       }
                       badges={[
@@ -264,7 +287,7 @@ export function TeamDirectory({
                         { text: team.status || 'Escuadra Activa', variant: 'emerald', pulse: true }
                       ]}
                       stats={[
-                        { icon: <Users className="w-3.5 h-3.5 text-cyan-400" />, label: 'Plantilla', value: `${team.membersCount || (team as any).members_count || 11} Atletas` },
+                        { icon: <Users className="w-3.5 h-3.5 text-cyan-400" />, label: 'Plantilla', value: `${team.membersCount || team.members_count || 11} Atletas` },
                         { icon: <Crown className="w-3.5 h-3.5 text-amber-400" />, label: 'Capitán', value: team.captainName || 'Asignado' },
                       ]}
                       footerLeft={

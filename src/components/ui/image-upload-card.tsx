@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Upload, ImageIcon, Shield } from 'lucide-react';
 import { compressImageToWebP } from '@/lib/image-compressor';
-import { getAuthHeaders } from '@/lib/fetch-utils';
+import { fetchJson } from '@/lib/fetch-utils';
 
 export interface ImageUploadCardProps {
   label: string;
@@ -24,7 +25,6 @@ export interface ImageUploadCardProps {
 export function ImageUploadCard({
   label,
   subtitle = 'Formato WebP optimizado',
-  formatLabel = 'WebP HD',
   currentUrl = '',
   fallbackType = 'avatar',
   maxDimension = 600,
@@ -58,9 +58,8 @@ export function ImageUploadCard({
 
       const cleanSlug = entityName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-      const res = await fetch('/api/upload', {
+      const data = await fetchJson<{ success?: boolean; data?: { url?: string }; url?: string }>('/api/upload', {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify({
           fileBase64: compressedRes.base64,
           fileName: `${uploadType}-${Date.now()}.webp`,
@@ -71,7 +70,6 @@ export function ImageUploadCard({
         }),
       });
 
-      const data = await res.json();
       const resultUrl = data.data?.url || data.url;
       if (data.success && resultUrl) {
         await onUploadSuccess(resultUrl, statsMsg);
@@ -102,18 +100,18 @@ export function ImageUploadCard({
         {isBanner ? (
           <div className="w-20 h-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] overflow-hidden flex items-center justify-center flex-shrink-0 relative shadow-sm">
             {currentUrl ? (
-              <img src={currentUrl} alt={label} className="w-full h-full object-cover" />
+              <Image src={currentUrl} alt={label} fill sizes="80px" unoptimized className="object-cover" />
             ) : (
               renderFallback()
             )}
           </div>
         ) : (
           <div
-            className="w-14 h-14 rounded-xl bg-[var(--bg-card)] border-2 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-sm"
+            className="relative w-14 h-14 rounded-xl bg-[var(--bg-card)] border-2 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-sm"
             style={{ borderColor: brandColor }}
           >
             {currentUrl ? (
-              <img src={currentUrl} alt={label} className="w-full h-full object-cover" />
+              <Image src={currentUrl} alt={label} fill sizes="56px" unoptimized className="object-cover" />
             ) : (
               renderFallback()
             )}

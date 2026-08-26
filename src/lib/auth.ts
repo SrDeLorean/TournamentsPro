@@ -6,12 +6,21 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 
-// Security: Use environment variable only, no fallback in production
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production-min-32-chars';
-const JWT_SECRET_FALLBACK = JWT_SECRET;
+const DEVELOPMENT_JWT_SECRET = 'dev-secret-change-in-production-min-32-chars';
 const SALT_ROUNDS = 12;
 const TOKEN_EXPIRY = '7d';
 const REFRESH_TOKEN_EXPIRY = '30d';
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+  if (secret) return secret;
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET es obligatorio en producción');
+  }
+
+  return DEVELOPMENT_JWT_SECRET;
+}
 
 // ── Password Hashing ────────────────────────────────────────────────────────
 
@@ -47,11 +56,14 @@ export function signToken(payload: Omit<JWTPayload, 'sessionId' | 'type'>, type:
     sessionId: sessionId || randomUUID(),
     type,
   };
-  return jwt.sign(fullPayload, JWT_SECRET_FALLBACK, { expiresIn });
+  return jwt.sign(fullPayload, getJwtSecret(), { expiresIn });
 }
 
-export function generateTokenPair(payload: Omit<JWTPayload, 'sessionId' | 'type'>): TokenPair {
-  const sessionId = randomUUID();
+export function generateTokenPair(
+  payload: Omit<JWTPayload, 'sessionId' | 'type'>,
+  existingSessionId?: string,
+): TokenPair {
+  const sessionId = existingSessionId || randomUUID();
   return {
     accessToken: signToken(payload, 'access', sessionId),
     refreshToken: signToken(payload, 'refresh', sessionId),
@@ -61,7 +73,8 @@ export function generateTokenPair(payload: Omit<JWTPayload, 'sessionId' | 'type'
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET_FALLBACK) as JWTPayload;
+    const payload = jwt.verify(token, getJwtSecret()) as JWTPayload;
+    return payload.type === 'access' || payload.type === 'refresh' ? payload : null;
   } catch {
     return null;
   }
@@ -164,7 +177,7 @@ export function createRateLimitKey(identifier: string, action: string): string {
 
 // ── Upload Validation ───────────────────────────────────────────────────────
 
-const ALLOWED_IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'];
+const ALLOWED_IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 const MAGIC_BYTES: Record<string, number[]> = {
@@ -248,9 +261,11 @@ export function sanitizeUploadPath(requestedPath: string, baseDir: string): stri
   if (!cleaned) return null;
 
   const resolved = path.resolve(baseDir, cleaned);
-  
-  // Ensure the resolved path is within the base directory
-  if (!resolved.startsWith(path.resolve(baseDir))) {
+  const resolvedBase = path.resolve(baseDir);
+  const relativePath = path.relative(resolvedBase, resolved);
+
+  // Ensure the resolved path is strictly within the base directory.
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     return null;
   }
 

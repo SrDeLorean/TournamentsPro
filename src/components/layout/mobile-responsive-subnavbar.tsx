@@ -4,11 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
-import { GameConfig, GAMES_CATALOG } from '@/lib/games-data';
+import { GameConfig } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
-import { Badge } from '@/components/ui/badge';
+import type { GameSection } from '@/components/layout/game-sub-navbar';
 import {
-  Gamepad2, User, Shield, Home, Trophy, Award, Calendar, ArrowRightLeft, Users, UserCheck, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard
+  Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard
 } from 'lucide-react';
 
 export type MobileSubnavSegment = 'game' | 'athlete' | 'club';
@@ -16,12 +16,12 @@ export type MobileSubnavSegment = 'game' | 'athlete' | 'club';
 interface MobileResponsiveSubnavbarProps {
   game: GameConfig;
   activeSection?: string;
-  onSelectSection?: (section: any) => void;
+  onSelectSection?: (section: GameSection) => void;
 }
 
-export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection }: MobileResponsiveSubnavbarProps) {
+export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileResponsiveSubnavbarProps) {
   const pathname = usePathname();
-  const { currentUser, activeGameSlug, userTeams, isAuthenticated } = useAuth();
+  const { currentUser, userTeams, isAuthenticated } = useAuth();
   const [activeSegment, setActiveSegment] = useState<MobileSubnavSegment>('game');
 
   const roleStr = (currentUser?.role || '').toLowerCase();
@@ -130,7 +130,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
               <Link
                 key={sec.id}
                 href={sec.href}
-                onClick={() => onSelectSection && onSelectSection(sec.id)}
+                onClick={() => onSelectSection && onSelectSection(sec.id as GameSection)}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
                     ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black'

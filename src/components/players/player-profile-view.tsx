@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { PositionBadge } from '@/components/ui/position-badge';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import {
-  User, Shield, Trophy, Star, Award, Calendar, ArrowRightLeft, BarChart3, MessageSquare, Sparkles, Monitor, CheckCircle2, History, Send, Globe, Share2, Video, Tv, Phone, Tag, Flag
+  User, Shield, Trophy, Star, ArrowRightLeft, BarChart3, MessageSquare, Sparkles, Send, Globe, Share2, Video, Tv, Phone
 } from 'lucide-react';
 
 export interface PlayerData {
@@ -58,12 +58,10 @@ export function PlayerProfileView({ player, onBack, brandColor = '#00F0FF' }: Pl
   const [activeTab, setActiveTab] = useState<'ficha' | 'stats' | 'palmares' | 'ofertas'>('ficha');
 
   const activeColor = brandColor || '#00F0FF';
-  const playerBanner = player.bannerUrl || '/images/default/banner-default.jpg';
   const playerName = player.name || player.gamertag || 'Atleta eSports';
   const playerTag = player.gamertag || player.name || 'ATLETA';
   const playerPos = player.position || 'DFC';
   const playerSecPos = player.secondaryPosition;
-  const hasValidSecPos = playerSecPos && typeof playerSecPos === 'string' && playerSecPos.trim() !== '' && !['n/a', 'na', 'sin posición', 'sin posicion', 'ninguna', 'none', '-'].includes(playerSecPos.trim().toLowerCase()) && playerSecPos.trim() !== playerPos ? playerSecPos.trim() : null;
   const playerGameId = player.gameId || `${player.gameSlug.toUpperCase()}-ID #998877`;
   const playerNacionalidad = player.nacionalidad || 'Chile';
   const playerTeam = player.teamName || 'Agencia Libre';
@@ -93,13 +91,16 @@ export function PlayerProfileView({ player, onBack, brandColor = '#00F0FF' }: Pl
             style={{ borderColor: activeColor, boxShadow: `0 0 25px ${activeColor}44` }}
           >
             {player.avatarUrl ? (
-              <img
+              <Image
                 src={player.avatarUrl}
                 alt={playerName}
+                fill
+                sizes="96px"
+                unoptimized={shouldBypassImageOptimization(player.avatarUrl)}
                 onError={(e) => {
                   e.currentTarget.src = '/images/default/logo-default.png';
                 }}
-                className="w-full h-full object-cover"
+                className="object-cover"
               />
             ) : (
               <Avatar fallback={playerName} size="lg" status="online" />

@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Badge } from '@/components/ui/badge';
 import {
-  Shield, Trophy, Users, Building2, LayoutDashboard, Calendar, Award, ArrowRightLeft, MessageSquare, ChevronRight, Settings, Sparkles, CheckCircle2, Menu, X, FileText, Activity, Gamepad2, Swords, Globe, Home, Star, PieChart, Database, Target
+  Shield, Users, LayoutDashboard, Calendar, Award, ArrowRightLeft, CheckCircle2, Menu, X, Gamepad2, Swords, Globe, Home, Star, PieChart, Database, Target
 } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 

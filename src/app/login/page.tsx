@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Trophy, Mail, Lock, Sparkles, ArrowRight, ShieldCheck, Gamepad2, Tv, MessageSquare, Flame, CheckCircle2 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Trophy, Mail, Lock, Sparkles, ArrowRight, Tv, MessageSquare, CheckCircle2 } from 'lucide-react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 
@@ -13,7 +14,7 @@ import { GoogleOAuthModal } from '@/components/auth/google-oauth-modal';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loginWithGoogle, isAuthenticated } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,10 +48,13 @@ export default function LoginPage() {
         
         {/* Background Image Layer in Original Crisp Color & Brightness */}
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1600&auto=format&fit=crop&q=80"
             alt="eSports Tournament Portal"
-            className="w-full h-full object-cover opacity-85 filter contrast-105 saturate-110"
+            fill
+            sizes="50vw"
+            unoptimized
+            className="object-cover opacity-85 filter contrast-105 saturate-110"
           />
           {/* Soft Natural Fade only at the bottom */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-black/20" />
@@ -188,38 +192,6 @@ export default function LoginPage() {
                 <MessageSquare className="w-4 h-4" />
                 Discord
               </button>
-            </div>
-
-            {/* Quick Real User Credentials Selector */}
-            <div className="p-3 rounded-2xl bg-slate-900/90 border border-cyan-500/40 space-y-2">
-              <span className="text-[10px] font-black uppercase text-cyan-400 block tracking-wider text-center">
-                🔑 Cuentas Oficiales de Acceso (Clave: 123456)
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('admin@tournamentspro.com');
-                    setPassword('123456');
-                  }}
-                  className="p-2 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-400/50 text-cyan-300 text-[11px] font-extrabold flex flex-col items-center justify-center transition-all"
-                >
-                  <span>🛡️ Administrador</span>
-                  <span className="text-[9px] text-slate-400 font-mono font-normal">admin@tournamentspro.com</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('organizador@tournamentspro.com');
-                    setPassword('123456');
-                  }}
-                  className="p-2 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 border border-purple-400/50 text-purple-300 text-[11px] font-extrabold flex flex-col items-center justify-center transition-all"
-                >
-                  <span>🏆 Organizador</span>
-                  <span className="text-[9px] text-slate-400 font-mono font-normal">organizador@tournamentspro.com</span>
-                </button>
-              </div>
             </div>
 
             {/* Login Form */}

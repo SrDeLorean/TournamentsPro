@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
+import { transferPostBodySchema } from '@/lib/api-schemas';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -24,10 +26,18 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { teamId, applicantUserId, position, pitchMessage } = body;
+    const actor = await requireRequestActor(request);
+    const parsedBody = transferPostBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { success: false, error: 'Faltan datos obligatorios para la postulación' },
+        { status: 400 },
+      );
+    }
+    const body = parsedBody.data;
+    const { teamId, position, pitchMessage } = body;
 
-    if (!teamId || !applicantUserId || !position) {
+    if (!teamId || !position) {
       return NextResponse.json(
         { success: false, error: 'Faltan datos obligatorios para la postulación' },
         { status: 400 }
@@ -37,7 +47,7 @@ export async function POST(request: Request) {
     const application = {
       id: `trans-${Date.now()}`,
       teamId,
-      applicantUserId,
+      applicantUserId: actor.userId,
       position,
       pitchMessage: pitchMessage || 'Postulación enviada desde el Mercado de Traspasos',
       status: 'PENDIENTE',
@@ -53,6 +63,8 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Error al procesar la postulación' },
       { status: 500 }

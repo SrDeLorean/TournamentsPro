@@ -8,16 +8,14 @@ import { Avatar } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { CountryFlag } from '@/components/ui/country-flag';
 import { useAuth } from '@/components/providers/auth-provider';
-import { GAMES_CATALOG, GameConfig } from '@/lib/games-data';
+import { GAMES_CATALOG } from '@/lib/games-data';
 import { MatchReportModal } from '@/components/matches/match-report-modal';
 import {
-  Calendar,
-  Search,
   Trophy,
+  Search,
   Gamepad2,
   RefreshCw,
   Building2,
-  Clock,
   Shield,
   BarChart2,
   CheckCircle2,
@@ -45,6 +43,35 @@ export interface MatchdayReportItem {
   transmissionTime: string;
   groupJornada: string;
   proofUrl?: string | null;
+}
+
+interface TournamentApiItem {
+  id: string;
+  name: string;
+  game_slug?: string;
+}
+
+interface MatchApiItem {
+  id?: string;
+  scheduled_at?: string;
+  scheduled_time?: string;
+  transmission_time?: string;
+  game_slug?: string;
+  tournament_id?: string;
+  competition_id?: string;
+  tournament_name?: string;
+  organization_name?: string;
+  home_team_name?: string;
+  home_team_tag?: string;
+  away_team_name?: string;
+  away_team_tag?: string;
+  score_home?: number | string | null;
+  score_away?: number | string | null;
+  status?: string;
+  round_name?: string;
+  matchday?: number;
+  matchday_number?: number;
+  proof_url?: string | null;
 }
 
 export function MatchdayReportView() {
@@ -80,7 +107,7 @@ export function MatchdayReportView() {
       const data = await res.json();
       const raw = data.tournaments || data.competitions || data.data || [];
       if (Array.isArray(raw)) {
-        setTournaments(raw.map((t: any) => ({ id: t.id, name: t.name, gameSlug: t.game_slug || 'eafc26' })));
+        setTournaments((raw as TournamentApiItem[]).map((t) => ({ id: t.id, name: t.name, gameSlug: t.game_slug || 'eafc26' })));
       }
     } catch (e) {
       console.error('Error fetching tournaments:', e);
@@ -104,7 +131,7 @@ export function MatchdayReportView() {
       const data = await res.json();
 
       if (data.success && Array.isArray(data.matches)) {
-        const mapped: MatchdayReportItem[] = data.matches.map((m: any, idx: number) => {
+        const mapped: MatchdayReportItem[] = (data.matches as MatchApiItem[]).map((m, idx) => {
           const dateObj = m.scheduled_at ? new Date(m.scheduled_at) : new Date();
           const yyyy = dateObj.getFullYear();
           const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -118,11 +145,12 @@ export function MatchdayReportView() {
             timeStr = m.transmission_time.slice(0, 5);
           }
 
-          const gameObj = GAMES_CATALOG[m.game_slug] || GAMES_CATALOG['eafc26'];
+          const resolvedGameSlug = m.game_slug || 'eafc26';
+          const gameObj = GAMES_CATALOG[resolvedGameSlug] || GAMES_CATALOG['eafc26'];
 
           return {
             id: m.id || `M-${idx + 1}`,
-            gameSlug: m.game_slug || 'eafc26',
+            gameSlug: resolvedGameSlug,
             gameName: gameObj?.name || 'eSports',
             tournamentId: m.tournament_id || m.competition_id || 'tourn-1',
             tournamentName: m.tournament_name || 'Competencia BD',
@@ -153,15 +181,16 @@ export function MatchdayReportView() {
   }, [selectedGameSlug, selectedTournName, statusFilter, clubSearch]);
 
   useEffect(() => {
-    fetchTournaments(selectedGameSlug);
-    fetchMatches();
+    void Promise.resolve().then(() => Promise.all([
+      fetchTournaments(selectedGameSlug),
+      fetchMatches(),
+    ]));
   }, [selectedGameSlug, selectedTournName, statusFilter, fetchTournaments, fetchMatches]);
 
   // Handle Game Selection
   const handleGameSelect = (gSlug: string) => {
     setSelectedGameSlug(gSlug);
     setSelectedTournName('TODAS');
-    fetchTournaments(gSlug);
   };
 
   // Filtered Tournaments based on active game
@@ -234,7 +263,6 @@ export function MatchdayReportView() {
           action: 'APPROVE',
           scoreHome,
           scoreAway,
-          requesterRole: currentUser?.role || 'Organizador',
         }),
       });
 

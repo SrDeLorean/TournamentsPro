@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useSyncExternalStore } from 'react';
 import es from '@/locales/es.json';
 import en from '@/locales/en.json';
 import pt from '@/locales/pt.json';
@@ -21,28 +21,46 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('es');
+const LANGUAGE_STORAGE_KEY = 'app_language';
+const LANGUAGE_CHANGE_EVENT = 'tournamentspro:language-change';
 
-  useEffect(() => {
-    const savedLang = localStorage.getItem('app_language') as Language;
-    if (savedLang && ['es', 'en', 'pt'].includes(savedLang)) {
-      setLanguageState(savedLang);
-    }
-  }, []);
+function isLanguage(value: string | null): value is Language {
+  return value === 'es' || value === 'en' || value === 'pt';
+}
+
+function getStoredLanguage(): Language {
+  const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  return isLanguage(stored) ? stored : 'es';
+}
+
+function getServerLanguage(): Language {
+  return 'es';
+}
+
+function subscribeToLanguage(onStoreChange: () => void) {
+  window.addEventListener('storage', onStoreChange);
+  window.addEventListener(LANGUAGE_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener('storage', onStoreChange);
+    window.removeEventListener(LANGUAGE_CHANGE_EVENT, onStoreChange);
+  };
+}
+
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const language = useSyncExternalStore(subscribeToLanguage, getStoredLanguage, getServerLanguage);
 
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem('app_language', lang);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+    window.dispatchEvent(new Event(LANGUAGE_CHANGE_EVENT));
   };
 
   const t = (keyPath: string): string => {
     const keys = keyPath.split('.');
-    let current: any = dictionaries[language];
+    let current: unknown = dictionaries[language];
 
     for (const key of keys) {
-      if (current && current[key] !== undefined) {
-        current = current[key];
+      if (typeof current === 'object' && current !== null && key in current) {
+        current = (current as Record<string, unknown>)[key];
       } else {
         return keyPath;
       }

@@ -1,16 +1,12 @@
 'use client';
 
 import React from 'react';
-import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { FileText, Shield, CheckCircle2, XCircle, ArrowRightLeft, Sparkles } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { FileText, CheckCircle2, XCircle, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function AtletaOfertasPage() {
-  const { currentUser } = useAuth();
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">
       <PageHeader

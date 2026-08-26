@@ -99,7 +99,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     bgGradient: 'from-[#0AC8B9]/25 via-[#091428] to-[#030914]',
     positions: ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'],
     bannerUrl: '/images/games-background/lol.jpg',
-    logoUrl: '/images/games/lol.png',
+    logoUrl: '/images/games/lol.webp',
     teamBadgeText: 'Directorio de Escuadras MOBA 5v5',
     teamTitle: 'ESCUADRAS',
     teamHighlightTitle: 'DE LA GRIETA.',

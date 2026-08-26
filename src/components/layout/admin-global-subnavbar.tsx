@@ -5,9 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
-  Users, Shield, Building2, Trophy, LayoutDashboard, Settings, Activity, Sparkles, CheckCircle2, Lock
+  Users, Shield, Building2, LayoutDashboard
 } from 'lucide-react';
 
 export function AdminGlobalSubnavbar() {

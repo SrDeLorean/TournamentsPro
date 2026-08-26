@@ -1,17 +1,56 @@
 import { NextResponse } from 'next/server';
 import { queryDB } from '@/lib/db';
+import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
+import { canManageCompetition } from '@/lib/authorization';
+import { writeSecurityAudit } from '@/lib/security';
+import { fixtureRequestBodySchema } from '@/lib/api-schemas';
+
+interface FixtureTeam {
+  id: string;
+  name: string;
+  tag: string;
+}
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const actor = await requireRequestActor(request, ['Administrador', 'Organizador']);
+    const parsedBody = fixtureRequestBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      return NextResponse.json({ error: 'Configuración de fixture inválida' }, { status: 400 });
+    }
+    const body = parsedBody.data;
     const { tournamentId, format, startDate, matchdayTime } = body;
 
     if (!tournamentId) {
       return NextResponse.json({ error: 'Falta ID del torneo' }, { status: 400 });
     }
 
+    let resources = await queryDB<{ organization_id: string | null; organizer_id: string | null }>(
+      'SELECT organization_id, organizer_id FROM competitions WHERE id = ? LIMIT 1',
+      [tournamentId],
+    );
+    if (resources.length === 0) {
+      resources = await queryDB<{ organization_id: string | null; organizer_id: string | null }>(
+        `SELECT u.organization_id, t.organizer_id
+           FROM tournaments t
+           LEFT JOIN users u ON u.id = t.organizer_id
+          WHERE t.id = ? LIMIT 1`,
+        [tournamentId],
+      );
+    }
+    const resource = resources[0];
+    if (!resource) {
+      return NextResponse.json({ error: 'Torneo no encontrado' }, { status: 404 });
+    }
+    if (!canManageCompetition(actor, {
+      organizationId: resource.organization_id,
+      organizerId: resource.organizer_id,
+    })) {
+      return NextResponse.json({ error: 'No tienes permisos para generar este fixture' }, { status: 403 });
+    }
+
     // 1. Fetch Enrolled Teams with real names and tags
-    let enrolledTeams = await queryDB<any>(
+    const enrolledTeams = await queryDB<FixtureTeam>(
       `SELECT t.id, COALESCE(t.name, t.team_name, 'Equipo BD') as name, COALESCE(t.tag, UPPER(LEFT(COALESCE(t.name, 'EQU'), 3))) as tag
        FROM tournament_teams tt
        JOIN teams t ON (tt.team_id = t.id OR tt.teamId = t.id)
@@ -19,25 +58,17 @@ export async function POST(request: Request) {
       [tournamentId, tournamentId]
     );
 
-    if (!enrolledTeams || enrolledTeams.length === 0) {
-      // Fallback: fetch teams from global teams table
-      enrolledTeams = await queryDB<any>(
-        `SELECT id, COALESCE(name, team_name, 'Equipo BD') as name, COALESCE(tag, UPPER(LEFT(COALESCE(name, 'EQU'), 3))) as tag
-         FROM teams ORDER BY created_at DESC LIMIT 8`
-      );
-    }
-
     if (enrolledTeams.length < 2) {
       return NextResponse.json({ error: 'Se necesitan al menos 2 equipos inscritos para generar fixture' }, { status: 400 });
     }
 
-    const teamMap = new Map<string, any>();
-    enrolledTeams.forEach((t: any) => teamMap.set(t.id, t));
+    const teamMap = new Map<string, FixtureTeam>();
+    enrolledTeams.forEach((team) => teamMap.set(team.id, team));
 
     // 2. Clear existing matches for this tournament/competition
     await queryDB('DELETE FROM matches WHERE tournament_id = ? OR competition_id = ?', [tournamentId, tournamentId]);
 
-    const teamIds = enrolledTeams.map((t: any) => t.id);
+    const teamIds = enrolledTeams.map((team) => team.id);
     const fmt = (format || 'LIGA').toUpperCase();
     
     // Update the actual competition format in the database so it matches the generated fixture
@@ -187,8 +218,8 @@ export async function POST(request: Request) {
     } else {
       // ⚽ Round Robin (Liga) Generator Algorithm
       const n = teamIds.length % 2 === 0 ? teamIds.length : teamIds.length + 1;
-      const list = [...teamIds];
-      if (teamIds.length % 2 !== 0) list.push(null as any);
+      const list: Array<string | null> = [...teamIds];
+      if (teamIds.length % 2 !== 0) list.push(null);
 
       const totalRounds = n - 1;
 
@@ -215,16 +246,28 @@ export async function POST(request: Request) {
     // 3. Update status and format on both tables for 100% sync
     try {
       await queryDB('UPDATE tournaments SET status = "En_Juego", format = ?, mode_format = ? WHERE id = ?', [fmt, fmt, tournamentId]);
-    } catch (e) {}
+    } catch {}
     try {
       await queryDB('UPDATE competitions SET status = "En_Juego", format = ?, mode_format = ? WHERE id = ?', [fmt, fmt, tournamentId]);
-    } catch (e) {}
+    } catch {}
+
+    await writeSecurityAudit({
+      actor,
+      request,
+      action: 'FIXTURE_GENERATED',
+      resourceType: 'competition',
+      resourceId: tournamentId,
+      organizationId: resource.organization_id,
+      metadata: { format: fmt, enrolledTeams: enrolledTeams.length },
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Fixture generado exitosamente con sincronización completa de tablas, grupos y playoffs',
     });
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error generando fixture' }, { status: 500 });
   }
 }

@@ -2,11 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { GameConfig } from '@/lib/games-data';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import { SubSubNavbar, SubSubTabOption } from '@/components/layout/sub-sub-navbar';
 import {
-  Trophy, Shield, Calendar, ArrowLeft, Gamepad2, Award, Users, Target, Activity,
-  Clock, CheckCircle2, AlertCircle, FileText, Sparkles, Building2, Flame, RefreshCw, BarChart2
+  Trophy, Shield, Calendar, ArrowLeft, Award, Users, Target, Activity,
+  CheckCircle2, FileText, Building2, RefreshCw, BarChart2
 } from 'lucide-react';
 import { PlayoffBracket } from '@/components/tournaments/playoff-bracket';
 import { FixtureScheduleView } from '@/components/tournaments/fixture-schedule-view';
@@ -103,6 +105,18 @@ export function PublicCompetitionDetailView({
   const compBanner = competition.org_banner || gameConfig.bannerUrl || '/images/default/banner-default.jpg';
   const orgLogo = competition.org_logo || '/images/default/logo-default.png';
   const orgName = competition.org_name || 'Organización Oficial';
+  const playoffMatches = matches.map((match) => ({
+    id: match.id,
+    home_team_name: match.home_team_name || 'Por definir',
+    home_team_tag: match.home_team_tag || '',
+    away_team_name: match.away_team_name || 'Por definir',
+    away_team_tag: match.away_team_tag || '',
+    score_home: match.score_home ?? null,
+    score_away: match.score_away ?? null,
+    status: match.status || 'Pendiente',
+    round_name: match.round_name || 'Ronda Única',
+    matchday: match.matchday,
+  }));
 
   return (
     <div
@@ -116,13 +130,17 @@ export function PublicCompetitionDetailView({
       <div className="relative w-full left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-slate-950 border-b border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[260px] sm:min-h-[360px] flex flex-col justify-end">
         {/* Full-bleed background graphic */}
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src={compBanner}
             alt={competition.name}
+            fill
+            sizes="100vw"
+            priority
+            unoptimized={shouldBypassImageOptimization(compBanner)}
             onError={(e) => {
               e.currentTarget.src = '/images/default/banner-default.jpg';
             }}
-            className="w-full h-full object-cover opacity-90 filter contrast-[1.1] brightness-[0.85]"
+            className="object-cover opacity-90 filter contrast-[1.1] brightness-[0.85]"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-transparent to-slate-950/90" />
@@ -138,13 +156,16 @@ export function PublicCompetitionDetailView({
                 style={{ borderColor: brandColor, boxShadow: `0 0 30px ${brandColor}40` }}
               >
                 {orgLogo ? (
-                  <img
+                  <Image
                     src={orgLogo}
                     alt={orgName}
+                    fill
+                    sizes="112px"
+                    unoptimized={shouldBypassImageOptimization(orgLogo)}
                     onError={(e) => {
                       e.currentTarget.src = '/images/default/logo-default.png';
                     }}
-                    className="w-full h-full object-contain p-2 filter drop-shadow-md"
+                    className="object-contain p-2 filter drop-shadow-md"
                   />
                 ) : (
                   <Building2 className="w-10 h-10 sm:w-14 sm:h-14" style={{ color: brandColor }} />
@@ -292,9 +313,16 @@ export function PublicCompetitionDetailView({
                   className="glass-panel p-5 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-card)]/60 backdrop-blur-xl relative overflow-hidden flex items-center gap-4 hover:border-[var(--game-brand)] transition-all animate-fade-up group"
                   style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  <div className="w-14 h-14 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-center p-1 shrink-0 overflow-hidden shadow-lg group-hover:border-[var(--game-brand)] transition-colors">
+                  <div className="relative w-14 h-14 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-center p-1 shrink-0 overflow-hidden shadow-lg group-hover:border-[var(--game-brand)] transition-colors">
                     {t.team_logo ? (
-                      <img src={t.team_logo} alt={t.team_name} className="w-full h-full object-contain filter group-hover:drop-shadow-[0_0_8px_var(--game-brand)]" />
+                      <Image
+                        src={t.team_logo}
+                        alt={t.team_name}
+                        fill
+                        sizes="56px"
+                        unoptimized={shouldBypassImageOptimization(t.team_logo)}
+                        className="object-contain p-1 filter group-hover:drop-shadow-[0_0_8px_var(--game-brand)]"
+                      />
                     ) : (
                       <Shield className="w-7 h-7 text-[var(--game-brand)]" />
                     )}
@@ -343,7 +371,7 @@ export function PublicCompetitionDetailView({
                 {matches.length > 0 ? (
                   <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-3xl p-6 shadow-xl overflow-x-auto relative backdrop-blur-xl">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none" />
-                    <PlayoffBracket matches={matches as any} brandColor={brandColor} />
+                    <PlayoffBracket matches={playoffMatches} brandColor={brandColor} />
                   </div>
                 ) : (
                   <div className="py-12 text-center border border-dashed border-[var(--border-card)] rounded-3xl glass-panel">

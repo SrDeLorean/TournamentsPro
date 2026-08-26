@@ -1,15 +1,11 @@
-'use client';
-
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { mockTeamsList } from '@/lib/teams-data';
 import { GameLogo } from '@/components/ui/game-logo';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import {
-  Trophy, Shield, Users, Radio, Sparkles, ChevronRight, Award, Flame, Zap, ArrowRight, Activity, Globe, Monitor, Gamepad2, Play
+  Trophy, Radio, Sparkles, ChevronRight, Award, ArrowRight
 } from 'lucide-react';
 
 export default function HomePage() {

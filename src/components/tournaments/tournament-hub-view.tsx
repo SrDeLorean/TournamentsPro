@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GameConfig, GAMES_CATALOG } from '@/lib/games-data';
-import { initialTeams, TeamData } from '@/lib/data-store';
+import { GameConfig } from '@/lib/games-data';
+import { initialTeams } from '@/lib/data-store';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar } from '@/components/ui/avatar';
 import {
-  Trophy, Award, Calendar, Users, Sparkles, CheckCircle2, Shield, ArrowRight, Play, AlertCircle, Plus, ChevronRight, Check
+  Trophy, Award, Calendar, Sparkles, CheckCircle2, Shield, AlertCircle, Plus
 } from 'lucide-react';
 
 import { MatchReportModal } from '@/components/matches/match-report-modal';
@@ -18,10 +17,18 @@ interface TournamentHubViewProps {
   initialSection?: string;
 }
 
+interface ReportableMatch {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+  gameSlug: string;
+  tournamentName: string;
+}
+
 export function TournamentHubView({ game, initialSection = 'competencias' }: TournamentHubViewProps) {
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser } = useAuth();
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [selectedMatchForReport, setSelectedMatchForReport] = useState<any>(null);
+  const [selectedMatchForReport, setSelectedMatchForReport] = useState<ReportableMatch>();
 
   const [activeTab, setActiveTab] = useState<'TORNEOS' | 'POSICIONES' | 'BRACKETS' | 'FIXTURE' | 'INSCRIBIR'>(
     initialSection === 'clasificacion'

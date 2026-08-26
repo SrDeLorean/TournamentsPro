@@ -4,7 +4,6 @@ import Script from 'next/script';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageProvider } from '@/components/providers/language-provider';
-import { ReactQueryProvider } from '@/components/providers/query-provider';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { AppLayoutWrapper } from '@/components/layout/app-layout-wrapper';
 
@@ -53,11 +52,9 @@ export default function RootLayout({
       <body className="antialiased flex flex-col min-h-screen">
         <ThemeProvider>
           <LanguageProvider>
-            <ReactQueryProvider>
-              <AuthProvider>
-                <AppLayoutWrapper>{children}</AppLayoutWrapper>
-              </AuthProvider>
-            </ReactQueryProvider>
+            <AuthProvider>
+              <AppLayoutWrapper>{children}</AppLayoutWrapper>
+            </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />

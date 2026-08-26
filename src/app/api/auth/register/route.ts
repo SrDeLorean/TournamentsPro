@@ -1,11 +1,25 @@
 import { NextResponse } from 'next/server';
 import { queryDB } from '@/lib/db';
 import { hashPassword, signToken } from '@/lib/auth';
-import { UserRow, mapUserRowToProfile, apiError } from '@/lib/api-types';
+import { UserRow, apiError } from '@/lib/api-types';
+import { authorizationErrorResponse, requireValidMutationOrigin } from '@/lib/auth-server';
+import { consumeSecurityRateLimit, createAuthSession, getTrustedClientAddress } from '@/lib/security';
+import { registerBodySchema } from '@/lib/api-schemas';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    requireValidMutationOrigin(request);
+    const clientAddress = getTrustedClientAddress(request);
+    if (clientAddress) {
+      const clientRateLimit = await consumeSecurityRateLimit('auth-register-client', clientAddress, 5, 60 * 60 * 1000);
+      if (!clientRateLimit.allowed) {
+        return apiError(`Demasiados registros. Reintenta en ${clientRateLimit.retryAfter} segundos.`, 429, 'RATE_LIMITED');
+      }
+    }
+
+    const parsedBody = registerBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) return apiError('Datos de registro inválidos', 400);
+    const body = parsedBody.data;
     const { gamertag, name, email, password, primaryGame, platform } = body;
 
     // ── Validate required fields ────────────────────────────────────────
@@ -13,13 +27,28 @@ export async function POST(request: Request) {
       return apiError('Gamertag requerido (mínimo 3 caracteres)', 400);
     }
 
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return apiError('Contraseña requerida (mínimo 6 caracteres)', 400);
+    if (
+      !password ||
+      typeof password !== 'string' ||
+      password.length < 10 ||
+      !/[A-Za-z]/.test(password) ||
+      !/[0-9]/.test(password)
+    ) {
+      return apiError('La contraseña debe tener al menos 10 caracteres, una letra y un número', 400);
     }
 
     const userGamertag = gamertag.trim();
     const userName = (name || userGamertag).trim();
     const userEmail = email?.trim() || `${userGamertag.toLowerCase().replace(/[^a-z0-9]/g, '')}@tournamentspro.com`;
+    const accountRateLimit = await consumeSecurityRateLimit(
+      'auth-register-account',
+      `${userEmail}:${userGamertag}`,
+      5,
+      60 * 60 * 1000,
+    );
+    if (!accountRateLimit.allowed) {
+      return apiError(`Demasiados registros. Reintenta en ${accountRateLimit.retryAfter} segundos.`, 429, 'RATE_LIMITED');
+    }
 
     // ── Check if gamertag or email already exists ────────────────────────
     const existing = await queryDB<UserRow>(
@@ -54,11 +83,12 @@ export async function POST(request: Request) {
     );
 
     // ── Generate JWT ────────────────────────────────────────────────────
+    const session = await createAuthSession(newId, request);
     const token = signToken({
       userId: newId,
       role: userRole,
       gamertag: userGamertag,
-    });
+    }, 'access', session.sessionId);
 
     const userProfile = {
       id: newId,
@@ -77,7 +107,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       success: true,
-      data: { user: userProfile, token },
+      data: { user: userProfile },
       message: 'Usuario registrado exitosamente',
     });
 
@@ -91,6 +121,8 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Register error:', error);
     const message = error instanceof Error ? error.message : 'Error en registro';
     return apiError(message, 500);

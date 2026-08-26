@@ -1,11 +1,25 @@
 import { NextResponse } from 'next/server';
 import { queryDB } from '@/lib/db';
-import { hashPassword, verifyPassword, signToken } from '@/lib/auth';
-import { UserRow, mapUserRowToProfile, apiSuccess, apiError } from '@/lib/api-types';
+import { verifyPassword, signToken } from '@/lib/auth';
+import { UserRow, mapUserRowToProfile, apiError } from '@/lib/api-types';
+import { authorizationErrorResponse, requireValidMutationOrigin } from '@/lib/auth-server';
+import { consumeSecurityRateLimit, createAuthSession, getTrustedClientAddress } from '@/lib/security';
+import { loginBodySchema } from '@/lib/api-schemas';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    requireValidMutationOrigin(request);
+    const clientAddress = getTrustedClientAddress(request);
+    if (clientAddress) {
+      const clientRateLimit = await consumeSecurityRateLimit('auth-login-client', clientAddress, 20, 15 * 60 * 1000);
+      if (!clientRateLimit.allowed) {
+        return apiError(`Demasiados intentos. Reintenta en ${clientRateLimit.retryAfter} segundos.`, 429, 'RATE_LIMITED');
+      }
+    }
+
+    const parsedBody = loginBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) return apiError('Email/gamertag o contraseña inválidos', 400);
+    const body = parsedBody.data;
     const { emailOrGamertag, password } = body;
 
     if (!emailOrGamertag || typeof emailOrGamertag !== 'string' || !emailOrGamertag.trim()) {
@@ -17,6 +31,10 @@ export async function POST(request: Request) {
     }
 
     const term = emailOrGamertag.trim();
+    const accountRateLimit = await consumeSecurityRateLimit('auth-login-account', term, 10, 15 * 60 * 1000);
+    if (!accountRateLimit.allowed) {
+      return apiError(`Demasiados intentos. Reintenta en ${accountRateLimit.retryAfter} segundos.`, 429, 'RATE_LIMITED');
+    }
 
     // Query user in MySQL database
     const users = await queryDB<UserRow>(
@@ -46,42 +64,28 @@ export async function POST(request: Request) {
       return apiError('Esta cuenta no tiene contraseña configurada. Intenta con Google.', 401);
     }
 
-    // Support both hashed (bcrypt) and legacy plain-text passwords
-    let passwordValid = false;
-    if (row.password_hash.startsWith('$2a$') || row.password_hash.startsWith('$2b$')) {
-      // Bcrypt hashed password
-      passwordValid = await verifyPassword(password, row.password_hash);
-    } else {
-      // Legacy plain-text password — verify and migrate to bcrypt
-      passwordValid = (password === row.password_hash);
-      if (passwordValid) {
-        // Auto-migrate to bcrypt hash
-        try {
-          const hashed = await hashPassword(password);
-          await queryDB('UPDATE users SET password_hash = ? WHERE id = ?', [hashed, row.id]);
-        } catch (migrationErr) {
-          console.warn('Password migration failed (non-blocking):', migrationErr);
-        }
-      }
-    }
+    const passwordValid = row.password_hash.startsWith('$2')
+      ? await verifyPassword(password, row.password_hash)
+      : false;
 
     if (!passwordValid) {
       return apiError('Credenciales inválidas. Verifica tu email/gamertag y contraseña.', 401);
     }
 
     // Generate JWT token
+    const session = await createAuthSession(row.id, request);
     const token = signToken({
       userId: row.id,
       role: row.role,
       gamertag: row.gamertag,
-    });
+    }, 'access', session.sessionId);
 
     const userProfile = mapUserRowToProfile(row);
 
-    // Set HttpOnly cookie + return user data
+    // The JWT is only stored in an HttpOnly cookie; it is never exposed to client JavaScript.
     const response = NextResponse.json({
       success: true,
-      data: { user: userProfile, token },
+      data: { user: userProfile },
       message: 'Inicio de sesión exitoso',
     });
 
@@ -95,6 +99,8 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Login error:', error);
     const message = error instanceof Error ? error.message : 'Error en inicio de sesión';
     return apiError(message, 500);

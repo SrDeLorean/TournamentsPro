@@ -16,14 +16,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-  Trophy, Calendar, Shield, Settings, Users, Plus, Trash2, ArrowLeft, Play, CheckCircle2, Clock, Swords, AlertCircle
+  Trophy, Calendar, Shield, Settings, Plus, Trash2, ArrowLeft, Play, Swords
 } from 'lucide-react';
+import type { AvailableTeam, CompetitionMatch } from './competition-tabs';
 
 interface CompetitionDetailClientProps {
   competition: CompetitionData;
   enrolledTeams: CompetitionTeamData[];
-  availableTeams: any[];
-  matches: any[];
+  availableTeams: AvailableTeam[];
+  matches: CompetitionMatch[];
 }
 
 export function CompetitionDetailClient({
@@ -48,7 +49,7 @@ export function CompetitionDetailClient({
 
     startOperation(`Inscripción de Equipo: ${teamObj.name}`);
     startTransition(async () => {
-      const res = await enrollTeamAction(competition.id, teamObj.id, teamObj.name, teamObj.tag);
+      const res = await enrollTeamAction(competition.id, teamObj.id, teamObj.name, teamObj.tag ?? undefined);
       if (res.success) {
         setSelectedTeamToEnroll('');
         endSuccess(res.message || 'Equipo inscrito correctamente.');
@@ -77,7 +78,7 @@ export function CompetitionDetailClient({
     startTransition(async () => {
       const res = await generateFixtureAction(competition.id);
       if (res.success) {
-        endSuccess((res as any).message || 'Fixture generado exitosamente.');
+        endSuccess(res.message || 'Fixture generado exitosamente.');
       } else {
         endError(res.error || 'Error al generar fixture.');
       }
@@ -104,22 +105,26 @@ export function CompetitionDetailClient({
   });
 
   matches.forEach((m) => {
-    if (m.status === 'TERMINADO' && m.reported_score_home !== null && m.reported_score_away !== null) {
-      const h = standingsMap[m.home_team_id];
-      const a = standingsMap[m.away_team_id];
+    const homeId = m.home_team_id ?? m.team_home_id;
+    const awayId = m.away_team_id ?? m.team_away_id;
+    const homeScore = m.reported_score_home;
+    const awayScore = m.reported_score_away;
+    if (m.status === 'TERMINADO' && homeId && awayId && homeScore != null && awayScore != null) {
+      const h = standingsMap[homeId];
+      const a = standingsMap[awayId];
       if (h && a) {
         h.pj += 1;
         a.pj += 1;
-        h.gf += m.reported_score_home;
-        h.gc += m.reported_score_away;
-        a.gf += m.reported_score_away;
-        a.gc += m.reported_score_home;
+        h.gf += homeScore;
+        h.gc += awayScore;
+        a.gf += awayScore;
+        a.gc += homeScore;
 
-        if (m.reported_score_home > m.reported_score_away) {
+        if (homeScore > awayScore) {
           h.pg += 1;
           h.pts += 3;
           a.pp += 1;
-        } else if (m.reported_score_home < m.reported_score_away) {
+        } else if (homeScore < awayScore) {
           a.pg += 1;
           a.pts += 3;
           h.pp += 1;
@@ -140,7 +145,7 @@ export function CompetitionDetailClient({
   const availableToEnroll = availableTeams.filter((t) => !enrolledSet.has(t.id));
 
   // Group matches by matchday
-  const matchesByMatchday: Record<number, any[]> = {};
+  const matchesByMatchday: Record<number, CompetitionMatch[]> = {};
   matches.forEach((m) => {
     const num = m.matchday_number || m.matchday || 1;
     if (!matchesByMatchday[num]) matchesByMatchday[num] = [];
@@ -254,7 +259,7 @@ export function CompetitionDetailClient({
               <Swords className="w-10 h-10 text-slate-500 mx-auto" />
               <h3 className="text-sm font-black uppercase text-white">No se ha generado el fixture todavía</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                Inscribe al menos 2 equipos en la pestaña de inscripción y presiona "Generar Fixture" para construir el calendario automático.
+                Inscribe al menos 2 equipos en la pestaña de inscripción y presiona &quot;Generar Fixture&quot; para construir el calendario automático.
               </p>
             </Card>
           ) : (

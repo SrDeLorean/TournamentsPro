@@ -1,8 +1,6 @@
-'use client';
-
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Trophy, Shield, Gamepad2, Users, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Shield, Gamepad2, Users, Sparkles } from 'lucide-react';
 
 export default function InformationPage() {
   return (

@@ -1,36 +1,36 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/components/providers/auth-provider';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { Shield, ExternalLink, Trophy } from 'lucide-react';
-import { queryDB } from '@/lib/db'; // Wait, client components can't query DB directly. I need to make an action for it.
 import { getUserEnrolledTeamsAction } from '@/app/actions/new-squads';
+
+type EnrolledTeam = Awaited<ReturnType<typeof getUserEnrolledTeamsAction>>['teams'][number];
 
 export function NewUserMyTeamsView() {
   const { currentUser } = useAuth();
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<EnrolledTeam[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (currentUser?.id) {
-      loadTeams();
-    }
+  const loadTeams = useCallback(async () => {
+    if (!currentUser?.id) return;
+    try {
+      const res = await getUserEnrolledTeamsAction(currentUser.id);
+      if (res.success) setTeams(res.teams);
+    } catch {}
+    setLoading(false);
   }, [currentUser]);
 
-  const loadTeams = async () => {
-    try {
-      const res = await getUserEnrolledTeamsAction(currentUser!.id);
-      if (res.success) {
-        setTeams(res.teams);
-      }
-    } catch (err) {}
-    setLoading(false);
-  };
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const timer = window.setTimeout(() => void loadTeams(), 0);
+    return () => window.clearTimeout(timer);
+  }, [currentUser?.id, loadTeams]);
 
   if (loading) return <div className="skeleton h-64 rounded-xl" />;
 
@@ -62,7 +62,7 @@ export function NewUserMyTeamsView() {
             </div>
             
             <div className="relative px-6 -mt-12 mb-4">
-              <Avatar src={team.logo_url} fallback={team.team_name} className="w-24 h-24 border-4 border-black bg-black rounded-xl shadow-xl" />
+              <Avatar src={team.logo_url || undefined} fallback={team.team_name} className="w-24 h-24 border-4 border-black bg-black rounded-xl shadow-xl" />
             </div>
 
             <CardContent className="space-y-4">

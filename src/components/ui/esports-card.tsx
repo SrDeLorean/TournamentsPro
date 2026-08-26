@@ -2,8 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { CountryFlag } from '@/components/ui/country-flag';
-import { Globe, Tv, MessageCircle, MessageSquare, ExternalLink } from 'lucide-react';
+import { Globe, Tv, MessageCircle, MessageSquare } from 'lucide-react';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
 export interface EsportsCardStat {
   icon: React.ReactNode;
@@ -149,7 +151,7 @@ export function EsportsCard({
 
   // Filter active social links
   const activeSocials = socials
-    ? Object.entries(socials).filter(([_, url]) => Boolean(url && url.trim() !== ''))
+    ? Object.entries(socials).filter(([, url]) => Boolean(url && url.trim() !== ''))
     : [];
 
   const cardContent = (
@@ -168,13 +170,16 @@ export function EsportsCard({
 
       {/* ── 1. COVER BANNER HEADER WITH ZOOM FX ──────────────────── */}
       <div className="relative w-full h-36 sm:h-40 overflow-hidden bg-[var(--bg-main)] border-b border-[var(--border-card)] shrink-0">
-        <img
+        <Image
           src={bannerImg}
           alt={title}
+          fill
+          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          unoptimized={shouldBypassImageOptimization(bannerImg)}
           onError={(e) => {
             e.currentTarget.src = '/images/default/banner-default.jpg';
           }}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
+          className="object-cover group-hover:scale-110 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] via-[var(--bg-card)]/45 to-transparent" />
 
@@ -231,20 +236,23 @@ export function EsportsCard({
         {/* Crest Shield Overlapping Banner Header */}
         <div className="flex items-start gap-3.5 -mt-10 relative z-20">
           <div
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[var(--bg-card)] border-2 flex items-center justify-center p-1.5 overflow-hidden shadow-2xl shrink-0 group-hover:scale-105 transition-transform duration-300"
+            className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[var(--bg-card)] border-2 flex items-center justify-center p-1.5 overflow-hidden shadow-2xl shrink-0 group-hover:scale-105 transition-transform duration-300"
             style={{
               borderColor: brandColor,
               boxShadow: `0 0 20px color-mix(in srgb, ${brandColor} 40%, transparent)`,
             }}
           >
             {logoUrl ? (
-              <img
+              <Image
                 src={logoImg}
                 alt={title}
+                fill
+                sizes="64px"
+                unoptimized={shouldBypassImageOptimization(logoImg)}
                 onError={(e) => {
                   e.currentTarget.src = '/images/default/logo-default.png';
                 }}
-                className="w-full h-full object-contain filter drop-shadow-md"
+                className="object-contain filter drop-shadow-md p-1.5"
               />
             ) : (
               fallbackIcon || <div className="w-full h-full bg-[var(--bg-main)] rounded-xl" />

@@ -1,12 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { initialTransfers, TransferListing } from '@/lib/data-store';
+import { TransferListing } from '@/lib/data-store';
 import { GAMES_CATALOG, GameConfig } from '@/lib/games-data';
-import { GameLogo } from '@/components/ui/game-logo';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { PageHeader } from '@/components/ui/page-header';
@@ -21,20 +18,14 @@ import {
   ArrowRightLeft,
   UserCheck,
   Shield,
-  MessageSquare,
   Plus,
-  CheckCircle2,
   Clock,
-  Sparkles,
-  Gamepad2,
-  Users,
   AlertCircle,
   Lock,
   LogIn,
   UserPlus,
   Calendar,
   Trophy,
-  History,
   X,
   Database,
 } from 'lucide-react';
@@ -44,6 +35,24 @@ import { useAuth } from '@/components/providers/auth-provider';
 
 interface TransferMarketProps {
   game?: GameConfig;
+}
+
+type MarketTab = 'ALL' | 'JUGADOR_BUSCA_CLUB' | 'CLUB_RECLUTA_JUGADOR' | 'REALIZADOS';
+type TimeFilter = 'ALL' | 'TODAY' | '3_DAYS' | '7_DAYS' | 'OLDEST';
+
+interface CompletedTransfer {
+  id: string;
+  playerName: string;
+  playerGamertag: string;
+  fromTeamName: string;
+  toTeamName: string;
+  transferType: string;
+  signedAt: string;
+}
+
+interface LegacyTeamFields {
+  team?: string;
+  team_id?: string;
 }
 
 export function TransferMarket({ game }: TransferMarketProps) {
@@ -77,8 +86,8 @@ export function TransferMarket({ game }: TransferMarketProps) {
     });
   }, [currentGameSlug]);
 
-  const [activeTab, setActiveTab] = useState<'ALL' | 'JUGADOR_BUSCA_CLUB' | 'CLUB_RECLUTA_JUGADOR' | 'REALIZADOS'>('ALL');
-  const [timeFilter, setTimeFilter] = useState<'ALL' | 'TODAY' | '3_DAYS' | '7_DAYS' | 'OLDEST'>('ALL');
+  const [activeTab, setActiveTab] = useState<MarketTab>('ALL');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoadingDB, setIsLoadingDB] = useState(true);
@@ -90,34 +99,34 @@ export function TransferMarket({ game }: TransferMarketProps) {
   const [platformInput, setPlatformInput] = useState('CROSSPLAY');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (dbGameConfig.positions.length > 0) {
-      if (!positionInput || !dbGameConfig.positions.includes(positionInput)) {
-        setPositionInput(dbGameConfig.positions[0]);
-      }
-    }
-  }, [currentGameSlug, showCreateModal, dbGameConfig.positions]);
+  const openCreateModal = () => {
+    const nextPosition = dbGameConfig.positions.includes(positionInput)
+      ? positionInput
+      : dbGameConfig.positions[0] || '';
+    setPositionInput(nextPosition);
+    setShowCreateModal(true);
+  };
 
   const [transfers, setTransfers] = useState<TransferListing[]>([]);
-  const [completedTransfers, setCompletedTransfers] = useState<any[]>([]);
+  const [completedTransfers, setCompletedTransfers] = useState<CompletedTransfer[]>([]);
 
   // Function to reload active listings from DB
-  const loadActiveListings = () => {
+  const loadActiveListings = useCallback(() => {
     const apiTimeFilter = timeFilter === 'OLDEST' ? 'ALL' : timeFilter;
     getTransferPostsAction(currentGameSlug, apiTimeFilter)
       .then((res) => {
         if (res.success && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const mappedDbPosts: TransferListing[] = res.data.map((p: any) => ({
+          const mappedDbPosts: TransferListing[] = res.data.map((p) => ({
             id: p.id,
-            type: p.type,
-            userId: p.userId || p.user_id,
+            type: p.type as TransferListing['type'],
+            userId: p.userId,
             userName: p.userName,
             userGamertag: p.userGamertag,
             teamName: p.teamName || undefined,
-            gameSlug: p.gameSlug as any,
+            gameSlug: p.gameSlug as TransferListing['gameSlug'],
             position: p.position,
             platform: p.platform,
-            status: p.status === 'ACTIVO' ? 'DISPONIBLE' : p.status,
+            status: p.status === 'ACTIVO' ? 'DISPONIBLE' : p.status as TransferListing['status'],
             date: new Date(p.createdAt).toLocaleDateString(),
             message: p.message,
           }));
@@ -130,15 +139,15 @@ export function TransferMarket({ game }: TransferMarketProps) {
         console.error('Error al cargar publicaciones de BD:', err);
       })
       .finally(() => setIsLoadingDB(false));
-  };
+  }, [currentGameSlug, timeFilter]);
 
   // Function to load completed historic transfers
-  const loadCompletedTransfers = () => {
+  const loadCompletedTransfers = useCallback(() => {
     setIsLoadingDB(true);
     getCompletedTransfersAction(currentGameSlug)
       .then((res) => {
         if (res.success && res.data) {
-          setCompletedTransfers(res.data);
+          setCompletedTransfers(res.data as CompletedTransfer[]);
         } else {
           setCompletedTransfers([]);
         }
@@ -148,15 +157,18 @@ export function TransferMarket({ game }: TransferMarketProps) {
         setCompletedTransfers([]);
       })
       .finally(() => setIsLoadingDB(false));
-  };
+  }, [currentGameSlug]);
 
   useEffect(() => {
-    if (activeTab === 'REALIZADOS') {
-      loadCompletedTransfers();
-    } else {
-      loadActiveListings();
-    }
-  }, [currentGameSlug, timeFilter, activeTab]);
+    const timer = window.setTimeout(() => {
+      if (activeTab === 'REALIZADOS') {
+        loadCompletedTransfers();
+      } else {
+        loadActiveListings();
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [activeTab, loadActiveListings, loadCompletedTransfers]);
 
   let filteredTransfers = transfers.filter((item) => {
     const matchesGame = item.gameSlug === currentGameSlug;
@@ -194,8 +206,9 @@ export function TransferMarket({ game }: TransferMarketProps) {
 
     setSubmitting(true);
     try {
-      const teamNameVal = listingType === 'CLUB_RECLUTA_JUGADOR' ? (currentUser as any).teamName || (currentUser as any).team || 'Escuadra Oficial' : undefined;
-      const teamIdVal = listingType === 'CLUB_RECLUTA_JUGADOR' ? (currentUser as any).teamId || (currentUser as any).team_id : undefined;
+      const legacyUser = currentUser as typeof currentUser & LegacyTeamFields;
+      const teamNameVal = listingType === 'CLUB_RECLUTA_JUGADOR' ? currentUser.teamName || legacyUser.team || 'Escuadra Oficial' : undefined;
+      const teamIdVal = listingType === 'CLUB_RECLUTA_JUGADOR' ? currentUser.teamId || legacyUser.team_id : undefined;
 
       // 1. Optimistic UI update: Immediately insert new listing into local state
       const newListing: TransferListing = {
@@ -204,7 +217,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
         userName: currentUser.name || 'Atleta Oficial',
         userGamertag: currentUser.gamertag || 'Gamertag',
         teamName: teamNameVal,
-        gameSlug: currentGameSlug as any,
+        gameSlug: currentGameSlug as TransferListing['gameSlug'],
         position: positionInput.trim(),
         platform: platformInput,
         status: 'DISPONIBLE',
@@ -248,7 +261,9 @@ export function TransferMarket({ game }: TransferMarketProps) {
     }
   };
 
-  const hasTeam = Boolean((currentUser as any)?.teamId || (currentUser as any)?.team || (currentUser as any)?.role === 'Capitán' || (currentUser as any)?.role === 'DT' || (currentUser as any)?.role === 'Manager' || currentUser?.role === 'Administrador');
+  const legacyUser = currentUser as (typeof currentUser & LegacyTeamFields) | null;
+  const currentRole = currentUser?.role as string | undefined;
+  const hasTeam = Boolean(currentUser?.teamId || legacyUser?.team || ['Capitán', 'DT', 'Manager', 'Administrador'].includes(currentRole || ''));
 
   return (
     <div className="space-y-6 text-[var(--text-primary)]">
@@ -285,7 +300,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
           </div>
 
           <Button
-            onClick={() => setShowCreateModal(true)}
+            onClick={openCreateModal}
             className="font-bold text-xs shrink-0 rounded-xl shadow-md flex items-center gap-1.5"
             style={{
               backgroundColor: currentGameObj.brandColor,
@@ -312,7 +327,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
             { id: 'REALIZADOS', label: '🏆 TRASPASOS REALIZADOS' },
           ]}
           activeFilter={activeTab}
-          onFilterChange={(fId) => setActiveTab(fId as any)}
+          onFilterChange={(fId) => setActiveTab(fId as MarketTab)}
           renderAsSelect={true}
           count={activeTab === 'REALIZADOS' ? filteredCompletedTransfers.length : filteredTransfers.length}
           countLabel={activeTab === 'REALIZADOS' ? 'FICHADOS' : 'PUBLICACIONES ACTIVAS'}
@@ -327,7 +342,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
           </div>
           <select
             value={timeFilter}
-            onChange={(e) => setTimeFilter(e.target.value as any)}
+            onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
             className="bg-[var(--bg-main)] border border-[var(--border-card)] px-3 py-1.5 rounded-xl text-xs font-bold text-[var(--text-heading)] focus:outline-none cursor-pointer focus:border-[var(--border-card-hover)] transition-colors"
             style={{
               borderColor: `color-mix(in srgb, ${currentGameObj.brandColor} 40%, var(--border-card))`,
@@ -467,7 +482,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
                 </p>
                 <Button
                   size="sm"
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={openCreateModal}
                   className="text-xs font-mono font-bold"
                   style={{ backgroundColor: currentGameObj.brandColor, color: '#020617' }}
                 >

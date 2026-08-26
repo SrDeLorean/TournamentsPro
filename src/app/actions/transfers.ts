@@ -5,6 +5,12 @@ import { queryDB } from '@/lib/db';
 import { validateSchema, requiredIdSchema, uuidSchema } from '@/lib/validation';
 import { z } from 'zod';
 import {
+  requireCompetitionManager,
+  requireServerActor,
+  requireTeamManager,
+  requireUserManager,
+} from '@/lib/auth-server';
+import {
   createTransferApplicationService,
   approveExtraordinaryTransferService,
   rejectExtraordinaryTransferService,
@@ -15,9 +21,13 @@ import {
   getGameConfigurationService,
   getPlayerContractOffersService,
   respondPlayerContractOfferService,
+  respondOrdinaryTransferApplicationService,
+  cancelTransferOfferService,
+  cancelTransferPostService,
   sendClubContractOfferService,
   CreateTransferPostData,
 } from '@/lib/services';
+import { getActionErrorMessage } from '@/lib/action-utils';
 
 export interface TransferApplicationData {
   id: string;
@@ -45,6 +55,10 @@ export async function createTransferApplicationAction(data: {
   competitionId?: string;
 }) {
   try {
+    const actor = await requireServerActor();
+    if (data.type === 'OFERTA_CLUB') {
+      await requireTeamManager(data.teamId);
+    }
     const validation = validateSchema(
       z.object({
         teamId: requiredIdSchema,
@@ -64,6 +78,7 @@ export async function createTransferApplicationAction(data: {
 
     const result = await createTransferApplicationService({
       ...validation.data,
+      userId: data.type === 'POSTULACION_JUGADOR' ? actor.userId : validation.data.userId,
       competitionId: validation.data.competitionId || undefined,
     });
 
@@ -73,9 +88,9 @@ export async function createTransferApplicationAction(data: {
     }
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en createTransferApplicationAction:', error);
-    return { success: false, error: error?.message || 'Error al procesar transferencia.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al procesar transferencia.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -85,7 +100,16 @@ export async function approveExtraordinaryTransferAction(applicationId: string, 
       return { success: false, error: 'ID de solicitud y organizador requeridos.', code: 'MISSING_PARAMS' };
     }
 
-    const result = await approveExtraordinaryTransferService(applicationId, organizerUserId);
+    const actor = await requireServerActor(['Administrador', 'Organizador']);
+    const applications = await queryDB<{ competition_id: string | null; team_id: string }>(
+      'SELECT competition_id, team_id FROM transfer_applications WHERE id = ? LIMIT 1',
+      [applicationId],
+    );
+    if (!applications[0]) return { success: false, error: 'Solicitud no encontrada.', code: 'NOT_FOUND' };
+    if (applications[0].competition_id) await requireCompetitionManager(applications[0].competition_id);
+    else await requireTeamManager(applications[0].team_id);
+
+    const result = await approveExtraordinaryTransferService(applicationId, actor.userId);
 
     if (result.success) {
       revalidatePath('/dashboard/competencias');
@@ -93,9 +117,9 @@ export async function approveExtraordinaryTransferAction(applicationId: string, 
     }
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en approveExtraordinaryTransferAction:', error);
-    return { success: false, error: error?.message || 'Error al aprobar traspaso extraordinario.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al aprobar traspaso extraordinario.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -105,16 +129,25 @@ export async function rejectExtraordinaryTransferAction(applicationId: string, o
       return { success: false, error: 'ID de solicitud y organizador requeridos.', code: 'MISSING_PARAMS' };
     }
 
-    const result = await rejectExtraordinaryTransferService(applicationId, organizerUserId, reason);
+    const actor = await requireServerActor(['Administrador', 'Organizador']);
+    const applications = await queryDB<{ competition_id: string | null; team_id: string }>(
+      'SELECT competition_id, team_id FROM transfer_applications WHERE id = ? LIMIT 1',
+      [applicationId],
+    );
+    if (!applications[0]) return { success: false, error: 'Solicitud no encontrada.', code: 'NOT_FOUND' };
+    if (applications[0].competition_id) await requireCompetitionManager(applications[0].competition_id);
+    else await requireTeamManager(applications[0].team_id);
+
+    const result = await rejectExtraordinaryTransferService(applicationId, actor.userId, reason);
 
     if (result.success) {
       revalidatePath('/dashboard/competencias');
     }
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en rejectExtraordinaryTransferAction:', error);
-    return { success: false, error: error?.message || 'Error al rechazar traspaso extraordinario.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al rechazar traspaso extraordinario.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -123,24 +156,40 @@ export async function getAthleteTransferHistoryAction(userId: string, organizati
     if (!userId) {
       return { success: false, error: 'ID de usuario requerido', code: 'MISSING_PARAMS' };
     }
+    await requireUserManager(userId);
     const history = await getAthleteTransferHistoryService(userId, organizationId);
     return { success: true, data: history };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getAthleteTransferHistoryAction:', error);
-    return { success: false, error: error?.message || 'Error al obtener historial.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al obtener historial.'), code: 'INTERNAL_ERROR' };
   }
 }
 
 export async function createTransferPostAction(data: CreateTransferPostData) {
   try {
-    const res = await createTransferPostService(data);
+    const actor = await requireServerActor();
+    if (data.type === 'CLUB_RECLUTA_JUGADOR') {
+      if (!data.teamId) return { success: false, error: 'Equipo requerido.', code: 'MISSING_TEAM' };
+      await requireTeamManager(data.teamId);
+    }
+    const users = await queryDB<{ name: string; gamertag: string }>(
+      'SELECT name, gamertag FROM users WHERE id = ? LIMIT 1',
+      [actor.userId],
+    );
+    const user = users[0];
+    const res = await createTransferPostService({
+      ...data,
+      userId: actor.userId,
+      userName: user?.name || 'Usuario',
+      userGamertag: user?.gamertag || 'Usuario',
+    });
     if (res.success) {
       revalidatePath(`/${data.gameSlug}/traspasos`);
     }
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en createTransferPostAction:', error);
-    return { success: false, error: error?.message || 'Error al crear publicación.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al crear publicación.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -151,9 +200,9 @@ export async function getTransferPostsAction(
   try {
     const posts = await getTransferPostsService(gameSlug, timeFilter);
     return { success: true, data: posts };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getTransferPostsAction:', error);
-    return { success: false, error: error?.message || 'Error al consultar publicaciones.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al consultar publicaciones.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -161,9 +210,9 @@ export async function getCompletedTransfersAction(gameSlug: string) {
   try {
     const logs = await getCompletedTransfersService(gameSlug);
     return { success: true, data: logs };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getCompletedTransfersAction:', error);
-    return { success: false, error: error?.message || 'Error al obtener traspasos realizados.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al obtener traspasos realizados.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -171,32 +220,34 @@ export async function getGameConfigurationAction(gameSlug: string) {
   try {
     const config = await getGameConfigurationService(gameSlug);
     return { success: true, data: config };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getGameConfigurationAction:', error);
-    return { success: false, error: error?.message || 'Error al obtener configuración de juego.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al obtener configuración de juego.') };
   }
 }
 
 export async function getPlayerContractOffersAction(userId: string, gameSlug: string) {
   try {
+    await requireUserManager(userId);
     const offers = await getPlayerContractOffersService(userId, gameSlug);
     return { success: true, data: offers };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getPlayerContractOffersAction:', error);
-    return { success: false, error: error?.message || 'Error al consultar ofertas de contrato.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al consultar ofertas de contrato.') };
   }
 }
 
 export async function respondPlayerContractOfferAction(offerId: string, userId: string, accept: boolean) {
   try {
-    const res = await respondPlayerContractOfferService(offerId, userId, accept);
+    const actor = await requireServerActor();
+    const res = await respondPlayerContractOfferService(offerId, actor.userId, accept);
     if (res.success) {
       revalidatePath('/atleta/ofertas');
     }
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en respondPlayerContractOfferAction:', error);
-    return { success: false, error: error?.message || 'Error al responder oferta.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al responder oferta.') };
   }
 }
 
@@ -211,21 +262,23 @@ export async function sendClubContractOfferAction(data: {
   gameSlug?: string;
 }) {
   try {
-    const res = await sendClubContractOfferService(data);
+    const actor = await requireTeamManager(data.teamId);
+    const res = await sendClubContractOfferService({ ...data, offeredByUserId: actor.userId });
     if (res.success) {
       revalidatePath('/atleta/ofertas');
       revalidatePath('/club/reclutamiento');
     }
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en sendClubContractOfferAction:', error);
-    return { success: false, error: error?.message || 'Error al enviar oferta de contrato.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al enviar oferta de contrato.') };
   }
 }
 
 export async function getOutgoingOffersAction(teamId: string, gameSlug: string) {
   try {
-    const offers = await queryDB<any>(
+    await requireTeamManager(teamId);
+    const offers = await queryDB<Record<string, unknown>>(
       `SELECT 
         tro.id,
         tro.game_slug,
@@ -245,20 +298,73 @@ export async function getOutgoingOffersAction(teamId: string, gameSlug: string) 
       [teamId, gameSlug, gameSlug]
     );
     return { success: true, data: offers };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getOutgoingOffersAction:', error);
-    return { success: false, error: error?.message || 'Error al obtener solicitudes enviadas.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al obtener solicitudes enviadas.') };
   }
 }
 
 export async function cancelTransferOfferAction(offerId: string) {
   try {
-    await queryDB(`UPDATE transfer_offers SET status = 'CANCELADO' WHERE id = ?`, [offerId]);
+    const offers = await queryDB<{ team_id: string }>('SELECT team_id FROM transfer_offers WHERE id = ? LIMIT 1', [offerId]);
+    if (!offers[0]) return { success: false, error: 'Oferta no encontrada.' };
+    await requireTeamManager(offers[0].team_id);
+    const result = await cancelTransferOfferService(offerId, offers[0].team_id);
+    if (!result.success) return result;
     revalidatePath('/atleta/ofertas');
     revalidatePath('/club/reclutamiento');
-    return { success: true, message: 'Oferta cancelada correctamente.' };
-  } catch (error: any) {
+    return result;
+  } catch (error: unknown) {
     console.error('Error en cancelTransferOfferAction:', error);
-    return { success: false, error: error?.message || 'Error al cancelar oferta.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al cancelar oferta.') };
+  }
+}
+
+export async function respondOrdinaryTransferApplicationAction(applicationId: string, accept: boolean) {
+  try {
+    const actor = await requireServerActor();
+    const applications = await queryDB<{ team_id: string }>(
+      'SELECT team_id FROM transfer_applications WHERE id = ? LIMIT 1',
+      [applicationId],
+    );
+    if (!applications[0]) return { success: false, error: 'Solicitud no encontrada.' };
+    await requireTeamManager(applications[0].team_id);
+    const result = await respondOrdinaryTransferApplicationService(applicationId, actor.userId, accept);
+    if (result.success) {
+      revalidatePath('/atleta/ofertas');
+      revalidatePath('/club/reclutamiento');
+      revalidatePath('/club/plantilla');
+    }
+    return result;
+  } catch (error: unknown) {
+    return { success: false, error: getActionErrorMessage(error, 'Error al responder solicitud.') };
+  }
+}
+
+export async function cancelTransferApplicationAction(applicationId: string) {
+  try {
+    const actor = await requireServerActor();
+    const applications = await queryDB<{ applicant_user_id: string }>(
+      'SELECT applicant_user_id FROM transfer_applications WHERE id = ? LIMIT 1',
+      [applicationId],
+    );
+    if (!applications[0] || applications[0].applicant_user_id !== actor.userId) {
+      return { success: false, error: 'Solicitud no encontrada.' };
+    }
+    return await respondOrdinaryTransferApplicationService(applicationId, actor.userId, false);
+  } catch (error: unknown) {
+    return { success: false, error: getActionErrorMessage(error, 'Error al cancelar solicitud.') };
+  }
+}
+
+export async function cancelTransferPostAction(postId: string, teamId?: string) {
+  try {
+    const actor = await requireServerActor();
+    if (teamId) await requireTeamManager(teamId);
+    const result = await cancelTransferPostService(postId, actor.userId, teamId);
+    if (result.success) revalidatePath('/traspasos');
+    return result;
+  } catch (error: unknown) {
+    return { success: false, error: getActionErrorMessage(error, 'Error al cerrar publicación.') };
   }
 }

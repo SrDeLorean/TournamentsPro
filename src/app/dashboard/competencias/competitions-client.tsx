@@ -9,7 +9,7 @@ import { ModalForm } from '@/components/ui/modal-form';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trophy, Plus, Eye, Edit3, Trash2, Calendar, Gamepad2, Shield } from 'lucide-react';
+import { Trophy, Plus, Eye, Trash2, Calendar } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getOrganizationSeasonsAction, SeasonData } from '@/app/actions/seasons';
 
@@ -18,6 +18,9 @@ interface CompetitionsListClientProps {
   allowedGames?: string[];
   userRole?: string;
 }
+
+type CompetitionFilter = 'all' | 'Borrador' | 'Inscripcion' | 'En Curso' | 'Finalizada' | 'Eliminada';
+type TimeFilter = 'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC';
 
 export function CompetitionsListClient({ competitions, allowedGames = [], userRole }: CompetitionsListClientProps) {
   const { currentUser } = useAuth();
@@ -30,6 +33,12 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
   const [isCreatingNewSeason, setIsCreatingNewSeason] = useState<boolean>(false);
 
   const [selectedGameSlug, setSelectedGameSlug] = useState<string>('eafc26');
+  const [defaultDates] = useState(() => {
+    const now = Date.now();
+    const format = (days: number) => new Date(now + 86400000 * days).toISOString().slice(0, 16);
+    return { registration: format(3), start: format(5), end: format(30) };
+  });
+  const organizationId = currentUser?.organizationId;
 
   // Filtrar disciplinas según los permisos de la Organización del usuario
   const availableGames = React.useMemo(() => {
@@ -50,16 +59,16 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
 
   React.useEffect(() => {
     if (isModalOpen) {
-      getOrganizationSeasonsAction(currentUser?.organizationId || undefined).then((res) => {
+      getOrganizationSeasonsAction(organizationId || undefined).then((res) => {
         if (res.success && res.seasons) {
           setSeasons(res.seasons);
-          if (res.seasons.length > 0 && !selectedSeasonId) {
-            setSelectedSeasonId(res.seasons[0].id);
+          if (res.seasons.length > 0) {
+            setSelectedSeasonId((current) => current || res.seasons![0].id);
           }
         }
       });
     }
-  }, [isModalOpen, currentUser]);
+  }, [isModalOpen, organizationId]);
 
   const handleCreateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -191,9 +200,9 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
   ];
 
   // Sub-tabs & Sorting State
-  const [activeTab, setActiveTab] = useState<'all' | 'Borrador' | 'Inscripcion' | 'En Curso' | 'Finalizada' | 'Eliminada'>('all');
-  const [timeFilter, setTimeFilter] = useState<'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC'>('NEWEST');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<CompetitionFilter>('all');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('NEWEST');
+  const searchTerm = '';
 
   // Process & filter competitions data
   const processedCompetitions = React.useMemo(() => {
@@ -310,7 +319,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
         <div className="flex items-center gap-2 flex-1">
           <select
             value={activeTab}
-            onChange={(e) => setActiveTab(e.target.value as any)}
+            onChange={(e) => setActiveTab(e.target.value as CompetitionFilter)}
             className="bg-[var(--bg-main)] border border-[var(--border-card)] px-3.5 py-2 rounded-xl text-xs font-bold text-[var(--text-heading)] focus:outline-none cursor-pointer focus:border-[var(--border-card-hover)] transition-colors"
           >
             <option value="all" className="bg-[#0b101b] text-slate-100 font-semibold">🔍 Filtro: Todas las Competencias</option>
@@ -326,7 +335,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase shrink-0 hidden md:inline">Antigüedad:</span>
             <select
               value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value as any)}
+              onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
               className="bg-[var(--bg-main)] border border-[var(--border-card)] px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-heading)] focus:outline-none cursor-pointer focus:border-[var(--border-card-hover)] transition-colors"
             >
               <option value="NEWEST" className="bg-[#0b101b] text-slate-100 font-semibold">⏱️ Más recientes primero</option>
@@ -398,11 +407,6 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
         brandColor="#A855F7"
       >
         <div className="space-y-4 text-xs font-bold">
-          {/* Campos Ocultos de Autoridad de la Organización */}
-          <input type="hidden" name="organizerId" value={currentUser?.id || 'usr-organizer'} />
-          <input type="hidden" name="organizerName" value={currentUser?.name || 'Organizador Oficial'} />
-          <input type="hidden" name="organizationId" value={currentUser?.organizationId || ''} />
-
           <div className="space-y-1">
             <label className="text-slate-300 uppercase block">Nombre de la Competencia / Torneo:</label>
             <input
@@ -530,7 +534,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
               <input
                 type="datetime-local"
                 name="fechaLimiteInscripcion"
-                defaultValue={new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 16)}
+                defaultValue={defaultDates.registration}
                 className="w-full p-2.5 rounded-xl bg-slate-900 border border-amber-500/40 text-amber-300 font-mono text-xs"
               />
             </div>
@@ -541,7 +545,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
                 type="datetime-local"
                 name="fechaInicio"
                 required
-                defaultValue={new Date(Date.now() + 86400000 * 5).toISOString().slice(0, 16)}
+                defaultValue={defaultDates.start}
                 className="w-full p-2.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 font-mono text-xs"
               />
             </div>
@@ -551,7 +555,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
               <input
                 type="datetime-local"
                 name="fechaTermino"
-                defaultValue={new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 16)}
+                defaultValue={defaultDates.end}
                 className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 font-mono text-xs"
               />
             </div>

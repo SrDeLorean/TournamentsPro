@@ -1,22 +1,82 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/components/providers/auth-provider';
-import { Building2, Plus, Shield, Edit, Globe, Calendar, MapPin, Sparkles, Users, CheckCircle2, Trophy, Star } from 'lucide-react';
+import { Building2, Plus, Shield, Edit, Users, Trophy, Star } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
-import { EsportsCard } from '@/components/ui/esports-card';
+import { EsportsCard, type EsportsSocialLinks } from '@/components/ui/esports-card';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { Pagination } from '@/components/ui/pagination';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
+
+interface OrganizerOption {
+  id: string;
+  name: string;
+  gamertag?: string;
+  avatar_url?: string;
+  foto?: string;
+}
+
+interface OrganizationRecord {
+  id: string;
+  name: string;
+  tag?: string;
+  country?: string;
+  description?: string;
+  status?: string;
+  game_slug?: string;
+  logo_url?: string;
+  logoUrl?: string;
+  banner_url?: string;
+  bannerUrl?: string;
+  founded_year?: string | number;
+  foundedYear?: string | number;
+  rating?: string | number;
+  website?: string;
+  allowedGames?: string[] | string;
+  organizers?: OrganizerOption[];
+  organizers_count?: number;
+  socialMedia?: Record<string, string>;
+  social_media?: Record<string, string> | string;
+  social_twitter?: string;
+  social_instagram?: string;
+  social_twitch?: string;
+  social_youtube?: string;
+}
+
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+const organizationSocials = (organization: OrganizationRecord): EsportsSocialLinks => {
+  let storedSocials: EsportsSocialLinks | undefined;
+  if (typeof organization.social_media === 'string') {
+    try {
+      storedSocials = JSON.parse(organization.social_media) as EsportsSocialLinks;
+    } catch {
+      storedSocials = undefined;
+    }
+  } else {
+    storedSocials = organization.social_media;
+  }
+
+  return organization.socialMedia || storedSocials || {
+    twitter: organization.social_twitter,
+    instagram: organization.social_instagram,
+    twitch: organization.social_twitch,
+    youtube: organization.social_youtube,
+    website: organization.website,
+  };
+};
 
 export default function OrganizationsModulePage() {
   const { currentUser } = useAuth();
@@ -25,10 +85,10 @@ export default function OrganizationsModulePage() {
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [organizations, setOrganizations] = useState<any[]>([]);
-  const [availableOrganizers, setAvailableOrganizers] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationRecord[]>([]);
+  const [availableOrganizers, setAvailableOrganizers] = useState<OrganizerOption[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
-  const [editingOrg, setEditingOrg] = useState<any | null>(null);
+  const [editingOrg, setEditingOrg] = useState<OrganizationRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Image Upload State for Modals
@@ -37,45 +97,51 @@ export default function OrganizationsModulePage() {
 
   const isAdmin = currentUser?.role === 'Administrador';
 
-  const fetchOrganizations = async () => {
+  const fetchOrganizations = React.useCallback(async (): Promise<OrganizationRecord[]> => {
     try {
       const res = await fetch('/api/admin/organizations');
-      const data = await res.json();
-      if (data.success) {
-        setOrganizations(data.organizations);
-      }
+      const data: { success?: boolean; organizations?: OrganizationRecord[] } = await res.json();
+      return data.success && Array.isArray(data.organizations) ? data.organizations : [];
     } catch (e) {
       console.error('Error cargando organizaciones:', e);
+      return [];
     }
-  };
+  }, []);
 
-  const fetchAvailableOrganizers = async () => {
+  const fetchAvailableOrganizers = React.useCallback(async (): Promise<OrganizerOption[]> => {
     try {
       const res = await fetch('/api/admin/users?role=Organizador');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.users)) {
-        setAvailableOrganizers(data.users);
-      }
+      const data: { success?: boolean; users?: OrganizerOption[] } = await res.json();
+      return data.success && Array.isArray(data.users) ? data.users : [];
     } catch (e) {
       console.error('Error cargando organizadores:', e);
+      return [];
     }
+  }, []);
+
+  const refreshOrganizations = () => void fetchOrganizations().then(setOrganizations);
+
+  useEffect(() => {
+    void Promise.all([
+      fetchOrganizations(),
+      isAdmin ? fetchAvailableOrganizers() : Promise.resolve([]),
+    ]).then(([organizationRows, organizerRows]) => {
+      setOrganizations(organizationRows);
+      setAvailableOrganizers(organizerRows);
+    });
+  }, [fetchAvailableOrganizers, fetchOrganizations, isAdmin]);
+
+  const openCreateModal = () => {
+    setModalLogoUrl('');
+    setModalBannerUrl('');
+    setIsCreateModalOpen(true);
   };
 
-  useEffect(() => {
-    fetchOrganizations();
-    if (isAdmin) fetchAvailableOrganizers();
-  }, [isAdmin]);
-
-  // Sync images when editing org opens
-  useEffect(() => {
-    if (editingOrg) {
-      setModalLogoUrl(editingOrg.logo_url || editingOrg.logoUrl || '');
-      setModalBannerUrl(editingOrg.banner_url || editingOrg.bannerUrl || '');
-    } else {
-      setModalLogoUrl('');
-      setModalBannerUrl('');
-    }
-  }, [editingOrg]);
+  const openEditModal = (organization: OrganizationRecord) => {
+    setModalLogoUrl(organization.logo_url || organization.logoUrl || '');
+    setModalBannerUrl(organization.banner_url || organization.bannerUrl || '');
+    setEditingOrg(organization);
+  };
 
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
@@ -145,7 +211,6 @@ export default function OrganizationsModulePage() {
             twitch: formData.get('social_twitch'),
             youtube: formData.get('social_youtube'),
           },
-          requesterRole: currentUser?.role,
         }),
       });
 
@@ -155,12 +220,12 @@ export default function OrganizationsModulePage() {
         setModalLogoUrl('');
         setModalBannerUrl('');
         endSuccess(`La organización "${orgName}" y sus organizadores asignados fueron registrados correctamente.`);
-        fetchOrganizations();
+        refreshOrganizations();
       } else {
         endError(data.error || 'Error al crear la organización.');
       }
-    } catch (e: any) {
-      endError(e?.message || 'Error de conexión al crear organización.');
+    } catch (e: unknown) {
+      endError(errorMessage(e, 'Error de conexión al crear organización.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -209,7 +274,6 @@ export default function OrganizationsModulePage() {
             twitch: formData.get('social_twitch'),
             youtube: formData.get('social_youtube'),
           },
-          requesterRole: currentUser?.role,
         }),
       });
 
@@ -219,12 +283,12 @@ export default function OrganizationsModulePage() {
         setModalLogoUrl('');
         setModalBannerUrl('');
         endSuccess(`Los datos de la organización "${orgName}" fueron actualizados con éxito.`);
-        fetchOrganizations();
+        refreshOrganizations();
       } else {
         endError(data.error || 'Error al actualizar la organización.');
       }
-    } catch (e: any) {
-      endError(e?.message || 'Error de conexión al guardar cambios.');
+    } catch (e: unknown) {
+      endError(errorMessage(e, 'Error de conexión al guardar cambios.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -308,15 +372,7 @@ export default function OrganizationsModulePage() {
                   logoUrl={logoImg}
                   tag={org.tag}
                   country={org.country || 'Global'}
-                  socials={
-                    org.socialMedia || org.social_media || {
-                      twitter: org.social_twitter,
-                      instagram: org.social_instagram,
-                      twitch: org.social_twitch,
-                      youtube: org.social_youtube,
-                      website: org.website,
-                    }
-                  }
+                  socials={organizationSocials(org)}
                   badges={[
                     { text: gameCfg?.name || 'eSports', variant: 'purple' },
                     { text: org.status || 'Activa', variant: 'emerald', pulse: true },
@@ -355,9 +411,12 @@ export default function OrganizationsModulePage() {
                             }}
                           >
                             {gConfig.logoUrl ? (
-                              <img
+                              <Image
                                 src={gConfig.logoUrl}
                                 alt={gConfig.name}
+                                width={32}
+                                height={32}
+                                unoptimized={shouldBypassImageOptimization(gConfig.logoUrl)}
                                 className="w-full h-full object-contain filter drop-shadow group-hover/logo:scale-110 transition-transform"
                                 onError={(e) => {
                                   e.currentTarget.style.display = 'none';
@@ -398,11 +457,7 @@ export default function OrganizationsModulePage() {
             </h3>
 
             <Button
-              onClick={() => {
-                setModalLogoUrl('');
-                setModalBannerUrl('');
-                setIsCreateModalOpen(true);
-              }}
+              onClick={openCreateModal}
               className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
@@ -410,14 +465,21 @@ export default function OrganizationsModulePage() {
             </Button>
           </div>
 
-          <DataTable
+          <DataTable<OrganizationRecord>
             columns={[
               {
                 header: 'Organización',
                 cell: (r) => (
                   <div className="flex items-center gap-3">
                     {r.logo_url ? (
-                      <img src={r.logo_url} alt={r.name} className="w-8 h-8 rounded-lg object-cover border border-purple-400" />
+                      <Image
+                        src={r.logo_url}
+                        alt={r.name}
+                        width={32}
+                        height={32}
+                        unoptimized={shouldBypassImageOptimization(r.logo_url)}
+                        className="w-8 h-8 rounded-lg object-cover border border-purple-400"
+                      />
                     ) : (
                       <div className="w-8 h-8 rounded-lg bg-purple-950 border border-purple-400 flex items-center justify-center font-black text-[10px] text-white">
                         {r.tag}
@@ -447,7 +509,7 @@ export default function OrganizationsModulePage() {
             searchPlaceholder="Buscar organización..."
             brandColor="#A855F7"
             actions={(row) => (
-              <Button size="sm" variant="ghost" onClick={() => setEditingOrg(row)} className="text-xs text-purple-300 hover:bg-purple-950 p-2">
+              <Button size="sm" variant="ghost" onClick={() => openEditModal(row)} className="text-xs text-purple-300 hover:bg-purple-950 p-2">
                 <Edit className="w-3.5 h-3.5" />
               </Button>
             )}
@@ -629,7 +691,7 @@ export default function OrganizationsModulePage() {
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {availableOrganizers.map((oUser) => {
-                  const isAssigned = editingOrg.organizers?.some((o: any) => o.id === oUser.id);
+                  const isAssigned = editingOrg.organizers?.some((o) => o.id === oUser.id);
                   return (
                     <label key={oUser.id} className="flex items-center gap-2 text-xs font-semibold text-white bg-slate-950 p-2 rounded-lg border border-white/10 cursor-pointer">
                       <input type="checkbox" name={`organizer_${oUser.id}`} defaultChecked={isAssigned} />

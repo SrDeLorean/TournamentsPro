@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { GameConfig } from '@/lib/games-data';
 import { Card } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { ModalForm } from '@/components/ui/modal-form';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { useAuth } from '@/components/providers/auth-provider';
+import type { TeamData } from '@/lib/data-store';
 import {
   getTeamSquadAction,
   getAllPlayersForContractOfferAction,
@@ -28,7 +29,6 @@ import {
   cancelTransferOfferAction,
 } from '@/app/actions/transfers';
 import {
-  Shield,
   Users,
   UserPlus,
   FileText,
@@ -40,17 +40,81 @@ import {
   Trash2,
   Clock,
   Ban,
-  Layers,
-  Trophy,
   MessageSquare,
   CheckSquare,
   Square,
-  User,
 } from 'lucide-react';
 
 interface PlantillaManagementViewProps {
   game: GameConfig;
 }
+
+type ManagedTeam = TeamData & {
+  game_slug?: string;
+  captain_id?: string;
+  captain_name?: string;
+  encargados?: unknown;
+  encargados_json?: unknown;
+};
+
+interface OrganizationOption {
+  id: string;
+  name: string;
+  tag?: string;
+  acronym?: string;
+}
+
+interface CompetitionOption {
+  game_slug?: string;
+  gameSlug?: string;
+  organization_id?: string;
+  organizationId?: string;
+}
+
+interface ContractPlayer {
+  id: string;
+  name: string;
+  gamertag: string;
+  email?: string;
+  position?: string;
+  current_team_id?: string | null;
+  current_team_name?: string | null;
+  current_team_tag?: string | null;
+}
+
+interface OutgoingOffer {
+  id: string;
+  player_user_id: string;
+  player_name: string;
+  player_gamertag: string;
+  position: string;
+  pitch_message?: string;
+  status: string;
+  created_at: string;
+}
+
+interface MatrixOrganization {
+  id: string;
+  name: string;
+  acronym?: string;
+  competitionName?: string | null;
+}
+
+interface InscriptionMatrixEntry {
+  user_id: string;
+  user_name: string;
+  gamertag?: string;
+  organizations: MatrixOrganization[];
+  tactical_position?: string | null;
+  jersey_number?: number | null;
+}
+
+type SquadMemberWithOrganizations = SquadMemberData & {
+  organization_ids?: string;
+  organization_names?: string;
+};
+
+const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 
 export function PlantillaManagementView({ game }: PlantillaManagementViewProps) {
   const gameSlug = game.slug || 'eafc26';
@@ -58,8 +122,8 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
   // 1. Strictly determine the specific club managed by currentUser
-  const myTeam = (userTeams || []).find((t: any) => {
-    const slug = (t as any).game_slug || t.gameSlug || 'eafc26';
+  const myTeam = ((userTeams || []) as ManagedTeam[]).find((t) => {
+    const slug = t.game_slug || t.gameSlug || 'eafc26';
     if (slug !== gameSlug && gameSlug !== 'ALL') return false;
 
     const uId = currentUser?.id;
@@ -78,29 +142,31 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
       try {
         const arr = typeof encs === 'string' ? JSON.parse(encs) : encs;
         if (Array.isArray(arr)) {
-          return arr.some((enc: any) => {
+          return arr.some((enc: unknown) => {
             if (typeof enc === 'string') return enc === uId || enc.toLowerCase() === uName || enc.toLowerCase() === uGamer;
+            if (!enc || typeof enc !== 'object') return false;
+            const manager = enc as { id?: string; name?: string; gamertag?: string };
             return (
-              enc.id === uId ||
-              (enc.name && uName && enc.name.toLowerCase() === uName) ||
-              (enc.gamertag && uGamer && enc.gamertag.toLowerCase() === uGamer)
+              manager.id === uId ||
+              (manager.name && uName && manager.name.toLowerCase() === uName) ||
+              (manager.gamertag && uGamer && manager.gamertag.toLowerCase() === uGamer)
             );
           });
         }
-      } catch (e) {}
+      } catch {}
     }
 
     if (currentUser?.role === 'Administrador' || currentUser?.role === 'Organizador') return true;
     return false;
-  }) || (userTeams && userTeams.length > 0 ? userTeams[0] : null);
+  }) || (userTeams && userTeams.length > 0 ? userTeams[0] as ManagedTeam : null);
 
   const teamId = myTeam?.id || 'tm-1';
   const teamName = myTeam?.name || 'Escuadra Oficial';
   const teamTag = myTeam?.tag || 'CLUB';
 
   // Organizations state
-  const [organizations, setOrganizations] = useState<any[]>([]);
-  const [contractOrgs, setContractOrgs] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
+  const [contractOrgs, setContractOrgs] = useState<OrganizationOption[]>([]);
   const [selectedOrgFilter, setSelectedOrgFilter] = useState<string>('ALL');
   const [activeTab, setActiveTab] = useState<'roster' | 'send_contracts' | 'sent_offers' | 'matrix'>('roster');
 
@@ -109,16 +175,16 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
   const [isLoadingSquad, setIsLoadingSquad] = useState(false);
 
   // All Players for Contract Offers (Tab 2)
-  const [allPlayers, setAllPlayers] = useState<any[]>([]);
+  const [allPlayers, setAllPlayers] = useState<ContractPlayer[]>([]);
   const [searchPlayerQuery, setSearchPlayerQuery] = useState('');
   const [isLoadingAllPlayers, setIsLoadingAllPlayers] = useState(false);
 
   // Sent Offers state (Tab 3)
-  const [outgoingOffers, setOutgoingOffers] = useState<any[]>([]);
+  const [outgoingOffers, setOutgoingOffers] = useState<OutgoingOffer[]>([]);
   const [isLoadingOffers, setIsLoadingOffers] = useState(false);
 
   // Inscriptions Matrix state (Tab 4 for THIS club)
-  const [inscriptionsMatrix, setInscriptionsMatrix] = useState<any[]>([]);
+  const [inscriptionsMatrix, setInscriptionsMatrix] = useState<InscriptionMatrixEntry[]>([]);
   const [isLoadingMatrix, setIsLoadingMatrix] = useState(false);
   const [matrixSearchQuery, setMatrixSearchQuery] = useState('');
 
@@ -131,35 +197,35 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
 
   // Contract Offer Modal State (with Multi-Select Checkboxes for Organizations)
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
-  const [targetPlayer, setTargetPlayer] = useState<any | null>(null);
+  const [targetPlayer, setTargetPlayer] = useState<ContractPlayer | null>(null);
   const [contractPosition, setContractPosition] = useState<string>('DC');
   const [selectedContractOrgNames, setSelectedContractOrgNames] = useState<string[]>([]);
   const [contractTermsMessage, setContractTermsMessage] = useState<string>('');
   const [isSendingContract, setIsSendingContract] = useState(false);
 
   // Fetch Organizations & Filter Organizations with active tournaments in this gameSlug
-  const fetchOrgsAndCompetitions = async () => {
+  const fetchOrgsAndCompetitions = useCallback(async () => {
     try {
       const [orgRes, compRes] = await Promise.all([
         fetch('/api/admin/organizations').then((r) => r.json()).catch(() => ({ success: false, organizations: [] })),
         fetch('/api/tournaments').then((r) => r.json()).catch(() => ({ competitions: [] })),
       ]);
 
-      const allOrgs = orgRes.success && Array.isArray(orgRes.organizations) ? orgRes.organizations : [];
-      const comps = compRes.competitions || compRes.data?.competitions || [];
+      const allOrgs = (orgRes.success && Array.isArray(orgRes.organizations) ? orgRes.organizations : []) as OrganizationOption[];
+      const comps = (compRes.competitions || compRes.data?.competitions || []) as CompetitionOption[];
 
       // Filter organization IDs with active tournaments in this gameSlug
       const activeOrgIds = new Set(
         comps
-          .filter((c: any) => (c.game_slug || c.gameSlug || 'eafc26') === gameSlug)
-          .map((c: any) => c.organization_id || c.organizationId)
+          .filter((c) => (c.game_slug || c.gameSlug || 'eafc26') === gameSlug)
+          .map((c) => c.organization_id || c.organizationId)
           .filter(Boolean)
       );
 
       setOrganizations(allOrgs);
 
       // Filtered Organizations for Contract Offer Modal (only orgs with active competitions in this game)
-      const validForContract = allOrgs.filter((org: any) => activeOrgIds.size === 0 || activeOrgIds.has(org.id));
+      const validForContract = allOrgs.filter((org) => activeOrgIds.size === 0 || activeOrgIds.has(org.id));
       const orgsList = validForContract.length > 0 ? validForContract : allOrgs;
       setContractOrgs(orgsList);
       if (orgsList.length > 0) {
@@ -168,14 +234,15 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
     } catch (e) {
       console.error('Error cargando organizaciones y competencias:', e);
     }
-  };
-
-  useEffect(() => {
-    fetchOrgsAndCompetitions();
   }, [gameSlug]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => void fetchOrgsAndCompetitions(), 0);
+    return () => window.clearTimeout(timer);
+  }, [fetchOrgsAndCompetitions]);
+
   // Load Squad Roster for THIS Club
-  const loadSquad = async () => {
+  const loadSquad = useCallback(async () => {
     if (!teamId) return;
     setIsLoadingSquad(true);
     try {
@@ -190,17 +257,17 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
     } finally {
       setIsLoadingSquad(false);
     }
-  };
+  }, [teamId]);
 
   // Load ALL Players (Tab 2: shows all registered athletes in DB for this discipline)
-  const loadAllPlayers = async () => {
+  const loadAllPlayers = useCallback(async () => {
     setIsLoadingAllPlayers(true);
     try {
       const res = await getAllPlayersForContractOfferAction(gameSlug, searchPlayerQuery);
       let playersList = res.success && res.players ? res.players : [];
 
       if (currentUser) {
-        const selfExists = playersList.some((p: any) => p.id === currentUser.id);
+        const selfExists = playersList.some((p) => p.id === currentUser.id);
         if (!selfExists) {
           const matchesQuery = !searchPlayerQuery || 
             currentUser.name?.toLowerCase().includes(searchPlayerQuery.toLowerCase()) || 
@@ -223,9 +290,9 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
           }
         } else {
           // Move self to top of the list for easy access
-          const selfObj = playersList.find((p: any) => p.id === currentUser.id);
-          const rest = playersList.filter((p: any) => p.id !== currentUser.id);
-          playersList = [selfObj, ...rest];
+          const selfObj = playersList.find((p) => p.id === currentUser.id);
+          const rest = playersList.filter((p) => p.id !== currentUser.id);
+          if (selfObj) playersList = [selfObj, ...rest];
         }
       }
 
@@ -235,16 +302,16 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
     } finally {
       setIsLoadingAllPlayers(false);
     }
-  };
+  }, [currentUser, gameSlug, searchPlayerQuery, teamId, teamName, teamTag]);
 
   // Load Sent Offers (Tab 3) for THIS Club
-  const loadSentOffers = async () => {
+  const loadSentOffers = useCallback(async () => {
     if (!teamId) return;
     setIsLoadingOffers(true);
     try {
       const res = await getOutgoingOffersAction(teamId, gameSlug);
       if (res.success && res.data) {
-        setOutgoingOffers(res.data);
+        setOutgoingOffers(res.data as unknown as OutgoingOffer[]);
       } else {
         setOutgoingOffers([]);
       }
@@ -253,10 +320,10 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
     } finally {
       setIsLoadingOffers(false);
     }
-  };
+  }, [gameSlug, teamId]);
 
   // Load Inscriptions Matrix for THIS Club (Tab 4)
-  const loadInscriptionsMatrix = async () => {
+  const loadInscriptionsMatrix = useCallback(async () => {
     if (!teamId) return;
     setIsLoadingMatrix(true);
     try {
@@ -271,34 +338,35 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
     } finally {
       setIsLoadingMatrix(false);
     }
-  };
+  }, [gameSlug, teamId]);
 
   useEffect(() => {
-    if (teamId) {
-      loadSquad();
-      loadAllPlayers();
-      loadSentOffers();
-    }
-  }, [teamId]);
+    if (!teamId) return;
+    const timer = window.setTimeout(() => {
+      void Promise.all([loadSquad(), loadAllPlayers(), loadSentOffers()]);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadAllPlayers, loadSentOffers, loadSquad, teamId]);
 
   useEffect(() => {
-    if (activeTab === 'matrix' && teamId) {
-      loadInscriptionsMatrix();
-    }
-  }, [activeTab, teamId, gameSlug]);
+    if (activeTab !== 'matrix' || !teamId) return;
+    const timer = window.setTimeout(() => void loadInscriptionsMatrix(), 0);
+    return () => window.clearTimeout(timer);
+  }, [activeTab, loadInscriptionsMatrix, teamId]);
 
   useEffect(() => {
     if (searchPlayerQuery !== undefined) {
       const timer = setTimeout(loadAllPlayers, 300);
       return () => clearTimeout(timer);
     }
-  }, [searchPlayerQuery]);
+  }, [loadAllPlayers, searchPlayerQuery]);
 
   // Roster filtered by Organization (Tab 1)
   const filteredSquad = squad.filter((member) => {
     if (selectedOrgFilter === 'ALL') return true;
-    const orgIds = ((member as any).organization_ids || '').split(',');
-    const orgNames = ((member as any).organization_names || '').split(',');
+    const memberWithOrganizations = member as SquadMemberWithOrganizations;
+    const orgIds = (memberWithOrganizations.organization_ids || '').split(',');
+    const orgNames = (memberWithOrganizations.organization_names || '').split(',');
     return (
       orgIds.includes(selectedOrgFilter) ||
       orgNames.includes(selectedOrgFilter) ||
@@ -324,8 +392,8 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
       } else {
         endError(res.error || 'Error al actualizar dorsal.');
       }
-    } catch (e: any) {
-      endError(e?.message || 'Error de conexión al guardar dorsal.');
+    } catch (error: unknown) {
+      endError(errorMessage(error, 'Error de conexión al guardar dorsal.'));
     } finally {
       setIsSubmittingJersey(false);
     }
@@ -346,8 +414,8 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
       } else {
         endError(res.error || 'Error al desvincular jugador de la escuadra.');
       }
-    } catch (e: any) {
-      endError(e?.message || 'Error de conexión al dar de baja al jugador.');
+    } catch (error: unknown) {
+      endError(errorMessage(error, 'Error de conexión al dar de baja al jugador.'));
     }
   };
 
@@ -397,8 +465,8 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
       } else {
         endError(res.error || 'Error al enviar contratos.');
       }
-    } catch (e: any) {
-      endError(e?.message || 'Error al enviar propuestas de contrato.');
+    } catch (error: unknown) {
+      endError(errorMessage(error, 'Error al enviar propuestas de contrato.'));
     } finally {
       setIsSendingContract(false);
     }
@@ -415,8 +483,8 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
       } else {
         endError(res.error || 'Error al cancelar propuesta.');
       }
-    } catch (e: any) {
-      endError(e?.message || 'Error al cancelar oferta.');
+    } catch (error: unknown) {
+      endError(errorMessage(error, 'Error al cancelar oferta.'));
     }
   };
 
@@ -450,7 +518,7 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
                 </Badge>
               </div>
               <span className="text-xs font-mono text-[var(--text-muted)] block mt-0.5">
-                Capitán Directivo: <strong className="text-[var(--accent-purple)]">{(myTeam as any)?.captain_name || myTeam?.captainName || currentUser?.name}</strong> • Disciplina: <span className="text-[var(--accent-cyan)] font-bold uppercase">{game.name}</span>
+                Capitán Directivo: <strong className="text-[var(--accent-purple)]">{myTeam?.captain_name || myTeam?.captainName || currentUser?.name}</strong> • Disciplina: <span className="text-[var(--accent-cyan)] font-bold uppercase">{game.name}</span>
               </span>
             </div>
           </div>
@@ -818,7 +886,7 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
                         </p>
                         {offer.pitch_message && (
                           <p className="text-[11px] font-mono italic text-[var(--text-secondary)] mt-1 bg-[var(--bg-main)] p-2 rounded-lg border border-[var(--border-card)]">
-                            "{offer.pitch_message}"
+                            &quot;{offer.pitch_message}&quot;
                           </p>
                         )}
                       </div>
@@ -947,7 +1015,7 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
                         </span>
                       ) : (
                         <div className="flex flex-wrap gap-2">
-                          {orgList.map((org: any) => (
+                          {orgList.map((org) => (
                             <div
                               key={org.id}
                               className="px-3 py-1.5 rounded-xl bg-purple-950/40 border border-purple-500/30 flex items-center gap-2 text-purple-200 shadow-sm"

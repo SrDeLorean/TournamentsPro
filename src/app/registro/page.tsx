@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Trophy, Mail, Lock, User, Gamepad2, Shield, Sparkles, ArrowRight, CheckCircle2, Tv, MessageSquare, Flame } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Trophy, Mail, Lock, User, Gamepad2, ArrowRight, CheckCircle2, Tv, MessageSquare, Flame } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { useAuth } from '@/components/providers/auth-provider';
 
@@ -13,7 +14,7 @@ import { GoogleOAuthModal } from '@/components/auth/google-oauth-modal';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, loginWithGoogle, isAuthenticated } = useAuth();
+  const { register, isAuthenticated } = useAuth();
   const gamesList = Object.values(GAMES_CATALOG);
 
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
@@ -43,8 +44,8 @@ export default function RegisterPage() {
     const success = await register({
       gamertag: gamertag.trim(),
       name: fullName.trim(),
-      primaryGame: primaryGame as any,
-      platform: platform as any,
+      primaryGame: primaryGame as 'eafc26' | 'valorant' | 'csgo' | 'lol' | 'rocketleague',
+      platform: platform as 'PS5' | 'PS4' | 'XBOX' | 'PC' | 'CROSSPLAY',
       role: role === 'CAPITAN' ? 'Capitán' : role === 'ORGANIZADOR' ? 'Organizador' : 'Jugador',
     });
     setIsLoading(false);
@@ -61,10 +62,13 @@ export default function RegisterPage() {
         
         {/* Background Image Layer in Original Crisp Color & Brightness */}
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1600&auto=format&fit=crop&q=80"
             alt="eSports Tournament Registration"
-            className="w-full h-full object-cover opacity-85 filter contrast-105 saturate-110"
+            fill
+            sizes="50vw"
+            unoptimized
+            className="object-cover opacity-85 filter contrast-105 saturate-110"
           />
           {/* Soft Natural Fade only at the bottom */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-black/20" />

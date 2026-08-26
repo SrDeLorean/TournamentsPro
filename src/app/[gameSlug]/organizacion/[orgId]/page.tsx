@@ -5,14 +5,29 @@ import { Building2 } from 'lucide-react';
 
 import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { OrganizationProfileView } from '@/components/tournaments/organization-profile-view';
+import {
+  OrganizationProfileView,
+  type AffiliatedTeam,
+  type CompetitionData,
+  type OrganizerUser,
+  type OrgMatch,
+  type OrgProfileData,
+} from '@/components/tournaments/organization-profile-view';
+
+interface OrganizationRow extends OrgProfileData {
+  logo_url?: string;
+  banner_url?: string;
+  founded_year?: string | number;
+  allowed_games?: string | string[];
+  redes_sociales?: string | Record<string, string>;
+}
 
 export default async function OrganizacionPage({ params }: { params: Promise<{ gameSlug: string; orgId: string }> }) {
   const { gameSlug, orgId } = await params;
   const gameConfig = GAMES_CATALOG[gameSlug] || GAMES_CATALOG['eafc26'];
 
   // 1. Fetch Organization Details
-  const orgs = await queryDB<any>(
+  const orgs = await queryDB<OrganizationRow>(
     `SELECT * FROM organizations WHERE id = ?`,
     [orgId]
   );
@@ -46,13 +61,13 @@ export default async function OrganizacionPage({ params }: { params: Promise<{ g
     ...orgRaw,
     logoUrl: orgRaw.logo_url || orgRaw.logoUrl || '/images/default/logo-default.png',
     bannerUrl: orgRaw.banner_url || orgRaw.bannerUrl || gameConfig.bannerUrl || '/images/default/banner-default.jpg',
-    foundedYear: orgRaw.founded_year || orgRaw.foundedYear || '2022',
+    foundedYear: String(orgRaw.founded_year || orgRaw.foundedYear || '2022'),
     allowedGames: orgRaw.allowed_games ? (typeof orgRaw.allowed_games === 'string' ? JSON.parse(orgRaw.allowed_games) : orgRaw.allowed_games) : ['eafc26', 'valorant'],
     socialMedia: orgRaw.redes_sociales ? (typeof orgRaw.redes_sociales === 'string' ? JSON.parse(orgRaw.redes_sociales) : orgRaw.redes_sociales) : {},
   };
 
   // 2. Fetch Competitions owned by this Org
-  const competitions = await queryDB<any>(
+  const competitions = await queryDB<CompetitionData>(
     `SELECT c.*, 
             (SELECT COUNT(*) FROM matches m WHERE m.competition_id = c.id OR m.tournament_id = c.id) as total_matches,
             (SELECT COUNT(*) FROM matches m WHERE (m.competition_id = c.id OR m.tournament_id = c.id) AND m.status = 'FINALIZADO') as finished_matches
@@ -66,7 +81,7 @@ export default async function OrganizacionPage({ params }: { params: Promise<{ g
   );
 
   // 3. Fetch Assigned Organizers
-  const organizers = await queryDB<any>(
+  const organizers = await queryDB<OrganizerUser>(
     `SELECT id, name, gamertag, email, role, avatar_url 
      FROM users 
      WHERE organization_id = ? AND role = 'Organizador'`,
@@ -74,7 +89,7 @@ export default async function OrganizacionPage({ params }: { params: Promise<{ g
   );
 
   // 4. Fetch Affiliated Teams
-  const teams = await queryDB<any>(
+  const teams = await queryDB<AffiliatedTeam>(
     `SELECT t.*, COALESCE(t.members_count, 1) as player_count
      FROM teams t 
      WHERE t.organization_id = ? OR t.game_slug = ?
@@ -84,7 +99,7 @@ export default async function OrganizacionPage({ params }: { params: Promise<{ g
   );
 
   // 5. Fetch Recent & Live Matches
-  const matches = await queryDB<any>(
+  const matches = await queryDB<OrgMatch>(
     `SELECT m.*, 
             c.name as competition_name,
             COALESCE(th.name, m.home_team_name) as home_team_name,

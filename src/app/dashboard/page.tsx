@@ -6,13 +6,12 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { GameLogo } from '@/components/ui/game-logo';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
-  Trophy, Shield, Users, MessageSquare, LogOut, Sparkles, ExternalLink, ArrowRight, Activity, Gamepad2, Award, Calendar, CheckCircle2, User, ChevronRight
+  Trophy, Shield, Users, MessageSquare, LogOut, Sparkles, ExternalLink, ArrowRight, Activity, Gamepad2, ChevronRight
 } from 'lucide-react';
 
 import { AdminDashboardView } from '@/components/admin/admin-dashboard-view';

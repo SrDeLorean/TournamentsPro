@@ -40,7 +40,7 @@ import { NewUserOffersView } from '../user/new-user-offers';
 
 export function PlayerOffersSection({ game }: { game: GameConfig }) {
   return (
-    <div className="pt-3 sm:pt-4 animate-in fade-in duration-300">
+    <div data-game-slug={game.slug} className="pt-3 sm:pt-4 animate-in fade-in duration-300">
       <NewUserOffersView />
     </div>
   );

@@ -1,44 +1,42 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { GameConfig } from '@/lib/games-data';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getUserEnrolledTeamsAction } from '@/app/actions/squads';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import {
   Shield,
   Users,
   Trophy,
   Building2,
   Search,
-  Hash,
-  ChevronRight,
   Loader2,
-  Crown,
-  Award,
-  Sparkles,
 } from 'lucide-react';
 
 interface UserMyTeamsViewProps {
   game: GameConfig;
 }
 
+type EnrolledTeam = Awaited<ReturnType<typeof getUserEnrolledTeamsAction>>['teams'][number];
+
 export function UserMyTeamsView({ game }: UserMyTeamsViewProps) {
   const gameSlug = game.slug || 'eafc26';
   const { currentUser } = useAuth();
 
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<EnrolledTeam[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const userId = currentUser?.id;
 
-  const loadUserTeams = async () => {
+  const loadUserTeams = useCallback(async () => {
     if (!userId) return;
     setIsLoading(true);
     try {
@@ -53,11 +51,12 @@ export function UserMyTeamsView({ game }: UserMyTeamsViewProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [gameSlug, userId]);
 
   useEffect(() => {
-    loadUserTeams();
-  }, [userId, gameSlug]);
+    const timer = window.setTimeout(() => void loadUserTeams(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadUserTeams]);
 
   const filteredTeams = teams.filter((t) => {
     if (!searchTerm) return true;
@@ -138,9 +137,16 @@ export function UserMyTeamsView({ game }: UserMyTeamsViewProps) {
                 {/* Team Info Header */}
                 <div className="flex items-start justify-between gap-4 border-b border-[var(--border-card)] pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-center font-black text-base text-cyan-400 shadow-md shrink-0">
+                    <div className="relative w-14 h-14 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-center font-black text-base text-cyan-400 shadow-md shrink-0 overflow-hidden">
                       {team.logoUrl ? (
-                        <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover rounded-2xl" />
+                        <Image
+                          src={team.logoUrl}
+                          alt={team.name}
+                          fill
+                          sizes="56px"
+                          unoptimized={shouldBypassImageOptimization(team.logoUrl)}
+                          className="object-cover rounded-2xl"
+                        />
                       ) : (
                         team.tag
                       )}
@@ -185,7 +191,7 @@ export function UserMyTeamsView({ game }: UserMyTeamsViewProps) {
 
                   {team.organizations && team.organizations.length > 0 ? (
                     <div className="space-y-2">
-                      {team.organizations.map((org: any) => (
+                      {team.organizations.map((org) => (
                         <div
                           key={org.id}
                           className="p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-1.5"

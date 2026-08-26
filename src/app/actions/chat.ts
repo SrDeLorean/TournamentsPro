@@ -1,6 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { queryDB } from '@/lib/db';
+import {
+  getServerUserSession,
+  requireServerActor,
+  requireThreadParticipant,
+  requireUserManager,
+} from '@/lib/auth-server';
 import {
   getChatThreadsService,
   getThreadMessagesService,
@@ -14,6 +21,8 @@ import {
   clearTypingStatusService,
   getTypingUsersService,
 } from '@/lib/services';
+import { consumeSecurityRateLimit, revokeUserSessions, writeSecurityAudit } from '@/lib/security';
+import { getActionErrorMessage } from '@/lib/action-utils';
 
 export async function getChatThreadsAction(
   userId: string,
@@ -22,21 +31,23 @@ export async function getChatThreadsAction(
   channelFilter: string = 'ALL'
 ) {
   try {
-    const threads = await getChatThreadsService(userId, userRole, gameSlug, channelFilter);
+    const actor = await requireServerActor();
+    const threads = await getChatThreadsService(actor.userId, actor.role, gameSlug, channelFilter);
     return { success: true, data: threads };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getChatThreadsAction:', error);
-    return { success: false, error: error?.message || 'Error al obtener conversaciones.', data: [] };
+    return { success: false, error: getActionErrorMessage(error, 'Error al obtener conversaciones.'), data: [] };
   }
 }
 
 export async function getThreadMessagesAction(threadId: string) {
   try {
+    await requireThreadParticipant(threadId);
     const messages = await getThreadMessagesService(threadId);
     return { success: true, data: messages };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getThreadMessagesAction:', error);
-    return { success: false, error: error?.message || 'Error al obtener mensajes.', data: [] };
+    return { success: false, error: getActionErrorMessage(error, 'Error al obtener mensajes.'), data: [] };
   }
 }
 
@@ -52,14 +63,21 @@ export async function sendChatMessageAction(
       return { success: false, error: 'Parámetros requeridos incompletos.' };
     }
 
-    const res = await sendChatMessageService(threadId, senderId, senderName, senderRole, text);
+    const actor = await requireThreadParticipant(threadId);
+    const session = await getServerUserSession();
+    const rateLimit = await consumeSecurityRateLimit('chat-message', actor.userId, 30, 60 * 1_000);
+    if (!rateLimit.allowed) {
+      return { success: false, error: `Demasiados mensajes. Reintenta en ${rateLimit.retryAfter} segundos.` };
+    }
+
+    const res = await sendChatMessageService(threadId, actor.userId, session?.name || 'Usuario', actor.role, text);
     if (res.success) {
       revalidatePath('/mensajes');
     }
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en sendChatMessageAction:', error);
-    return { success: false, error: error?.message || 'Error al enviar mensaje.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al enviar mensaje.') };
   }
 }
 
@@ -75,13 +93,28 @@ export async function createOrGetDirectThreadAction(
   title?: string
 ) {
   try {
+    const actor = await requireServerActor();
+    const session = await getServerUserSession();
+    if (channelType === 'ANUNCIO_ADMIN' && actor.role !== 'Administrador') {
+      return { success: false, error: 'Solo Administración puede crear anuncios globales.' };
+    }
+    if (channelType === 'SOPORTE_ORGANIZADOR' && !['Administrador', 'Organizador'].includes(actor.role)) {
+      return { success: false, error: 'No tienes permiso para crear este canal.' };
+    }
+    const targets = await queryDB<{ id: string; name: string; role: string }>(
+      'SELECT id, name, role FROM users WHERE id = ? LIMIT 1',
+      [targetUserId],
+    );
+    const target = targets[0];
+    if (!target) return { success: false, error: 'Usuario destino no encontrado.' };
+
     const res = await createOrGetDirectThreadService(
-      currentUserId,
-      currentUserName,
-      currentUserRole,
-      targetUserId,
-      targetUserName,
-      targetUserRole,
+      actor.userId,
+      session?.name || 'Usuario',
+      actor.role,
+      target.id,
+      target.name,
+      target.role,
       gameSlug,
       channelType,
       title
@@ -90,67 +123,93 @@ export async function createOrGetDirectThreadAction(
       revalidatePath('/mensajes');
     }
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en createOrGetDirectThreadAction:', error);
-    return { success: false, error: error?.message || 'Error al iniciar chat.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al iniciar chat.') };
   }
 }
 
 export async function getUsersByRoleAction(role: string) {
   try {
+    await requireServerActor();
     const users = await getUsersByRoleService(role);
     return { success: true, data: users };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getUsersByRoleAction:', error);
-    return { success: false, error: error?.message || 'Error al consultar usuarios por rol.', data: [] };
+    return { success: false, error: getActionErrorMessage(error, 'Error al consultar usuarios por rol.'), data: [] };
   }
 }
 
 export async function banUserFromChatAction(targetUserId: string, reason?: string) {
   try {
+    const actor = await requireServerActor(['Administrador']);
     const res = await banUserFromChatService(targetUserId, reason);
     if (res.success) {
+      await revokeUserSessions(targetUserId);
+      await writeSecurityAudit({
+        actor,
+        action: 'CHAT_USER_BANNED',
+        resourceType: 'user',
+        resourceId: targetUserId,
+        metadata: { reason },
+      });
       revalidatePath('/mensajes');
     }
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en banUserFromChatAction:', error);
-    return { success: false, error: error?.message || 'Error al banear usuario.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al banear usuario.') };
   }
 }
 
 export async function unbanUserFromChatAction(targetUserId: string) {
   try {
+    const actor = await requireServerActor(['Administrador']);
     const res = await unbanUserFromChatService(targetUserId);
     if (res.success) {
+      await writeSecurityAudit({
+        actor,
+        action: 'CHAT_USER_UNBANNED',
+        resourceType: 'user',
+        resourceId: targetUserId,
+      });
       revalidatePath('/mensajes');
     }
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en unbanUserFromChatAction:', error);
-    return { success: false, error: error?.message || 'Error al desbanear usuario.' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al desbanear usuario.') };
   }
 }
 
 export async function checkUserBanStatusAction(userId: string) {
   try {
+    await requireUserManager(userId);
     const res = await checkUserBanStatusService(userId);
     return { success: true, data: res };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en checkUserBanStatusAction:', error);
     return { success: false, data: { isBanned: false, reason: null } };
   }
 }
 
 export async function updateTypingStatusAction(threadId: string, userId: string, userName: string) {
-  return await updateTypingStatusService(threadId, userId, userName);
+  void userId;
+  void userName;
+  const actor = await requireThreadParticipant(threadId);
+  const session = await getServerUserSession();
+  return await updateTypingStatusService(threadId, actor.userId, session?.name || 'Usuario');
 }
 
 export async function clearTypingStatusAction(threadId: string, userId: string) {
-  return await clearTypingStatusService(threadId, userId);
+  void userId;
+  const actor = await requireThreadParticipant(threadId);
+  return await clearTypingStatusService(threadId, actor.userId);
 }
 
 export async function getTypingUsersAction(threadId: string, currentUserId: string) {
-  const users = await getTypingUsersService(threadId, currentUserId);
+  void currentUserId;
+  const actor = await requireThreadParticipant(threadId);
+  const users = await getTypingUsersService(threadId, actor.userId);
   return { success: true, data: users };
 }

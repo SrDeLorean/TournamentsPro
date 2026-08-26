@@ -8,7 +8,6 @@ import {
   enrollTeamAction,
   enrollIndividualAthleteAction,
   removeEnrolledTeamAction,
-  generateFixtureAction,
   updateCompetitionStatusAction,
   CompetitionStatus,
 } from '@/app/actions/competitions';
@@ -16,20 +15,53 @@ import { FixtureGenerator } from './fixture-generator';
 import { FixtureScheduleView } from '@/components/tournaments/fixture-schedule-view';
 import { ClassificationView } from '@/components/tournaments/classification-view';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-  Trophy, Calendar, Shield, Settings, Users, Plus, Trash2, Activity, Zap, Swords, AlertTriangle, Check, UserCheck
+  Trophy, Calendar, Shield, Settings, Users, Plus, Trash2, Activity, Zap, Check, UserCheck
 } from 'lucide-react';
 
 interface CompetitionTabsProps {
-  competition: CompetitionData;
+  competition: CompetitionData & { qualifiers_per_group?: number };
   enrolledTeams: CompetitionTeamData[];
-  availableTeams: any[];
-  availableUsers?: any[];
+  availableTeams: AvailableTeam[];
+  availableUsers?: AvailableUser[];
   isIndividual?: boolean;
-  matches: any[];
+  matches: CompetitionMatch[];
+}
+
+export interface AvailableTeam {
+  id: string;
+  name: string;
+  tag?: string | null;
+  platform?: string | null;
+  game_slug?: string | null;
+}
+
+export interface AvailableUser {
+  id: string;
+  name: string;
+  gamertag?: string | null;
+  position?: string | null;
+  rating?: string | number | null;
+  primary_game_slug?: string | null;
+}
+
+export interface CompetitionMatch {
+  id: string;
+  status?: string | null;
+  home_team_id?: string | null;
+  team_home_id?: string | null;
+  away_team_id?: string | null;
+  team_away_id?: string | null;
+  home_team_name?: string | null;
+  away_team_name?: string | null;
+  reported_score_home?: number | null;
+  reported_score_away?: number | null;
+  score_home?: number | null;
+  score_away?: number | null;
+  matchday_number?: number | null;
+  matchday?: number | null;
 }
 
 export type CompetitionTabType = 'dashboard' | 'fixture' | 'standings' | 'teams' | 'settings';
@@ -60,7 +92,6 @@ export function CompetitionTabs({
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
   const gameConfig = GAMES_CATALOG[competition.game_slug] || GAMES_CATALOG['eafc26'];
-  const brandColor = gameConfig?.brandColor || '#00F0FF';
 
   // Metrics calculation
   const totalMatches = matches.length;
@@ -76,7 +107,7 @@ export function CompetitionTabs({
 
     startOperation(`Inscripción de Equipo: ${teamObj.name}`);
     startTransition(async () => {
-      const res = await enrollTeamAction(competition.id, teamObj.id, teamObj.name, teamObj.tag);
+      const res = await enrollTeamAction(competition.id, teamObj.id, teamObj.name, teamObj.tag ?? undefined);
       if (res.success) {
         setSelectedTeamToEnroll('');
         endSuccess(res.message || 'Equipo inscrito correctamente.');
@@ -94,7 +125,7 @@ export function CompetitionTabs({
 
     startOperation(`Inscripción de Atleta: ${userObj.gamertag || userObj.name}`);
     startTransition(async () => {
-      const res = await enrollIndividualAthleteAction(competition.id, userObj.id, userObj.name, userObj.gamertag);
+      const res = await enrollIndividualAthleteAction(competition.id, userObj.id, userObj.name, userObj.gamertag ?? undefined);
       if (res.success) {
         setSelectedTeamToEnroll('');
         endSuccess(res.message || 'Atleta inscrito correctamente.');
@@ -140,10 +171,12 @@ export function CompetitionTabs({
     const isFinished = m.status === 'TERMINADO' || m.status === 'FINALIZADO';
     const hScore = m.reported_score_home ?? m.score_home;
     const aScore = m.reported_score_away ?? m.score_away;
+    const homeId = m.home_team_id ?? m.team_home_id;
+    const awayId = m.away_team_id ?? m.team_away_id;
 
-    if (isFinished && hScore !== null && aScore !== null) {
-      const h = standingsMap[m.home_team_id];
-      const a = standingsMap[m.away_team_id];
+    if (isFinished && homeId && awayId && hScore != null && aScore != null) {
+      const h = standingsMap[homeId];
+      const a = standingsMap[awayId];
       if (h && a) {
         h.pj += 1;
         a.pj += 1;
@@ -170,7 +203,6 @@ export function CompetitionTabs({
     }
   });
 
-  const standingsList = Object.values(standingsMap).sort((a, b) => b.pts - a.pts || (b.gf - b.gc) - (a.gf - a.gc));
   const enrolledSet = new Set(enrolledTeams.map((t) => t.team_id));
   const availableToEnroll = availableTeams.filter(
     (t) => !enrolledSet.has(t.id) && (t.game_slug === competition.game_slug || !t.game_slug)
@@ -246,7 +278,7 @@ export function CompetitionTabs({
               {(competition.mode_format || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes('HIBRID') && (
                 <div className="flex items-center justify-between text-[var(--text-secondary)]">
                   <span className="text-[var(--text-muted)]">Clasifican a Playoffs:</span>
-                  <strong className="text-amber-400 font-bold">Top {(competition as any).qualifiers_per_group || 2} de cada grupo</strong>
+                  <strong className="text-amber-400 font-bold">Top {competition.qualifiers_per_group || 2} de cada grupo</strong>
                 </div>
               )}
 

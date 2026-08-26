@@ -1,10 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
-import { Avatar } from '@/components/ui/avatar';
-import { Monitor } from 'lucide-react';
 import { Pagination } from '@/components/ui/pagination';
 
 export interface PlayerCardData {
@@ -22,6 +18,24 @@ export interface PlayerCardData {
   avatarUrl: string;
   status: string;
   platform: string;
+  socialMedia?: SocialMediaLinks;
+  instagram?: string;
+  twitch?: string;
+  twitter?: string;
+  whatsapp?: string;
+  tiktok?: string;
+  youtube?: string;
+  discord?: string;
+}
+
+interface SocialMediaLinks {
+  instagram?: string;
+  twitch?: string;
+  twitter?: string;
+  whatsapp?: string;
+  tiktok?: string;
+  youtube?: string;
+  discord?: string;
 }
 
 interface PlayerCardGridProps {
@@ -32,12 +46,13 @@ interface PlayerCardGridProps {
 
 export function PlayerCardGrid({ players, gameSlug, brandColor }: PlayerCardGridProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [previousPlayers, setPreviousPlayers] = React.useState(players);
   const itemsPerPage = 12;
 
-  // Reset page when filter/players change
-  React.useEffect(() => {
+  if (previousPlayers !== players) {
+    setPreviousPlayers(players);
     setCurrentPage(1);
-  }, [players]);
+  }
 
   if (players.length === 0) {
     return (
@@ -86,14 +101,14 @@ function PlayerCard({ player, gameSlug, brandColor }: { player: PlayerCardData; 
       tag={player.pos}
       country={player.nacionalidad}
       socials={
-        (player as any).socialMedia || {
-          instagram: (player as any).instagram,
-          twitch: (player as any).twitch,
-          twitter: (player as any).twitter,
-          whatsapp: (player as any).whatsapp,
-          tiktok: (player as any).tiktok,
-          youtube: (player as any).youtube,
-          discord: (player as any).discord,
+        player.socialMedia || {
+          instagram: player.instagram,
+          twitch: player.twitch,
+          twitter: player.twitter,
+          whatsapp: player.whatsapp,
+          tiktok: player.tiktok,
+          youtube: player.youtube,
+          discord: player.discord,
         }
       }
       badges={[

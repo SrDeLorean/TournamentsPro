@@ -2,38 +2,38 @@
 // TournamentsPro — Client-side Fetch Utilities
 // =============================================================================
 
-/**
- * Returns auth headers for API requests.
- * Reads the JWT token from localStorage.
- */
+/** Returns the common headers for cookie-authenticated API requests. */
 export function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
+  return {
     'Content-Type': 'application/json',
   };
-
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('tournamentspro_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-  }
-
-  return headers;
 }
 
 /**
  * Wrapper around fetch that automatically includes auth headers.
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-  const authHeaders = getAuthHeaders();
+  const headers = new Headers(getAuthHeaders());
+  new Headers(options.headers).forEach((value, key) => headers.set(key, value));
   
   return fetch(url, {
     ...options,
-    headers: {
-      ...authHeaders,
-      ...(options.headers || {}),
-    },
+    credentials: options.credentials || 'same-origin',
+    headers,
   });
+}
+
+/** Fetch JSON through the shared cookie-authenticated transport. */
+export async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetchWithAuth(url, options);
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+
+  if (!response.ok) {
+    const message = typeof payload.error === 'string' ? payload.error : `Error ${response.status}`;
+    throw new Error(message);
+  }
+
+  return payload as T;
 }
 
 /**

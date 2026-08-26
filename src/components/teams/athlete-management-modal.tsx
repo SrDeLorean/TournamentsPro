@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { UserProfile, TeamData } from '@/lib/data-store';
+import React, { useState } from 'react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import {
-  User, BarChart2, FileText, CheckCircle2, X, Award, Shield, Sparkles, Star, Check
+  User, BarChart2, FileText, CheckCircle2, X
 } from 'lucide-react';
 
 export type AthleteTabOption = 'ATLETA_FICHA' | 'ATLETA_STATS' | 'ATLETA_SOLICITUDES';
@@ -25,13 +24,9 @@ export function AthleteManagementModal({
   initialTab = 'ATLETA_FICHA',
 }: AthleteManagementModalProps) {
   const { currentUser, activeGameSlug } = useAuth();
-  const [activeTab, setActiveTab] = useState<AthleteTabOption>(initialTab);
-
-  useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
+  const [tabSelection, setTabSelection] = useState({ initialTab, value: initialTab });
+  const activeTab = tabSelection.initialTab === initialTab ? tabSelection.value : initialTab;
+  const setActiveTab = (value: AthleteTabOption) => setTabSelection({ initialTab, value });
 
   const [offersList, setOffersList] = useState([
     { id: 'off-1', teamName: 'SANGRE NUEVA FC', game: 'EA SPORTS FC 26', offerType: 'Fichaje Titular', status: 'PENDIENTE' },

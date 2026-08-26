@@ -2,10 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { initialTeams, TeamData } from '@/lib/data-store';
+import { initialTeams } from '@/lib/data-store';
 import { CreateTeamModal } from '@/components/teams/create-team-modal';
 import { ClubManagementModal } from '@/components/teams/club-management-modal';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
@@ -15,15 +16,16 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { NotificationCenter } from '@/components/notifications/notification-center';
-import { AdminGlobalSubnavbar } from '@/components/layout/admin-global-subnavbar';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
+import type { TeamData, UserProfile } from '@/lib/data-store';
 import {
-  Trophy, Shield, Users, MessageSquare, LogOut, Settings, Plus, Sparkles, ChevronDown, LayoutDashboard, ArrowRightLeft, ExternalLink, Gamepad2, User, Globe, CheckCircle2, Menu, X
+  Trophy, Shield, MessageSquare, LogOut, Settings, Plus, Sparkles, ChevronDown, LayoutDashboard, ArrowRightLeft, User, CheckCircle2
 } from 'lucide-react';
 
 export function AdminNavbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, activeGameSlug, setActiveGameSlug, logout, login, userTeams } = useAuth();
+  const { currentUser, activeGameSlug, setActiveGameSlug, logout, userTeams } = useAuth();
   const userRoleStr = (currentUser?.role || '').toLowerCase();
   const isAdmin = userRoleStr === 'administrador' || userRoleStr === 'admin';
   const isOrganizer = userRoleStr === 'organizador';
@@ -32,15 +34,12 @@ export function AdminNavbar() {
   const [isTeamsOpen, setIsTeamsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isGamesOpen, setIsGamesOpen] = useState(false);
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
   const [isClubManageOpen, setIsClubManageOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const teamsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
-  const gamesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -53,21 +52,26 @@ export function AdminNavbar() {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
         setIsSettingsOpen(false);
       }
-      if (gamesRef.current && !gamesRef.current.contains(event.target as Node)) {
-        setIsGamesOpen(false);
-      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const teamsPool = userTeams && userTeams.length > 0 ? userTeams : initialTeams;
-  const disciplineFilteredTeams = teamsPool.filter((t) => {
-    const slug = (t as any).game_slug || t.gameSlug || 'eafc26';
+  type ManagedTeam = TeamData & {
+    game_slug?: string;
+    captain_id?: string;
+    captain_name?: string;
+    encargados?: unknown;
+    encargados_json?: unknown;
+  };
+
+  const disciplineFilteredTeams = (teamsPool as ManagedTeam[]).filter((t) => {
+    const slug = t.game_slug || t.gameSlug || 'eafc26';
     return slug === activeGameSlug || activeGameSlug === 'ALL';
   });
 
-  const isUserTeamManager = (team: any, user: any, strictSpecific = false) => {
+  const isUserTeamManager = (team: ManagedTeam, user: UserProfile | null, strictSpecific = false) => {
     if (!team || !user) return false;
 
     const uId = user.id;
@@ -86,17 +90,19 @@ export function AdminNavbar() {
       try {
         const arr = typeof encs === 'string' ? JSON.parse(encs) : encs;
         if (Array.isArray(arr)) {
-          const isEnc = arr.some((enc: any) => {
+          const isEnc = arr.some((enc: unknown) => {
             if (typeof enc === 'string') return enc === uId || enc.toLowerCase() === uName || enc.toLowerCase() === uGamer;
+            if (!enc || typeof enc !== 'object') return false;
+            const manager = enc as { id?: string; name?: string; gamertag?: string };
             return (
-              enc.id === uId ||
-              (enc.name && uName && enc.name.toLowerCase() === uName) ||
-              (enc.gamertag && uGamer && enc.gamertag.toLowerCase() === uGamer)
+              manager.id === uId ||
+              (manager.name && uName && manager.name.toLowerCase() === uName) ||
+              (manager.gamertag && uGamer && manager.gamertag.toLowerCase() === uGamer)
             );
           });
           if (isEnc) return true;
         }
-      } catch (e) {}
+      } catch {}
     }
 
     if (!strictSpecific && (user.role === 'Administrador' || user.role === 'Organizador')) {
@@ -112,6 +118,7 @@ export function AdminNavbar() {
   }
 
   const isCaptain = userRoleStr === 'capitán' || userRoleStr === 'capitan' || userRoleStr === 'encargado' || Boolean(myTeamInActiveDiscipline);
+  const activeTeamLogo = myTeamInActiveDiscipline?.logoUrl || (myTeamInActiveDiscipline as TeamData & { logo?: string } | undefined)?.logo;
 
   return (
     <>
@@ -151,15 +158,18 @@ export function AdminNavbar() {
               onClick={() => setIsTeamsOpen(!isTeamsOpen)}
               className="px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-950 via-slate-950 to-slate-900 border border-purple-500/50 text-purple-300 hover:border-purple-400 transition-all flex items-center gap-2 shadow-lg hover:scale-[1.01]"
             >
-              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-slate-950 border border-purple-400 flex items-center justify-center font-black text-[10px] sm:text-xs text-purple-300 shadow-sm flex-shrink-0 overflow-hidden">
-                {myTeamInActiveDiscipline?.logoUrl || (myTeamInActiveDiscipline as any)?.logo ? (
-                  <img
-                    src={myTeamInActiveDiscipline?.logoUrl || (myTeamInActiveDiscipline as any)?.logo}
+              <div className="relative w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-slate-950 border border-purple-400 flex items-center justify-center font-black text-[10px] sm:text-xs text-purple-300 shadow-sm flex-shrink-0 overflow-hidden">
+                {activeTeamLogo ? (
+                  <Image
+                    src={activeTeamLogo}
                     alt={myTeamInActiveDiscipline?.name || 'Club'}
+                    fill
+                    sizes="24px"
+                    unoptimized={shouldBypassImageOptimization(activeTeamLogo)}
                     onError={(e) => {
                       e.currentTarget.src = '/images/default/logo-default.png';
                     }}
-                    className="w-full h-full object-cover"
+                    className="object-cover"
                   />
                 ) : (
                   myTeamInActiveDiscipline?.logoText || 'TP'
@@ -396,36 +406,6 @@ export function AdminNavbar() {
                         {currentUser?.platform} • {currentGameObj.name}
                       </span>
                     </div>
-                  </div>
-
-                  {/* Quick Account/Role Switcher Buttons */}
-                  <div className="p-2 rounded-xl bg-slate-900 border border-white/10 space-y-1.5 my-2 text-[10px]">
-                    <span className="font-bold text-slate-400 block uppercase px-1">Cambiar Rol / Cuenta:</span>
-                    <button
-                      onClick={async () => {
-                        await login('admin@tournamentspro.com', '123456');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className={`w-full p-1.5 rounded-lg flex items-center justify-between font-bold transition-all ${
-                        isAdmin ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50' : 'text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span>🛡️ Administrador</span>
-                      {isAdmin && <CheckCircle2 className="w-3 h-3 text-cyan-400" />}
-                    </button>
-
-                    <button
-                      onClick={async () => {
-                        await login('organizador@tournamentspro.com', '123456');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className={`w-full p-1.5 rounded-lg flex items-center justify-between font-bold transition-all ${
-                        isOrganizer ? 'bg-purple-950 text-purple-300 border border-purple-500/50' : 'text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span>🏆 Organizador</span>
-                      {isOrganizer && <CheckCircle2 className="w-3 h-3 text-purple-400" />}
-                    </button>
                   </div>
 
                   {/* Navigation Links inside User Profile Menu */}

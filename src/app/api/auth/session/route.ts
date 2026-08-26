@@ -1,0 +1,18 @@
+import { apiError, apiSuccess, mapUserRowToProfile, type UserRow } from '@/lib/api-types';
+import { getRequestUserSession } from '@/lib/auth-server';
+import { queryDB } from '@/lib/db';
+
+export async function GET(request: Request) {
+  try {
+    const session = await getRequestUserSession(request);
+    if (!session) return apiError('No existe una sesión activa', 401, 'UNAUTHORIZED');
+
+    const users = await queryDB<UserRow>('SELECT * FROM users WHERE id = ? LIMIT 1', [session.userId]);
+    if (!users[0]) return apiError('Usuario de sesión no encontrado', 401, 'UNAUTHORIZED');
+
+    return apiSuccess({ user: mapUserRowToProfile(users[0]) });
+  } catch (error) {
+    console.error('Session lookup error:', error);
+    return apiError('No se pudo verificar la sesión', 500);
+  }
+}

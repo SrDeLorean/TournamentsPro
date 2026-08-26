@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { queryDB } from '@/lib/db';
-import { hashPassword, authenticateRequest, isAdminOrOrganizer } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
+import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
+import { canAssignRole, canManageUser, isAdministrator } from '@/lib/authorization';
+import { revokeUserSessions, shouldRevokeUserSessions, writeSecurityAudit } from '@/lib/security';
 
 // GET /api/admin/users - List users with status & ban filters
 export async function GET(request: Request) {
   try {
+    const actor = await requireRequestActor(request, ['Administrador', 'Organizador']);
     const { searchParams } = new URL(request.url);
     const roleFilter = searchParams.get('role');
     const statusFilter = searchParams.get('status');
@@ -12,6 +16,11 @@ export async function GET(request: Request) {
 
     let sql = `SELECT * FROM users WHERE 1=1`;
     const params: (string | number | null)[] = [];
+
+    if (!isAdministrator(actor)) {
+      sql += ` AND organization_id = ?`;
+      params.push(actor.organizationId);
+    }
 
     if (roleFilter) {
       sql += ` AND role = ?`;
@@ -28,9 +37,16 @@ export async function GET(request: Request) {
 
     sql += ` ORDER BY created_at DESC`;
 
-    const users = await queryDB(sql, params);
-    return NextResponse.json({ success: true, users });
+    const users = await queryDB<Record<string, unknown>>(sql, params);
+    const safeUsers = users.map((user) => {
+      const safeUser = { ...user };
+      delete safeUser.password_hash;
+      return safeUser;
+    });
+    return NextResponse.json({ success: true, users: safeUsers });
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error consultando usuarios' }, { status: 500 });
   }
 }
@@ -38,6 +54,7 @@ export async function GET(request: Request) {
 // POST /api/admin/users - Create user
 export async function POST(request: Request) {
   try {
+    const actor = await requireRequestActor(request, ['Administrador', 'Organizador']);
     const body = await request.json();
     const {
       name,
@@ -62,12 +79,20 @@ export async function POST(request: Request) {
       youtube,
       whatsapp,
       organizationId,
-      requesterRole,
     } = body;
 
-    let finalRole = role || 'Jugador';
-    if (requesterRole === 'Organizador' && finalRole === 'Administrador') {
-      return NextResponse.json({ error: 'Un Organizador no puede crear usuarios Administradores' }, { status: 403 });
+    const finalRole = role || 'Jugador';
+    if (!canAssignRole(actor, finalRole)) {
+      return NextResponse.json({ error: 'No tienes permisos para asignar ese rol' }, { status: 403 });
+    }
+
+    const targetOrganizationId = isAdministrator(actor) ? (organizationId || null) : actor.organizationId;
+
+    if (typeof password !== 'string' || password.length < 10 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      return NextResponse.json(
+        { error: 'La contraseña debe tener al menos 10 caracteres, una letra y un número' },
+        { status: 400 },
+      );
     }
 
     const newId = `usr-${Date.now()}`;
@@ -83,7 +108,7 @@ export async function POST(request: Request) {
         newId,
         name || gamertag,
         userEmail,
-        await hashPassword(password || '123456'),
+        await hashPassword(password),
         gamertag || name,
         finalRole,
         primaryGame || 'eafc26',
@@ -102,12 +127,24 @@ export async function POST(request: Request) {
         discord || null,
         youtube || null,
         whatsapp || null,
-        organizationId || null,
+        targetOrganizationId,
       ]
     );
 
+    await writeSecurityAudit({
+      actor,
+      request,
+      action: 'ADMIN_USER_CREATED',
+      resourceType: 'user',
+      resourceId: newId,
+      organizationId: targetOrganizationId,
+      metadata: { assignedRole: finalRole },
+    });
+
     return NextResponse.json({ success: true, message: 'Usuario creado exitosamente', userId: newId });
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error creando usuario' }, { status: 500 });
   }
 }
@@ -115,6 +152,7 @@ export async function POST(request: Request) {
 // PUT /api/admin/users - Edit user & Ban/Unban with partial updates and Password change support
 export async function PUT(request: Request) {
   try {
+    const actor = await requireRequestActor(request, ['Administrador', 'Organizador']);
     const body = await request.json();
     const {
       id,
@@ -143,7 +181,6 @@ export async function PUT(request: Request) {
       isBanned,
       banReason,
       organizationId,
-      requesterRole,
       action,
     } = body;
 
@@ -157,25 +194,40 @@ export async function PUT(request: Request) {
     }
 
     const targetUser = existing[0];
+    let invalidateTargetSessions = shouldRevokeUserSessions({ action, isBanned, status });
 
-    // Permission check for role changes and admin account protection
-    if (requesterRole === 'Organizador') {
-      if (targetUser.role === 'Administrador') {
-        return NextResponse.json({ error: 'Solo un Administrador puede modificar cuentas de Administrador' }, { status: 403 });
-      }
-      if (role === 'Administrador') {
-        return NextResponse.json({ error: 'Un Organizador no puede asignar el rol Administrador' }, { status: 403 });
-      }
+    if (!canManageUser(actor, {
+      userId: targetUser.id,
+      role: targetUser.role,
+      organizationId: targetUser.organization_id,
+    })) {
+      return NextResponse.json({ error: 'No tienes permisos para modificar este usuario' }, { status: 403 });
+    }
+    if (role && !canAssignRole(actor, role)) {
+      return NextResponse.json({ error: 'No tienes permisos para asignar ese rol' }, { status: 403 });
+    }
+    if (!isAdministrator(actor) && organizationId !== undefined && organizationId !== actor.organizationId) {
+      return NextResponse.json({ error: 'No puedes mover usuarios fuera de tu organización' }, { status: 403 });
     }
 
     if (action === 'UNBAN') {
       await queryDB('UPDATE users SET is_banned = 0, status = "Activo", ban_reason = NULL, banned_at = NULL WHERE id = ?', [id]);
+      await writeSecurityAudit({ actor, request, action: 'ADMIN_USER_UNBANNED', resourceType: 'user', resourceId: id });
       return NextResponse.json({ success: true, message: 'Usuario desbaneado con éxito' });
     }
 
     if (action === 'BAN') {
       const reason = banReason || 'Infracción a las reglas eSports';
       await queryDB('UPDATE users SET is_banned = 1, status = "Baneado", ban_reason = ?, banned_at = NOW() WHERE id = ?', [reason, id]);
+      await revokeUserSessions(id);
+      await writeSecurityAudit({
+        actor,
+        request,
+        action: 'ADMIN_USER_BANNED',
+        resourceType: 'user',
+        resourceId: id,
+        metadata: { reason },
+      });
       return NextResponse.json({ success: true, message: 'Usuario baneado del sistema' });
     }
 
@@ -188,6 +240,7 @@ export async function PUT(request: Request) {
       fieldsToUpdate.push('is_banned = ?');
       updateParams.push(bVal);
       if (bVal === 1) {
+        invalidateTargetSessions = true;
         fieldsToUpdate.push('ban_reason = ?');
         updateParams.push(banReason || 'Sanción disciplinaria de chat eSports');
       } else {
@@ -210,19 +263,19 @@ export async function PUT(request: Request) {
 
     // Password change support for Admin and Organizer
     const passToSet = newPassword || password;
+    if (passToSet && !isAdministrator(actor) && actor.userId !== id) {
+      return NextResponse.json({ error: 'No puedes cambiar la contraseña de otro usuario' }, { status: 403 });
+    }
     if (passToSet && passToSet.trim() !== '' && passToSet.trim().length >= 6) {
+      invalidateTargetSessions = true;
       fieldsToUpdate.push('password_hash = ?');
       updateParams.push(await hashPassword(passToSet.trim()));
     }
 
     // Role change (Admin can change to any role; Organizer is restricted to Jugador)
     if (role !== undefined && role !== null && role !== '') {
-      let finalRole = role;
-      if (requesterRole === 'Organizador') {
-        finalRole = targetUser.role; // Organizer cannot alter roles
-      }
       fieldsToUpdate.push('role = ?');
-      updateParams.push(finalRole);
+      updateParams.push(role);
     }
 
     if (status !== undefined && status !== null && status !== '') {
@@ -301,8 +354,25 @@ export async function PUT(request: Request) {
       await queryDB(sql, updateParams);
     }
 
+    if (invalidateTargetSessions) await revokeUserSessions(id);
+    await writeSecurityAudit({
+      actor,
+      request,
+      action: 'ADMIN_USER_UPDATED',
+      resourceType: 'user',
+      resourceId: id,
+      organizationId: targetUser.organization_id,
+      metadata: {
+        roleChanged: role !== undefined,
+        passwordChanged: Boolean(passToSet),
+        banChanged: isBanned !== undefined,
+      },
+    });
+
     return NextResponse.json({ success: true, message: 'Usuario actualizado exitosamente' });
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error actualizando usuario' }, { status: 500 });
   }
 }

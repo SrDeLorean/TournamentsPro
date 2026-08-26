@@ -1,13 +1,60 @@
 'use server';
 
 import { queryDB } from '@/lib/db';
+import { requireTeamManager, requireUserManager } from '@/lib/auth-server';
 import { revalidatePath } from 'next/cache';
+import { removePlayerFromSquadService } from '@/lib/services';
+import { getActionErrorMessage } from '@/lib/action-utils';
+
+interface NewSquadRow extends Record<string, unknown> {
+  user_id: string;
+  organization_name: string | null;
+}
+
+interface NewSquadMember extends NewSquadRow {
+  original_orgs: string[];
+}
+
+interface InscriptionRow {
+  user_id: string;
+  user_name: string;
+  gamertag: string;
+  tactical_position: string | null;
+  member_org_name: string | null;
+  org_id: string | null;
+  org_acronym?: string | null;
+}
+
+interface OrganizationSummary { id: string; name: string; acronym: string }
+interface PlayerInscription {
+  user_id: string;
+  user_name: string;
+  gamertag: string;
+  tactical_position: string;
+  organizations: OrganizationSummary[];
+}
+
+interface TeamEnrollmentRow {
+  team_id: string;
+  organization_name: string | null;
+  team_name: string;
+  team_tag: string | null;
+  logo_url: string | null;
+}
+
+interface TeamEnrollment {
+  team_id: string;
+  team_name: string;
+  team_tag: string | null;
+  logo_url: string | null;
+  organizations: string[];
+}
 
 export async function getNewTeamSquadAction(teamId: string) {
   try {
     if (!teamId) return { success: false, squad: [], error: 'ID de equipo requerido.' };
 
-    const squadRows = await queryDB<any>(
+    const squadRows = await queryDB<NewSquadRow>(
       `SELECT 
         tm.id, tm.team_id, tm.user_id, tm.organization_name, tm.tactical_position, tm.role_in_team, tm.jersey_number, tm.joined_at,
         u.name as user_name, u.gamertag, u.email, u.avatar_url, u.foto
@@ -18,7 +65,7 @@ export async function getNewTeamSquadAction(teamId: string) {
       [teamId]
     );
 
-    const userMap: Record<string, any> = {};
+    const userMap: Record<string, NewSquadMember> = {};
     for (const r of squadRows) {
       if (!userMap[r.user_id]) {
         userMap[r.user_id] = { ...r, original_orgs: [] };
@@ -35,15 +82,16 @@ export async function getNewTeamSquadAction(teamId: string) {
     }));
 
     return { success: true, squad: uniqueSquad };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getNewTeamSquadAction:', error);
-    return { success: false, squad: [], error: error.message };
+    return { success: false, squad: [], error: getActionErrorMessage(error, 'Error al obtener plantilla.') };
   }
 }
 
 export async function getNewPlayerInscriptionsMatrixAction(teamId: string) {
   try {
-    const rows = await queryDB<any>(
+    await requireTeamManager(teamId);
+    const rows = await queryDB<InscriptionRow>(
       `SELECT 
         u.id as user_id,
         u.name as user_name,
@@ -59,7 +107,7 @@ export async function getNewPlayerInscriptionsMatrixAction(teamId: string) {
       [teamId]
     );
 
-    const userMap: Record<string, any> = {};
+    const userMap: Record<string, PlayerInscription> = {};
     for (const r of rows) {
       if (!userMap[r.user_id]) {
         userMap[r.user_id] = {
@@ -73,7 +121,7 @@ export async function getNewPlayerInscriptionsMatrixAction(teamId: string) {
       
       const orgName = r.member_org_name;
       if (orgName) {
-        const exists = userMap[r.user_id].organizations.some((o: any) => o.name.toLowerCase() === orgName.toLowerCase());
+        const exists = userMap[r.user_id].organizations.some((organization) => organization.name.toLowerCase() === orgName.toLowerCase());
         if (!exists) {
           userMap[r.user_id].organizations.push({
             id: r.org_id || orgName,
@@ -85,31 +133,32 @@ export async function getNewPlayerInscriptionsMatrixAction(teamId: string) {
     }
 
     return { success: true, data: Object.values(userMap) };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getNewPlayerInscriptionsMatrixAction:', error);
-    return { success: false, data: [], error: error.message };
+    return { success: false, data: [], error: getActionErrorMessage(error, 'Error al obtener inscripciones.') };
   }
 }
 
-export async function expelPlayerFromSquadAction(teamId: string, userId: string, orgName?: string) {
+export async function expelPlayerFromSquadAction(
+  teamId: string,
+  userId: string,
+  orgName?: string,
+): Promise<{ success: boolean; message?: string; error?: string; code?: string }> {
   try {
-    if (orgName) {
-      await queryDB(`DELETE FROM team_members WHERE team_id = ? AND user_id = ? AND LOWER(organization_name) = LOWER(?)`, [teamId, userId, orgName]);
-      await queryDB(`UPDATE transfer_offers SET status = 'CONCLUIDO' WHERE team_id = ? AND player_user_id = ? AND status = 'ACEPTADO' AND LOWER(pitch_message) LIKE LOWER(?)`, [teamId, userId, `%[organización: ${orgName}]%`]);
-    } else {
-      await queryDB(`DELETE FROM team_members WHERE team_id = ? AND user_id = ?`, [teamId, userId]);
-      await queryDB(`UPDATE transfer_offers SET status = 'CONCLUIDO' WHERE team_id = ? AND player_user_id = ? AND status = 'ACEPTADO'`, [teamId, userId]);
-    }
+    await requireTeamManager(teamId);
+    const result = await removePlayerFromSquadService(teamId, userId, orgName);
+    if (!result.success) return result;
     revalidatePath('/');
     return { success: true, message: 'Jugador desvinculado. El contrato ha concluido.' };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { success: false, error: getActionErrorMessage(error, 'Error al desvincular jugador.') };
   }
 }
 
 export async function getUserEnrolledTeamsAction(userId: string) {
   try {
-    const rows = await queryDB<any>(
+    await requireUserManager(userId);
+    const rows = await queryDB<TeamEnrollmentRow>(
       `SELECT tm.team_id, tm.organization_name, t.name as team_name, t.tag as team_tag, t.logo_url
        FROM team_members tm
        JOIN teams t ON tm.team_id = t.id
@@ -117,7 +166,7 @@ export async function getUserEnrolledTeamsAction(userId: string) {
       [userId]
     );
 
-    const teamMap: Record<string, any> = {};
+    const teamMap: Record<string, TeamEnrollment> = {};
     for (const r of rows) {
       if (!teamMap[r.team_id]) {
         teamMap[r.team_id] = {
@@ -134,9 +183,8 @@ export async function getUserEnrolledTeamsAction(userId: string) {
     }
 
     return { success: true, teams: Object.values(teamMap) };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getUserEnrolledTeamsAction:', error);
-    return { success: false, teams: [], error: error.message };
+    return { success: false, teams: [], error: getActionErrorMessage(error, 'Error al obtener equipos del usuario.') };
   }
 }
-

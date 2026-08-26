@@ -1,15 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { BarChart2, Award, Trophy, Activity, Target, Zap, ShieldAlert } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { BarChart2, Award, Trophy, Activity, Target, Zap } from 'lucide-react';
 
 export default function AtletaStatsPage() {
-  const { currentUser } = useAuth();
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">
       <PageHeader

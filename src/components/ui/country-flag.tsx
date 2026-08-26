@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface CountryFlagProps {
@@ -18,13 +19,12 @@ export function CountryFlag({ code, name, className = '', size = 'md' }: Country
   }[size];
 
   return (
-    <img
+    <Image
       src={`https://flagcdn.com/w40/${codeLower}.png`}
-      srcSet={`https://flagcdn.com/w80/${codeLower}.png 2x`}
       width={size === 'sm' ? 16 : size === 'md' ? 24 : 32}
       height={size === 'sm' ? 12 : size === 'md' ? 18 : 24}
       alt={name}
-      loading="lazy"
+      unoptimized
       className={cn("inline-block rounded-sm object-cover shadow-sm border border-[var(--border-card)] shrink-0", dimensions, className)}
     />
   );

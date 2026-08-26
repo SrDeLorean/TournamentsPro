@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       LEFT JOIN organizations o3 ON (o3.owner_id = u.id)
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: string[] = [];
 
     if (gameSlug && gameSlug !== 'ALL' && gameSlug !== 'TODOS') {
       query += ` AND (c.game_slug = ? OR c.game_slug IS NULL)`;
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
 
     query += ` ORDER BY m.scheduled_at DESC, m.matchday ASC`;
 
-    const matches = await queryDB<any>(query, params);
+    const matches = await queryDB<Record<string, unknown>>(query, params);
 
     return NextResponse.json({ success: true, matches: matches || [] });
   } catch (error: unknown) {

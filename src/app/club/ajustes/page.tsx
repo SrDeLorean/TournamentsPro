@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/ui/page-header';
 import { Settings } from 'lucide-react';
@@ -11,16 +11,20 @@ export default function ClubAjustesPage() {
   const { currentUser, activeGameSlug } = useAuth();
   const [userTeam, setUserTeam] = useState<TeamData | null>(null);
 
-  const fetchTeam = () => {
+  const teamId = currentUser?.teamId;
+  const teamName = currentUser?.teamName;
+  const userId = currentUser?.id;
+
+  const fetchTeam = useCallback(() => {
     fetch(`/api/teams?gameSlug=${activeGameSlug || 'eafc26'}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.teams)) {
           const found = data.teams.find(
             (t: TeamData) =>
-              t.id === currentUser?.teamId ||
-              (currentUser?.teamName && t.name.toLowerCase() === currentUser.teamName.toLowerCase()) ||
-              t.captainId === currentUser?.id
+              t.id === teamId ||
+              (teamName && t.name.toLowerCase() === teamName.toLowerCase()) ||
+              t.captainId === userId
           );
           if (found) {
             setUserTeam(found);
@@ -28,11 +32,11 @@ export default function ClubAjustesPage() {
         }
       })
       .catch((err) => console.error('Error fetching team for club settings:', err));
-  };
+  }, [activeGameSlug, teamId, teamName, userId]);
 
   useEffect(() => {
     fetchTeam();
-  }, [activeGameSlug, currentUser]);
+  }, [fetchTeam]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">

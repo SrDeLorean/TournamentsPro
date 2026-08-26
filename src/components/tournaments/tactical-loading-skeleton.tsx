@@ -3,6 +3,7 @@
 import React from 'react';
 import { GameConfig } from '@/lib/games-data';
 import { Activity } from 'lucide-react';
+import { GameLogo } from '@/components/ui/game-logo';
 
 interface TacticalLoadingSkeletonProps {
   game: GameConfig;
@@ -55,7 +56,7 @@ export function TacticalLoadingSkeleton({ game, message }: TacticalLoadingSkelet
             style={{ borderColor: brandColor, boxShadow: `0 0 30px ${brandColor}40` }}
           >
             {game?.logoUrl ? (
-              <img src={game.logoUrl} alt={game.name || 'Juego'} className="w-full h-full object-contain filter drop-shadow-md" />
+              <GameLogo game={game} size="xl" className="filter drop-shadow-md" />
             ) : (
               <span className="text-3xl">{game?.icon || '🎯'}</span>
             )}

@@ -11,10 +11,6 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
-  Clock,
-  Award,
-  Flame,
-  FileText,
   X,
 } from 'lucide-react';
 
@@ -68,7 +64,8 @@ export function OrganizerTransferReviewModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && application.applicantUserId) {
+    if (!isOpen || !application.applicantUserId) return;
+    const timer = window.setTimeout(() => {
       setHistoryLoading(true);
       getAthleteTransferHistoryAction(application.applicantUserId, organizationId)
         .then((res) => {
@@ -77,7 +74,8 @@ export function OrganizerTransferReviewModal({
           }
         })
         .finally(() => setHistoryLoading(false));
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [isOpen, application.applicantUserId, organizationId]);
 
   if (!isOpen) return null;
@@ -93,8 +91,8 @@ export function OrganizerTransferReviewModal({
       } else {
         setErrorMsg(res.error || 'Error al aprobar el traspaso.');
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error de conexión.');
+    } catch (error: unknown) {
+      setErrorMsg(error instanceof Error ? error.message : 'Error de conexión.');
     } finally {
       setSubmitting(false);
     }
@@ -111,8 +109,8 @@ export function OrganizerTransferReviewModal({
       } else {
         setErrorMsg(res.error || 'Error al rechazar el traspaso.');
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error de conexión.');
+    } catch (error: unknown) {
+      setErrorMsg(error instanceof Error ? error.message : 'Error de conexión.');
     } finally {
       setSubmitting(false);
     }
@@ -194,7 +192,7 @@ export function OrganizerTransferReviewModal({
 
             {application.pitchMessage && (
               <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] text-xs text-[var(--text-secondary)] italic">
-                "{application.pitchMessage}"
+                &quot;{application.pitchMessage}&quot;
               </div>
             )}
           </div>

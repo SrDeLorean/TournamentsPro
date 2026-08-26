@@ -4,7 +4,7 @@ import React from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Users, Shield, Award, UserCheck, Plus, CheckCircle2 } from 'lucide-react';
+import { Users, Shield, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 

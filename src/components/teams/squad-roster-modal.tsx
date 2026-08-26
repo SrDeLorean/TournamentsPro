@@ -1,18 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useCallback, useState, useEffect, useTransition } from 'react';
 import {
   X,
   UserPlus,
   UserMinus,
   Users,
   Search,
-  Shield,
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Sparkles,
-  Award,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,7 +57,7 @@ export function SquadRosterModal({ isOpen, onClose, team, onRosterUpdated }: Squ
   const [subTab, setSubTab] = useState<'squad' | 'add'>('squad');
 
   // Load current squad & available players
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!team) return;
     setIsLoadingSquad(true);
     setIsLoadingAvailable(true);
@@ -79,28 +76,14 @@ export function SquadRosterModal({ isOpen, onClose, team, onRosterUpdated }: Squ
       setAvailablePlayers(availRes.players);
     }
     setIsLoadingAvailable(false);
-  };
+  }, [currentUser?.id, searchQuery, team]);
 
-  useEffect(() => {
-    if (isOpen && team) {
-      loadData();
-    }
-  }, [isOpen, team]);
-
-  // Debounced search for available players
   useEffect(() => {
     if (!isOpen || !team) return;
-    const timer = setTimeout(async () => {
-      setIsLoadingAvailable(true);
-      const res = await getAvailablePlayersForSquadAction(team.id, searchQuery, currentUser?.id);
-      if (res.success && res.players) {
-        setAvailablePlayers(res.players);
-      }
-      setIsLoadingAvailable(false);
-    }, 300);
+    const timer = setTimeout(() => void loadData(), searchQuery ? 300 : 0);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [isOpen, loadData, searchQuery, team]);
 
   if (!isOpen || !team) return null;
 

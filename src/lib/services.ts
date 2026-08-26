@@ -4,17 +4,93 @@
 
 import {
   userRepository,
-  organizationRepository,
   teamRepository,
   competitionRepository,
   seasonRepository,
+  type Competition,
+  type Team,
+  type User,
 } from '@/lib/repositories';
-import { queryDB } from '@/lib/db';
+import { executeCas, queryDB, withTransaction, type DatabaseExecutor, type DatabaseParams } from '@/lib/db';
 import { validateSchema, uuidSchema } from '@/lib/validation';
-import { hashPassword, verifyToken, generateTokenPair, checkRateLimit, createRateLimitKey, verifyPassword } from '@/lib/auth';
+import { hashPassword, generateTokenPair, verifyPassword } from '@/lib/auth';
+import { consumeSecurityRateLimit, createServiceAuthSession } from '@/lib/security';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { GAMES_CATALOG } from '@/lib/games-data';
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+interface AvailablePlayerRow {
+  id: string; name: string; gamertag: string; email: string; position: string;
+  primary_game_slug: string; organization_id: string | null; avatar_url: string | null; foto: string | null;
+}
+
+interface SquadRow {
+  id: string; team_id: string; user_id: string; organization_name: string | null;
+  tactical_position: string; role_in_team: 'Capitan' | 'Jugador' | 'DT / Analyst';
+  jersey_number: number | null; joined_at: string; user_name: string; gamertag: string;
+  email?: string; avatar_url?: string | null; foto?: string | null;
+}
+
+interface SquadWithOrganizations extends SquadRow {
+  member_org_names: string[];
+  organization_ids?: string;
+  organization_names?: string;
+}
+
+interface TransferApplicationRow {
+  id: string; team_id: string; applicant_user_id: string; game_slug: string; position: string;
+  pitch_message: string | null; application_type: string; status: string;
+  is_extraordinary: number; organizer_approval_status: string;
+}
+
+interface TransferHistoryRow {
+  id: string; game_slug: string; player_user_id?: string; player_name?: string;
+  player_gamertag?: string; from_team_name: string | null; to_team_name: string;
+  signed_at: string; transfer_type: string;
+}
+
+interface TransferPostRow {
+  id: string; game_slug: string; type: string; user_id: string; user_name: string;
+  user_gamertag: string; team_id: string | null; team_name: string | null;
+  position: string; platform: string; status: string; message: string;
+  expires_at: string; created_at: string;
+}
+
+interface GameConfigurationRow {
+  slug: string; name: string; max_squad_cap: number; max_transfers_per_window: number;
+  post_expiration_days: number; positions_json: string | string[] | null; brand_color: string | null;
+}
+
+interface ContractOfferRow {
+  id: string; game_slug: string; team_id: string; team_name: string; team_tag: string;
+  player_user_id?: string; offered_by_user_id?: string; position: string;
+  pitch_message: string | null; offer_type?: string; status: string; created_at: string;
+}
+
+interface ChatThreadRow {
+  id: string; channel_type: ChatThreadDTO['channelType']; game_slug: string; title: string | null;
+  participant_a_id: string; participant_a_name: string; participant_a_role: string;
+  participant_b_id: string; participant_b_name: string | null; participant_b_role: string | null;
+  last_message_text: string | null; last_message_at: string; unread_count: number;
+}
+
+interface ChatMessageRow {
+  id: string; thread_id: string; sender_id: string; sender_name: string;
+  sender_role: string; message_text: string; created_at: string;
+}
+
+interface UserRoleRow {
+  id: string; name: string; gamertag: string; role: string; primary_game_slug: string;
+  is_banned: number; ban_reason: string | null;
+}
+
+function isManagerEntry(value: unknown): value is { id: string } {
+  return typeof value === 'object' && value !== null && 'id' in value && typeof value.id === 'string';
+}
 
 export interface CreateCompetitionInput {
   name: string;
@@ -29,6 +105,7 @@ export interface CreateCompetitionInput {
   seasonId?: string | null;
   newSeasonName?: string;
   organizationId?: string | null;
+  status?: string;
 }
 
 // ── User Service ────────────────────────────────────────────────────────────
@@ -45,7 +122,7 @@ export interface RegisterUserInput {
 
 export interface RegisterUserResult {
   success: boolean;
-  user?: any;
+  user?: User;
   tokenPair?: { accessToken: string; refreshToken: string };
   error?: string;
   code?: string;
@@ -53,7 +130,7 @@ export interface RegisterUserResult {
 
 export async function registerUserService(data: RegisterUserInput): Promise<RegisterUserResult> {
   // Rate limiting
-  const rateLimit = checkRateLimit(createRateLimitKey(data.email, 'register'), 5, 60 * 60 * 1000);
+  const rateLimit = await consumeSecurityRateLimit('auth-register-service', data.email.trim(), 5, 60 * 60 * 1000);
   if (!rateLimit.allowed) {
     return { success: false, error: 'Demasiados intentos de registro. Intenta más tarde.', code: 'RATE_LIMITED' };
   }
@@ -105,19 +182,20 @@ export async function registerUserService(data: RegisterUserInput): Promise<Regi
   });
 
   // Generate tokens
+  const session = await createServiceAuthSession(user.id);
   const tokenPair = generateTokenPair({
     userId: user.id,
     role: user.role,
     gamertag: user.gamertag,
     organizationId: user.organizationId,
-  });
+  }, session.sessionId);
 
   return { success: true, user, tokenPair };
 }
 
 export interface LoginResult {
   success: boolean;
-  user?: any;
+  user?: User;
   tokenPair?: { accessToken: string; refreshToken: string };
   error?: string;
   code?: string;
@@ -125,7 +203,7 @@ export interface LoginResult {
 
 export async function loginUserService(emailOrGamertag: string, password: string): Promise<LoginResult> {
   // Rate limiting
-  const rateLimit = checkRateLimit(createRateLimitKey(emailOrGamertag, 'login'), 10, 15 * 60 * 1000);
+  const rateLimit = await consumeSecurityRateLimit('auth-login-service', emailOrGamertag.trim(), 10, 15 * 60 * 1000);
   if (!rateLimit.allowed) {
     return { success: false, error: 'Demasiados intentos de inicio de sesión. Intenta en 15 minutos.', code: 'RATE_LIMITED' };
   }
@@ -151,12 +229,13 @@ export async function loginUserService(emailOrGamertag: string, password: string
   // Update last login
   await userRepository.update(user.id, { lastLoginAt: new Date().toISOString().slice(0, 19).replace('T', ' ') });
 
+  const session = await createServiceAuthSession(user.id);
   const tokenPair = generateTokenPair({
     userId: user.id,
     role: user.role,
     gamertag: user.gamertag,
     organizationId: user.organizationId,
-  });
+  }, session.sessionId);
 
   return { success: true, user, tokenPair };
 }
@@ -164,6 +243,7 @@ export async function loginUserService(emailOrGamertag: string, password: string
 // ── Team Service ────────────────────────────────────────────────────────────
 
 export interface CreateTeamInput {
+  id?: string;
   name: string;
   tag: string;
   gameSlug: 'eafc26' | 'valorant' | 'csgo' | 'lol' | 'rocketleague' | 'fortnite';
@@ -174,11 +254,16 @@ export interface CreateTeamInput {
   position?: string;
   vacantPositions?: string[];
   organizationId?: string | null;
+  managerIds?: string[];
+  status?: string;
+  clubIdEa?: string | null;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
 }
 
 export interface CreateTeamResult {
   success: boolean;
-  team?: any;
+  team?: Partial<Team> & Pick<Team, 'id' | 'name' | 'tag' | 'gameSlug' | 'captainId' | 'captainName'>;
   error?: string;
   code?: string;
 }
@@ -186,6 +271,7 @@ export interface CreateTeamResult {
 export async function createTeamService(data: CreateTeamInput, captainId: string, captainName: string): Promise<CreateTeamResult> {
   const validation = validateSchema(
     z.object({
+      id: z.string().min(1).max(36).optional(),
       name: z.string().min(3).max(100),
       tag: z.string().min(2).max(10).regex(/^[A-Z0-9]+$/),
       gameSlug: z.enum(['eafc26', 'valorant', 'csgo', 'lol', 'rocketleague', 'fortnite']),
@@ -196,6 +282,11 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
       position: z.string().optional(),
       vacantPositions: z.array(z.string()).optional(),
       organizationId: uuidSchema,
+      managerIds: z.array(z.string().min(1).max(100)).default([]),
+      status: z.string().max(50).default('Activo'),
+      clubIdEa: z.string().max(100).nullable().optional(),
+      logoUrl: z.string().max(2000).nullable().optional(),
+      bannerUrl: z.string().max(2000).nullable().optional(),
     }),
     data
   );
@@ -204,49 +295,343 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
     return { success: false, error: validation.errors.join(', '), code: 'VALIDATION_ERROR' };
   }
 
-  // Check if user already owns a team in this discipline
-  const existingTeams = await teamRepository.findByCaptain(captainId, validation.data.gameSlug);
-  if (existingTeams.length > 0) {
-    return { 
-      success: false, 
-      error: `Ya posees el club "${existingTeams[0].name}" en esta disciplina. Solo se permite 1 club por disciplina por usuario.`,
-      code: 'DUPLICATE_TEAM'
-    };
-  }
+  return withTransaction(async (transaction) => {
+    const captains = await transaction.queryRows<{ id: string }>('SELECT id FROM users WHERE id = ? FOR UPDATE', [captainId]);
+    if (captains.length === 0) return { success: false, error: 'Capitán no encontrado', code: 'CAPTAIN_NOT_FOUND' };
 
-  const team = await teamRepository.create({
-    ...validation.data,
-    captainId,
-    captainName,
-    membersCount: 1,
-    maxMembers: 45,
-    status: 'Activo',
-  });
+    if (validation.data.organizationId) {
+      const organizations = await transaction.queryRows<{ id: string }>(
+        'SELECT id FROM organizations WHERE id = ? FOR UPDATE',
+        [validation.data.organizationId],
+      );
+      if (organizations.length === 0) return { success: false, error: 'Organización no encontrada', code: 'ORG_NOT_FOUND' };
+    }
 
-  // Add captain as team member
-  await queryDB(
-    `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
-     VALUES (?, ?, ?, ?, 'Capitan')
-     ON DUPLICATE KEY UPDATE role_in_team = 'Capitan'`,
-    [`tm-${Date.now()}`, team.id, captainId, validation.data.position || 'DFC']
-  );
+    const managerIds = [...new Set(validation.data.managerIds)].filter((userId) => userId !== captainId);
+    if (managerIds.length > 0) {
+      const managers = await transaction.queryRows<{ id: string }>(
+        `SELECT id FROM users WHERE id IN (${managerIds.map(() => '?').join(', ')}) FOR UPDATE`,
+        managerIds,
+      );
+      if (managers.length !== managerIds.length) return { success: false, error: 'Uno o más encargados no existen.', code: 'MANAGER_NOT_FOUND' };
+    }
 
-  // Update user organization if team has one
-  if (team.organizationId) {
-    await queryDB(
-      `UPDATE users SET organization_id = ? WHERE id = ? AND (organization_id IS NULL OR organization_id = '')`,
-      [team.organizationId, captainId]
+    const existingTeams = await transaction.queryRows<{ id: string; name: string }>(
+      'SELECT id, name FROM teams WHERE captain_id = ? AND game_slug = ? FOR UPDATE',
+      [captainId, validation.data.gameSlug],
     );
-  }
+    if (existingTeams.length > 0) {
+      return {
+        success: false,
+        error: `Ya posees el club "${existingTeams[0].name}" en esta disciplina. Solo se permite 1 club por disciplina por usuario.`,
+        code: 'DUPLICATE_TEAM',
+      };
+    }
 
-  return { success: true, team };
+    const teamId = validation.data.id || randomUUID();
+    await transaction.executeCommand(
+      `INSERT INTO teams
+        (id, name, tag, game_slug, organization_id, captain_id, captain_name, platform, members_count,
+         max_members, color, logo_text, description, vacant_positions, status, club_id_ea, logo_url, banner_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 45, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        teamId, validation.data.name, validation.data.tag, validation.data.gameSlug,
+        validation.data.organizationId || null, captainId, captainName, validation.data.platform,
+        validation.data.color, validation.data.logoText, validation.data.description || null,
+        JSON.stringify(validation.data.vacantPositions || []), validation.data.status,
+        validation.data.clubIdEa || null, validation.data.logoUrl || null, validation.data.bannerUrl || null,
+      ],
+    );
+    for (const managerId of managerIds) {
+      await transaction.executeCommand(
+        `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
+         VALUES (?, ?, ?, 'ENCARGADO', 'Encargado')`,
+        [randomUUID(), teamId, managerId],
+      );
+    }
+    await transaction.executeCommand(
+      `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
+       VALUES (?, ?, ?, ?, 'Capitan')`,
+      [randomUUID(), teamId, captainId, validation.data.position || 'DFC'],
+    );
+    if (validation.data.organizationId) {
+      await transaction.executeCommand(
+        `UPDATE users SET organization_id = ? WHERE id = ? AND (organization_id IS NULL OR organization_id = '')`,
+        [validation.data.organizationId, captainId],
+      );
+    }
+
+    return {
+      success: true,
+      team: { id: teamId, ...validation.data, captainId, captainName, membersCount: 1, maxMembers: 45 },
+    };
+  });
+}
+
+export interface ManagedOrganizationInput {
+  name: string;
+  tag: string;
+  ownerId: string;
+  allowedGames?: string[];
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
+  country?: string | null;
+  foundedYear?: string | number | null;
+  rating?: string | number | null;
+  website?: string | null;
+  socialMedia?: Record<string, unknown> | null;
+  organizerIds?: string[];
+  status?: string | null;
+}
+
+export async function createManagedOrganizationService(data: ManagedOrganizationInput) {
+  return withTransaction(async (transaction) => {
+    const owners = await transaction.queryRows<{ id: string }>('SELECT id FROM users WHERE id = ? FOR UPDATE', [data.ownerId]);
+    if (owners.length === 0) return { success: false, error: 'Propietario no encontrado.' };
+    const organizerIds = [...new Set(data.organizerIds || [])];
+    if (organizerIds.length > 0) {
+      const organizers = await transaction.queryRows<{ id: string }>(
+        `SELECT id FROM users WHERE id IN (${organizerIds.map(() => '?').join(', ')}) AND role = 'Organizador' FOR UPDATE`,
+        organizerIds,
+      );
+      if (organizers.length !== organizerIds.length) return { success: false, error: 'Uno o más organizadores no son válidos.' };
+    }
+    const duplicates = await transaction.queryRows<{ id: string }>(
+      'SELECT id FROM organizations WHERE name = ? OR tag = ? FOR UPDATE',
+      [data.name, data.tag],
+    );
+    if (duplicates.length > 0) return { success: false, error: 'Ya existe una organización con ese nombre o tag.' };
+
+    const organizationId = randomUUID();
+    await transaction.executeCommand(
+      `INSERT INTO organizations
+        (id, name, tag, owner_id, allowed_games, logo_url, banner_url, country, founded_year, rating, website, redes_sociales, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        organizationId, data.name, data.tag, data.ownerId, JSON.stringify(data.allowedGames || ['eafc26', 'valorant']),
+        data.logoUrl || '/images/default/logo-default.png', data.bannerUrl || '/images/default/banner-default.jpg',
+        data.country || 'Venezuela', data.foundedYear || '2020', data.rating || '4.95', data.website || null,
+        JSON.stringify(data.socialMedia || {}), data.status || 'Activa',
+      ],
+    );
+    for (const organizerId of organizerIds) {
+      await transaction.executeCommand('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
+    }
+    return { success: true, organizationId };
+  });
+}
+
+export async function updateManagedOrganizationService(
+  organizationId: string,
+  data: Partial<ManagedOrganizationInput>,
+) {
+  return withTransaction(async (transaction) => {
+    const organizations = await transaction.queryRows<{ id: string }>(
+      'SELECT id FROM organizations WHERE id = ? FOR UPDATE',
+      [organizationId],
+    );
+    if (organizations.length === 0) return { success: false, error: 'Organización no encontrada.' };
+    const organizerIds = data.organizerIds === undefined ? undefined : [...new Set(data.organizerIds)];
+    if (organizerIds && organizerIds.length > 0) {
+      const organizers = await transaction.queryRows<{ id: string }>(
+        `SELECT id FROM users WHERE id IN (${organizerIds.map(() => '?').join(', ')}) AND role = 'Organizador' FOR UPDATE`,
+        organizerIds,
+      );
+      if (organizers.length !== organizerIds.length) return { success: false, error: 'Uno o más organizadores no son válidos.' };
+    }
+    if (data.ownerId) {
+      const owners = await transaction.queryRows<{ id: string }>('SELECT id FROM users WHERE id = ? FOR UPDATE', [data.ownerId]);
+      if (owners.length === 0) return { success: false, error: 'Propietario no encontrado.' };
+    }
+
+    await transaction.executeCommand(
+      `UPDATE organizations SET
+        name = COALESCE(?, name), tag = COALESCE(?, tag), owner_id = COALESCE(?, owner_id),
+        allowed_games = COALESCE(?, allowed_games), logo_url = COALESCE(?, logo_url), banner_url = COALESCE(?, banner_url),
+        country = COALESCE(?, country), founded_year = COALESCE(?, founded_year), rating = COALESCE(?, rating),
+        website = COALESCE(?, website), redes_sociales = COALESCE(?, redes_sociales), status = COALESCE(?, status)
+       WHERE id = ?`,
+      [
+        data.name || null, data.tag || null, data.ownerId || null,
+        data.allowedGames ? JSON.stringify(data.allowedGames) : null, data.logoUrl ?? null, data.bannerUrl ?? null,
+        data.country ?? null, data.foundedYear ?? null, data.rating ?? null, data.website ?? null,
+        data.socialMedia ? JSON.stringify(data.socialMedia) : null, data.status ?? null, organizationId,
+      ],
+    );
+    if (organizerIds) {
+      await transaction.queryRows(
+        "SELECT id FROM users WHERE organization_id = ? AND role = 'Organizador' FOR UPDATE",
+        [organizationId],
+      );
+      await transaction.executeCommand(
+        "UPDATE users SET organization_id = NULL WHERE organization_id = ? AND role = 'Organizador'",
+        [organizationId],
+      );
+      for (const organizerId of organizerIds) {
+        await transaction.executeCommand('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
+      }
+    }
+    return { success: true };
+  });
+}
+
+export async function archiveManagedOrganizationService(organizationId: string) {
+  return withTransaction(async (transaction) => {
+    const organizations = await transaction.queryRows<{ id: string; status: string }>(
+      'SELECT id, status FROM organizations WHERE id = ? FOR UPDATE',
+      [organizationId],
+    );
+    if (organizations.length === 0) return { success: false, error: 'Organización no encontrada.' };
+
+    const activeDependencies = await transaction.queryRows<{ id: string }>(
+      `SELECT DISTINCT c.id
+         FROM competitions c
+         LEFT JOIN competition_teams ct ON ct.competition_id = c.id AND ct.status = 'CONFIRMADO'
+         LEFT JOIN teams t ON t.id = ct.team_id
+        WHERE c.status IN ('Activo', 'Inscripcion', 'En Curso')
+          AND (c.organization_id = ? OR t.organization_id = ?)
+        FOR UPDATE`,
+      [organizationId, organizationId],
+    );
+    if (activeDependencies.length > 0) {
+      return { success: false, error: 'No se puede archivar mientras existan competencias activas asociadas.' };
+    }
+
+    const teamRows = await transaction.queryRows<{ id: string }>(
+      'SELECT id FROM teams WHERE organization_id = ? FOR UPDATE',
+      [organizationId],
+    );
+    const teamIds = teamRows.map((team) => team.id);
+    if (teamIds.length > 0) {
+      const placeholders = teamIds.map(() => '?').join(', ');
+      await transaction.executeCommand(
+        `UPDATE team_vacancies SET status = 'CERRADA' WHERE team_id IN (${placeholders}) AND status = 'ABIERTA'`,
+        teamIds,
+      );
+      await transaction.executeCommand(
+        `UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE team_id IN (${placeholders}) AND status = 'ACTIVO'`,
+        teamIds,
+      );
+      await transaction.executeCommand(
+        `UPDATE teams SET status = 'Archivado', updated_at = NOW() WHERE id IN (${placeholders})`,
+        teamIds,
+      );
+    }
+    await transaction.executeCommand(
+      "UPDATE organizations SET status = 'Archivada', updated_at = NOW() WHERE id = ?",
+      [organizationId],
+    );
+    return { success: true, archivedTeams: teamIds.length };
+  });
+}
+
+export interface ManagedTeamUpdate {
+  name?: string;
+  tag?: string;
+  gameSlug?: string;
+  organizationId?: string | null;
+  captainId?: string;
+  captainName?: string;
+  managerIds?: string[];
+  platform?: string;
+  color?: string;
+  logoText?: string;
+  description?: string;
+  status?: string;
+  clubIdEa?: string | null;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
+}
+
+export async function updateManagedTeamService(teamId: string, data: ManagedTeamUpdate) {
+  return withTransaction(async (transaction) => {
+    const teams = await transaction.queryRows<{ id: string; captain_id: string }>('SELECT id, captain_id FROM teams WHERE id = ? FOR UPDATE', [teamId]);
+    if (teams.length === 0) return { success: false, error: 'Equipo no encontrado.' };
+    const captainId = data.captainId || teams[0].captain_id;
+    const staffIds = [...new Set([captainId, ...(data.managerIds || [])])];
+    const staff = await transaction.queryRows<{ id: string }>(
+      `SELECT id FROM users WHERE id IN (${staffIds.map(() => '?').join(', ')}) FOR UPDATE`,
+      staffIds,
+    );
+    if (staff.length !== staffIds.length) return { success: false, error: 'Uno o más responsables no existen.' };
+    if (data.organizationId) {
+      const organizations = await transaction.queryRows<{ id: string }>('SELECT id FROM organizations WHERE id = ? FOR UPDATE', [data.organizationId]);
+      if (organizations.length === 0) return { success: false, error: 'Organización no encontrada.' };
+    }
+    await transaction.executeCommand(
+      `UPDATE teams SET name = COALESCE(?, name), tag = COALESCE(?, tag), game_slug = COALESCE(?, game_slug),
+        organization_id = COALESCE(?, organization_id), captain_id = ?, captain_name = COALESCE(?, captain_name),
+        platform = COALESCE(?, platform), color = COALESCE(?, color), logo_text = COALESCE(?, logo_text),
+        description = COALESCE(?, description), status = COALESCE(?, status), club_id_ea = COALESCE(?, club_id_ea),
+        logo_url = COALESCE(?, logo_url), banner_url = COALESCE(?, banner_url), updated_at = NOW() WHERE id = ?`,
+      [
+        data.name || null, data.tag || null, data.gameSlug || null, data.organizationId || null, captainId,
+        data.captainName || null, data.platform || null, data.color || null, data.logoText || null,
+        data.description || null, data.status || null, data.clubIdEa ?? null, data.logoUrl ?? null, data.bannerUrl ?? null, teamId,
+      ],
+    );
+    if (data.captainId || data.managerIds) {
+      await transaction.queryRows(
+        "SELECT id FROM team_members WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado') FOR UPDATE",
+        [teamId],
+      );
+      await transaction.executeCommand(
+        "DELETE FROM team_members WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado')",
+        [teamId],
+      );
+      await transaction.executeCommand(
+        `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, 'CAPITAN', 'Capitán')`,
+        [randomUUID(), teamId, captainId],
+      );
+      for (const managerId of data.managerIds || []) {
+        if (managerId === captainId) continue;
+        await transaction.executeCommand(
+          `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, 'ENCARGADO', 'Encargado')`,
+          [randomUUID(), teamId, managerId],
+        );
+      }
+    }
+    return { success: true };
+  });
+}
+
+export async function archiveManagedTeamService(teamId: string) {
+  return withTransaction(async (transaction) => {
+    const teams = await transaction.queryRows<{ id: string }>('SELECT id FROM teams WHERE id = ? FOR UPDATE', [teamId]);
+    if (teams.length === 0) return { success: false, error: 'Equipo no encontrado.' };
+    const activeCompetitions = await transaction.queryRows<{ id: string }>(
+      `SELECT ct.id
+         FROM competition_teams ct
+         JOIN competitions c ON c.id = ct.competition_id
+        WHERE ct.team_id = ? AND ct.status = 'CONFIRMADO'
+          AND c.status IN ('Activo', 'Inscripcion', 'En Curso') FOR UPDATE`,
+      [teamId],
+    );
+    if (activeCompetitions.length > 0) {
+      return { success: false, error: 'No se puede archivar un equipo inscrito en una competencia activa.' };
+    }
+    await transaction.executeCommand(
+      "UPDATE team_vacancies SET status = 'CERRADA' WHERE team_id = ? AND status = 'ABIERTA'",
+      [teamId],
+    );
+    await transaction.executeCommand(
+      "UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE team_id = ? AND status = 'ACTIVO'",
+      [teamId],
+    );
+    await transaction.executeCommand(
+      "UPDATE transfer_offers SET status = 'CANCELADO' WHERE team_id = ? AND status = 'PENDIENTE'",
+      [teamId],
+    );
+    await transaction.executeCommand("UPDATE teams SET status = 'Archivado', updated_at = NOW() WHERE id = ?", [teamId]);
+    return { success: true };
+  });
 }
 
 export async function getAvailablePlayersForSquadService(
   teamId: string,
   searchQuery?: string,
   organizerUserId?: string
-): Promise<{ success: boolean; players: any[]; error?: string }> {
+): Promise<{ success: boolean; players: AvailablePlayerRow[]; error?: string }> {
   try {
     // Get team info
     const team = await teamRepository.findById(teamId);
@@ -271,7 +656,7 @@ export async function getAvailablePlayersForSquadService(
       WHERE u.id NOT IN (SELECT DISTINCT user_id FROM team_members)
       AND u.is_banned = 0
     `;
-    const params: any[] = [];
+    const params: DatabaseParams = [];
 
     if (organizerOrgId) {
       sql += ` AND (u.organization_id = ? OR u.organization_id IS NULL OR u.organization_id = '')`;
@@ -286,11 +671,11 @@ export async function getAvailablePlayersForSquadService(
 
     sql += ` ORDER BY u.name ASC LIMIT 50`;
 
-    const players = await queryDB(sql, params);
+    const players = await queryDB<AvailablePlayerRow>(sql, params);
     return { success: true, players };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getAvailablePlayersForSquadService:', error);
-    return { success: false, players: [], error: error?.message || 'Error al buscar jugadores' };
+    return { success: false, players: [], error: getErrorMessage(error, 'Error al buscar jugadores') };
   }
 }
 
@@ -318,7 +703,7 @@ export async function getTeamSquadService(teamId: string): Promise<GetTeamSquadR
   try {
     if (!teamId) return { success: false, error: 'ID de equipo requerido.', code: 'MISSING_PARAMS' };
 
-    const squadRows = await queryDB<any>(
+    const squadRows = await queryDB<SquadRow>(
       `SELECT 
         tm.id, tm.team_id, tm.user_id, tm.organization_name, tm.tactical_position, tm.role_in_team, tm.jersey_number, tm.joined_at,
         u.name as user_name, u.gamertag, u.email, u.avatar_url, u.foto
@@ -330,13 +715,13 @@ export async function getTeamSquadService(teamId: string): Promise<GetTeamSquadR
     );
 
     // Fetch accepted contract offers for this team to get organizations
-    const acceptedOffers = await queryDB<any>(
+    const acceptedOffers = await queryDB<{ player_user_id: string; pitch_message: string | null }>(
       `SELECT player_user_id, pitch_message FROM transfer_offers WHERE team_id = ? AND status = 'ACEPTADO'`,
       [teamId]
     );
 
     // Fetch competitions/organizations for this team
-    const compOrgs = await queryDB<any>(
+    const compOrgs = await queryDB<{ org_id: string; org_name: string }>(
       `SELECT DISTINCT o.id as org_id, o.name as org_name
        FROM competition_teams ct
        JOIN competitions c ON ct.competition_id = c.id
@@ -346,7 +731,7 @@ export async function getTeamSquadService(teamId: string): Promise<GetTeamSquadR
     );
 
     // Group squadRows by user_id to prevent duplicate cards for multi-org players
-    const userMap: Record<string, any> = {};
+    const userMap: Record<string, SquadWithOrganizations> = {};
     for (const r of squadRows) {
       if (!userMap[r.user_id]) {
         userMap[r.user_id] = { ...r, member_org_names: [] };
@@ -357,7 +742,7 @@ export async function getTeamSquadService(teamId: string): Promise<GetTeamSquadR
     }
     const uniqueSquad = Object.values(userMap);
 
-    const squadWithOrgs = uniqueSquad.map((member: any) => {
+    const squadWithOrgs = uniqueSquad.map((member) => {
       const orgNamesSet = new Set<string>();
       const orgIdsSet = new Set<string>();
 
@@ -395,9 +780,9 @@ export async function getTeamSquadService(teamId: string): Promise<GetTeamSquadR
     });
 
     return { success: true, squad: squadWithOrgs };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getTeamSquadService:', error);
-    return { success: false, error: error?.message || 'Error al obtener la plantilla.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getErrorMessage(error, 'Error al obtener la plantilla.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -413,45 +798,53 @@ export async function addPlayerToSquadService(
   tacticalPosition?: string,
   roleInTeam: 'Capitan' | 'Capitán' | 'Encargado' | 'Jugador' | 'DT / Analyst' = 'Jugador'
 ): Promise<AddPlayerToSquadResult> {
-  // Verify team exists
-  const team = await teamRepository.findById(teamId);
-  if (!team) {
-    return { success: false, error: 'Equipo no encontrado', code: 'TEAM_NOT_FOUND' };
-  }
-
-  // Check if player already in a team
-  const existing = await queryDB<{ id: string }>(`SELECT id FROM team_members WHERE user_id = ?`, [userId]);
-  if (existing.length > 0) {
-    return { success: false, error: 'El jugador ya pertenece a otra escuadra', code: 'PLAYER_IN_TEAM' };
-  }
-
-  // Get position if not provided
-  let positionToUse = tacticalPosition;
-  if (!positionToUse) {
-    const users = await queryDB<{ position: string }>(`SELECT position FROM users WHERE id = ?`, [userId]);
-    positionToUse = users[0]?.position || 'DEL';
-  }
-
-  // Add to team_members
-  const memberId = `tm-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  await queryDB(
-    `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
-     VALUES (?, ?, ?, ?, ?)`,
-    [memberId, teamId, userId, positionToUse, roleInTeam]
-  );
-
-  // Update user organization
-  if (team.organizationId) {
-    await queryDB(
-      `UPDATE users SET organization_id = ? WHERE id = ? AND (organization_id IS NULL OR organization_id = '')`,
-      [team.organizationId, userId]
+  return withTransaction(async (transaction) => {
+    const users = await transaction.queryRows<{ position: string }>(
+      'SELECT position FROM users WHERE id = ? FOR UPDATE',
+      [userId],
     );
-  }
+    if (users.length === 0) {
+      return { success: false, error: 'Jugador no encontrado', code: 'USER_NOT_FOUND' };
+    }
 
-  // Update members count
-  await teamRepository.updateMembersCount(teamId);
+    const teams = await transaction.queryRows<{ organization_id: string | null }>(
+      'SELECT organization_id FROM teams WHERE id = ? FOR UPDATE',
+      [teamId],
+    );
+    if (teams.length === 0) {
+      return { success: false, error: 'Equipo no encontrado', code: 'TEAM_NOT_FOUND' };
+    }
 
-  return { success: true };
+    const existing = await transaction.queryRows<{ id: string }>(
+      'SELECT id FROM team_members WHERE user_id = ? FOR UPDATE',
+      [userId],
+    );
+    if (existing.length > 0) {
+      return { success: false, error: 'El jugador ya pertenece a otra escuadra', code: 'PLAYER_IN_TEAM' };
+    }
+
+    const positionToUse = tacticalPosition || users[0].position || 'DEL';
+
+    const memberId = `tm-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    await transaction.executeCommand(
+      `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
+       VALUES (?, ?, ?, ?, ?)`,
+      [memberId, teamId, userId, positionToUse, roleInTeam],
+    );
+
+    if (teams[0].organization_id) {
+      await transaction.executeCommand(
+        `UPDATE users SET organization_id = ? WHERE id = ? AND (organization_id IS NULL OR organization_id = '')`,
+        [teams[0].organization_id, userId],
+      );
+    }
+
+    await transaction.executeCommand(
+      'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
+      [teamId, teamId],
+    );
+    return { success: true };
+  });
 }
 
 export async function isUserTeamManagerOrCaptainService(userId: string, teamId: string): Promise<boolean> {
@@ -459,14 +852,14 @@ export async function isUserTeamManagerOrCaptainService(userId: string, teamId: 
 
   try {
     // 1. Check if user is global Admin or Organizer
-    const userRows = await queryDB<any>('SELECT role FROM users WHERE id = ? LIMIT 1', [userId]);
+    const userRows = await queryDB<{ role: string }>('SELECT role FROM users WHERE id = ? LIMIT 1', [userId]);
     if (userRows && userRows.length > 0) {
       const r = userRows[0].role;
       if (r === 'Administrador' || r === 'Organizador') return true;
     }
 
     // 2. Check if user is Official Captain or listed in encargados_json
-    const teamRows = await queryDB<any>('SELECT captain_id, encargados_json FROM teams WHERE id = ? LIMIT 1', [teamId]);
+    const teamRows = await queryDB<{ captain_id: string; encargados_json: string | unknown[] | null }>('SELECT captain_id, encargados_json FROM teams WHERE id = ? LIMIT 1', [teamId]);
     if (teamRows && teamRows.length > 0) {
       if (teamRows[0].captain_id === userId) return true;
 
@@ -474,15 +867,15 @@ export async function isUserTeamManagerOrCaptainService(userId: string, teamId: 
       if (jsonStr) {
         try {
           const arr = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
-          if (Array.isArray(arr) && arr.some((enc: any) => (typeof enc === 'string' ? enc === userId : enc.id === userId))) {
+          if (Array.isArray(arr) && arr.some((enc: unknown) => (typeof enc === 'string' ? enc === userId : isManagerEntry(enc) && enc.id === userId))) {
             return true;
           }
-        } catch (e) {}
+        } catch {}
       }
     }
 
     // 3. Check team_members table for role 'Capitán', 'Capitan', 'Encargado', 'DT / Analyst'
-    const memberRows = await queryDB<any>(
+    const memberRows = await queryDB<{ role_in_team: string }>(
       `SELECT role_in_team FROM team_members 
        WHERE team_id = ? AND user_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán') LIMIT 1`,
       [teamId, userId]
@@ -502,18 +895,44 @@ export interface RemovePlayerFromSquadResult {
 }
 
 export async function removePlayerFromSquadService(teamId: string, userId: string, orgName?: string): Promise<RemovePlayerFromSquadResult> {
-  if (orgName) {
-    // Delete specifically for this organization
-    await queryDB(`DELETE FROM team_members WHERE team_id = ? AND user_id = ? AND LOWER(organization_name) = LOWER(?)`, [teamId, userId, orgName]);
-    await queryDB(`UPDATE transfer_offers SET status = 'CONCLUIDO' WHERE team_id = ? AND player_user_id = ? AND status = 'ACEPTADO' AND LOWER(pitch_message) LIKE LOWER(?)`, [teamId, userId, `%[organización: ${orgName}]%`]);
-  } else {
-    // Delete completely from the team
-    await queryDB(`DELETE FROM team_members WHERE team_id = ? AND user_id = ?`, [teamId, userId]);
-    await queryDB(`UPDATE transfer_offers SET status = 'CONCLUIDO' WHERE team_id = ? AND player_user_id = ? AND status = 'ACEPTADO'`, [teamId, userId]);
-  }
-  
-  await teamRepository.updateMembersCount(teamId);
-  return { success: true };
+  return withTransaction(async (transaction) => {
+    await transaction.queryRows('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId]);
+    await transaction.queryRows('SELECT id FROM teams WHERE id = ? FOR UPDATE', [teamId]);
+    const membership = await transaction.queryRows<{ id: string }>(
+      orgName
+        ? 'SELECT id FROM team_members WHERE team_id = ? AND user_id = ? AND LOWER(organization_name) = LOWER(?) FOR UPDATE'
+        : 'SELECT id FROM team_members WHERE team_id = ? AND user_id = ? FOR UPDATE',
+      orgName ? [teamId, userId, orgName] : [teamId, userId],
+    );
+    if (membership.length === 0) {
+      return { success: false, error: 'El jugador no pertenece a la plantilla', code: 'MEMBER_NOT_FOUND' };
+    }
+
+    if (orgName) {
+      await transaction.executeCommand(
+        'DELETE FROM team_members WHERE team_id = ? AND user_id = ? AND LOWER(organization_name) = LOWER(?)',
+        [teamId, userId, orgName],
+      );
+      await transaction.executeCommand(
+        `UPDATE transfer_offers SET status = 'CONCLUIDO'
+          WHERE team_id = ? AND player_user_id = ? AND status = 'ACEPTADO'
+            AND LOWER(pitch_message) LIKE LOWER(?)`,
+        [teamId, userId, `%[organización: ${orgName}]%`],
+      );
+    } else {
+      await transaction.executeCommand('DELETE FROM team_members WHERE team_id = ? AND user_id = ?', [teamId, userId]);
+      await transaction.executeCommand(
+        "UPDATE transfer_offers SET status = 'CONCLUIDO' WHERE team_id = ? AND player_user_id = ? AND status = 'ACEPTADO'",
+        [teamId, userId],
+      );
+    }
+
+    await transaction.executeCommand(
+      'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
+      [teamId, teamId],
+    );
+    return { success: true };
+  });
 }
 
 export async function updateSquadMemberJerseyService(memberId: string, jerseyNumber: number | null) {
@@ -521,8 +940,8 @@ export async function updateSquadMemberJerseyService(memberId: string, jerseyNum
   try {
     await queryDB('UPDATE team_members SET jersey_number = ? WHERE id = ?', [jerseyNumber, memberId]);
     return { success: true, message: 'Dorsal asignado y actualizado exitosamente en MySQL.' };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Error al actualizar dorsal.' };
+  } catch (err: unknown) {
+    return { success: false, error: getErrorMessage(err, 'Error al actualizar dorsal.') };
   }
 }
 
@@ -539,7 +958,7 @@ export async function getAllPlayersForContractOfferService(gameSlug: string, sea
       LEFT JOIN teams t ON tm.team_id = t.id
       WHERE u.is_banned = 0
     `;
-    const params: any[] = [];
+    const params: DatabaseParams = [];
 
     if (searchQuery && searchQuery.trim()) {
       const q = `%${searchQuery.trim()}%`;
@@ -551,9 +970,9 @@ export async function getAllPlayersForContractOfferService(gameSlug: string, sea
 
     const players = await queryDB(sql, params);
     return { success: true, players };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getAllPlayersForContractOfferService:', error);
-    return { success: false, players: [], error: error?.message || 'Error al buscar todos los jugadores' };
+    return { success: false, players: [], error: getErrorMessage(error, 'Error al buscar todos los jugadores') };
   }
 }
 
@@ -578,30 +997,32 @@ export async function sendClubContractOfferService(data: {
       ? [data.organizationId]
       : ['Organización General'];
 
-    let count = 0;
-    for (const orgNameOrId of orgsToProcess) {
-      const offerId = `off-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      const pitchText = `[Organización: ${orgNameOrId}] ` + (data.pitchMessage || 'Oferta formal de contrato para unirse a la plantilla de la escuadra.');
+    return await withTransaction(async (transaction) => {
+      const teams = await transaction.queryRows<{ id: string }>('SELECT id FROM teams WHERE id = ? FOR UPDATE', [data.teamId]);
+      const players = await transaction.queryRows<{ id: string }>('SELECT id FROM users WHERE id = ? FOR UPDATE', [data.playerUserId]);
+      if (teams.length === 0 || players.length === 0) return { success: false, error: 'Equipo o jugador no encontrado.' };
 
-      await queryDB(
-        `INSERT INTO transfer_offers (id, game_slug, team_id, player_user_id, offered_by_user_id, position, pitch_message, offer_type, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'OFERTA_CLUB', 'PENDIENTE')`,
-        [
-          offerId,
-          data.gameSlug || 'eafc26',
-          data.teamId,
-          data.playerUserId,
-          data.offeredByUserId || 'usr-manager',
-          data.position || 'DC',
-          pitchText,
-        ]
+      const pending = await transaction.queryRows<{ pitch_message: string | null }>(
+        `SELECT pitch_message FROM transfer_offers
+          WHERE team_id = ? AND player_user_id = ? AND status = 'PENDIENTE' FOR UPDATE`,
+        [data.teamId, data.playerUserId],
       );
-      count++;
-    }
-
-    return { success: true, count, message: `Se emitieron ${count} propuesta(s) de contrato independiente(s) por Organización.` };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Error al enviar ofertas de contrato.' };
+      let count = 0;
+      for (const orgNameOrId of orgsToProcess) {
+        const prefix = `[Organización: ${orgNameOrId}]`;
+        if (pending.some((offer) => offer.pitch_message?.startsWith(prefix))) continue;
+        const pitchText = `${prefix} ${data.pitchMessage || 'Oferta formal de contrato para unirse a la plantilla de la escuadra.'}`;
+        await transaction.executeCommand(
+          `INSERT INTO transfer_offers (id, game_slug, team_id, player_user_id, offered_by_user_id, position, pitch_message, offer_type, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'OFERTA_CLUB', 'PENDIENTE')`,
+          [randomUUID(), data.gameSlug || 'eafc26', data.teamId, data.playerUserId, data.offeredByUserId, data.position || 'DC', pitchText],
+        );
+        count++;
+      }
+      return { success: true, count, message: `Se emitieron ${count} propuesta(s) de contrato independiente(s) por Organización.` };
+    });
+  } catch (err: unknown) {
+    return { success: false, error: getErrorMessage(err, 'Error al enviar ofertas de contrato.') };
   }
 }
 
@@ -609,7 +1030,7 @@ export async function sendClubContractOfferService(data: {
 
 export interface CreateCompetitionResult {
   success: boolean;
-  competition?: any;
+  competition?: Competition;
   message?: string;
   error?: string;
   code?: string;
@@ -649,7 +1070,7 @@ export async function createCompetitionService(
     prizePool,
     transferMarketMode,
     modeFormat,
-    status: (data as any).status || 'Inscripcion',
+    status: data.status || 'Inscripcion',
     fechaLimiteInscripcion: fechaLimiteInscripcion ? new Date(fechaLimiteInscripcion).toISOString().slice(0, 19).replace('T', ' ') : null,
     fechaInicio: new Date(fechaInicio).toISOString().slice(0, 19).replace('T', ' '),
     fechaTermino: fechaTermino ? new Date(fechaTermino).toISOString().slice(0, 19).replace('T', ' ') : null,
@@ -683,37 +1104,56 @@ export async function generateFixtureService(
   competitionId: string,
   config: FixtureConfig
 ): Promise<FixtureGenerationResult> {
-  // Get enrolled teams
-  const enrolledTeams = await queryDB<any>(
-    `SELECT * FROM competition_teams WHERE competition_id = ? AND status = 'CONFIRMADO'`,
-    [competitionId]
-  );
+  return withTransaction(async (transaction) => {
+    const competitions = await transaction.queryRows<{ id: string }>(
+      'SELECT id FROM competitions WHERE id = ? FOR UPDATE',
+      [competitionId],
+    );
+    if (competitions.length === 0) {
+      return { success: false, error: 'Competencia no encontrada', code: 'NOT_FOUND' };
+    }
 
-  if (enrolledTeams.length < 2) {
-    return { success: false, error: 'Se requieren al menos 2 equipos confirmados', code: 'NOT_ENOUGH_TEAMS' };
-  }
+    const enrolledTeams = await transaction.queryRows<{ team_id: string; team_name: string; team_tag: string | null }>(
+      `SELECT * FROM competition_teams WHERE competition_id = ? AND status = 'CONFIRMADO' FOR UPDATE`,
+      [competitionId],
+    );
+    if (enrolledTeams.length < 2) {
+      return { success: false, error: 'Se requieren al menos 2 equipos confirmados', code: 'NOT_ENOUGH_TEAMS' };
+    }
 
-  const teams = enrolledTeams.map((t: any) => ({ id: t.team_id, name: t.team_name, tag: t.team_tag }));
+    const teams = enrolledTeams.map((team) => ({ id: team.team_id, name: team.team_name, tag: team.team_tag }));
+    await transaction.executeCommand(
+      'DELETE FROM matches WHERE competition_id = ? OR tournament_id = ?',
+      [competitionId, competitionId],
+    );
 
-  // Delete existing matches
-  await queryDB(`DELETE FROM matches WHERE competition_id = ? OR tournament_id = ?`, [competitionId, competitionId]);
+    const { startDate, selectedDays, selectedTimes, matchMode, format, groupCount, qualifiersPerGroup } = config;
+    const totalSavedMatches = await generateMatchesForFormat(
+      transaction,
+      competitionId,
+      teams,
+      format,
+      matchMode,
+      startDate,
+      selectedDays,
+      selectedTimes,
+      groupCount,
+      qualifiersPerGroup,
+    );
 
-  const { startDate, selectedDays, selectedTimes, matchMode, format, groupCount, qualifiersPerGroup } = config;
-  const totalSavedMatches = await generateMatchesForFormat(competitionId, teams, format, matchMode, startDate, selectedDays, selectedTimes, groupCount, qualifiersPerGroup);
+    await transaction.executeCommand(
+      `UPDATE competitions
+          SET status = 'Activo', format = ?, match_mode = ?, group_count = ?, qualifiers_per_group = ?
+        WHERE id = ?`,
+      [config.format, config.matchMode, config.groupCount, config.qualifiersPerGroup, competitionId],
+    );
 
-  // Update competition status and configuration
-  await competitionRepository.update(competitionId, { 
-    status: 'Activo',
-    format: config.format,
-    matchMode: config.matchMode,
-    groupCount: config.groupCount,
-    qualifiersPerGroup: config.qualifiersPerGroup
-  } as any);
-
-  return { success: true, matchesCreated: totalSavedMatches };
+    return { success: true, matchesCreated: totalSavedMatches };
+  });
 }
 
 async function generateMatchesForFormat(
+  transaction: DatabaseExecutor,
   competitionId: string,
   teams: { id: string; name: string; tag: string | null }[],
   format: 'Liga' | 'Playoff' | 'Hibrido',
@@ -750,7 +1190,7 @@ async function generateMatchesForFormat(
       }
       const timing = getScheduledDateTime(matchdayNumber);
       
-      await queryDB(
+      await transaction.executeCommand(
         `INSERT INTO matches 
          (id, tournament_id, competition_id, matchday_number, matchday, stage, round_name, next_match_id, next_match_slot, 
           home_team_id, away_team_id, team_home_id, team_away_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
@@ -770,7 +1210,7 @@ async function generateMatchesForFormat(
     let maxGroupMatchday = 1;
 
     // Fase de grupos
-    for (const group of groups) {
+    for (const [groupIndex, group] of groups.entries()) {
       const groupTeams = [...group.teams];
       if (groupTeams.length % 2 !== 0) groupTeams.push({ id: 'BYE', name: 'DESCANSO (BYE)' });
       
@@ -797,11 +1237,9 @@ async function generateMatchesForFormat(
             const away = groupTeams[awayIndex];
 
             if (home.id !== 'BYE' && away.id !== 'BYE') {
-              const homeClean = home.id.replace(/[^a-zA-Z0-9]/g, '');
-              const awayClean = away.id.replace(/[^a-zA-Z0-9]/g, '');
-              const matchId = `m-${compClean}-${group.groupName.replace(/\s+/g, '')}-j${matchdayNumber}-${homeClean}-vs-${awayClean}`;
+              const matchId = `m-${compClean}-g${groupIndex + 1}-j${matchdayNumber}-m${matchIndex + 1}`;
 
-              await queryDB(
+              await transaction.executeCommand(
                 `INSERT INTO matches 
                  (id, tournament_id, competition_id, matchday_number, matchday, stage, group_name, 
                   team_home_id, team_away_id, home_team_id, away_team_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
@@ -833,7 +1271,7 @@ async function generateMatchesForFormat(
       const matchdayNumber = maxGroupMatchday + playoffRoundOffset;
       const timing = getScheduledDateTime(matchdayNumber);
 
-      await queryDB(
+      await transaction.executeCommand(
         `INSERT INTO matches 
          (id, tournament_id, competition_id, matchday_number, matchday, stage, round_name, next_match_id, next_match_slot, 
           home_team_id, away_team_id, team_home_id, team_away_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
@@ -875,11 +1313,9 @@ async function generateMatchesForFormat(
           const away = teamsCopy[awayIndex];
 
           if (home.id !== 'BYE' && away.id !== 'BYE') {
-            const homeClean = home.id.replace(/[^a-zA-Z0-9]/g, '');
-            const awayClean = away.id.replace(/[^a-zA-Z0-9]/g, '');
-            const matchId = `m-${compClean}-j${matchdayNumber}-${homeClean}-vs-${awayClean}`;
+            const matchId = `m-${compClean}-j${matchdayNumber}-m${matchIndex + 1}`;
 
-            await queryDB(
+            await transaction.executeCommand(
               `INSERT INTO matches 
                (id, tournament_id, competition_id, matchday_number, matchday, stage, 
                 team_home_id, team_away_id, home_team_id, away_team_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
@@ -939,120 +1375,226 @@ export async function createTransferApplicationService(data: {
 }): Promise<CreateTransferResult> {
   const { teamId, userId, gameSlug, position, pitchMessage, type, competitionId } = data;
 
-  // 1. Enforce Squad Cap (20 for EA FC 26, 7 for all other games)
-  const maxSquadSize = gameSlug === 'eafc26' ? 20 : 7;
-  const currentMembersCount = await queryDB<{ total: number }>(
-    `SELECT COUNT(*) as total FROM team_members WHERE team_id = ?`,
-    [teamId]
-  );
-  if (currentMembersCount.length > 0 && currentMembersCount[0].total >= maxSquadSize) {
-    return {
-      success: false,
-      error: `El equipo ha alcanzado la capacidad máxima de plantilla (${maxSquadSize} atletas).`,
-      code: 'SQUAD_FULL',
-    };
-  }
-
-  // 2. Check Market Status & Competition Status
-  let marketMode: 'ABIERTO' | 'CERRADO' | 'SIN_MERCADO' = 'ABIERTO';
-  let isCompetitionActive = false;
-
-  if (competitionId) {
-    const comps = await queryDB<{ transfer_market_mode: string; status: string }>(
-      `SELECT transfer_market_mode, status FROM competitions WHERE id = ?`,
-      [competitionId]
+  return withTransaction(async (transaction) => {
+    const teams = await transaction.queryRows<{ id: string; max_members: number }>(
+      'SELECT id, max_members FROM teams WHERE id = ? FOR UPDATE',
+      [teamId],
     );
-    if (comps.length > 0) {
-      if (comps[0].transfer_market_mode) {
-        marketMode = comps[0].transfer_market_mode as any;
-      }
-      if (comps[0].status === 'EN_CURSO' || comps[0].status === 'IN_PROGRESS') {
-        isCompetitionActive = true;
-      }
+    if (teams.length === 0) return { success: false, error: 'Equipo no encontrado', code: 'TEAM_NOT_FOUND' };
+    const users = await transaction.queryRows<{ id: string }>('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId]);
+    if (users.length === 0) return { success: false, error: 'Jugador no encontrado', code: 'USER_NOT_FOUND' };
+
+    const maxSquadSize = Math.min(teams[0].max_members || 45, gameSlug === 'eafc26' ? 20 : 7);
+    const currentMembersCount = await transaction.queryRows<{ total: number }>(
+      'SELECT COUNT(*) as total FROM team_members WHERE team_id = ? FOR UPDATE',
+      [teamId],
+    );
+    if ((currentMembersCount[0]?.total ?? 0) >= maxSquadSize) {
+      return { success: false, error: `El equipo ha alcanzado la capacidad máxima de plantilla (${maxSquadSize} atletas).`, code: 'SQUAD_FULL' };
     }
-  }
 
-  if (marketMode === 'SIN_MERCADO') {
-    return { success: false, error: 'Mercado de transferencias deshabilitado en esta competencia', code: 'MARKET_CLOSED' };
-  }
+    let marketMode: 'ABIERTO' | 'CERRADO' | 'SIN_MERCADO' = 'ABIERTO';
+    let isCompetitionActive = false;
+    if (competitionId) {
+      const comps = await transaction.queryRows<{ transfer_market_mode: 'ABIERTO' | 'CERRADO' | 'SIN_MERCADO'; status: string }>(
+        'SELECT transfer_market_mode, status FROM competitions WHERE id = ? FOR UPDATE',
+        [competitionId],
+      );
+      if (comps.length === 0) return { success: false, error: 'Competencia no encontrada', code: 'COMPETITION_NOT_FOUND' };
+      marketMode = comps[0].transfer_market_mode;
+      isCompetitionActive = ['EN_CURSO', 'IN_PROGRESS', 'En Curso', 'En_Juego'].includes(comps[0].status);
+    }
+    if (marketMode === 'SIN_MERCADO') {
+      return { success: false, error: 'Mercado de transferencias deshabilitado en esta competencia', code: 'MARKET_CLOSED' };
+    }
 
-  const appId = `tr-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  // Requires Extraordinary 2-step approval if Market is Closed OR Competition is Active (En Curso)
-  const isExtraordinary = marketMode === 'CERRADO' || isCompetitionActive ? 1 : 0;
-  const organizerStatus = isExtraordinary ? 'PENDIENTE_ORGANIZADOR' : 'NINGUNO';
+    const duplicates = await transaction.queryRows<{ id: string }>(
+      `SELECT id FROM transfer_applications
+        WHERE team_id = ? AND applicant_user_id = ? AND application_type = ? AND status = 'PENDIENTE' FOR UPDATE`,
+      [teamId, userId, type],
+    );
+    if (duplicates.length > 0) return { success: false, error: 'Ya existe una solicitud pendiente.', code: 'DUPLICATE_APPLICATION' };
 
-  await queryDB(
-    `INSERT INTO transfer_applications (id, team_id, applicant_user_id, game_slug, position, pitch_message, application_type, status, is_extraordinary, organizer_approval_status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?)`,
-    [appId, teamId, userId, gameSlug, position, pitchMessage || null, type, isExtraordinary, organizerStatus]
-  );
+    const appId = randomUUID();
+    const isExtraordinary = marketMode === 'CERRADO' || isCompetitionActive;
+    await transaction.executeCommand(
+      `INSERT INTO transfer_applications (id, team_id, applicant_user_id, game_slug, position, pitch_message, application_type, status, is_extraordinary, organizer_approval_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?)`,
+      [appId, teamId, userId, gameSlug, position, pitchMessage || null, type, isExtraordinary ? 1 : 0, isExtraordinary ? 'PENDIENTE_ORGANIZADOR' : 'NINGUNO'],
+    );
+    return { success: true, applicationId: appId, isExtraordinary };
+  });
+}
 
-  return { success: true, applicationId: appId, isExtraordinary: Boolean(isExtraordinary) };
+export async function respondOrdinaryTransferApplicationService(
+  applicationId: string,
+  processedByUserId: string,
+  accept: boolean,
+): Promise<{ success: boolean; error?: string }> {
+  return withTransaction(async (transaction) => {
+    const applications = await transaction.queryRows<TransferApplicationRow>(
+      `SELECT * FROM transfer_applications
+        WHERE id = ? AND status = 'PENDIENTE' AND organizer_approval_status = 'NINGUNO' FOR UPDATE`,
+      [applicationId],
+    );
+    if (applications.length === 0) return { success: false, error: 'Solicitud ordinaria no encontrada o ya procesada.' };
+    const application = applications[0];
+
+    if (!accept) {
+      await executeCas(
+        transaction,
+        `UPDATE transfer_applications SET status = 'RECHAZADO', processed_by = ?, processed_at = NOW()
+          WHERE id = ? AND status = 'PENDIENTE' AND organizer_approval_status = 'NINGUNO'`,
+        [processedByUserId, applicationId],
+        'La solicitud ya fue procesada.',
+      );
+      return { success: true };
+    }
+
+    await transaction.queryRows('SELECT id FROM users WHERE id = ? FOR UPDATE', [application.applicant_user_id]);
+    const teams = await transaction.queryRows<{ id: string; name: string; max_members: number }>(
+      'SELECT id, name, max_members FROM teams WHERE id = ? FOR UPDATE',
+      [application.team_id],
+    );
+    if (teams.length === 0) return { success: false, error: 'Equipo no encontrado.' };
+    const counts = await transaction.queryRows<{ total: number }>(
+      'SELECT COUNT(*) AS total FROM team_members WHERE team_id = ? FOR UPDATE',
+      [application.team_id],
+    );
+    const limit = Math.min(teams[0].max_members || 45, application.game_slug === 'eafc26' ? 20 : 7);
+    if ((counts[0]?.total ?? 0) >= limit) return { success: false, error: 'El equipo alcanzó su capacidad máxima.' };
+
+    const previousTeams = await transaction.queryRows<{ id: string; name: string }>(
+      `SELECT t.id, t.name FROM teams t JOIN team_members tm ON tm.team_id = t.id
+        WHERE tm.user_id = ? FOR UPDATE`,
+      [application.applicant_user_id],
+    );
+    await executeCas(
+      transaction,
+      `UPDATE transfer_applications SET status = 'ACEPTADO', processed_by = ?, processed_at = NOW()
+        WHERE id = ? AND status = 'PENDIENTE' AND organizer_approval_status = 'NINGUNO'`,
+      [processedByUserId, applicationId],
+      'La solicitud ya fue procesada.',
+    );
+    await transaction.executeCommand('DELETE FROM team_members WHERE user_id = ?', [application.applicant_user_id]);
+    await transaction.executeCommand(
+      `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, ?, 'Jugador')`,
+      [randomUUID(), application.team_id, application.applicant_user_id, application.position],
+    );
+    await transaction.executeCommand(
+      `INSERT INTO transfer_history_logs
+        (id, game_slug, player_user_id, from_team_id, from_team_name, to_team_id, to_team_name, approved_by_user_id, transfer_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'TRASPASO_DIRECTO')`,
+      [
+        randomUUID(), application.game_slug, application.applicant_user_id, previousTeams[0]?.id || null,
+        previousTeams[0]?.name || 'Agente Libre', application.team_id, teams[0].name, processedByUserId,
+      ],
+    );
+    for (const previousTeam of previousTeams) {
+      await transaction.executeCommand(
+        'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
+        [previousTeam.id, previousTeam.id],
+      );
+    }
+    await transaction.executeCommand(
+      'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
+      [application.team_id, application.team_id],
+    );
+    await transaction.executeCommand(
+      "UPDATE transfer_market_posts SET status = 'COMPLETADO' WHERE user_id = ? AND status = 'ACTIVO'",
+      [application.applicant_user_id],
+    );
+    return { success: true };
+  });
+}
+
+export async function cancelTransferOfferService(offerId: string, expectedTeamId: string) {
+  return withTransaction(async (transaction) => {
+    const offers = await transaction.queryRows<{ id: string; team_id: string }>(
+      "SELECT id, team_id FROM transfer_offers WHERE id = ? AND status = 'PENDIENTE' FOR UPDATE",
+      [offerId],
+    );
+    if (offers.length === 0 || offers[0].team_id !== expectedTeamId) return { success: false, error: 'Oferta no encontrada o ya procesada.' };
+    await executeCas(
+      transaction,
+      "UPDATE transfer_offers SET status = 'CANCELADO' WHERE id = ? AND team_id = ? AND status = 'PENDIENTE'",
+      [offerId, expectedTeamId],
+      'La oferta ya fue procesada.',
+    );
+    return { success: true, message: 'Oferta cancelada correctamente.' };
+  });
 }
 
 export async function approveExtraordinaryTransferService(applicationId: string, organizerUserId: string): Promise<{ success: boolean; error?: string }> {
-  const apps = await queryDB<any>(`SELECT * FROM transfer_applications WHERE id = ?`, [applicationId]);
-  if (!apps.length) return { success: false, error: 'Solicitud no encontrada' };
+  return withTransaction(async (transaction) => {
+    const apps = await transaction.queryRows<TransferApplicationRow>(
+      `SELECT * FROM transfer_applications
+        WHERE id = ? AND status = 'PENDIENTE' AND organizer_approval_status = 'PENDIENTE_ORGANIZADOR'
+        FOR UPDATE`,
+      [applicationId],
+    );
+    if (apps.length === 0) return { success: false, error: 'Solicitud no encontrada o ya procesada' };
+    const app = apps[0];
 
-  const app = apps[0];
+    await transaction.queryRows('SELECT id FROM users WHERE id = ? FOR UPDATE', [app.applicant_user_id]);
 
-  // 1. Verify Squad Cap before final approval
-  const maxSquadSize = app.game_slug === 'eafc26' ? 20 : 7;
-  const currentMembersCount = await queryDB<{ total: number }>(
-    `SELECT COUNT(*) as total FROM team_members WHERE team_id = ?`,
-    [app.team_id]
-  );
-  if (currentMembersCount.length > 0 && currentMembersCount[0].total >= maxSquadSize) {
-    return {
-      success: false,
-      error: `No se puede aprobar. El equipo ya alcanzó su tope máximo de ${maxSquadSize} jugadores.`,
-    };
-  }
+    const newTeams = await transaction.queryRows<{ name: string }>(
+      'SELECT name FROM teams WHERE id = ? FOR UPDATE',
+      [app.team_id],
+    );
+    if (newTeams.length === 0) return { success: false, error: 'Equipo no encontrado' };
 
-  // 2. Fetch current player team name for historical log
-  const prevTeams = await queryDB<{ id: string; name: string }>(
-    `SELECT t.id, t.name FROM teams t JOIN team_members tm ON tm.team_id = t.id WHERE tm.user_id = ?`,
-    [app.applicant_user_id]
-  );
-  const fromTeamId = prevTeams.length > 0 ? prevTeams[0].id : null;
-  const fromTeamName = prevTeams.length > 0 ? prevTeams[0].name : 'Agente Libre';
+    const maxSquadSize = app.game_slug === 'eafc26' ? 20 : 7;
+    const currentMembersCount = await transaction.queryRows<{ total: number }>(
+      'SELECT COUNT(*) as total FROM team_members WHERE team_id = ?',
+      [app.team_id],
+    );
+    if ((currentMembersCount[0]?.total ?? 0) >= maxSquadSize) {
+      return { success: false, error: `No se puede aprobar. El equipo ya alcanzó su tope máximo de ${maxSquadSize} jugadores.` };
+    }
 
-  const newTeams = await queryDB<{ name: string }>(`SELECT name FROM teams WHERE id = ?`, [app.team_id]);
-  const toTeamName = newTeams.length > 0 ? newTeams[0].name : 'Equipo Desconocido';
+    const prevTeams = await transaction.queryRows<{ id: string; name: string }>(
+      `SELECT t.id, t.name FROM teams t JOIN team_members tm ON tm.team_id = t.id
+        WHERE tm.user_id = ? FOR UPDATE`,
+      [app.applicant_user_id],
+    );
+    const fromTeamId = prevTeams[0]?.id || null;
+    const fromTeamName = prevTeams[0]?.name || 'Agente Libre';
 
-  // 3. Mark Application as Approved by Organizer
-  await queryDB(
-    `UPDATE transfer_applications SET status = 'ACEPTADO', organizer_approval_status = 'APROBADO_ORGANIZADOR', processed_by = ?, processed_at = NOW() WHERE id = ?`,
-    [organizerUserId, applicationId]
-  );
+    await executeCas(
+      transaction,
+      `UPDATE transfer_applications
+          SET status = 'ACEPTADO', organizer_approval_status = 'APROBADO_ORGANIZADOR', processed_by = ?, processed_at = NOW()
+        WHERE id = ? AND status = 'PENDIENTE' AND organizer_approval_status = 'PENDIENTE_ORGANIZADOR'`,
+      [organizerUserId, applicationId],
+      'La solicitud ya fue procesada por otro usuario.',
+    );
 
-  // 4. Add to Team Members Roster
-  const memberId = `tm-${Date.now()}`;
-  await queryDB(
-    `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
-     VALUES (?, ?, ?, ?, 'Jugador')
-     ON DUPLICATE KEY UPDATE tactical_position = ?`,
-    [memberId, app.team_id, app.applicant_user_id, app.position, app.position]
-  );
-
-  // 6. Record Audit Log in transfer_history_logs
-  const logId = `thl-${Date.now()}`;
-  await queryDB(
-    `INSERT INTO transfer_history_logs (id, game_slug, player_user_id, from_team_id, from_team_name, to_team_id, to_team_name, approved_by_user_id, transfer_type)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'EXTRAORDINARIO')`,
-    [logId, app.game_slug, app.applicant_user_id, fromTeamId, fromTeamName, app.team_id, toTeamName, organizerUserId]
-  );
-
-  // 7. Auto-complete player's free agent posts as completed
-  await queryDB(
-    `UPDATE transfer_market_posts SET status = 'COMPLETADO' WHERE user_id = ? AND type = 'JUGADOR_BUSCA_CLUB'`,
-    [app.applicant_user_id]
-  );
-
-  return { success: true };
+    await transaction.executeCommand(
+      `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
+       VALUES (?, ?, ?, ?, 'Jugador')
+       ON DUPLICATE KEY UPDATE tactical_position = VALUES(tactical_position)`,
+      [randomUUID(), app.team_id, app.applicant_user_id, app.position],
+    );
+    await transaction.executeCommand(
+      `INSERT INTO transfer_history_logs (id, game_slug, player_user_id, from_team_id, from_team_name, to_team_id, to_team_name, approved_by_user_id, transfer_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'EXTRAORDINARIO')`,
+      [randomUUID(), app.game_slug, app.applicant_user_id, fromTeamId, fromTeamName, app.team_id, newTeams[0].name, organizerUserId],
+    );
+    await transaction.executeCommand(
+      "UPDATE transfer_market_posts SET status = 'COMPLETADO' WHERE user_id = ? AND type = 'JUGADOR_BUSCA_CLUB'",
+      [app.applicant_user_id],
+    );
+    await transaction.executeCommand(
+      'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
+      [app.team_id, app.team_id],
+    );
+    return { success: true };
+  });
 }
 
 export async function rejectExtraordinaryTransferService(applicationId: string, organizerUserId: string, reason?: string): Promise<{ success: boolean; error?: string }> {
+  void reason;
   await queryDB(
     `UPDATE transfer_applications SET status = 'RECHAZADO', organizer_approval_status = 'RECHAZADO_ORGANIZADOR', processed_by = ?, processed_at = NOW() WHERE id = ?`,
     [organizerUserId, applicationId]
@@ -1061,14 +1603,14 @@ export async function rejectExtraordinaryTransferService(applicationId: string, 
 }
 
 export async function getAthleteTransferHistoryService(userId: string, organizationId?: string): Promise<AthleteTransferHistoryResult> {
-  const params: any[] = [userId];
+  const params: DatabaseParams = [userId];
   let orgWhere = '';
   if (organizationId) {
     orgWhere = ' AND (organization_id = ? OR organization_id IS NULL)';
     params.push(organizationId);
   }
 
-  const logs = await queryDB<any>(
+  const logs = await queryDB<TransferHistoryRow>(
     `SELECT id, game_slug, from_team_name, to_team_name, signed_at, transfer_type 
      FROM transfer_history_logs 
      WHERE player_user_id = ? ${orgWhere}
@@ -1077,7 +1619,7 @@ export async function getAthleteTransferHistoryService(userId: string, organizat
     params
   );
 
-  const countRes = await queryDB<any>(
+  const countRes = await queryDB<{ total: number }>(
     `SELECT COUNT(*) as total FROM transfer_history_logs WHERE player_user_id = ? ${orgWhere}`,
     params
   );
@@ -1087,7 +1629,7 @@ export async function getAthleteTransferHistoryService(userId: string, organizat
   return {
     userId,
     totalMovements,
-    recentTransfers: logs.map((l: any) => ({
+    recentTransfers: logs.map((l) => ({
       id: l.id,
       gameSlug: l.game_slug,
       fromTeamName: l.from_team_name || 'Agente Libre',
@@ -1116,66 +1658,65 @@ export interface CreateTransferPostData {
 export async function createTransferPostService(data: CreateTransferPostData): Promise<{ success: boolean; postId?: string; error?: string }> {
   const { gameSlug, type, userId, userName, userGamertag, teamId, teamName, position, platform, message } = data;
 
-  const postId = `tmp-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const postId = randomUUID();
 
   try {
-    // 0. Auto-ensure table exists
-    await queryDB(`
-      CREATE TABLE IF NOT EXISTS \`transfer_market_posts\` (
-        \`id\` VARCHAR(36) NOT NULL,
-        \`game_slug\` VARCHAR(50) NOT NULL,
-        \`type\` ENUM('JUGADOR_BUSCA_CLUB', 'CLUB_RECLUTA_JUGADOR') NOT NULL DEFAULT 'JUGADOR_BUSCA_CLUB',
-        \`user_id\` VARCHAR(36) NOT NULL,
-        \`user_name\` VARCHAR(100) NOT NULL,
-        \`user_gamertag\` VARCHAR(50) NOT NULL,
-        \`team_id\` VARCHAR(36) NULL,
-        \`team_name\` VARCHAR(100) NULL,
-        \`position\` VARCHAR(50) NOT NULL,
-        \`platform\` VARCHAR(30) NOT NULL DEFAULT 'CROSSPLAY',
-        \`status\` ENUM('ACTIVO', 'COMPLETADO', 'CADUCADO') NOT NULL DEFAULT 'ACTIVO',
-        \`message\` TEXT NOT NULL,
-        \`expires_at\` DATETIME NOT NULL,
-        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (\`id\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
+    return await withTransaction(async (transaction) => {
+      const users = await transaction.queryRows<{ id: string }>('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId]);
+      if (users.length === 0) return { success: false, error: 'Usuario no encontrado.' };
+      if (type === 'CLUB_RECLUTA_JUGADOR') {
+        if (!teamId) return { success: false, error: 'Equipo requerido.' };
+        const teams = await transaction.queryRows<{ id: string }>('SELECT id FROM teams WHERE id = ? FOR UPDATE', [teamId]);
+        if (teams.length === 0) return { success: false, error: 'Equipo no encontrado.' };
+      }
 
-    // Ensure user exists in users table so foreign key constraint passes
-    if (userId) {
-      const sanitizedEmail = `${userId.replace(/[^a-zA-Z0-9]/g, '')}@tournamentspro.esports`;
-      await queryDB(
-        `INSERT INTO users (id, name, gamertag, email, role) VALUES (?, ?, ?, ?, 'Jugador')
-         ON DUPLICATE KEY UPDATE name = VALUES(name), gamertag = VALUES(gamertag)`,
-        [userId, userName || 'Atleta Oficial', userGamertag || 'Gamertag', sanitizedEmail]
-      ).catch((e) => console.log('Notice on user upsert:', e.message));
-    }
-
-    // 1. Auto-expire previous active post by the same user/team to prevent duplicates
-    if (type === 'JUGADOR_BUSCA_CLUB') {
-      await queryDB(
-        `UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE user_id = ? AND game_slug = ? AND type = 'JUGADOR_BUSCA_CLUB' AND status = 'ACTIVO'`,
-        [userId, gameSlug]
+      const activePosts = await transaction.queryRows<{ id: string }>(
+        type === 'JUGADOR_BUSCA_CLUB'
+          ? `SELECT id FROM transfer_market_posts
+              WHERE user_id = ? AND game_slug = ? AND type = 'JUGADOR_BUSCA_CLUB' AND status = 'ACTIVO' FOR UPDATE`
+          : `SELECT id FROM transfer_market_posts
+              WHERE team_id = ? AND game_slug = ? AND type = 'CLUB_RECLUTA_JUGADOR' AND position = ? AND status = 'ACTIVO' FOR UPDATE`,
+        type === 'JUGADOR_BUSCA_CLUB' ? [userId, gameSlug] : [teamId, gameSlug, position],
       );
-    } else if (teamId) {
-      await queryDB(
-        `UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE team_id = ? AND game_slug = ? AND type = 'CLUB_RECLUTA_JUGADOR' AND position = ? AND status = 'ACTIVO'`,
-        [teamId, gameSlug, position]
+      if (activePosts.length > 0) {
+        await transaction.executeCommand(
+          `UPDATE transfer_market_posts SET status = 'CADUCADO'
+            WHERE id IN (${activePosts.map(() => '?').join(', ')}) AND status = 'ACTIVO'`,
+          activePosts.map((post) => post.id),
+        );
+      }
+      await transaction.executeCommand(
+        `INSERT INTO transfer_market_posts
+          (id, game_slug, type, user_id, user_name, user_gamertag, team_id, team_name, position, platform, status, message, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?, DATE_ADD(NOW(), INTERVAL 7 DAY))`,
+        [postId, gameSlug, type, userId, userName, userGamertag, teamId || null, teamName || null, position, platform, message],
       );
-    }
-
-    // 2. Set 7 days expiration rule & insert new active post
-    await queryDB(
-      `INSERT INTO transfer_market_posts (id, game_slug, type, user_id, user_name, user_gamertag, team_id, team_name, position, platform, status, message, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?, DATE_ADD(NOW(), INTERVAL 7 DAY))`,
-      [postId, gameSlug, type, userId, userName, userGamertag, teamId || null, teamName || null, position, platform, message]
-    );
-
-    return { success: true, postId };
-  } catch (err: any) {
+      return { success: true, postId };
+    });
+  } catch (err: unknown) {
     console.error('Error al crear publicación en BD:', err);
-    return { success: false, error: err.message || 'Error en BD' };
+    return { success: false, error: getErrorMessage(err, 'Error en BD') };
   }
+}
+
+export async function cancelTransferPostService(postId: string, actorUserId: string, expectedTeamId?: string) {
+  return withTransaction(async (transaction) => {
+    const posts = await transaction.queryRows<{ id: string; user_id: string; team_id: string | null }>(
+      "SELECT id, user_id, team_id FROM transfer_market_posts WHERE id = ? AND status = 'ACTIVO' FOR UPDATE",
+      [postId],
+    );
+    const post = posts[0];
+    if (!post || (post.user_id !== actorUserId && (!expectedTeamId || post.team_id !== expectedTeamId))) {
+      return { success: false, error: 'Publicación no encontrada o no autorizada.' };
+    }
+    await executeCas(
+      transaction,
+      "UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE id = ? AND status = 'ACTIVO'",
+      [postId],
+      'La publicación ya fue cerrada.',
+    );
+    return { success: true };
+  });
 }
 
 export async function getTransferPostsService(
@@ -1183,28 +1724,6 @@ export async function getTransferPostsService(
   timeFilter: 'TODAY' | '3_DAYS' | '7_DAYS' | 'ALL' = 'ALL'
 ) {
   try {
-    // 0. Auto-ensure table exists
-    await queryDB(`
-      CREATE TABLE IF NOT EXISTS \`transfer_market_posts\` (
-        \`id\` VARCHAR(36) NOT NULL,
-        \`game_slug\` VARCHAR(50) NOT NULL,
-        \`type\` ENUM('JUGADOR_BUSCA_CLUB', 'CLUB_RECLUTA_JUGADOR') NOT NULL DEFAULT 'JUGADOR_BUSCA_CLUB',
-        \`user_id\` VARCHAR(36) NOT NULL,
-        \`user_name\` VARCHAR(100) NOT NULL,
-        \`user_gamertag\` VARCHAR(50) NOT NULL,
-        \`team_id\` VARCHAR(36) NULL,
-        \`team_name\` VARCHAR(100) NULL,
-        \`position\` VARCHAR(50) NOT NULL,
-        \`platform\` VARCHAR(30) NOT NULL DEFAULT 'CROSSPLAY',
-        \`status\` ENUM('ACTIVO', 'COMPLETADO', 'CADUCADO') NOT NULL DEFAULT 'ACTIVO',
-        \`message\` TEXT NOT NULL,
-        \`expires_at\` DATETIME NOT NULL,
-        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (\`id\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
     // 1. Auto-expire old posts older than 7 days
     await queryDB(
       `UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE expires_at < NOW() AND status = 'ACTIVO'`
@@ -1220,7 +1739,7 @@ export async function getTransferPostsService(
       timeClause = ' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
     }
 
-    const posts = await queryDB<any>(
+    const posts = await queryDB<TransferPostRow>(
       `SELECT id, game_slug, type, user_id, user_name, user_gamertag, team_id, team_name, position, platform, status, message, expires_at, created_at
        FROM transfer_market_posts
        WHERE game_slug = ? AND status = 'ACTIVO' ${timeClause}
@@ -1228,7 +1747,7 @@ export async function getTransferPostsService(
       [gameSlug]
     );
 
-    return posts.map((p: any) => ({
+    return posts.map((p) => ({
       id: p.id,
       gameSlug: p.game_slug,
       type: p.type,
@@ -1252,24 +1771,7 @@ export async function getTransferPostsService(
 
 export async function getCompletedTransfersService(gameSlug: string) {
   try {
-    await queryDB(`
-      CREATE TABLE IF NOT EXISTS \`transfer_history_logs\` (
-        \`id\` VARCHAR(36) NOT NULL,
-        \`game_slug\` VARCHAR(50) NOT NULL,
-        \`organization_id\` VARCHAR(36) NULL,
-        \`player_user_id\` VARCHAR(36) NOT NULL,
-        \`from_team_id\` VARCHAR(36) NULL,
-        \`from_team_name\` VARCHAR(100) NULL,
-        \`to_team_id\` VARCHAR(36) NOT NULL,
-        \`to_team_name\` VARCHAR(100) NOT NULL,
-        \`approved_by_user_id\` VARCHAR(36) NOT NULL,
-        \`transfer_type\` ENUM('LIBRE', 'TRASPASO_DIRECTO', 'EXTRAORDINARIO') NOT NULL DEFAULT 'LIBRE',
-        \`signed_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (\`id\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    const logs = await queryDB<any>(
+    const logs = await queryDB<TransferHistoryRow>(
       `SELECT thl.id, thl.game_slug, thl.player_user_id, COALESCE(u.name, 'Atleta Oficial') as player_name, COALESCE(u.gamertag, 'Atleta') as player_gamertag, 
               thl.from_team_name, thl.to_team_name, thl.transfer_type, thl.signed_at
        FROM transfer_history_logs thl
@@ -1280,7 +1782,7 @@ export async function getCompletedTransfersService(gameSlug: string) {
       [gameSlug]
     );
 
-    return logs.map((l: any) => ({
+    return logs.map((l) => ({
       id: l.id,
       gameSlug: l.game_slug,
       playerName: l.player_name || 'Atleta Oficial',
@@ -1326,39 +1828,45 @@ export async function submitMatchReportService(data: {
 
   const reportId = `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-  await queryDB(
-    `INSERT INTO match_reports (id, match_id, reported_by_user_id, score_home, score_away, proof_url, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'PENDIENTE')`,
-    [reportId, matchId, reportedByUserId, scoreHome, scoreAway, proofUrl || null]
-  );
+  return withTransaction(async (transaction) => {
+    const matches = await transaction.queryRows<{ id: string; status: string }>(
+      'SELECT id, status FROM matches WHERE id = ? FOR UPDATE',
+      [matchId],
+    );
+    if (matches.length === 0) return { success: false, error: 'Partido no encontrado', code: 'NOT_FOUND' };
 
-  await queryDB(
-    `UPDATE matches 
-     SET reported_score_home = ?, reported_score_away = ?, proof_url = ?, reported_by_user_id = ?, status = 'POR_REVISAR'
-     WHERE id = ?`,
-    [scoreHome, scoreAway, proofUrl || null, reportedByUserId, matchId]
-  );
+    await transaction.executeCommand(
+      `INSERT INTO match_reports (id, match_id, reported_by_user_id, score_home, score_away, proof_url, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'PENDIENTE')
+       ON DUPLICATE KEY UPDATE reported_by_user_id = VALUES(reported_by_user_id), score_home = VALUES(score_home),
+         score_away = VALUES(score_away), proof_url = VALUES(proof_url), status = 'PENDIENTE'`,
+      [reportId, matchId, reportedByUserId, scoreHome, scoreAway, proofUrl || null],
+    );
+    await executeCas(
+      transaction,
+      `UPDATE matches
+          SET reported_score_home = ?, reported_score_away = ?, proof_url = ?, reported_by_user_id = ?, status = 'POR_REVISAR'
+        WHERE id = ? AND status IN ('PENDIENTE', 'EN_CURSO', 'DISPUTADO')`,
+      [scoreHome, scoreAway, proofUrl || null, reportedByUserId, matchId],
+      'El partido ya fue reportado o finalizado.',
+    );
 
-  if (playerStats && playerStats.length > 0) {
-    for (const stat of playerStats) {
-      const statId = `stat-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-      await queryDB(
-        `INSERT INTO match_player_stats 
+    for (const stat of playerStats || []) {
+      await transaction.executeCommand(
+        `INSERT INTO match_player_stats
            (id, match_id, team_id, user_id, goals, assists, yellow_cards, red_cards, rating, is_mvp)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE 
-           goals = VALUES(goals), assists = VALUES(assists), yellow_cards = VALUES(yellow_cards), 
+         ON DUPLICATE KEY UPDATE goals = VALUES(goals), assists = VALUES(assists), yellow_cards = VALUES(yellow_cards),
            red_cards = VALUES(red_cards), rating = VALUES(rating), is_mvp = VALUES(is_mvp)`,
         [
-          statId, matchId, stat.teamId, stat.userId,
+          randomUUID(), matchId, stat.teamId, stat.userId,
           stat.goals || 0, stat.assists || 0, stat.yellowCards || 0, stat.redCards || 0,
-          stat.rating || 6.0, stat.isMvp ? 1 : 0
-        ]
+          stat.rating || 6.0, stat.isMvp ? 1 : 0,
+        ],
       );
     }
-  }
-
-  return { success: true, reportId };
+    return { success: true, reportId };
+  });
 }
 
 // ── Season Service ──────────────────────────────────────────────────────────
@@ -1397,9 +1905,9 @@ export async function createSeasonService(
       seasonId: season.id,
       seasonName: season.name,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en createSeasonService:', error);
-    return { success: false, error: error?.message || 'Error al crear la temporada.', code: 'INTERNAL_ERROR' };
+    return { success: false, error: getErrorMessage(error, 'Error al crear la temporada.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -1440,9 +1948,9 @@ export async function getTeamRosterForMatchReportService(teamId: string): Promis
     );
 
     return { success: true, roster };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en getTeamRosterForMatchReportService:', error);
-    return { success: false, roster: [], error: error?.message || 'Error al cargar plantilla.', code: 'INTERNAL_ERROR' };
+    return { success: false, roster: [], error: getErrorMessage(error, 'Error al cargar plantilla.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -1465,15 +1973,6 @@ export async function getGameConfigurationService(gameSlug: string): Promise<Gam
   const fallbackName = GAMES_CATALOG[gameSlug]?.name || gameSlug.toUpperCase();
 
   try {
-    // 0. Auto-ensure configuration columns exist on games table in MySQL
-    await queryDB(`
-      ALTER TABLE \`games\` 
-      ADD COLUMN IF NOT EXISTS \`max_squad_cap\` INT NOT NULL DEFAULT 20,
-      ADD COLUMN IF NOT EXISTS \`max_transfers_per_window\` INT NOT NULL DEFAULT 3,
-      ADD COLUMN IF NOT EXISTS \`post_expiration_days\` INT NOT NULL DEFAULT 7,
-      ADD COLUMN IF NOT EXISTS \`positions_json\` JSON NULL;
-    `).catch(() => {});
-
     // Ensure game row is seeded in games table with dynamic config
     await queryDB(
       `INSERT INTO \`games\` (\`slug\`, \`name\`, \`category\`, \`team_size\`, \`max_roster_members\`, \`max_squad_cap\`, \`max_transfers_per_window\`, \`post_expiration_days\`, \`positions_json\`, \`brand_color\`)
@@ -1482,7 +1981,7 @@ export async function getGameConfigurationService(gameSlug: string): Promise<Gam
       [gameSlug, fallbackName, 'Deportes', fallbackCap, JSON.stringify(fallbackPositions), fallbackColor]
     ).catch(() => {});
 
-    const rows = await queryDB<any>(
+    const rows = await queryDB<GameConfigurationRow>(
       `SELECT slug, name, max_squad_cap, max_transfers_per_window, post_expiration_days, positions_json, brand_color FROM games WHERE slug = ?`,
       [gameSlug]
     );
@@ -1493,7 +1992,7 @@ export async function getGameConfigurationService(gameSlug: string): Promise<Gam
       if (row.positions_json) {
         try {
           parsedPositions = typeof row.positions_json === 'string' ? JSON.parse(row.positions_json) : row.positions_json;
-        } catch (e) {
+        } catch {
           parsedPositions = fallbackPositions;
         }
       }
@@ -1527,29 +2026,8 @@ export async function getGameConfigurationService(gameSlug: string): Promise<Gam
 
 export async function getPlayerContractOffersService(userId: string, gameSlug: string) {
   try {
-    // 0. Auto-ensure transfer_offers table exists
-    await queryDB(`
-      CREATE TABLE IF NOT EXISTS \`transfer_offers\` (
-        \`id\` VARCHAR(36) NOT NULL,
-        \`game_slug\` VARCHAR(50) NOT NULL,
-        \`team_id\` VARCHAR(36) NOT NULL,
-        \`player_user_id\` VARCHAR(36) NOT NULL,
-        \`offered_by_user_id\` VARCHAR(36) NOT NULL,
-        \`position\` VARCHAR(50) NOT NULL,
-        \`pitch_message\` TEXT NULL,
-        \`offer_type\` ENUM('OFERTA_CLUB', 'POSTULACION_JUGADOR') NOT NULL DEFAULT 'OFERTA_CLUB',
-        \`status\` ENUM('PENDIENTE', 'ACEPTADO', 'RECHAZADO', 'CANCELADO', 'EXPIRADO') NOT NULL DEFAULT 'PENDIENTE',
-        \`is_extraordinary\` TINYINT(1) NOT NULL DEFAULT 0,
-        \`organizer_approval_status\` ENUM('NINGUNO', 'PENDIENTE_ORGANIZADOR', 'APROBADO_ORGANIZADOR', 'RECHAZADO_ORGANIZADOR') NOT NULL DEFAULT 'NINGUNO',
-        \`rejection_reason\` VARCHAR(255) NULL,
-        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (\`id\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
     // Check count of pending contract offers for this player
-    const offers = await queryDB<any>(
+    const offers = await queryDB<ContractOfferRow>(
       `SELECT o.id, o.game_slug, o.team_id, COALESCE(t.name, 'Escuadra Oficial') as team_name, COALESCE(t.tag, 'PRO') as team_tag, o.position, o.pitch_message, o.status, o.created_at
        FROM transfer_offers o
        LEFT JOIN teams t ON o.team_id = t.id
@@ -1558,7 +2036,7 @@ export async function getPlayerContractOffersService(userId: string, gameSlug: s
       [userId, gameSlug]
     );
 
-    return offers.map((off: any) => ({
+    return offers.map((off) => ({
       id: off.id,
       gameSlug: off.game_slug,
       teamId: off.team_id,
@@ -1582,76 +2060,87 @@ export async function respondPlayerContractOfferService(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!accept) {
-      await queryDB(`UPDATE transfer_offers SET status = 'RECHAZADO' WHERE id = ? AND player_user_id = ?`, [offerId, userId]);
-      return { success: true };
+      return await withTransaction(async (transaction) => {
+        await executeCas(
+          transaction,
+          "UPDATE transfer_offers SET status = 'RECHAZADO' WHERE id = ? AND player_user_id = ? AND status = 'PENDIENTE'",
+          [offerId, userId],
+          'Oferta no encontrada o ya procesada.',
+        );
+        return { success: true };
+      });
     }
 
-    // Get offer details
-    const offers = await queryDB<any>(`SELECT * FROM transfer_offers WHERE id = ? AND player_user_id = ?`, [offerId, userId]);
-    if (!offers || offers.length === 0) {
-      return { success: false, error: 'Oferta no encontrada o ya procesada.' };
-    }
-    const offer = offers[0];
+    return await withTransaction(async (transaction) => {
+      const offers = await transaction.queryRows<ContractOfferRow>(
+        "SELECT * FROM transfer_offers WHERE id = ? AND player_user_id = ? AND status = 'PENDIENTE' FOR UPDATE",
+        [offerId, userId],
+      );
+      if (offers.length === 0) return { success: false, error: 'Oferta no encontrada o ya procesada.' };
+      const offer = offers[0];
 
-    // 1. Squad Cap Check (20 for FC26, 7 for others)
-    const maxSquadSize = offer.game_slug === 'eafc26' ? 20 : 7;
-    const rosterCount = await queryDB<{ total: number }>(`SELECT COUNT(*) as total FROM team_members WHERE team_id = ?`, [offer.team_id]);
-    if (rosterCount && rosterCount[0]?.total >= maxSquadSize) {
-      return { success: false, error: `No se puede aceptar. La escuadra ya cuenta con el máximo permitido de ${maxSquadSize} jugadores.` };
-    }
+      await transaction.queryRows('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId]);
 
-    // 2. Fetch previous team name
-    const prevTeam = await queryDB<{ id: string; name: string }>(`SELECT t.id, t.name FROM teams t JOIN team_members tm ON tm.team_id = t.id WHERE tm.user_id = ?`, [userId]);
-    const fromTeamId = prevTeam[0]?.id || null;
-    const fromTeamName = prevTeam[0]?.name || 'Agente Libre';
+      const targetTeam = await transaction.queryRows<{ name: string }>(
+        'SELECT name FROM teams WHERE id = ? FOR UPDATE',
+        [offer.team_id],
+      );
+      if (targetTeam.length === 0) return { success: false, error: 'Equipo no encontrado.' };
 
-    const targetTeam = await queryDB<{ name: string }>(`SELECT name FROM teams WHERE id = ?`, [offer.team_id]);
-    const toTeamName = targetTeam[0]?.name || 'Escuadra Oficial';
-
-    // 3. Mark offer as ACEPTADO
-    await queryDB(`UPDATE transfer_offers SET status = 'ACEPTADO' WHERE id = ?`, [offerId]);
-
-    // Extract organization_name from offer's pitch_message
-    let orgName = 'Organización General';
-    if (offer.pitch_message) {
-      const match = offer.pitch_message.match(/\[Organización:\s*([^\]]+)\]/i);
-      if (match && match[1]) {
-        orgName = match[1].trim();
+      const maxSquadSize = offer.game_slug === 'eafc26' ? 20 : 7;
+      const rosterCount = await transaction.queryRows<{ total: number }>(
+        'SELECT COUNT(*) as total FROM team_members WHERE team_id = ?',
+        [offer.team_id],
+      );
+      if ((rosterCount[0]?.total ?? 0) >= maxSquadSize) {
+        return { success: false, error: `No se puede aceptar. La escuadra ya cuenta con el máximo permitido de ${maxSquadSize} jugadores.` };
       }
-    }
 
-    // Delete existing team_members entry for this user in this exact Organization (1 Player, 1 Organization, 1 Team rule)
-    if (orgName) {
-      await queryDB(
-        `DELETE FROM team_members WHERE user_id = ? AND LOWER(organization_name) = LOWER(?)`,
-        [userId, orgName]
-      ).catch(() => {});
-    }
+      const prevTeam = await transaction.queryRows<{ id: string; name: string }>(
+        'SELECT t.id, t.name FROM teams t JOIN team_members tm ON tm.team_id = t.id WHERE tm.user_id = ? FOR UPDATE',
+        [userId],
+      );
+      const fromTeamId = prevTeam[0]?.id || null;
+      const fromTeamName = prevTeam[0]?.name || 'Agente Libre';
 
-    // 5. Add to team_members for this Organization
-    const memberId = `tm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    await queryDB(
-      `INSERT INTO team_members (id, team_id, user_id, organization_name, tactical_position, role_in_team)
-       VALUES (?, ?, ?, ?, ?, 'Jugador')
-       ON DUPLICATE KEY UPDATE tactical_position = VALUES(tactical_position)`,
-      [memberId, offer.team_id, userId, orgName, offer.position || 'DFC']
-    );
+      let orgName = 'Organización General';
+      const organizationMatch = offer.pitch_message?.match(/\[Organización:\s*([^\]]+)\]/i);
+      if (organizationMatch?.[1]) orgName = organizationMatch[1].trim();
 
-    // 6. Log audit entry in transfer_history_logs
-    const logId = `thl-${Date.now()}`;
-    await queryDB(
-      `INSERT INTO transfer_history_logs (id, game_slug, player_user_id, from_team_id, from_team_name, to_team_id, to_team_name, approved_by_user_id, transfer_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'LIBRE')`,
-      [logId, offer.game_slug, userId, fromTeamId, fromTeamName, offer.team_id, toTeamName, userId]
-    );
-
-    // 7. Auto-complete player's free agent posts
-    await queryDB(`UPDATE transfer_market_posts SET status = 'COMPLETADO' WHERE user_id = ? AND type = 'JUGADOR_BUSCA_CLUB'`, [userId]);
-
-    return { success: true };
-  } catch (err: any) {
+      await executeCas(
+        transaction,
+        "UPDATE transfer_offers SET status = 'ACEPTADO' WHERE id = ? AND player_user_id = ? AND status = 'PENDIENTE'",
+        [offerId, userId],
+        'La oferta ya fue procesada por otro usuario.',
+      );
+      await transaction.executeCommand(
+        'DELETE FROM team_members WHERE user_id = ? AND LOWER(organization_name) = LOWER(?)',
+        [userId, orgName],
+      );
+      await transaction.executeCommand(
+        `INSERT INTO team_members (id, team_id, user_id, organization_name, tactical_position, role_in_team)
+         VALUES (?, ?, ?, ?, ?, 'Jugador')
+         ON DUPLICATE KEY UPDATE tactical_position = VALUES(tactical_position)`,
+        [randomUUID(), offer.team_id, userId, orgName, offer.position || 'DFC'],
+      );
+      await transaction.executeCommand(
+        `INSERT INTO transfer_history_logs (id, game_slug, player_user_id, from_team_id, from_team_name, to_team_id, to_team_name, approved_by_user_id, transfer_type)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'LIBRE')`,
+        [randomUUID(), offer.game_slug, userId, fromTeamId, fromTeamName, offer.team_id, targetTeam[0].name, userId],
+      );
+      await transaction.executeCommand(
+        "UPDATE transfer_market_posts SET status = 'COMPLETADO' WHERE user_id = ? AND type = 'JUGADOR_BUSCA_CLUB'",
+        [userId],
+      );
+      await transaction.executeCommand(
+        'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
+        [offer.team_id, offer.team_id],
+      );
+      return { success: true };
+    });
+  } catch (err: unknown) {
     console.error('Error al responder oferta de contrato:', err);
-    return { success: false, error: err.message || 'Error al procesar contrato.' };
+    return { success: false, error: getErrorMessage(err, 'Error al procesar contrato.') };
   }
 }
 
@@ -1680,90 +2169,15 @@ export interface ChatMessageDTO {
   timestamp: string;
 }
 
-export async function autoEnsureChatTablesService() {
-  try {
-    try {
-      await queryDB(`ALTER TABLE \`users\` MODIFY COLUMN \`status\` VARCHAR(50) NOT NULL DEFAULT 'Activo';`);
-    } catch (_err) {
-      // Column is already compatible
-    }
-
-    await queryDB(`
-      CREATE TABLE IF NOT EXISTS \`chat_threads\` (
-        \`id\` VARCHAR(36) NOT NULL,
-        \`channel_type\` ENUM('DIRECTO', 'SQUAD_EQUIPO', 'SOPORTE_ORGANIZADOR', 'ANUNCIO_ADMIN') NOT NULL DEFAULT 'DIRECTO',
-        \`game_slug\` VARCHAR(50) NOT NULL DEFAULT 'eafc26',
-        \`title\` VARCHAR(150) NULL,
-        \`participant_a_id\` VARCHAR(36) NOT NULL,
-        \`participant_a_name\` VARCHAR(100) NOT NULL,
-        \`participant_a_role\` VARCHAR(50) NOT NULL DEFAULT 'Jugador',
-        \`participant_b_id\` VARCHAR(36) NOT NULL,
-        \`participant_b_name\` VARCHAR(100) NOT NULL,
-        \`participant_b_role\` VARCHAR(50) NOT NULL DEFAULT 'Jugador',
-        \`last_message_text\` TEXT NULL,
-        \`last_message_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (\`id\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    await queryDB(`
-      CREATE TABLE IF NOT EXISTS \`chat_messages\` (
-        \`id\` VARCHAR(36) NOT NULL,
-        \`thread_id\` VARCHAR(36) NOT NULL,
-        \`sender_id\` VARCHAR(36) NOT NULL,
-        \`sender_name\` VARCHAR(100) NOT NULL,
-        \`sender_role\` VARCHAR(50) NOT NULL DEFAULT 'Jugador',
-        \`message_text\` TEXT NOT NULL,
-        \`is_read\` TINYINT(1) NOT NULL DEFAULT 0,
-        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (\`id\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    await queryDB(`
-      CREATE TABLE IF NOT EXISTS \`chat_typing_status\` (
-        \`thread_id\` VARCHAR(64) NOT NULL,
-        \`user_id\` VARCHAR(36) NOT NULL,
-        \`user_name\` VARCHAR(100) NOT NULL,
-        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (\`thread_id\`, \`user_id\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    // Ensure default official channels exist
-    const countThreads = await queryDB<{ total: number }>(`SELECT COUNT(*) as total FROM chat_threads`);
-    if (!countThreads || countThreads[0]?.total === 0) {
-      await queryDB(`
-        INSERT INTO chat_threads (id, channel_type, game_slug, title, participant_a_id, participant_a_name, participant_a_role, participant_b_id, participant_b_name, participant_b_role, last_message_text)
-        VALUES 
-        ('ct-org-support', 'SOPORTE_ORGANIZADOR', 'eafc26', 'Canal Oficial de Organizadores & Arbitraje', 'usr-organizer', 'Organizador Oficial', 'Organizador', 'usr-all', 'Comunidad eSports', 'Jugador', 'Mesa de ayuda directa habilitada para consultas de torneo y reporte de partidos.'),
-        ('ct-admin-broadcast', 'ANUNCIO_ADMIN', 'eafc26', 'Anuncios Globales de Administración', 'usr-admin', 'Administrador Principal', 'Administrador', 'usr-all', 'Comunidad eSports', 'Jugador', 'Canal oficial de boletines, comunicados de sanciones y actualizaciones del sistema.')
-      `);
-
-      await queryDB(`
-        INSERT INTO chat_messages (id, thread_id, sender_id, sender_name, sender_role, message_text)
-        VALUES
-        ('cm-org-1', 'ct-org-support', 'usr-organizer', 'Organizador Oficial', 'Organizador', 'Bienvenidos al canal de arbitraje y soporte técnico. Escribe tu consulta o disputa de partido aquí.'),
-        ('cm-adm-1', 'ct-admin-broadcast', 'usr-admin', 'Administrador Principal', 'Administrador', 'Comunidad TournamentsPro: El mercado de traspasos eSports y reglamentos de temporada están activos.')
-      `);
-    }
-  } catch (err) {
-    console.error('Error en autoEnsureChatTablesService:', err);
-  }
-}
-
 export async function getChatThreadsService(
   userId: string,
   userRole: string,
   gameSlug: string = 'eafc26',
   channelFilter: string = 'ALL'
 ): Promise<ChatThreadDTO[]> {
-  await autoEnsureChatTablesService();
-
   try {
     let whereClause = `(ct.participant_a_id = ? OR ct.participant_b_id = ? OR ct.participant_b_id = 'usr-all')`;
-    const queryParams: any[] = [userId, userId];
+    const queryParams: DatabaseParams = [userId, userId];
 
     if (gameSlug && gameSlug !== 'ALL') {
       whereClause += ` AND ct.game_slug = ?`;
@@ -1775,7 +2189,7 @@ export async function getChatThreadsService(
       queryParams.push(channelFilter);
     }
 
-    const threads = await queryDB<any>(
+    const threads = await queryDB<ChatThreadRow>(
       `SELECT ct.*, 
         (SELECT COUNT(*) FROM chat_messages cm WHERE cm.thread_id = ct.id AND cm.sender_id != ? AND cm.is_read = 0) as unread_count
        FROM chat_threads ct
@@ -1784,7 +2198,7 @@ export async function getChatThreadsService(
       [userId, ...queryParams]
     );
 
-    return threads.map((t: any) => {
+    return threads.map((t) => {
       const isParticipantA = t.participant_a_id === userId;
       const otherId = isParticipantA ? t.participant_b_id : t.participant_a_id;
       const otherName = isParticipantA ? t.participant_b_name : t.participant_a_name;
@@ -1811,12 +2225,12 @@ export async function getChatThreadsService(
 
 export async function getThreadMessagesService(threadId: string): Promise<ChatMessageDTO[]> {
   try {
-    const messages = await queryDB<any>(
+    const messages = await queryDB<ChatMessageRow>(
       `SELECT * FROM chat_messages WHERE thread_id = ? ORDER BY created_at ASC`,
       [threadId]
     );
 
-    return messages.map((m: any) => ({
+    return messages.map((m) => ({
       id: m.id,
       threadId: m.thread_id,
       senderId: m.sender_id,
@@ -1825,8 +2239,8 @@ export async function getThreadMessagesService(threadId: string): Promise<ChatMe
       text: m.message_text,
       timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }));
-  } catch (err) {
-    console.error('Error en getThreadMessagesService:', err);
+  } catch (error) {
+    console.error('Error en getThreadMessagesService:', error);
     return [];
   }
 }
@@ -1876,9 +2290,9 @@ export async function sendChatMessageService(
     await queryDB(`DELETE FROM chat_typing_status WHERE thread_id = ? AND user_id = ?`, [threadId, senderId]).catch(() => {});
 
     return { success: true, messageId };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en sendChatMessageService:', err);
-    return { success: false, error: err.message || 'Error al enviar mensaje.' };
+    return { success: false, error: getErrorMessage(err, 'Error al enviar mensaje.') };
   }
 }
 
@@ -1892,7 +2306,7 @@ export async function updateTypingStatusService(threadId: string, userId: string
       [threadId, userId, userName || 'Usuario']
     );
     return { success: true };
-  } catch (err) {
+  } catch {
     return { success: false };
   }
 }
@@ -1902,7 +2316,7 @@ export async function clearTypingStatusService(threadId: string, userId: string)
   try {
     await queryDB(`DELETE FROM chat_typing_status WHERE thread_id = ? AND user_id = ?`, [threadId, userId]);
     return { success: true };
-  } catch (err) {
+  } catch {
     return { success: false };
   }
 }
@@ -1916,7 +2330,7 @@ export async function getTypingUsersService(threadId: string, currentUserId: str
       [threadId, currentUserId]
     );
     return rows ? rows.map((r) => r.user_name) : [];
-  } catch (err) {
+  } catch {
     return [];
   }
 }
@@ -1932,11 +2346,9 @@ export async function createOrGetDirectThreadService(
   channelType: 'DIRECTO' | 'SQUAD_EQUIPO' | 'SOPORTE_ORGANIZADOR' | 'ANUNCIO_ADMIN' = 'DIRECTO',
   title?: string
 ) {
-  await autoEnsureChatTablesService();
-
   try {
     // Check if thread already exists
-    const existing = await queryDB<any>(
+    const existing = await queryDB<{ id: string }>(
       `SELECT id FROM chat_threads 
        WHERE channel_type = ? AND game_slug = ? AND 
              ((participant_a_id = ? AND participant_b_id = ?) OR (participant_a_id = ? AND participant_b_id = ?))`,
@@ -1966,29 +2378,29 @@ export async function createOrGetDirectThreadService(
     );
 
     return { success: true, threadId: newThreadId };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en createOrGetDirectThreadService:', err);
-    return { success: false, error: err.message || 'Error al crear hilo de chat.' };
+    return { success: false, error: getErrorMessage(err, 'Error al crear hilo de chat.') };
   }
 }
 
 export async function getUsersByRoleService(role: string) {
   try {
     let roleQuery = `role = ?`;
-    let queryParams: any[] = [role];
+    let queryParams: DatabaseParams = [role];
 
     if (role === 'Capitan' || role === 'Capitán') {
       roleQuery = `role IN ('Capitan', 'Capitán')`;
       queryParams = [];
     }
 
-    const users = await queryDB<any>(
+    const users = await queryDB<UserRoleRow>(
       `SELECT id, name, gamertag, role, primary_game_slug, is_banned, ban_reason FROM users WHERE ${roleQuery} ORDER BY name ASC`,
       queryParams
     );
 
     if (users && users.length > 0) {
-      return users.map((u: any) => ({
+      return users.map((u) => ({
         id: u.id,
         name: u.name,
         gamertag: u.gamertag,
@@ -1999,17 +2411,7 @@ export async function getUsersByRoleService(role: string) {
       }));
     }
 
-    // Fallback defaults if no user of that role exists yet in BD
-    if (role === 'Organizador') {
-      return [{ id: 'usr-organizer', name: 'Organizador Oficial', gamertag: 'Organizador_Pro', role: 'Organizador', isBanned: false }];
-    }
-    if (role === 'Administrador') {
-      return [{ id: 'usr-admin', name: 'Administrador Principal', gamertag: 'Admin_Pro', role: 'Administrador', isBanned: false }];
-    }
-    if (role === 'Capitan' || role === 'Capitán') {
-      return [{ id: 'usr-capitan-1', name: 'Capitán Sangre Nueva', gamertag: 'Capitan_SN', role: 'Capitán', isBanned: false }];
-    }
-    return [{ id: 'usr-player-1', name: 'Atleta Libre', gamertag: 'Player_Pro', role: 'Jugador', isBanned: false }];
+    return [];
   } catch (err) {
     console.error('Error en getUsersByRoleService:', err);
     return [];
@@ -2023,9 +2425,9 @@ export async function banUserFromChatService(targetUserId: string, reason?: stri
     const reasonText = reason?.trim() || 'Sanción disciplinaria por infracción de reglamento en chat eSports.';
     await queryDB(`UPDATE users SET is_banned = 1, ban_reason = ? WHERE id = ?`, [reasonText, targetUserId]);
     return { success: true, message: `Usuario sancionado y baneado exitosamente.` };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en banUserFromChatService:', err);
-    return { success: false, error: err.message || 'Error al banear usuario.' };
+    return { success: false, error: getErrorMessage(err, 'Error al banear usuario.') };
   }
 }
 
@@ -2033,9 +2435,9 @@ export async function unbanUserFromChatService(targetUserId: string) {
   try {
     await queryDB(`UPDATE users SET is_banned = 0, ban_reason = NULL WHERE id = ?`, [targetUserId]);
     return { success: true, message: `Sanción levantada. El usuario puede escribir nuevamente.` };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en unbanUserFromChatService:', err);
-    return { success: false, error: err.message || 'Error al desbanear usuario.' };
+    return { success: false, error: getErrorMessage(err, 'Error al desbanear usuario.') };
   }
 }
 

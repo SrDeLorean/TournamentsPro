@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Trophy, CheckCircle2, Shield, X, Upload, Camera, Award, Star, AlertCircle, FileImage
+  CheckCircle2, X, Upload, Camera, AlertCircle
 } from 'lucide-react';
 
 interface MatchReportModalProps {
@@ -23,7 +24,6 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
   const [homeScore, setHomeScore] = useState<number>(0);
   const [awayScore, setAwayScore] = useState<number>(0);
   const [mvpName, setMvpName] = useState('');
-  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [evidencePreview, setEvidencePreview] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState('');
@@ -42,7 +42,6 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setEvidenceFile(file);
       setEvidencePreview(URL.createObjectURL(file));
     }
   };
@@ -68,7 +67,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
         setSuccessNotice('');
         onClose();
       }, 3000);
-    } catch (err: any) {
+    } catch {
       setErrorMsg('Error al enviar el reporte de partido');
       setIsSubmitting(false);
     }
@@ -187,7 +186,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
               <label htmlFor="evidence-upload" className="cursor-pointer space-y-2 block">
                 {evidencePreview ? (
                   <div className="space-y-2">
-                    <img src={evidencePreview} alt="Evidencia" className="h-32 mx-auto rounded-xl object-cover border border-emerald-500" />
+                    <Image src={evidencePreview} alt="Evidencia" width={512} height={128} unoptimized className="h-32 w-auto mx-auto rounded-xl object-cover border border-emerald-500" />
                     <span className="text-[11px] text-emerald-400 font-bold block">✓ Captura cargada correctamente</span>
                   </div>
                 ) : (

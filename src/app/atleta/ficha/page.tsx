@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, Shield, Trophy, Award, Gamepad2, CheckCircle2, Edit3, Sparkles } from 'lucide-react';
+import { User, Gamepad2, CheckCircle2, Edit3 } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 
 export default function AtletaFichaPage() {

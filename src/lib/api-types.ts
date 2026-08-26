@@ -462,7 +462,7 @@ export function mapMatchRowToData(row: MatchRow): MatchData {
 }
 
 // Validation helpers
-export function validateRequired<T extends Record<string, any>>(data: T, fields: (keyof T)[]): string | null {
+export function validateRequired<T extends Record<string, unknown>>(data: T, fields: (keyof T)[]): string | null {
   for (const field of fields) {
     const value = data[field];
     if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {

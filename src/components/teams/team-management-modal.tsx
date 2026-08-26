@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TeamData, UserProfile } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import {
-  Shield, Users, Plus, Trash2, CheckCircle2, UserCheck, Settings, Sparkles, X, Award, Check
+  Users, Plus, Trash2, CheckCircle2, Settings, Sparkles, X, Award, Check
 } from 'lucide-react';
 
 export type TeamTabOption = 'EQUIPO_ROSTER' | 'EQUIPO_RECLUTAMIENTO' | 'EQUIPO_MATCHDAY' | 'EQUIPO_AJUSTES';
@@ -29,19 +29,15 @@ export function TeamManagementModal({
   onUpdateTeam,
 }: TeamManagementModalProps) {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<TeamTabOption>(initialTab);
-
-  useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
+  const [tabSelection, setTabSelection] = useState({ initialTab, value: initialTab });
+  const activeTab = tabSelection.initialTab === initialTab ? tabSelection.value : initialTab;
+  const setActiveTab = (value: TeamTabOption) => setTabSelection({ initialTab, value });
 
   const [currentTeam, setCurrentTeam] = useState<TeamData>(team);
   const [newVacantInput, setNewVacantInput] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
 
-  const [membersList, setMembersList] = useState<UserProfile[]>(
+  const [membersList] = useState<UserProfile[]>(
     team.members && team.members.length > 0
       ? team.members
       : [
@@ -228,7 +224,7 @@ export function TeamManagementModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
-              {membersList.map((member, idx) => (
+              {membersList.map((member) => (
                 <div key={member.id} className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-3">
                     <Avatar fallback={member.name} size="md" status="online" />

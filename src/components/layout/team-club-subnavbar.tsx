@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
-import { initialTeams, TeamData } from '@/lib/data-store';
+import { initialTeams, type TeamData } from '@/lib/data-store';
 import { Shield, Users, Sparkles, Award, Settings, LayoutDashboard, SlidersHorizontal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,9 +24,17 @@ export function TeamClubSubnavbar() {
   const teamsPool = userTeams && userTeams.length > 0 ? userTeams : initialTeams;
 
   // Filter team where user is Captain or Encargado or Admin
-  const isUserTeamManager = (t: any) => {
+  type ManagedTeam = TeamData & {
+    game_slug?: string;
+    captain_id?: string;
+    captain_name?: string;
+    encargados?: unknown;
+    encargados_json?: unknown;
+  };
+
+  const isUserTeamManager = (t: ManagedTeam) => {
     if (!t) return false;
-    const slug = (t as any).game_slug || t.gameSlug || 'eafc26';
+    const slug = t.game_slug || t.gameSlug || 'eafc26';
     if (slug !== activeGameSlug && activeGameSlug !== 'ALL') return false;
 
     const cId = t.captain_id || t.captainId;
@@ -43,17 +51,19 @@ export function TeamClubSubnavbar() {
       try {
         const arr = typeof encs === 'string' ? JSON.parse(encs) : encs;
         if (Array.isArray(arr)) {
-          const isEnc = arr.some((enc: any) => {
+          const isEnc = arr.some((enc: unknown) => {
             if (typeof enc === 'string') return enc === uId || enc.toLowerCase() === uName || enc.toLowerCase() === uGamer;
+            if (!enc || typeof enc !== 'object') return false;
+            const manager = enc as { id?: string; name?: string; gamertag?: string };
             return (
-              enc.id === uId ||
-              (enc.name && uName && enc.name.toLowerCase() === uName) ||
-              (enc.gamertag && uGamer && enc.gamertag.toLowerCase() === uGamer)
+              manager.id === uId ||
+              (manager.name && uName && manager.name.toLowerCase() === uName) ||
+              (manager.gamertag && uGamer && manager.gamertag.toLowerCase() === uGamer)
             );
           });
           if (isEnc) return true;
         }
-      } catch (e) {}
+      } catch {}
     }
 
     // 3. Fallback for Admin/Organizer
@@ -64,7 +74,7 @@ export function TeamClubSubnavbar() {
     return false;
   };
 
-  const myTeam = teamsPool.find(isUserTeamManager);
+  const myTeam = (teamsPool as ManagedTeam[]).find(isUserTeamManager);
   if (!myTeam) return null;
 
   const teamOptions = [

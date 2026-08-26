@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { Trophy, Shield, Radio, Sparkles, Globe, MessageSquare, Tv, Share2, Video } from 'lucide-react';
+import { Trophy, Shield, Radio, Sparkles, MessageSquare, Tv, Share2, Video } from 'lucide-react';
 
 export function Footer() {
   const gamesList = Object.values(GAMES_CATALOG);

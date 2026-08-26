@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server';
 import { queryDB } from '@/lib/db';
 
+interface TournamentListRow {
+  id: string;
+  name: string;
+  game_slug: string;
+  organizer_id: string | null;
+  format: string | null;
+  format_type: string | null;
+  status: string;
+  created_at: string;
+  max_teams: number | null;
+  registered_teams_count: number | null;
+  organization_id: string | null;
+  organization_name: string | null;
+  organization_tag: string | null;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const gameSlug = searchParams.get('gameSlug');
@@ -9,7 +25,7 @@ export async function GET(request: Request) {
 
   try {
     // Single query directly from unified 'competitions' table
-    const comps = await queryDB<any>(`
+    const comps = await queryDB<TournamentListRow>(`
       SELECT c.id, c.name, c.game_slug, c.organizer_id, c.mode_format as format, 
              c.format as format_type, c.status, c.created_at, c.max_teams, c.registered_teams_count,
              COALESCE(c.organization_id, u.organization_id, o.id) as organization_id,
