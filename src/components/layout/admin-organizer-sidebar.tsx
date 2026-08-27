@@ -42,6 +42,12 @@ export function AdminOrganizerSidebar() {
       badge: 'Orgs.',
     },
     {
+      title: 'Gestión Disciplinas',
+      href: '/dashboard/disciplinas',
+      icon: <Gamepad2 className="w-4 h-4 text-pink-400" />,
+      badge: 'Juegos',
+    },
+    {
       title: 'Gestión de Competencias',
       href: '/dashboard/competencias',
       icon: <Swords className="w-4 h-4 text-purple-400" />,

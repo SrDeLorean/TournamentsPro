@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,32 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  
+  const [gameSchema, setGameSchema] = useState<any[]>([]);
+  const [dynamicStats, setDynamicStats] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (isOpen && match?.gameSlug) {
+      // Fetch games to find the schema
+      fetch('/api/admin/games')
+        .then(res => res.json())
+        .then(data => {
+          if (data.games) {
+            const game = data.games.find((g: any) => g.slug === match.gameSlug);
+            if (game && game.stats_schema) {
+              const schema = typeof game.stats_schema === 'string' ? JSON.parse(game.stats_schema) : game.stats_schema;
+              setGameSchema(schema);
+              const initialStats: Record<string, number> = {};
+              schema.forEach((s: any) => { initialStats[s.key] = 0; });
+              setDynamicStats(initialStats);
+            } else {
+              setGameSchema([]);
+            }
+          }
+        })
+        .catch(err => console.error(err));
+    }
+  }, [isOpen, match]);
 
   if (!isOpen) return null;
 
@@ -46,6 +72,10 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
     }
   };
 
+  const handleStatChange = (key: string, val: string) => {
+    setDynamicStats(prev => ({ ...prev, [key]: Number(val) }));
+  };
+
   const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -59,6 +89,13 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
 
     try {
       // Simulate backend match report submission
+      console.log('Enviando reporte con payload:', {
+        matchId: currentMatch.id,
+        homeScore,
+        awayScore,
+        mvpName,
+        dynamicStats
+      });
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       setIsSubmitting(false);
@@ -161,12 +198,34 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
             <label className="text-xs font-bold uppercase text-[var(--text-heading)] block">Jugador MVP del Partido (Opcional)</label>
             <input
               type="text"
-              placeholder="ej. @SrDeLorean (3 Goles)"
+              placeholder="ej. @SrDeLorean"
               value={mvpName}
               onChange={(e) => setMvpName(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl input-theme text-xs font-bold font-mono"
             />
           </div>
+
+          {/* Dynamic Stats for MVP / Reporter */}
+          {gameSchema.length > 0 && (
+            <div className="p-4 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)]">
+              <span className="text-[10px] font-black uppercase text-emerald-400 block tracking-wider mb-3">
+                📊 Estadísticas del MVP / Capitán
+              </span>
+              <div className="grid grid-cols-2 gap-3">
+                {gameSchema.map((stat, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{stat.label}</label>
+                    <input
+                      type={stat.type || 'number'}
+                      value={dynamicStats[stat.key] || 0}
+                      onChange={(e) => handleStatChange(stat.key, e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg input-theme text-xs font-bold font-mono"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Upload Screenshot Evidence */}
           <div className="space-y-2">
