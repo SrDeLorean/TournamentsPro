@@ -99,11 +99,9 @@ export function MatchdayReportView() {
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string>('');
 
   // 1. Fetch Tournaments from DB
-  const fetchTournaments = useCallback(async (gSlug: string) => {
+  const fetchTournaments = useCallback(async () => {
     try {
-      let url = '/api/tournaments';
-      if (gSlug !== 'TODOS') url += `?gameSlug=${gSlug}`;
-      const res = await fetch(url);
+      const res = await fetch('/api/tournaments');
       const data = await res.json();
       const raw = data.tournaments || data.competitions || data.data || [];
       if (Array.isArray(raw)) {
@@ -181,11 +179,12 @@ export function MatchdayReportView() {
   }, [selectedGameSlug, selectedTournName, statusFilter, clubSearch]);
 
   useEffect(() => {
-    void Promise.resolve().then(() => Promise.all([
-      fetchTournaments(selectedGameSlug),
-      fetchMatches(),
-    ]));
-  }, [selectedGameSlug, selectedTournName, statusFilter, fetchTournaments, fetchMatches]);
+    fetchTournaments();
+  }, [fetchTournaments]);
+
+  useEffect(() => {
+    fetchMatches();
+  }, [selectedGameSlug, selectedTournName, statusFilter, clubSearch, fetchMatches]);
 
   // Handle Game Selection
   const handleGameSelect = (gSlug: string) => {
@@ -208,6 +207,18 @@ export function MatchdayReportView() {
     });
     return Array.from(map.values());
   }, [tournaments, matches, selectedGameSlug]);
+
+  // Derived available games based on fetched tournaments and matches
+  const availableGameSlugs = useMemo(() => {
+    const slugs = new Set<string>();
+    tournaments.forEach(t => {
+      if (t.gameSlug) slugs.add(t.gameSlug);
+    });
+    matches.forEach(m => {
+      if (m.gameSlug) slugs.add(m.gameSlug);
+    });
+    return Array.from(slugs);
+  }, [tournaments, matches]);
 
   // Format Day / Date Label: e.g. "Martes 11/08"
   const formatDayDate = (dateStr: string) => {
@@ -346,7 +357,7 @@ export function MatchdayReportView() {
               🎮 TODOS LOS JUEGOS
             </button>
 
-            {Object.values(GAMES_CATALOG).map((g) => {
+            {Object.values(GAMES_CATALOG).filter(g => availableGameSlugs.includes(g.slug)).map((g) => {
               const isActive = selectedGameSlug === g.slug;
               return (
                 <button

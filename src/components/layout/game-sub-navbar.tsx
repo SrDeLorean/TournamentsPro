@@ -184,10 +184,18 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
         </div>
 
         {/* 👤 SUB-NAVBAR NIVEL 3: OPCIONES DEL USUARIO / ATLETA */}
-        {(isAuthenticated || Boolean(currentUser)) && <UserAthleteSubnavbar />}
+        {(isAuthenticated || Boolean(currentUser)) && 
+         currentUser?.role && 
+         !['organizador', 'administrador', 'admin'].includes(currentUser.role.toLowerCase()) && (
+          <UserAthleteSubnavbar />
+        )}
 
         {/* 🛡️ SUB-NAVBAR NIVEL 4: OPCIONES DEL EQUIPO / CLUB */}
-        {(isAuthenticated || Boolean(currentUser)) && <TeamClubSubnavbar />}
+        {(isAuthenticated || Boolean(currentUser)) && 
+         currentUser?.role && 
+         !['organizador', 'administrador', 'admin'].includes(currentUser.role.toLowerCase()) && (
+          <TeamClubSubnavbar />
+        )}
       </div>
     </>
   );

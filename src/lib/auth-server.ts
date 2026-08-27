@@ -227,10 +227,8 @@ export async function requireCompetitionManager(competitionId: string): Promise<
     organizer_id: string | null;
   }>(
     `SELECT id, organization_id, organizer_id FROM competitions WHERE id = ?
-     UNION ALL
-     SELECT id, organization_id, organizer_id FROM tournaments WHERE id = ?
      LIMIT 1`,
-    [competitionId, competitionId],
+    [competitionId],
   );
   const competition = competitions[0];
   if (!competition || !canManageCompetition(actor, {

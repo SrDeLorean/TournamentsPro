@@ -78,24 +78,41 @@ export function PlayoffBracket({ matches }: PlayoffBracketProps) {
       if (processedIds.has(m.id)) continue;
 
       const isVuelta = (m.round_name || '').toLowerCase().includes('(vuelta)');
+      const isIda = (m.round_name || '').toLowerCase().includes('(ida)');
+      
       let idaMatch: PlayoffMatch | undefined;
       let vueltaMatch: PlayoffMatch | undefined;
 
-      const findPair = (targetMatch: PlayoffMatch) => {
-        return roundMatches.find(other => 
-          other.id !== targetMatch.id && 
-          !processedIds.has(other.id) &&
-          other.home_team_name === targetMatch.away_team_name && 
-          other.away_team_name === targetMatch.home_team_name
-        );
-      };
+      if (isVuelta || isIda) {
+        const baseId = m.id.toString().replace(/-ida|-vuelta/i, '');
+        const findPair = (targetMatch: PlayoffMatch) => {
+          return roundMatches.find(other => 
+            other.id !== targetMatch.id && 
+            !processedIds.has(other.id) &&
+            other.id.toString().replace(/-ida|-vuelta/i, '') === baseId
+          );
+        };
+        
+        const findPairLegacy = (targetMatch: PlayoffMatch) => {
+          return roundMatches.find(other => 
+            other.id !== targetMatch.id && 
+            !processedIds.has(other.id) &&
+            other.home_team_name === targetMatch.away_team_name && 
+            other.away_team_name === targetMatch.home_team_name &&
+            other.home_team_name !== 'Por Definir'
+          );
+        };
 
-      if (isVuelta) {
-        vueltaMatch = m;
-        idaMatch = findPair(m);
+        if (isVuelta) {
+          vueltaMatch = m;
+          idaMatch = findPair(m) || findPairLegacy(m);
+        } else {
+          idaMatch = m;
+          vueltaMatch = findPair(m) || findPairLegacy(m);
+        }
       } else {
         idaMatch = m;
-        vueltaMatch = findPair(m);
+        vueltaMatch = undefined;
       }
 
       if (idaMatch) processedIds.add(idaMatch.id);

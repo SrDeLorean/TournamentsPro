@@ -390,6 +390,11 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
     matchesByMatchday[num].push(m);
   });
 
+  const matchdayKeys = Object.keys(matchesByMatchday).map(Number).sort((a, b) => a - b);
+  const [currentMatchdayIndex, setCurrentMatchdayIndex] = useState<number>(0);
+  const currentMatchdayNum = matchdayKeys[currentMatchdayIndex] || 1;
+  const currentMatchGroup = matchesByMatchday[currentMatchdayNum] || [];
+
   return (
     <div className="space-y-6">
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
@@ -429,120 +434,159 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
             </Button>
           </div>
 
-          {/* Listado de Jornadas */}
-          {Object.entries(matchesByMatchday).map(([jornadaNum, matchGroup]) => {
-            const firstMatch = matchGroup[0];
-            const dateStr = firstMatch?.scheduled_time || firstMatch?.scheduled_at;
-            const formattedDate = dateStr
-              ? new Date(dateStr).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-              : 'Fecha por definir';
-
-            return (
-              <div key={jornadaNum} className="glass-panel rounded-2xl p-4 space-y-3 shadow-xl overflow-x-auto">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase text-cyan-300 font-mono">
-                    <Calendar className="w-4 h-4 text-cyan-400" />
-                    <span>Jornada {jornadaNum} ({matchGroup.length} Partidos Simultáneos)</span>
-                  </div>
-                  <Badge variant="cyan" className="text-[10px] font-mono uppercase">
-                    {formattedDate}
-                  </Badge>
+          {/* Paginación de Jornadas */}
+          {matchdayKeys.length > 0 && (
+            <div className="flex flex-col space-y-4">
+              <div className="flex items-center justify-center gap-2 overflow-x-auto py-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentMatchdayIndex((prev) => Math.max(0, prev - 1))}
+                  disabled={currentMatchdayIndex === 0}
+                  className="px-3 border-white/10 bg-slate-900/50 hover:bg-slate-800 text-slate-300"
+                >
+                  {'<'}
+                </Button>
+                
+                <div className="flex gap-1">
+                  {matchdayKeys.map((jornadaNum, idx) => (
+                    <Button
+                      key={jornadaNum}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentMatchdayIndex(idx)}
+                      className={`w-10 h-10 p-0 border-white/10 ${
+                        idx === currentMatchdayIndex
+                          ? 'bg-cyan-600 text-white font-black border-cyan-400'
+                          : 'bg-slate-900/50 hover:bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {jornadaNum}
+                    </Button>
+                  ))}
                 </div>
 
-                <table className="w-full text-left text-xs font-mono">
-                  <thead>
-                    <tr className="border-b border-white/10 text-slate-400 text-[10px] uppercase">
-                      <th className="p-2">ID</th>
-                      <th className="p-2 text-right">Equipo Local</th>
-                      <th className="p-2 text-center">Logo</th>
-                      <th className="p-2 text-center">Resultado</th>
-                      <th className="p-2 text-center">VS</th>
-                      <th className="p-2 text-center">Resultado</th>
-                      <th className="p-2 text-center">Logo</th>
-                      <th className="p-2 text-left">Equipo Visitante</th>
-                      <th className="p-2 text-center">Acciones & Auto-Avance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matchGroup.map((m) => {
-                      const homeName = m.home_team_name || m.home_team_id || m.team_home_id || 'Por Definir';
-                      const awayName = m.away_team_name || m.away_team_id || m.team_away_id || 'Por Definir';
-                      const homeId = m.home_team_id || m.team_home_id;
-                      const awayId = m.away_team_id || m.team_away_id;
-                      const homeScore = m.reported_score_home ?? m.score_home;
-                      const awayScore = m.reported_score_away ?? m.score_away;
-                      const isTerminado = m.status === 'TERMINADO' || m.status === 'FINALIZADO';
-
-                      return (
-                        <tr key={m.id} className="border-b border-white/5 hover:bg-slate-900/40 transition-colors">
-                          <td className="p-2 text-slate-500 font-bold text-[10px]">{m.id.slice(-6)}</td>
-                          <td className="p-2 text-right font-black text-white">{homeName}</td>
-                          <td className="p-2 text-center">
-                            <div className="w-7 h-7 mx-auto rounded-lg bg-slate-900 border border-purple-500/40 flex items-center justify-center font-black text-[10px] text-purple-300">
-                              {homeName.slice(0, 3).toUpperCase()}
-                            </div>
-                          </td>
-                          <td className="p-2 text-center font-black text-sm">
-                            {isTerminado ? (
-                              <span className="text-emerald-400">{homeScore}</span>
-                            ) : (
-                              <span className="input-theme px-2 py-0.5 rounded text-slate-400 font-mono text-xs opacity-70">-</span>
-                            )}
-                          </td>
-                          <td className="p-2 text-center font-black text-slate-500 text-[10px]">VS</td>
-                          <td className="p-2 text-center font-black text-sm">
-                            {isTerminado ? (
-                              <span className="text-emerald-400">{awayScore}</span>
-                            ) : (
-                              <span className="input-theme px-2 py-0.5 rounded text-slate-400 font-mono text-xs opacity-70">-</span>
-                            )}
-                          </td>
-                          <td className="p-2 text-center">
-                            <div className="w-7 h-7 mx-auto rounded-lg bg-slate-900 border border-cyan-500/40 flex items-center justify-center font-black text-[10px] text-cyan-300">
-                              {awayName.slice(0, 3).toUpperCase()}
-                            </div>
-                          </td>
-                          <td className="p-2 text-left font-black text-white">{awayName}</td>
-
-                          {/* Acciones & Auto-Avance */}
-                          <td className="p-2 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {/* Botones de Declarar Ganador / Auto-Avance */}
-                              {homeId && homeId !== 'BYE' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleAdvanceWinner(m.id, homeId, homeName)}
-                                  disabled={isPending}
-                                  className="text-[10px] text-purple-300 hover:bg-purple-950 px-2 py-1 h-auto"
-                                  title={`Avanzar a ${homeName}`}
-                                >
-                                  Gana {homeName.slice(0, 6)}
-                                </Button>
-                              )}
-
-                              {awayId && awayId !== 'BYE' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleAdvanceWinner(m.id, awayId, awayName)}
-                                  disabled={isPending}
-                                  className="text-[10px] text-cyan-300 hover:bg-cyan-950 px-2 py-1 h-auto"
-                                  title={`Avanzar a ${awayName}`}
-                                >
-                                  Gana {awayName.slice(0, 6)}
-                                </Button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentMatchdayIndex((prev) => Math.min(matchdayKeys.length - 1, prev + 1))}
+                  disabled={currentMatchdayIndex === matchdayKeys.length - 1}
+                  className="px-3 border-white/10 bg-slate-900/50 hover:bg-slate-800 text-slate-300"
+                >
+                  {'>'}
+                </Button>
               </div>
-            );
-          })}
+
+              {/* Contenido de la Jornada Actual */}
+              {(() => {
+                const firstMatch = currentMatchGroup[0];
+                const dateStr = firstMatch?.scheduled_time || firstMatch?.scheduled_at;
+                const formattedDate = dateStr
+                  ? new Date(dateStr).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  : 'Fecha por definir';
+
+                return (
+                  <div className="glass-panel rounded-2xl p-4 space-y-3 shadow-xl overflow-x-auto">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+                      <div className="flex items-center gap-2 text-xs font-black uppercase text-cyan-300 font-mono">
+                        <Calendar className="w-4 h-4 text-cyan-400" />
+                        <span>Jornada {currentMatchdayNum} ({currentMatchGroup.length} Partidos)</span>
+                      </div>
+                      <Badge variant="cyan" className="text-[10px] font-mono uppercase">
+                        {formattedDate}
+                      </Badge>
+                    </div>
+
+                    <table className="w-full text-left text-xs font-mono">
+                      <thead>
+                        <tr className="border-b border-white/10 text-slate-400 text-[10px] uppercase">
+                          <th className="p-2">ID</th>
+                          <th className="p-2 text-right">Equipo Local</th>
+                          <th className="p-2 text-center">Logo</th>
+                          <th className="p-2 text-center">Resultado</th>
+                          <th className="p-2 text-center">VS</th>
+                          <th className="p-2 text-center">Resultado</th>
+                          <th className="p-2 text-center">Logo</th>
+                          <th className="p-2 text-left">Equipo Visitante</th>
+                          <th className="p-2 text-center">Acciones & Auto-Avance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentMatchGroup.map((m) => {
+                          const homeName = m.home_team_name || m.home_team_id || m.team_home_id || 'Por Definir';
+                          const awayName = m.away_team_name || m.away_team_id || m.team_away_id || 'Por Definir';
+                          const homeId = m.home_team_id || m.team_home_id;
+                          const awayId = m.away_team_id || m.team_away_id;
+                          const homeScore = m.reported_score_home ?? m.score_home;
+                          const awayScore = m.reported_score_away ?? m.score_away;
+                          const isTerminado = m.status === 'TERMINADO' || m.status === 'FINALIZADO';
+
+                          return (
+                            <tr key={m.id} className="border-b border-white/5 hover:bg-slate-900/40 transition-colors">
+                              <td className="p-2 text-slate-500 font-bold text-[10px]">{m.id.slice(-6)}</td>
+                              <td className="p-2 text-right font-black text-white">{homeName}</td>
+                              <td className="p-2 text-center">
+                                <div className="w-7 h-7 mx-auto rounded-lg bg-slate-900 border border-purple-500/40 flex items-center justify-center font-black text-[10px] text-purple-300">
+                                  {homeName.slice(0, 3).toUpperCase()}
+                                </div>
+                              </td>
+                              <td className="p-2 text-center font-black text-sm">
+                                {isTerminado ? (
+                                  <span className="text-emerald-400">{homeScore}</span>
+                                ) : (
+                                  <span className="input-theme px-2 py-0.5 rounded text-slate-400 font-mono text-xs opacity-70">-</span>
+                                )}
+                              </td>
+                              <td className="p-2 text-center font-black text-slate-500 text-[10px]">VS</td>
+                              <td className="p-2 text-center font-black text-sm">
+                                {isTerminado ? (
+                                  <span className="text-emerald-400">{awayScore}</span>
+                                ) : (
+                                  <span className="input-theme px-2 py-0.5 rounded text-slate-400 font-mono text-xs opacity-70">-</span>
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                <div className="w-7 h-7 mx-auto rounded-lg bg-slate-900 border border-cyan-500/40 flex items-center justify-center font-black text-[10px] text-cyan-300">
+                                  {awayName.slice(0, 3).toUpperCase()}
+                                </div>
+                              </td>
+                              <td className="p-2 text-left font-black text-white">{awayName}</td>
+                              <td className="p-2 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  {homeId && homeId !== 'BYE' && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleAdvanceWinner(m.id, homeId, homeName)}
+                                      disabled={isPending}
+                                      className="text-[10px] text-purple-300 hover:bg-purple-950 px-2 py-1 h-auto"
+                                    >
+                                      Gana {homeName.slice(0, 6)}
+                                    </Button>
+                                  )}
+                                  {awayId && awayId !== 'BYE' && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleAdvanceWinner(m.id, awayId, awayName)}
+                                      disabled={isPending}
+                                      className="text-[10px] text-cyan-300 hover:bg-cyan-950 px-2 py-1 h-auto"
+                                    >
+                                      Gana {awayName.slice(0, 6)}
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       )}
 

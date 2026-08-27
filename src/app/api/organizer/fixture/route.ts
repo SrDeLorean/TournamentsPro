@@ -29,15 +29,6 @@ export async function POST(request: Request) {
       'SELECT organization_id, organizer_id FROM competitions WHERE id = ? LIMIT 1',
       [tournamentId],
     );
-    if (resources.length === 0) {
-      resources = await queryDB<{ organization_id: string | null; organizer_id: string | null }>(
-        `SELECT u.organization_id, t.organizer_id
-           FROM tournaments t
-           LEFT JOIN users u ON u.id = t.organizer_id
-          WHERE t.id = ? LIMIT 1`,
-        [tournamentId],
-      );
-    }
     const resource = resources[0];
     if (!resource) {
       return NextResponse.json({ error: 'Torneo no encontrado' }, { status: 404 });
@@ -243,10 +234,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Update status and format on both tables for 100% sync
-    try {
-      await queryDB('UPDATE tournaments SET status = "En_Juego", format = ?, mode_format = ? WHERE id = ?', [fmt, fmt, tournamentId]);
-    } catch {}
+    // 3. Update status and format
     try {
       await queryDB('UPDATE competitions SET status = "En_Juego", format = ?, mode_format = ? WHERE id = ?', [fmt, fmt, tournamentId]);
     } catch {}

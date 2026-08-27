@@ -33,9 +33,9 @@ export async function GET(request: Request) {
 
     const seasons = await queryDB<SeasonRow>(sql, params);
     const tournaments = isAdministrator(actor)
-      ? await queryDB<TournamentRow>(`SELECT * FROM tournaments ORDER BY created_at DESC`)
+      ? await queryDB<TournamentRow>(`SELECT * FROM competitions ORDER BY created_at DESC`)
       : await queryDB<TournamentRow>(
-          `SELECT t.* FROM tournaments t
+          `SELECT t.* FROM competitions t
              JOIN seasons s ON s.id = t.season_id
             WHERE s.organization_id = ?
             ORDER BY t.created_at DESC`,

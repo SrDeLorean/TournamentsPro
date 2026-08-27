@@ -1205,7 +1205,7 @@ async function generateMatchesForFormat(
 
   if (format === 'Playoff') {
     const playoffNodes = generatePlayoffBracket(competitionId, teams, matchMode);
-    for (const node of playoffNodes) {
+    for (const node of playoffNodes.reverse()) {
       let matchdayNumber = node.roundOrder;
       if (matchMode === 'IdaVuelta') {
         matchdayNumber = (node.roundOrder - 1) * 2 + (node.legType === 'VUELTA' ? 2 : 1);
@@ -1285,7 +1285,7 @@ async function generateMatchesForFormat(
     const playoffTeamCount = groupCount * qualifiersPerGroup;
     const playoffNodes = generatePlayoffBracket(competitionId, teams.slice(0, playoffTeamCount), matchMode, true, groupCount, qualifiersPerGroup);
 
-    for (const node of playoffNodes) {
+    for (const node of playoffNodes.reverse()) {
       let playoffRoundOffset = node.roundOrder;
       if (matchMode === 'IdaVuelta') {
         playoffRoundOffset = (node.roundOrder - 1) * 2 + (node.legType === 'VUELTA' ? 2 : 1);

@@ -47,15 +47,6 @@ export async function POST(request: Request) {
       'SELECT organization_id, organizer_id FROM competitions WHERE id = ? LIMIT 1',
       [competitionId],
     );
-    if (competitions.length === 0) {
-      competitions = await queryDB<{ organization_id: string | null; organizer_id: string | null }>(
-        `SELECT u.organization_id, t.organizer_id
-           FROM tournaments t
-           LEFT JOIN users u ON u.id = t.organizer_id
-          WHERE t.id = ? LIMIT 1`,
-        [competitionId],
-      );
-    }
     const competition = competitions[0] || { organization_id: null, organizer_id: null };
 
     // ACTION: REPORT_SCORE (Captains) -> Status: POR_REVISAR
