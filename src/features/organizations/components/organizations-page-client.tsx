@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/components/providers/auth-provider';
-import { Building2, Plus, Shield, Edit, Users, Trophy, Star } from 'lucide-react';
+import { Building2, Plus, Shield, Edit, Users, Trophy, Star, Trash2 } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
@@ -299,6 +299,31 @@ export default function OrganizationsModulePage() {
     }
   };
 
+  const handleDeleteOrg = async (organization: OrganizationRecord) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar la organización "${organization.name}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    
+    startOperation(`Eliminación de Organización: ${organization.name}`);
+    try {
+      const res = await fetch('/api/admin/organizations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: organization.id }),
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        endSuccess(`La organización "${organization.name}" fue eliminada correctamente.`);
+        refreshOrganizations();
+      } else {
+        endError(data.error || 'Error al eliminar la organización.');
+      }
+    } catch (e: unknown) {
+      endError(errorMessage(e, 'Error de conexión al eliminar la organización.'));
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       <PageHeader
@@ -514,9 +539,14 @@ export default function OrganizationsModulePage() {
             searchPlaceholder="Buscar organización..."
             brandColor="#A855F7"
             actions={(row) => (
-              <Button size="sm" variant="ghost" onClick={() => openEditModal(row)} className="text-xs text-purple-300 hover:bg-purple-950 p-2">
-                <Edit className="w-3.5 h-3.5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="ghost" onClick={() => openEditModal(row)} className="text-xs text-purple-300 hover:bg-purple-950 p-2">
+                  <Edit className="w-3.5 h-3.5" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => handleDeleteOrg(row)} className="text-xs text-rose-400 hover:bg-rose-950/50 p-2">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
             )}
           />
         </div>

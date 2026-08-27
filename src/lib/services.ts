@@ -18,7 +18,7 @@ import { consumeSecurityRateLimit, createServiceAuthSession } from '@/lib/securi
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { replaceOrganizationGames } from '@/server/organizations/organization-games';
+
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -427,11 +427,6 @@ export async function createManagedOrganizationService(data: ManagedOrganization
         JSON.stringify(data.socialMedia || {}), data.status || 'Activa',
       ],
     );
-    await replaceOrganizationGames(
-      transaction,
-      organizationId,
-      data.allowedGames || ['eafc26', 'valorant'],
-    );
     for (const organizerId of organizerIds) {
       await transaction.executeCommand('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
     }
@@ -476,9 +471,6 @@ export async function updateManagedOrganizationService(
         data.socialMedia ? JSON.stringify(data.socialMedia) : null, data.status ?? null, organizationId,
       ],
     );
-    if (data.allowedGames) {
-      await replaceOrganizationGames(transaction, organizationId, data.allowedGames);
-    }
     if (organizerIds) {
       await transaction.queryRows(
         "SELECT id FROM users WHERE organization_id = ? AND role = 'Organizador' FOR UPDATE",

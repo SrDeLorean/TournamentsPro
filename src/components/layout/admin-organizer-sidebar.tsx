@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Badge } from '@/components/ui/badge';
 import {
-  Shield, Users, LayoutDashboard, Calendar, Award, ArrowRightLeft, CheckCircle2, Menu, X, Gamepad2, Swords, Globe, Home, Star, PieChart, Database, Target
+  Shield, Users, LayoutDashboard, Calendar, Award, ArrowRightLeft, CheckCircle2, Menu, X, Gamepad2, Swords, Globe, Home, Star, PieChart, Database, Target, Building2, MessageSquare, Ban
 } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 
@@ -36,6 +36,12 @@ export function AdminOrganizerSidebar() {
       badge: 'Stats',
     },
     {
+      title: 'Gestión Organizaciones',
+      href: '/organizaciones',
+      icon: <Building2 className="w-4 h-4 text-emerald-400" />,
+      badge: 'Orgs.',
+    },
+    {
       title: 'Gestión de Competencias',
       href: '/dashboard/competencias',
       icon: <Swords className="w-4 h-4 text-purple-400" />,
@@ -58,6 +64,12 @@ export function AdminOrganizerSidebar() {
       href: '/matchday',
       icon: <CheckCircle2 className="w-4 h-4 text-rose-400" />,
       badge: 'Matchday',
+    },
+    {
+      title: 'Moderación & Chat Global',
+      href: '/moderacion',
+      icon: <MessageSquare className="w-4 h-4 text-orange-400" />,
+      badge: 'Bans/Chat',
     },
   ];
 

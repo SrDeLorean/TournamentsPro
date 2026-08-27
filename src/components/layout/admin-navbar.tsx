@@ -18,9 +18,11 @@ import { Button } from '@/components/ui/button';
 import { NotificationCenter } from '@/components/notifications/notification-center';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import type { TeamData, UserProfile } from '@/lib/data-store';
+import { useTranslation } from '@/components/providers/language-provider';
 import {
-  Trophy, Shield, MessageSquare, LogOut, Settings, Plus, Sparkles, ChevronDown, LayoutDashboard, ArrowRightLeft, User, CheckCircle2
+  Trophy, Shield, MessageSquare, LogOut, Settings, Plus, Sparkles, ChevronDown, LayoutDashboard, ArrowRightLeft, User, CheckCircle2, Home, Gamepad2, Flag, Users, Info
 } from 'lucide-react';
+import { NavLinks } from '@/components/layout/nav-links';
 
 export function AdminNavbar() {
   const pathname = usePathname();
@@ -31,15 +33,19 @@ export function AdminNavbar() {
   const isOrganizer = userRoleStr === 'organizador';
   const currentGameObj = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG['eafc26'];
 
+  const { t } = useTranslation();
+
   const [isTeamsOpen, setIsTeamsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
   const [isClubManageOpen, setIsClubManageOpen] = useState(false);
+  const [isGamesOpen, setIsGamesOpen] = useState(false);
 
   const teamsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const gamesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -51,6 +57,9 @@ export function AdminNavbar() {
       }
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
         setIsSettingsOpen(false);
+      }
+      if (gamesRef.current && !gamesRef.current.contains(event.target as Node)) {
+        setIsGamesOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -253,40 +262,8 @@ export function AdminNavbar() {
             )}
           </div>
 
-          {/* 2. Navigation Items */}
-          <nav className="hidden lg:flex items-center gap-2">
-            <Link
-              href="/dashboard"
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 ${
-                pathname === '/dashboard'
-                  ? 'bg-[var(--accent-cyan-bg)] text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/40 shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)]'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              Dashboard
-            </Link>
-
-            {!isAdmin && (
-              <Link
-                href={`/${activeGameSlug}/traspasos`}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-1.5"
-              >
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-                Traspasos ({currentGameObj.name})
-              </Link>
-            )}
-
-            <Link
-              href="/mensajes"
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
-                pathname === '/mensajes' ? 'text-[var(--accent-cyan)] font-extrabold' : 'text-[var(--text-secondary)]'
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
-              Mensajes
-            </Link>
-          </nav>
+          {/* 2. Navigation Items (Matched with Unlogged Version) */}
+          <NavLinks />
 
           {/* 3. Right Action Controls & User Profile Dropdown */}
           <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">

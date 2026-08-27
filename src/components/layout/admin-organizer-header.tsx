@@ -11,8 +11,9 @@ import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import {
-  Trophy, Shield, Settings, LogOut, CheckCircle2, ChevronDown, Sparkles, Home, Gamepad2, Swords, Users, ArrowRightLeft
+  Trophy, Shield, Settings, LogOut, CheckCircle2, ChevronDown, Sparkles, Home, Gamepad2, Users, Flag, Info
 } from 'lucide-react';
+import { NavLinks } from '@/components/layout/nav-links';
 
 export function AdminOrganizerHeader() {
   const router = useRouter();
@@ -74,106 +75,7 @@ export function AdminOrganizerHeader() {
         </div>
 
         {/* 🌐 Center: Public Layout Navigation Views (Vistas Públicas Integradas) */}
-        <nav className="hidden md:flex items-center gap-1 font-mono text-xs overflow-x-auto scrollbar-none">
-          <Link
-            href="/"
-            className="px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-cyan-400 hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-          >
-            <Home className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Inicio</span>
-          </Link>
-
-          {/* Disciplinas eSports Dropdown */}
-          <div className="relative" ref={gamesRef}>
-            <button
-              onClick={() => setIsGamesOpen(!isGamesOpen)}
-              className="px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-cyan-400 hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-            >
-              <Gamepad2 className="w-3.5 h-3.5 text-purple-400" />
-              <span>Disciplinas</span>
-              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isGamesOpen ? 'rotate-180 text-cyan-400' : ''}`} />
-            </button>
-
-            {isGamesOpen && (
-              <div
-                className="absolute top-full left-0 mt-1.5 w-60 rounded-2xl bg-slate-950/95 border border-purple-500/40 p-2 shadow-2xl z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 space-y-1"
-                onMouseLeave={() => setIsGamesOpen(false)}
-              >
-                <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-purple-300 border-b border-white/10 flex items-center justify-between">
-                  <span>Disciplinas eSports</span>
-                  <Sparkles className="w-3 h-3 text-cyan-400" />
-                </div>
-                {Object.values(GAMES_CATALOG).map((game) => (
-                  <button
-                    key={game.slug}
-                    onClick={() => {
-                      setActiveGameSlug(game.slug);
-                      setIsGamesOpen(false);
-                      const segments = pathname.split('/').filter(Boolean);
-                      if (segments.length > 0 && GAMES_CATALOG[segments[0]]) {
-                        segments[0] = game.slug;
-                        router.push('/' + segments.join('/'));
-                      } else {
-                        router.push(`/${game.slug}/partidos`);
-                      }
-                    }}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                      activeGameSlug === game.slug
-                        ? 'bg-purple-950 text-cyan-300 border border-purple-500/50'
-                        : 'text-slate-300 hover:bg-slate-900 hover:text-cyan-400'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{game.icon}</span>
-                      <span>{game.name}</span>
-                    </div>
-                    {activeGameSlug === game.slug && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <Link
-            href={`/${activeGameSlug}/partidos`}
-            className="px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-cyan-400 hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-          >
-            <Swords className="w-3.5 h-3.5 text-amber-400" />
-            <span>Partidos</span>
-          </Link>
-
-          <Link
-            href="/informacion"
-            className="px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-cyan-400 hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-          >
-            <Trophy className="w-3.5 h-3.5 text-yellow-400" />
-            <span>Torneos</span>
-          </Link>
-
-          <Link
-            href="/equipos"
-            className="px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-cyan-400 hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-          >
-            <Shield className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Equipos</span>
-          </Link>
-
-          <Link
-            href="/atleta/ofertas"
-            className="px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-cyan-400 hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-          >
-            <ArrowRightLeft className="w-3.5 h-3.5 text-rose-400" />
-            <span>Fichajes</span>
-          </Link>
-
-          <Link
-            href="/usuarios"
-            className="px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-cyan-400 hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-          >
-            <Users className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Atletas</span>
-          </Link>
-        </nav>
+        <NavLinks />
 
         {/* Right Side Controls ONLY: 1. Bell, 2. Settings Gear, 3. User Info Dropdown */}
         <div className="flex items-center gap-3">

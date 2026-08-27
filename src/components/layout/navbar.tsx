@@ -12,6 +12,7 @@ import { GameLogo } from '@/components/ui/game-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 
 import { AdminNavbar } from '@/components/layout/admin-navbar';
+import { NavLinks } from '@/components/layout/nav-links';
 
 export function Navbar() {
   const { t } = useTranslation();
@@ -49,128 +50,23 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex items-center justify-between gap-2">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 p-0.5 shadow-md shadow-cyan-500/20 group-hover:scale-105 transition-transform flex items-center justify-center">
-            <div className="w-full h-full bg-[var(--bg-main)] rounded-[6px] flex items-center justify-center">
-              <Trophy className="w-3.5 h-3.5 text-[var(--accent-cyan)] group-hover:rotate-12 transition-transform" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-600 to-amber-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform">
+            <div className="w-full h-full bg-slate-950 rounded-[9px] flex items-center justify-center">
+              <Trophy className="w-4 h-4 text-cyan-400" />
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="font-display text-sm font-black tracking-wider bg-gradient-to-r from-cyan-500 via-purple-500 to-amber-500 bg-clip-text text-transparent uppercase">
-              TorneosEsport
+          <div className="hidden md:flex flex-col text-left">
+            <span className="text-base font-black tracking-tight text-[var(--text-heading)] uppercase leading-none">
+              TOURNAMENTS<span className="text-cyan-400">PRO</span>
             </span>
-            <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--accent-cyan-bg)] text-[var(--accent-cyan)] font-extrabold uppercase hidden sm:inline-block">
-              PRO
+            <span className="text-[9px] text-[var(--text-muted)] font-mono font-bold uppercase">
+              Plataforma Competitiva
             </span>
           </div>
         </Link>
 
         {/* Center Nav Links (Desktop) */}
-        <nav className="hidden lg:flex items-center gap-1">
-          <Link
-            href="/"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
-          >
-            <Home className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
-            Inicio
-          </Link>
-
-          {/* Juegos Dropdown */}
-          <div className="relative" ref={gamesRef}>
-            <button
-              onClick={() => setIsGamesOpen(!isGamesOpen)}
-              onMouseEnter={() => setIsGamesOpen(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
-            >
-              <Gamepad2 className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
-              {t('nav.games')}
-              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isGamesOpen ? 'rotate-180 text-[var(--accent-cyan)]' : ''}`} />
-            </button>
-
-            {/* Dropdown Menu */}
-            {isGamesOpen && (
-              <div
-                className="absolute top-full left-0 mt-1 w-64 rounded-xl glass-panel p-2 shadow-2xl border border-[var(--border-card)] animate-in fade-in zoom-in-95 duration-150 z-50"
-                onMouseLeave={() => setIsGamesOpen(false)}
-              >
-                <div className="px-2 py-1 mb-1 border-b border-[var(--border-card)] flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Disciplinas eSports</span>
-                  <Sparkles className="w-3 h-3 text-[var(--accent-cyan)]" />
-                </div>
-                <div className="space-y-1">
-                  {Object.values(GAMES_CATALOG).map((game) => (
-                    <Link
-                      key={game.id}
-                      href={`/${game.slug}`}
-                      onClick={() => setIsGamesOpen(false)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <GameLogo game={game} size="sm" className="group-hover:scale-110" />
-                        <div>
-                          <span className="font-bold text-xs block text-[var(--text-heading)] group-hover:text-[var(--accent-cyan)] transition-colors">
-                            {game.name}
-                          </span>
-                          <span className="text-[10px] text-[var(--text-muted)] block line-clamp-1">{game.category}</span>
-                        </div>
-                      </div>
-                      <span
-                        className="w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ backgroundColor: game.brandColor }}
-                      />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <Link
-            href="/equipos"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
-          >
-            <Shield className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
-            Equipos
-          </Link>
-
-          <Link
-            href="/organizaciones"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
-          >
-            <Flag className="w-3.5 h-3.5 text-[var(--accent-emerald)]" />
-            {t('nav.organizations')}
-          </Link>
-
-          <Link
-            href="/usuarios"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
-          >
-            <Users className="w-3.5 h-3.5 text-[var(--accent-violet)]" />
-            Usuarios
-          </Link>
-
-          <Link
-            href="/mensajes"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
-          >
-            <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
-            Mensajes
-          </Link>
-
-          <Link
-            href="/informacion"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-colors flex items-center gap-1.5"
-          >
-            <Info className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            Información
-          </Link>
-
-          <Link
-            href="/componentes"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-colors flex items-center gap-1.5"
-          >
-            UI Kit
-          </Link>
-        </nav>
+        <NavLinks />
 
         {/* Right Controls: Settings Gear & Auth Buttons */}
         <div className="flex items-center gap-1.5">

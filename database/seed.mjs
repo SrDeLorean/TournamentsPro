@@ -7,11 +7,12 @@ const { loadEnvConfig } = pkg;
 loadEnvConfig(process.cwd());
 
 const games = [
-    { slug: 'eafc', name: 'EA FC 24', category: 'Esports', team_size: 11 },
-    { slug: 'csgo', name: 'CS2', category: 'Esports', team_size: 5 },
-    { slug: 'valorant', name: 'Valorant', category: 'Esports', team_size: 5 },
-    { slug: 'rocketleague', name: 'Rocket League', category: 'Esports', team_size: 3 },
-    { slug: 'lol', name: 'League of Legends', category: 'Esports', team_size: 5 }
+    { slug: 'eafc26', name: 'EA SPORTS FC 26', category: 'Deportes', team_size: 11 },
+    { slug: 'csgo', name: 'Counter-Strike 2', category: 'FPS Tactical', team_size: 5 },
+    { slug: 'valorant', name: 'VALORANT', category: 'FPS Tactical', team_size: 5 },
+    { slug: 'rocketleague', name: 'Rocket League', category: 'Vehicular', team_size: 3 },
+    { slug: 'lol', name: 'League of Legends', category: 'MOBA', team_size: 5 },
+    { slug: 'fortnite', name: 'Fortnite', category: 'Battle Royale', team_size: 4 }
 ];
 
 async function seed() {
@@ -53,38 +54,19 @@ async function seed() {
             ['admin-1', 'admin@tournamentspro.com', 'Admin User', 'Admin', 'Administrador', 'Activo', passwordHash]
         );
 
-        // 4. Create Organizer
-        await connection.query(
-            `INSERT INTO users (id, email, name, gamertag, role, status, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            ['org-1', 'organizer@tournamentspro.com', 'Main Organizer', 'Organizer', 'Organizador', 'Activo', passwordHash]
-        );
-
-        // 5. Create Organization
-        await connection.query(
-            `INSERT INTO organizations (id, name, tag, owner_id) VALUES (?, ?, ?, ?)`,
-            ['org-1', 'Pro League Org', 'PLO', 'org-1']
-        );
-        
-        // Update Organizer with organization_id
-        await connection.query(
-            `UPDATE users SET organization_id = ? WHERE id = ?`,
-            ['org-1', 'org-1']
-        );
-
-        // 6. Iterate through games and create data
-        for (const game of games) {
-            console.log(`Seeding data for ${game.name}...`);
-            
-            // Create a competition for this game
-            const compId = `comp-${game.slug}-1`;
+        // 4. Create 3 Organizers WITHOUT organizations
+        for (let o = 1; o <= 3; o++) {
             await connection.query(
-                `INSERT INTO competitions (id, name, game_slug, organizer_id, organizer_name, organization_id, status, fecha_inicio, format) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [compId, `${game.name} Pro League`, game.slug, 'org-1', 'Main Organizer', 'org-1', 'Borrador', new Date(), 'Liga']
+                `INSERT INTO users (id, email, name, gamertag, role, status, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [`org-${o}`, `organizer${o}@tournamentspro.com`, `Organizer ${o}`, `Org${o}`, 'Organizador', 'Activo', passwordHash]
             );
+        }
 
-            // Create 2 Captains and 2 Teams
-            for (let i = 1; i <= 2; i++) {
+        // 5. Iterate through games and create 16 teams per game
+        for (const game of games) {
+            console.log(`Seeding 16 teams for ${game.name}...`);
+
+            for (let i = 1; i <= 16; i++) {
                 const captainId = `cap-${game.slug}-${i}`;
                 const teamId = `team-${game.slug}-${i}`;
                 const teamName = `${game.name} Team ${i}`;
@@ -99,12 +81,6 @@ async function seed() {
                 await connection.query(
                     `INSERT INTO teams (id, name, tag, game_slug, captain_id, captain_name) VALUES (?, ?, ?, ?, ?, ?)`,
                     [teamId, teamName, `T${i}${game.slug.substring(0,2)}`.toUpperCase(), game.slug, captainId, `Captain ${i} ${game.name}`]
-                );
-
-                // Enroll team in competition
-                await connection.query(
-                    `INSERT INTO competition_teams (id, competition_id, team_id, team_name, status) VALUES (?, ?, ?, ?, ?)`,
-                    [`ct-${game.slug}-${i}`, compId, teamId, teamName, 'CONFIRMADO']
                 );
 
                 // Add 1 Player to the team

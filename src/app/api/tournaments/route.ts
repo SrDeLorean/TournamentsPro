@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     // Single query directly from unified 'competitions' table
     const comps = await queryDB<TournamentListRow>(`
       SELECT c.id, c.name, c.game_slug, c.organizer_id, c.mode_format as format, 
-             c.format as format_type, c.status, c.created_at, c.max_teams, c.registered_teams_count,
+             c.format as format_type, c.status, c.created_at, NULL as max_teams, NULL as registered_teams_count,
              COALESCE(c.organization_id, u.organization_id, o.id) as organization_id,
              COALESCE(o.name, u_org.name, 'Organización Oficial') as organization_name,
              COALESCE(o.tag, u_org.tag, 'ORG') as organization_tag
