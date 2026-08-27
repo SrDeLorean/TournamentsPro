@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     enrolledTeams.forEach((team) => teamMap.set(team.id, team));
 
     // 2. Clear existing matches for this tournament/competition
-    await queryDB('DELETE FROM matches WHERE tournament_id = ? OR competition_id = ?', [tournamentId, tournamentId]);
+    await queryDB('DELETE FROM matches WHERE competition_id = ?', [tournamentId]);
 
     const teamIds = enrolledTeams.map((team) => team.id);
     const fmt = (format || 'LIGA').toUpperCase();

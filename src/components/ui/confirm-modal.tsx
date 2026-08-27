@@ -56,9 +56,9 @@ export function ConfirmModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className={`max-w-md p-6 sm:p-7 bg-[var(--bg-card)] backdrop-blur-2xl border ${styles.border} shadow-2xl space-y-5 font-mono text-[var(--text-primary)]`}>
-      <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-2xl border border-[var(--border-card)] shrink-0 ${styles.iconBg}`}>{styles.icon}</div>
-        <div className="pt-0.5">
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div className={`p-2.5 sm:p-3 rounded-2xl border border-[var(--border-card)] shrink-0 ${styles.iconBg}`}>{styles.icon}</div>
+        <div className="min-w-0 pt-0.5">
           <h3 className="text-base sm:text-lg font-black text-[var(--text-heading)] uppercase tracking-wider">{title}</h3>
           <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed font-sans">{description}</p>
         </div>
@@ -77,15 +77,15 @@ export function ConfirmModal({
         </div>
       )}
 
-      <div className="pt-4 flex items-center justify-end gap-3 border-t border-[var(--border-card)]/50">
-        <Button type="button" variant="ghost" onClick={onClose} className="text-xs font-bold font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-4 py-2.5 rounded-xl">
+      <div className="pt-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 border-t border-[var(--border-card)]/50">
+        <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto text-xs font-bold font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-4 py-2.5 rounded-xl">
           Cancelar
         </Button>
         <Button
           type="button"
           onClick={handleConfirm}
           disabled={isSubmitting || (requireReason && !reason.trim())}
-          className={`font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-lg transition-all hover:scale-[0.98] ${styles.btnBg}`}
+          className={`w-full sm:w-auto font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-lg transition-all hover:scale-[0.98] ${styles.btnBg}`}
         >
           {isSubmitting ? 'Procesando...' : confirmText}
         </Button>

@@ -3,7 +3,11 @@ import { queryDB } from '@/lib/db';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canCreateOrganization, canManageOrganization, isAdministrator } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
-import { createManagedOrganizationService, updateManagedOrganizationService } from '@/lib/services';
+import {
+  archiveManagedOrganizationService,
+  createManagedOrganizationService,
+  updateManagedOrganizationService,
+} from '@/lib/services';
 
 interface OrganizationRow extends Record<string, unknown> {
   id: string;
@@ -197,5 +201,37 @@ export async function PUT(request: Request) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error actualizando organización' }, { status: 500 });
+  }
+}
+
+// DELETE archives an organization and its teams. Only administrators may perform this operation.
+export async function DELETE(request: Request) {
+  try {
+    const actor = await requireRequestActor(request, ['Administrador']);
+    const body: unknown = await request.json();
+    const organizationId = body && typeof body === 'object' && 'id' in body && typeof body.id === 'string'
+      ? body.id.trim().slice(0, 36)
+      : '';
+    if (!organizationId) return NextResponse.json({ error: 'ID de la Organización requerido' }, { status: 400 });
+    if (!canManageOrganization(actor, organizationId)) {
+      return NextResponse.json({ error: 'No tienes permisos para archivar esta Organización' }, { status: 403 });
+    }
+
+    const result = await archiveManagedOrganizationService(organizationId);
+    if (!result.success) return NextResponse.json({ error: result.error }, { status: 409 });
+    await writeSecurityAudit({
+      actor,
+      request,
+      action: 'ADMIN_ORGANIZATION_ARCHIVED',
+      resourceType: 'organization',
+      resourceId: organizationId,
+      organizationId,
+      metadata: { archivedTeams: result.archivedTeams },
+    });
+    return NextResponse.json({ success: true, message: 'Organización archivada; su historial fue conservado.' });
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error archivando organización' }, { status: 500 });
   }
 }

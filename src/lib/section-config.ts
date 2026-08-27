@@ -1,5 +1,24 @@
 import { GameConfig } from './games-data';
 
+export const PUBLIC_GAME_SECTIONS = [
+  'organizaciones',
+  'competencias',
+  'clasificacion',
+  'partidos',
+  'traspasos',
+  'equipos',
+  'jugadores',
+  'tops',
+  'infografia',
+  'datos',
+] as const;
+
+export type PublicGameSection = (typeof PUBLIC_GAME_SECTIONS)[number];
+
+export function isPublicGameSection(value: string): value is PublicGameSection {
+  return PUBLIC_GAME_SECTIONS.includes(value as PublicGameSection);
+}
+
 export interface SectionMetadata {
   badgeText: string;
   title: string;

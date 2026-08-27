@@ -265,20 +265,19 @@ export async function requireMatchReporter(matchId: string): Promise<Authorizati
 
   const matches = await queryDB<{
     competition_id: string | null;
-    tournament_id: string | null;
     home_team_id: string | null;
     away_team_id: string | null;
     team_home_id: string | null;
     team_away_id: string | null;
   }>(
-    `SELECT competition_id, tournament_id, home_team_id, away_team_id, team_home_id, team_away_id
+    `SELECT competition_id, home_team_id, away_team_id, team_home_id, team_away_id
        FROM matches WHERE id = ? LIMIT 1`,
     [matchId],
   );
   const match = matches[0];
   if (!match) throw new AuthorizationError('Partido no encontrado', 403, 'FORBIDDEN');
 
-  const competitionId = match.competition_id || match.tournament_id;
+  const competitionId = match.competition_id;
   if (actor.role === 'Organizador' && competitionId) {
     try {
       await requireCompetitionManager(competitionId);

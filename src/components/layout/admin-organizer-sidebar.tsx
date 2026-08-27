@@ -27,8 +27,7 @@ export function AdminOrganizerSidebar() {
 
   const currentGameObj = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG['eafc26'];
 
-  // Admin Sidebar Nav Items
-  // 1. GESTIÓN GLOBAL
+  // Admin Sidebar Nav Items — 1. GESTIÓN GLOBAL
   const globalNavItems = [
     {
       title: 'Dashboard Global',
@@ -129,8 +128,8 @@ export function AdminOrganizerSidebar() {
   return (
     <>
       {/* Mobile Toggle Bar */}
-      <div className="md:hidden sticky top-12 z-40 bg-slate-950/90 border-b border-[var(--border-card)] p-2.5 flex items-center justify-between backdrop-blur-md">
-        <div className="flex items-center gap-2">
+      <div className="md:hidden sticky top-14 z-40 bg-slate-950/90 border-b border-[var(--border-card)] p-2.5 flex items-center justify-between gap-2 backdrop-blur-md">
+        <div className="flex min-w-0 items-center gap-2">
           <Badge variant={isAdmin ? 'cyan' : 'emerald'} className="text-[10px] uppercase font-bold">
             {isAdmin ? '🛡️ PANEL ADMIN' : '🏆 PANEL ORGANIZADOR'}
           </Badge>
@@ -141,15 +140,25 @@ export function AdminOrganizerSidebar() {
 
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
+          aria-expanded={isMobileOpen}
+          aria-label={isMobileOpen ? 'Cerrar menú administrativo' : 'Abrir menú administrativo'}
           className="p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200"
         >
           {isMobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
         </button>
       </div>
 
+      {isMobileOpen && (
+        <button
+          type="button" aria-label="Cerrar menú administrativo"
+          onClick={() => setIsMobileOpen(false)}
+          className="fixed inset-0 top-14 z-30 bg-black/55 backdrop-blur-sm md:hidden"
+        />
+      )}
+
       {/* Desktop & Mobile Sidebar Container */}
       <aside
-        className={`fixed top-12 left-0 bottom-0 z-40 w-64 bg-slate-950/95 border-r border-[var(--border-card)] backdrop-blur-xl flex flex-col justify-between p-4 transition-transform duration-300 overflow-y-auto ${
+        className={`fixed top-14 left-0 bottom-0 z-40 w-[min(18rem,calc(100vw-2rem))] md:w-64 bg-slate-950/95 border-r border-[var(--border-card)] backdrop-blur-xl flex flex-col justify-between p-4 transition-transform duration-300 overflow-y-auto overscroll-contain ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >

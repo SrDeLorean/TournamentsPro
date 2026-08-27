@@ -83,9 +83,9 @@ export default async function PublicCompetitionDetailPage({
        FROM matches m 
        LEFT JOIN teams th ON (m.team_home_id = th.id OR m.home_team_id = th.id) 
        LEFT JOIN teams ta ON (m.team_away_id = ta.id OR m.away_team_id = ta.id) 
-       WHERE m.competition_id = ? OR m.tournament_id = ? 
+       WHERE m.competition_id = ?
        ORDER BY COALESCE(m.matchday_number, m.matchday, 1) ASC, m.created_at ASC`,
-      [actualCompId, actualCompId]
+      [actualCompId]
     ),
   ]);
 

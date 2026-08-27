@@ -5,7 +5,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import nextEnv from '@next/env';
 import mysql from 'mysql2/promise';
-import { compareState, decideMigrationStrategy, validateBaselineSql } from './migration-core.mjs';
+import { compareState, decideMigrationStrategy, splitMigrationsAroundBaseline, validateBaselineSql } from './migration-core.mjs';
 
 const { loadEnvConfig } = nextEnv;
 
@@ -14,6 +14,7 @@ const projectDirectory = path.dirname(databaseDirectory);
 const migrationsDirectory = path.join(databaseDirectory, 'migrations');
 const baselinePath = path.join(databaseDirectory, 'baseline.sql');
 const mode = process.argv[2] ?? 'migrate';
+const baselineThroughVersion = '0005';
 
 loadEnvConfig(projectDirectory);
 
@@ -169,13 +170,28 @@ async function migrate(connection, migrations, baseline) {
       await connection.execute(
         "UPDATE schema_baselines SET state = 'APPLIED' WHERE id = 1",
       );
-      for (const migration of migrations) {
+      const { reconciled: reconciledMigrations, pending: postBaselineMigrations } = splitMigrationsAroundBaseline(
+        migrations,
+        baselineThroughVersion,
+      );
+      for (const migration of reconciledMigrations) {
         await connection.execute(
           'INSERT INTO schema_migrations (version, name, checksum) VALUES (?, ?, ?)',
           [migration.version, migration.name, migration.checksum]
         );
       }
-      console.log(`Bootstrap completo: baseline + ${migrations.length} migración(es) reconciliadas.`);
+      for (const migration of postBaselineMigrations) {
+        console.log(`Aplicando ${migration.name} después del baseline...`);
+        await connection.query(migration.sql);
+        await connection.execute(
+          'INSERT INTO schema_migrations (version, name, checksum) VALUES (?, ?, ?)',
+          [migration.version, migration.name, migration.checksum]
+        );
+      }
+      console.log(
+        `Bootstrap completo: baseline + ${reconciledMigrations.length} migración(es) reconciliadas`
+        + ` + ${postBaselineMigrations.length} migración(es) aplicada(s).`,
+      );
       return;
     }
 

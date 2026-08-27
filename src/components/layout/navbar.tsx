@@ -44,7 +44,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="dark relative top-0 z-50 w-full h-12 border-b border-[var(--border-card)] bg-[#05070d]/90 backdrop-blur-2xl saturate-150 transition-colors duration-300 flex items-center shadow-md">
+    <header className="app-navbar sticky top-0 z-50 w-full h-14 border-b transition-colors duration-300 flex items-center">
       {/* Thin Banner Stripe (h-12 / 48px) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex items-center justify-between gap-2">
         {/* Brand Logo */}
@@ -247,7 +247,7 @@ export function Navbar() {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed top-12 left-0 right-0 bg-[var(--bg-card)] border-b border-[var(--border-card)] p-4 space-y-3 z-40 shadow-2xl animate-in slide-in-from-top duration-200">
+        <div className="lg:hidden fixed top-14 left-0 right-0 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain glass-panel rounded-none border-x-0 border-t-0 p-4 space-y-3 z-40 shadow-2xl animate-in slide-in-from-top duration-200">
           <div className="space-y-1">
             <Link
               href="/"

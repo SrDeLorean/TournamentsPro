@@ -49,10 +49,11 @@ export function PageHeader({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pt-2 pb-4"
+      className="ui-page-header flex flex-col lg:flex-row lg:items-center justify-between gap-8 p-5 sm:p-7 lg:p-9"
+      style={{ '--page-brand': brandColor } as React.CSSProperties}
     >
       {/* Left Title & Description */}
-      <div className="space-y-4 max-w-2xl">
+      <div className="relative z-10 space-y-4 max-w-2xl">
         {badgeText && (
           <motion.div variants={itemVariants}>
             <div
@@ -69,14 +70,14 @@ export function PageHeader({
           </motion.div>
         )}
 
-        <motion.h1 variants={itemVariants} className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[var(--text-heading)] uppercase leading-none">
+        <motion.h1 variants={itemVariants} className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.035em] text-[var(--text-heading)] uppercase leading-[0.94] text-balance">
           {title}{' '}
           {highlightTitle && (
             <span
               className="block"
               style={{
                 color: brandColor,
-                filter: `drop-shadow(0 0 20px color-mix(in srgb, ${brandColor} 50%, transparent))`,
+                filter: `drop-shadow(0 0 24px color-mix(in srgb, ${brandColor} 38%, transparent))`,
               }}
             >
               {highlightTitle}
@@ -84,14 +85,14 @@ export function PageHeader({
           )}
         </motion.h1>
 
-        <motion.p variants={itemVariants} className="text-sm text-[var(--text-secondary)] leading-relaxed font-medium">
+        <motion.p variants={itemVariants} className="max-w-xl text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed font-medium text-pretty">
           {description}
         </motion.p>
       </div>
 
       {/* Right Side Slot (Telemetry / Stats / Quick Action) */}
       {children && (
-        <motion.div variants={itemVariants} className="flex-shrink-0 w-full lg:w-auto">
+        <motion.div variants={itemVariants} className="relative z-10 flex-shrink-0 w-full lg:w-auto">
           {children}
         </motion.div>
       )}

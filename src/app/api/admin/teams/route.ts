@@ -8,7 +8,7 @@ import {
   type AuthorizationActor,
 } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
-import { createTeamService, updateManagedTeamService } from '@/lib/services';
+import { archiveManagedTeamService, createTeamService, updateManagedTeamService } from '@/lib/services';
 
 interface AdminTeamRow extends Record<string, unknown> {
   redes_sociales: string | Record<string, unknown> | null;
@@ -307,5 +307,39 @@ export async function PUT(request: Request) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error gestionando equipo' }, { status: 500 });
+  }
+}
+
+// DELETE archives a team and preserves its history. Physical deletion is intentionally unsupported.
+export async function DELETE(request: Request) {
+  try {
+    const actor = await requireRequestActor(request);
+    const body: unknown = await request.json();
+    const teamId = body && typeof body === 'object' && 'id' in body && typeof body.id === 'string'
+      ? body.id.trim().slice(0, 36)
+      : '';
+    if (!teamId) return NextResponse.json({ error: 'ID del club requerido' }, { status: 400 });
+
+    const teamScope = await loadTeamScope(teamId);
+    if (!teamScope) return NextResponse.json({ error: 'Equipo no encontrado' }, { status: 404 });
+    if (!canManageTeam(actor, teamScope)) {
+      return NextResponse.json({ error: 'No tienes permisos para archivar este equipo' }, { status: 403 });
+    }
+
+    const result = await archiveManagedTeamService(teamId);
+    if (!result.success) return NextResponse.json({ error: result.error }, { status: 409 });
+    await writeSecurityAudit({
+      actor,
+      request,
+      action: 'ADMIN_TEAM_ARCHIVED',
+      resourceType: 'team',
+      resourceId: teamId,
+      organizationId: teamScope.organizationId,
+    });
+    return NextResponse.json({ success: true, message: 'Equipo archivado; su historial fue conservado.' });
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error archivando equipo' }, { status: 500 });
   }
 }

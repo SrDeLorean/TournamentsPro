@@ -13,6 +13,15 @@ import { TacticalLoadingSkeleton } from './tactical-loading-skeleton';
 import { PlayoffBracket } from './playoff-bracket';
 import { getOrganizationsWithStatsAction } from '@/app/actions/organizations';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
+import {
+  calculateStandings,
+  type ClassificationMatch,
+  type OrganizationApiItem,
+  type OrganizationItem,
+  type TeamStanding,
+  type TournamentApiItem,
+  type TournamentItem,
+} from '@/features/competitions/classification/classification-model';
 
 interface ClassificationViewProps {
   game: GameConfig;
@@ -24,77 +33,6 @@ interface ClassificationViewProps {
   hideSearchFilter?: boolean;
   hideHeader?: boolean;
   targetTeamName?: string;
-}
-
-interface OrgItem {
-  id: string | number;
-  name: string;
-  tag?: string;
-  gameSlugs?: string[];
-  logoUrl?: string;
-}
-
-interface TournItem {
-  id: string | number;
-  name: string;
-  gameSlug?: string;
-  organizationName?: string;
-  formatType?: string;
-  logoUrl?: string;
-}
-
-interface TeamStanding {
-  name: string;
-  tag: string;
-  pj: number; // Partidos Jugados
-  g: number;  // Ganados
-  e: number;  // Empatados
-  p: number;  // Perdidos
-  gf: number; // Goles a Favor
-  gc: number; // Goles en Contra
-  dif: number; // Diferencia (GF - GC)
-  pts: number; // Puntos
-  circuitName: string;
-  competitionName: string;
-  groupName: string;
-}
-
-interface ClassificationMatch {
-  id: string | number;
-  home_team_name: string;
-  home_team_tag: string;
-  away_team_name: string;
-  away_team_tag: string;
-  score_home: number | null;
-  score_away: number | null;
-  status: string;
-  round_name: string;
-  tournament_name?: string;
-  tournament_id?: string | number;
-  competition_id?: string | number;
-  organization_name?: string;
-  group_name?: string;
-  matchday?: number;
-}
-
-interface TournamentApiItem {
-  id: string | number;
-  name: string;
-  organization_name?: string;
-  format_type?: string;
-  format?: string;
-  logo_url?: string;
-  logoUrl?: string;
-  banner_url?: string;
-  bannerUrl?: string;
-}
-
-interface OrganizationApiItem {
-  id: string | number;
-  name: string;
-  tag?: string;
-  logo_url?: string | null;
-  logoUrl?: string | null;
 }
 
 export function ClassificationView({
@@ -111,8 +49,8 @@ export function ClassificationView({
   const brandColor = game.brandColor;
   
   // States
-  const [organizations, setOrganizations] = useState<OrgItem[]>([]);
-  const [tournaments, setTournaments] = useState<TournItem[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationItem[]>([]);
+  const [tournaments, setTournaments] = useState<TournamentItem[]>([]);
   
   const [selectedOrgName, setSelectedOrgName] = useState(initialOrgName || 'TODAS');
   const [selectedTournName, setSelectedTournName] = useState(initialTournName || 'TODAS');
@@ -207,80 +145,7 @@ export function ClassificationView({
       if (data.success && Array.isArray(data.matches)) {
         const matches = data.matches as ClassificationMatch[];
         setAllMatches(matches);
-        const standingsMap = new Map<string, TeamStanding>();
-
-        matches.forEach((m) => {
-          const homeName = m.home_team_name || 'Equipo Local';
-          const homeTag = m.home_team_tag || 'LOC';
-          const awayName = m.away_team_name || 'Equipo Visitante';
-          const awayTag = m.away_team_tag || 'VIS';
-          
-          const scoreHome = m.score_home !== null && m.score_home !== undefined ? Number(m.score_home) : null;
-          const scoreAway = m.score_away !== null && m.score_away !== undefined ? Number(m.score_away) : null;
-          
-          const compName = m.tournament_name || 'Competencia BD';
-          const circName = m.organization_name || 'Organización Oficial BD';
-          const groupName = m.group_name || 'GENERAL';
-
-          // Skip playoff rounds from the standings table
-          const rNameLower = (m.round_name || '').toLowerCase();
-          const isPlayoffRound = ['octavos', 'cuartos', 'semifinal', 'tercer', 'final', 'dieciseisavos'].some(key => rNameLower.includes(key));
-          if (isPlayoffRound) return;
-
-          const homeKey = `${circName}_${compName}_${groupName}_${homeName}`;
-          const awayKey = `${circName}_${compName}_${groupName}_${awayName}`;
-
-          // Inicializar equipos si no existen (así aparecen con 0pts aunque no hayan jugado)
-          if (!standingsMap.has(homeKey)) {
-            standingsMap.set(homeKey, { name: homeName, tag: homeTag, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, dif: 0, pts: 0, circuitName: circName, competitionName: compName, groupName });
-          }
-          if (!standingsMap.has(awayKey)) {
-            standingsMap.set(awayKey, { name: awayName, tag: awayTag, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, dif: 0, pts: 0, circuitName: circName, competitionName: compName, groupName });
-          }
-
-          // Solo sumar puntos y goles si el partido finalizó y tiene resultado válido
-          if (m.status !== 'FINALIZADO' || scoreHome === null || scoreAway === null) return;
-          
-          const hStats = standingsMap.get(homeKey)!;
-          const aStats = standingsMap.get(awayKey)!;
-
-          // Actualizar Local
-          hStats.pj += 1;
-          hStats.gf += scoreHome;
-          hStats.gc += scoreAway;
-          hStats.dif = hStats.gf - hStats.gc;
-
-          // Actualizar Visitante
-          aStats.pj += 1;
-          aStats.gf += scoreAway;
-          aStats.gc += scoreHome;
-          aStats.dif = aStats.gf - aStats.gc;
-
-          // Puntos y G/E/P
-          if (scoreHome > scoreAway) {
-            hStats.g += 1;
-            hStats.pts += 3;
-            aStats.p += 1;
-          } else if (scoreHome < scoreAway) {
-            aStats.g += 1;
-            aStats.pts += 3;
-            hStats.p += 1;
-          } else {
-            hStats.e += 1;
-            hStats.pts += 1;
-            aStats.e += 1;
-            aStats.pts += 1;
-          }
-        });
-
-        // Convertir Map a Array y Ordenar
-        const standingsArray = Array.from(standingsMap.values()).sort((a, b) => {
-          if (b.pts !== a.pts) return b.pts - a.pts; // Mayor puntaje
-          if (b.dif !== a.dif) return b.dif - a.dif; // Mayor diferencia de gol
-          return b.gf - a.gf; // Mayor goles a favor
-        });
-
-        setStandings(standingsArray);
+        setStandings(calculateStandings(matches));
       } else {
         setStandings([]);
       }
@@ -327,18 +192,18 @@ export function ClassificationView({
 
   // Agrupar Clasificaciones por Organización -> Competencia (Usando tournaments base con fallback a allMatches)
   const groupedTournaments = useMemo(() => {
-    const map: Record<string, TournItem[]> = {};
+    const map: Record<string, TournamentItem[]> = {};
     
     // Fallback: If API tournaments list is empty, build tournament items from allMatches
-    let activeTournaments: TournItem[] = [...tournaments];
+    let activeTournaments: TournamentItem[] = [...tournaments];
     // Fallback: If API tournaments list is empty and we are NOT filtering by a specific team, build tournament items from allMatches
     if (activeTournaments.length === 0 && allMatches.length > 0 && !targetTeamName) {
-      const matchTourns = new Map<string, TournItem>();
+      const matchTourns = new Map<string, TournamentItem>();
       allMatches.forEach((m) => {
         const tName = m.tournament_name || 'Competencia BD';
         if (!matchTourns.has(tName)) {
           matchTourns.set(tName, {
-            id: m.competition_id || m.tournament_id || tName,
+            id: m.competition_id || tName,
             name: tName,
             gameSlug: game.slug,
             organizationName: m.organization_name || 'Organización Oficial',
@@ -652,7 +517,7 @@ export function ClassificationView({
                   const compMatches = allMatches.filter(m => 
                     (m.tournament_name || '').toLowerCase() === compName.toLowerCase() ||
                     m.competition_id === compInfo.id || 
-                    m.tournament_id === compInfo.id
+                    m.competition_id === compInfo.id
                   );
                   
                   // Filter standings for this tournament

@@ -121,7 +121,7 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
             alt={teamName}
             fill
             sizes="100vw"
-            priority
+            loading="eager"
             unoptimized={shouldBypassImageOptimization(teamBanner)}
             onError={(e) => {
               e.currentTarget.src = '/images/default/banner-default.jpg';

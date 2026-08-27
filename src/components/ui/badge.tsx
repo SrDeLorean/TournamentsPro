@@ -18,7 +18,7 @@ export function Badge({ className, variant = 'cyan', children, ...props }: Badge
   return (
     <span
       className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border backdrop-blur-sm shadow-sm transition-colors",
+        "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.08em] border backdrop-blur-sm shadow-sm transition-colors",
         variants[variant],
         className
       )}

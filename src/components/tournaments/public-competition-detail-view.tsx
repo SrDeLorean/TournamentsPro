@@ -135,7 +135,7 @@ export function PublicCompetitionDetailView({
             alt={competition.name}
             fill
             sizes="100vw"
-            priority
+            loading="eager"
             unoptimized={shouldBypassImageOptimization(compBanner)}
             onError={(e) => {
               e.currentTarget.src = '/images/default/banner-default.jpg';

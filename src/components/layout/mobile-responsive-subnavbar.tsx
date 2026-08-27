@@ -120,7 +120,7 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
       </div>
 
       {/* 2. Active Segment Scrollable Options Bar */}
-      <div className="py-2 px-3 flex items-center gap-1.5 overflow-x-auto scrollbar-none touch-pan-x">
+      <div className="mobile-scroll-row py-2 px-3 flex items-center gap-1.5 overflow-x-auto touch-pan-x" aria-label="Secciones del portal">
         
         {/* Render JUEGO Options */}
         {activeSegment === 'game' &&

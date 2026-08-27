@@ -27,10 +27,10 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
       {isAdminOrOrganizer ? <AdminOrganizerHeader /> : <Navbar />}
 
       {/* Main Flex Wrapper with Joined Left Sidebar for Admin / Organizer */}
-      <div className="flex flex-1 relative">
+      <div className="flex flex-1 relative min-w-0">
         <AdminOrganizerSidebar />
 
-        <main className={`flex-grow min-h-screen transition-all duration-300 w-full page-transition ${isAdminOrOrganizer ? 'md:pl-64' : ''}`}>
+        <main className={`flex-grow min-w-0 min-h-screen overflow-x-clip transition-all duration-300 w-full page-transition ${isAdminOrOrganizer ? 'md:pl-64' : ''}`}>
           {children}
         </main>
       </div>

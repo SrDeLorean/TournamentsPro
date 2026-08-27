@@ -8,7 +8,6 @@ import { matchApprovalBodySchema } from '@/lib/api-schemas';
 interface MatchRow extends Record<string, unknown> {
   id: string;
   competition_id: string | null;
-  tournament_id: string | null;
   team_home_id: string | null;
   home_team_id: string | null;
   team_away_id: string | null;
@@ -42,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     const match = matches[0];
-    const competitionId = match.competition_id || match.tournament_id;
+    const competitionId = match.competition_id;
 
     let competitions = await queryDB<{ organization_id: string | null; organizer_id: string | null }>(
       'SELECT organization_id, organizer_id FROM competitions WHERE id = ? LIMIT 1',

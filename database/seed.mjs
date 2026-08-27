@@ -2,7 +2,6 @@ import { createConnection } from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
 import pkg from '@next/env';
 const { loadEnvConfig } = pkg;
-import path from 'path';
 
 // Load environment variables
 loadEnvConfig(process.cwd());

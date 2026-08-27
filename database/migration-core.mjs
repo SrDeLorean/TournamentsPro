@@ -42,3 +42,10 @@ export function compareState(migrations, appliedRows) {
 
   return { drift, pending };
 }
+
+export function splitMigrationsAroundBaseline(migrations, baselineThroughVersion) {
+  return {
+    reconciled: migrations.filter((migration) => migration.version <= baselineThroughVersion),
+    pending: migrations.filter((migration) => migration.version > baselineThroughVersion),
+  };
+}

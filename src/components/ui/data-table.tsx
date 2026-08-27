@@ -120,9 +120,9 @@ export function DataTable<T extends { id: string | number }>({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {/* Search & Advanced Dropdown Filters Toolbar */}
-      <div className="p-4 rounded-xl bg-[var(--bg-card)]/40 backdrop-blur-xl border border-[var(--border-card)] space-y-3 shadow-sm transition-all duration-300">
+      <div className="p-3 sm:p-4 rounded-xl bg-[var(--bg-card)]/40 backdrop-blur-xl border border-[var(--border-card)] space-y-3 shadow-sm transition-all duration-300">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Search Bar */}
           <div className="relative w-full max-w-sm group">
@@ -140,16 +140,16 @@ export function DataTable<T extends { id: string | number }>({
           </div>
 
           {/* Dynamic Dropdown Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex w-full md:w-auto items-center gap-2 flex-wrap">
             {filterOptions.map((f) => (
-              <div key={f.key} className="flex items-center gap-1.5">
+              <div key={f.key} className="flex min-w-0 flex-1 sm:flex-none items-center gap-1.5">
                 <select
                   value={activeFilters[f.key] || 'ALL'}
                   onChange={(e) => {
                     setActiveFilters((prev) => ({ ...prev, [f.key]: e.target.value }));
                     setCurrentPage(1);
                   }}
-                  className="h-8 px-3 rounded-lg bg-[var(--bg-main)]/50 border border-transparent focus:border-[var(--border-card-hover)] text-[12px] font-semibold text-[var(--text-secondary)] focus:outline-none transition-all cursor-pointer"
+                  className="min-w-0 max-w-full flex-1 h-8 px-3 rounded-lg bg-[var(--bg-main)]/50 border border-transparent focus:border-[var(--border-card-hover)] text-[12px] font-semibold text-[var(--text-secondary)] focus:outline-none transition-all cursor-pointer"
                 >
                   <option value="ALL" className="bg-[#0b101b] text-slate-100">
                     {f.label}: Todos
@@ -189,7 +189,7 @@ export function DataTable<T extends { id: string | number }>({
         className="table-container-theme font-mono"
         style={{ borderColor: `color-mix(in srgb, ${brandColor} 30%, var(--border-card))` }}
       >
-        <div className="overflow-x-auto">
+        <div className="mobile-scroll-row overflow-x-auto" role="region" aria-label="Tabla desplazable horizontalmente" tabIndex={0}>
           <table className="ui-table">
             <thead>
               <tr className="border-b border-[var(--border-card)]">
@@ -255,7 +255,7 @@ export function DataTable<T extends { id: string | number }>({
             <strong>{sortedData.length}</strong> registros
           </span>
 
-          <div className="flex items-center gap-1">
+          <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-1">
             <Button
               size="icon"
               variant="ghost"

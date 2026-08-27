@@ -1,47 +1,44 @@
 # Informe de implementación
 
-Fecha de cierre: 22 de agosto de 2026.
+Fecha de cierre técnico: 26 de agosto de 2026.
 
-## Implementado
+## Estado alcanzado
 
 - Autorización por sesión vigente, rol, organización, equipo, competencia, partido e hilo.
 - Google GIS verificado, cookies HttpOnly, sesiones persistentes/revocables y Proxy access-only.
-- CSRF Origin/Host, rate limiting MySQL por cuenta/cliente, fallback acotado y housekeeping.
-- Auditoría redactada, request IDs, endpoint `/api/health` y cabeceras de seguridad.
-- Schemas Zod para los bordes mutables principales y filas SQL tipadas en actions/APIs/repositorios.
-- Transacciones, locks y CAS para fixtures, partidos/playoffs, plantillas, inscripciones,
-  transferencias ordinarias/extraordinarias, ofertas, posts, equipos y organizaciones.
-- Baseline canónico y cuatro migraciones con bootstrap/upgrade/drift/checksum/lock.
-- DDL retirado de peticiones; Prisma y dependencias sin consumidores eliminados.
-- Sesión frontend sin localStorage, páginas servidor adicionales y fetch JSON centralizado.
-- Todas las imágenes TSX migradas a `next/image`; logo LoL reducido a 13,6 KB WebP.
-- Archivos de release, diagnósticos y activos duplicados retirados del repositorio.
-- CI, 70 pruebas Vitest, Playwright E2E, runbooks y `.env.example`.
+- CSRF Origin/Host, rate limiting MySQL, auditoría redactada, request IDs y `/api/health`.
+- Transacciones, bloqueos y actualizaciones condicionales en fixtures, resultados, plantillas,
+  inscripciones, transferencias, ofertas, equipos y organizaciones.
+- Baja segura mediante archivado: conserva historial, cierra publicaciones/vacantes y bloquea
+  el archivo cuando existen competencias activas. No se expone borrado físico destructivo.
+- Baseline canónico y cinco migraciones. La quinta completa columnas de perfiles y gestión,
+  protege responsables contra cascadas y fija `competition_id` como identificador canónico
+  de partidos, manteniendo `tournament_id` sincronizado solo por compatibilidad transitoria.
+- CSP de producción sin `script-src 'unsafe-inline'`, usando SRI SHA-384 para conservar el
+  prerender estático. Desarrollo mantiene únicamente las excepciones requeridas por React.
+- Frontend sin tokens en `localStorage`, DTOs tipados, efectos corregidos, `next/image`,
+  límites Server/Client más pequeños y estrategia fetch centralizada.
+- ESLint configurado con cero tolerancia a advertencias para impedir que vuelva la deuda.
+- CI, runbooks, `.env.example`, pruebas unitarias/de contrato y Playwright E2E.
 
-## Verificación
+## Verificación final
 
-- TypeScript: aprobado.
-- ESLint: 0 errores; 356 advertencias estructurales restantes (antes 880).
-- Vitest: 17 archivos y 70 pruebas aprobadas.
-- Build Next.js 16.3.2: 39 páginas generadas correctamente.
-- Baseline + cuatro migraciones: aprobados.
-- Bootstrap vacío y upgrade legacy: comprobados en MariaDB temporal; base eliminada después.
+- ESLint: **0 errores y 0 advertencias** (antes 880; al inicio de esta fase quedaban 356).
+- TypeScript: **aprobado**.
+- Vitest: **18 archivos y 78 pruebas aprobadas**.
+- Next.js 16.3.2: **build de producción aprobado**, 39 páginas estáticas generadas.
+- Playwright/Chromium: **9 de 9 pruebas E2E aprobadas**.
+- Baseline y cinco migraciones: validación de archivos aprobada.
 - Housekeeping: dos operaciones válidas en modo check.
-- E2E: las siete verificaciones HTTP finales pasaron. Las dos verificaciones que lanzan
-  Chromium no pudieron repetirse por `spawn EPERM` del sandbox; habían pasado en la
-  ejecución anterior con navegador autorizado.
-- La última instalación de dependencias informó 0 vulnerabilidades. La repetición final
-  de `npm audit` fue bloqueada por el límite del aprobador externo, no por un advisory.
+- Dependencias: la última instalación informó 0 vulnerabilidades; no se repitió `npm audit`
+  después de que el aprobador externo agotara su cuota.
 
-## Decisiones y trabajo restante
+## Único cierre dependiente del entorno
 
-- No se aplicaron migraciones ni housekeeping sobre la base real. Deben ejecutarse con
-  backup y despliegue controlado siguiendo `OPERATIONS.md`.
-- No se implementó borrado físico de equipos/organizaciones: se requiere primero una
-  política de archivo, transferencia de dependencias y retención de auditoría.
-- CSP conserva temporalmente `script-src 'unsafe-inline'` para mantener generación estática;
-  una CSP con nonce obligaría render dinámico. Evaluar SRI/hash cuando sea estable.
-- Quedan 356 warnings: principalmente modelos legacy con `any` y efectos acoplados. No se
-  ocultaron; permanecen visibles en CI como deuda estructural sin bloquear el build.
-- Resolver la semántica legacy de `competition_id` en transferencias extraordinarias antes
-  de convertirla en columna canónica o retirar definitivamente esa consulta.
+No se aplicaron migraciones ni housekeeping sobre la base real. Antes del despliegue se debe
+crear y verificar un backup, iniciar MySQL, ejecutar `db:migrate`, `db:migrate:verify` y las
+pruebas de humo conforme a `OPERATIONS.md`. La prueba temporal de esta sesión no pudo iniciar
+porque MySQL local estaba detenido; no se creó ni modificó ninguna base.
+
+La limpieza de ZIP/TAR del historial Git tampoco se ejecuta automáticamente porque reescribe
+hashes compartidos. Los archivos ya fueron retirados del árbol actual.

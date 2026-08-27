@@ -15,16 +15,6 @@ const eslintConfig = defineConfig([
     "scratch/**",
     "graphify-out/**",
   ]),
-  {
-    // Legacy debt is visible in CI while new authorization/compiler failures remain blocking.
-    rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/immutability": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/preserve-manual-memoization": "warn",
-    },
-  },
 ]);
 
 export default eslintConfig;

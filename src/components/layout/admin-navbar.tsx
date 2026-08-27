@@ -122,11 +122,11 @@ export function AdminNavbar() {
 
   return (
     <>
-      <header className="dark sticky top-0 z-50 w-full bg-[#05070d]/90 border-b border-[var(--border-card)] backdrop-blur-xl transition-all duration-300 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between gap-3">
+      <header className="app-navbar sticky top-0 z-50 w-full h-14 border-b transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-1 sm:gap-3">
           
           {/* 1. Left Brand & Admin Badge */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
             <Link href="/dashboard" className="flex items-center gap-2 group">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-600 to-amber-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform">
                 <div className="w-full h-full bg-slate-950 rounded-[9px] flex items-center justify-center">
@@ -153,10 +153,10 @@ export function AdminNavbar() {
           </div>
 
           {/* 🛡️ SELECTOR PROTAGONISTA DE EQUIPOS Y DISCIPLINAS (Visible en Móvil y Escritorio) */}
-          <div className="relative flex-shrink-0" ref={teamsRef}>
+          <div className="relative min-w-0 flex-1 sm:flex-none" ref={teamsRef}>
             <button
               onClick={() => setIsTeamsOpen(!isTeamsOpen)}
-              className="px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-950 via-slate-950 to-slate-900 border border-purple-500/50 text-purple-300 hover:border-purple-400 transition-all flex items-center gap-2 shadow-lg hover:scale-[1.01]"
+              className="w-full sm:w-auto px-2 sm:px-3.5 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-950 via-slate-950 to-slate-900 border border-purple-500/50 text-purple-300 hover:border-purple-400 transition-all flex items-center gap-1.5 sm:gap-2 shadow-lg hover:scale-[1.01]"
             >
               <div className="relative w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-slate-950 border border-purple-400 flex items-center justify-center font-black text-[10px] sm:text-xs text-purple-300 shadow-sm flex-shrink-0 overflow-hidden">
                 {activeTeamLogo ? (
@@ -175,7 +175,7 @@ export function AdminNavbar() {
                   myTeamInActiveDiscipline?.logoText || 'TP'
                 )}
               </div>
-              <div className="flex flex-col text-left leading-none max-w-[100px] sm:max-w-[130px]">
+              <div className="min-w-0 flex-1 sm:flex-none flex flex-col text-left leading-none max-w-[92px] sm:max-w-[130px]">
                 <span className="text-[11px] sm:text-xs font-black uppercase text-white truncate">
                   {myTeamInActiveDiscipline?.name || 'Agencia Libre'}
                 </span>
@@ -289,14 +289,14 @@ export function AdminNavbar() {
           </nav>
 
           {/* 3. Right Action Controls & User Profile Dropdown */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
             
             {/* If Captain -> Direct Club Management Button for Active Discipline */}
             {isCaptain && myTeamInActiveDiscipline && !isAdmin && (
               <Button
                 onClick={() => setIsClubManageOpen(true)}
                 size="sm"
-                className="font-bold text-xs bg-purple-600 hover:bg-purple-500 text-white shadow-md flex items-center gap-1.5"
+                className="hidden sm:inline-flex font-bold text-xs bg-purple-600 hover:bg-purple-500 text-white shadow-md items-center gap-1.5"
               >
                 <Shield className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Gestión de Club</span>
@@ -308,7 +308,7 @@ export function AdminNavbar() {
               <Button
                 onClick={() => setIsCreateTeamOpen(true)}
                 size="sm"
-                className="font-bold text-xs bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-md flex items-center gap-1"
+                className="hidden sm:inline-flex font-bold text-xs bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-md items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Crear Club</span>

@@ -24,15 +24,16 @@ export function GameLogo({ game, className = '', size = 'md' }: GameLogoProps) {
 
   if (!imageError && game.logoUrl) {
     return (
-      <Image
-        src={game.logoUrl}
-        alt={game.name}
-        width={pixels}
-        height={pixels}
-        sizes={`${pixels}px`}
-        onError={() => setImageError(true)}
-        className={cn("object-contain transition-all duration-300", sizeClasses, className)}
-      />
+      <span className={cn('relative inline-flex shrink-0', sizeClasses, className)}>
+        <Image
+          src={game.logoUrl}
+          alt={game.name}
+          fill
+          sizes={`${pixels}px`}
+          onError={() => setImageError(true)}
+          className="object-contain transition-all duration-300"
+        />
+      </span>
     );
   }
 

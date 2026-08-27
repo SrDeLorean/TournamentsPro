@@ -374,7 +374,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
             alt="Portada"
             fill
             sizes="100vw"
-            priority
+            loading="eager"
             unoptimized={shouldBypassImageOptimization(bannerUrl)}
             onError={(e) => {
               e.currentTarget.src = '/images/default/banner-default.jpg';

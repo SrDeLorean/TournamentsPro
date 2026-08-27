@@ -19,12 +19,12 @@ export async function GET(request: Request) {
              COALESCE(th.tag, UPPER(LEFT(COALESCE(th.name, m.home_team_name, 'LOC'), 3))) as home_team_tag,
              COALESCE(ta.name, m.away_team_name, 'Equipo Visitante') as away_team_name,
              COALESCE(ta.tag, UPPER(LEFT(COALESCE(ta.name, m.away_team_name, 'VIS'), 3))) as away_team_tag,
-             COALESCE(c.name, m.tournament_id, 'Competencia BD') as tournament_name,
+             COALESCE(c.name, m.competition_id, 'Competencia BD') as tournament_name,
              COALESCE(c.game_slug, 'eafc26') as game_slug,
              COALESCE(o.name, u_org.name, o2.name, o3.name, 'Organización Oficial') as organization_name,
              COALESCE(o.tag, u_org.tag, o2.tag, o3.tag, 'ORG') as organization_tag
       FROM matches m
-      LEFT JOIN competitions c ON (m.competition_id = c.id OR m.tournament_id = c.id)
+      LEFT JOIN competitions c ON m.competition_id = c.id
       LEFT JOIN teams th ON (m.team_home_id = th.id OR m.home_team_id = th.id)
       LEFT JOIN teams ta ON (m.team_away_id = ta.id OR m.away_team_id = ta.id)
       LEFT JOIN users u ON (c.organizer_id = u.id)
@@ -59,14 +59,14 @@ export async function GET(request: Request) {
     }
 
     if (tournamentId && tournamentId !== 'TODAS') {
-      query += ` AND (c.id = ? OR m.competition_id = ? OR m.tournament_id = ?)`;
-      params.push(tournamentId, tournamentId, tournamentId);
+      query += ` AND m.competition_id = ?`;
+      params.push(tournamentId);
     }
 
     if (tournamentName && tournamentName !== 'TODAS') {
-      query += ` AND (c.name LIKE ? OR m.tournament_id LIKE ?)`;
+      query += ` AND c.name LIKE ?`;
       const tLike = `%${tournamentName}%`;
-      params.push(tLike, tLike);
+      params.push(tLike);
     }
 
     if (date) {

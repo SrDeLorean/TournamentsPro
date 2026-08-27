@@ -2,7 +2,7 @@
 
 Este directorio es la fuente de verdad para cambios incrementales del esquema MySQL/MariaDB. Los archivos se aplican en orden por su prefijo numérico y, una vez aplicados, son inmutables: el runner registra su SHA-256 en `schema_migrations` y rechaza cualquier cambio posterior.
 
-`database/baseline.sql` es la fotografía canónica para una instalación nueva. No reemplaza ni modifica las migraciones históricas: evita reproducir en una base vacía supuestos de upgrades, órdenes de tablas antiguos o FKs circulares prematuras.
+`database/baseline.sql` es la fotografía canónica hasta la versión 0005. No reemplaza ni modifica las migraciones históricas: una instalación nueva aplica el baseline y ejecuta normalmente las migraciones posteriores, evitando modificar el checksum de instalaciones existentes.
 
 ## Uso
 
@@ -12,7 +12,7 @@ npm run db:migrate:verify
 npm run db:migrate:check
 ```
 
-- `db:migrate` obtiene un bloqueo exclusivo en MySQL. En un esquema realmente vacío aplica el baseline y registra 0001-0004 como reconciliadas; si detecta tablas de aplicación existentes conserva la ruta incremental y aplica únicamente migraciones pendientes.
+- `db:migrate` obtiene un bloqueo exclusivo en MySQL. En un esquema realmente vacío aplica el baseline, registra 0001-0005 como reconciliadas y ejecuta las versiones posteriores; si detecta tablas de aplicación existentes conserva la ruta incremental y aplica únicamente migraciones pendientes.
 - `db:migrate:verify` es de solo lectura y falla si hay migraciones pendientes, archivos modificados o versiones aplicadas que ya no existen localmente.
 - `db:migrate:check` valida baseline, nombres, versiones y contenido sin conectarse a la base de datos.
 

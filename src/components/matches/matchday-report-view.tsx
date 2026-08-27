@@ -152,7 +152,7 @@ export function MatchdayReportView() {
             id: m.id || `M-${idx + 1}`,
             gameSlug: resolvedGameSlug,
             gameName: gameObj?.name || 'eSports',
-            tournamentId: m.tournament_id || m.competition_id || 'tourn-1',
+            tournamentId: m.competition_id || 'tourn-1',
             tournamentName: m.tournament_name || 'Competencia BD',
             organizationName: m.organization_name || 'Organización Oficial BD',
             homeTeam: m.home_team_name || 'Equipo Local',

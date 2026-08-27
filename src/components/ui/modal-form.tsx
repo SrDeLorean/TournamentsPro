@@ -39,18 +39,18 @@ export function ModalForm({
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-xl p-0 overflow-hidden bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] shadow-2xl font-mono text-[var(--text-primary)]">
       <div
-        className="p-5 border-b border-[var(--border-card)] flex items-center justify-between"
+        className="p-4 sm:p-5 pr-12 border-b border-[var(--border-card)] flex items-center justify-between"
         style={{
           backgroundColor: `color-mix(in srgb, ${brandColor} 12%, transparent)`,
         }}
       >
         <div>
-          <h3 className="text-base font-black text-[var(--text-heading)] uppercase tracking-wider">{title}</h3>
+          <h3 className="text-sm sm:text-base font-black text-[var(--text-heading)] uppercase tracking-wider text-pretty">{title}</h3>
           {subtitle && <p className="text-xs text-[var(--text-muted)] mt-0.5">{subtitle}</p>}
         </div>
       </div>
 
-      <form onSubmit={onSubmit} className="p-6 space-y-5">
+      <form onSubmit={onSubmit} className="p-4 sm:p-6 space-y-5">
         {/* BANNER ALERTA ÉXITO */}
         {successMessage && (
           <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
@@ -77,14 +77,14 @@ export function ModalForm({
 
         {children}
 
-        <div className="pt-5 border-t border-[var(--border-card)] flex items-center justify-end gap-3 mt-4">
-          <Button type="button" variant="ghost" onClick={onClose} className="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-4 py-2.5 rounded-xl">
+        <div className="pt-5 border-t border-[var(--border-card)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 mt-4">
+          <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-4 py-2.5 rounded-xl">
             Cancelar
           </Button>
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="font-black text-xs uppercase px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all hover:scale-[0.98]"
+            className="w-full sm:w-auto font-black text-xs uppercase px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all hover:scale-[0.98]"
             style={{
               backgroundColor: brandColor,
               color: '#020617',

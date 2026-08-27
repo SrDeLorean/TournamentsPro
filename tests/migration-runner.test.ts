@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   compareState,
   decideMigrationStrategy,
+  splitMigrationsAroundBaseline,
   validateBaselineSql,
 } from '../database/migration-core.mjs';
 
@@ -38,5 +39,16 @@ describe('migration runner strategy', () => {
     });
     expect(compareState(migrations, [{ version: '0001', name: '0001_first.sql', checksum: 'changed' }]).drift)
       .toEqual(['0001_first.sql']);
+  });
+
+  it('applies migrations newer than the immutable baseline during bootstrap', () => {
+    const migrations = [
+      { version: '0005', name: '0005_baseline.sql' },
+      { version: '0006', name: '0006_expand.sql' },
+    ];
+    expect(splitMigrationsAroundBaseline(migrations, '0005')).toEqual({
+      reconciled: [migrations[0]],
+      pending: [migrations[1]],
+    });
   });
 });

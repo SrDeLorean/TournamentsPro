@@ -34,7 +34,7 @@ export function Modal({ isOpen, onClose, title, description, children, className
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -51,8 +51,12 @@ export function Modal({ isOpen, onClose, title, description, children, className
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? 'shared-modal-title' : undefined}
+            aria-describedby={description ? 'shared-modal-description' : undefined}
             className={cn(
-              "relative w-full max-w-lg rounded-3xl bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] p-6 shadow-2xl z-10 text-[var(--text-primary)] font-sans",
+              "relative z-10 w-full max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[var(--ui-radius-card)] bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] p-4 sm:p-6 shadow-2xl text-[var(--text-primary)] font-sans",
               className
             )}
           >
@@ -66,8 +70,8 @@ export function Modal({ isOpen, onClose, title, description, children, className
 
             {title && (
               <div className="mb-5 pr-8">
-                <h3 className="text-xl font-extrabold text-[var(--text-heading)] uppercase tracking-wider font-sans">{title}</h3>
-                {description && <p className="text-xs text-[var(--text-muted)] mt-1 font-sans">{description}</p>}
+                <h3 id="shared-modal-title" className="text-lg sm:text-xl font-extrabold text-[var(--text-heading)] uppercase tracking-wider font-sans text-pretty">{title}</h3>
+                {description && <p id="shared-modal-description" className="text-xs text-[var(--text-muted)] mt-1 font-sans text-pretty">{description}</p>}
               </div>
             )}
 

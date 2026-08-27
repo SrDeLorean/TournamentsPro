@@ -31,6 +31,16 @@
   cambiar el endpoint de la aplicación.
 - No reutilizar un backup que contenga sesiones activas sin revocarlas previamente.
 
+## Archivo y retención
+
+- La baja administrativa de equipos y organizaciones es lógica: cambia su estado a
+  `Archivado`/`Archivada` y conserva partidos, auditoría y transferencias históricas.
+- No se puede archivar una entidad con competencias activas asociadas; primero deben
+  finalizarse o reasignarse mediante un proceso explícito.
+- El archivo de un equipo cierra vacantes, caduca publicaciones y cancela ofertas pendientes.
+- El archivo de una organización archiva sus equipos y cierra sus vacantes/publicaciones.
+- No ejecutar `DELETE FROM teams` ni `DELETE FROM organizations` como operación normal.
+
 ## Incidentes de autenticación
 
 1. Rotar `JWT_SECRET` solo si es necesario invalidar todas las sesiones inmediatamente.

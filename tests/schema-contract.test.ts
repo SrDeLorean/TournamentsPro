@@ -7,6 +7,10 @@ const compatibilityMigration = readFileSync(
   resolve(process.cwd(), 'database/migrations/0005_profile_schema_and_canonical_competitions.sql'),
   'utf8',
 );
+const organizationGamesMigration = readFileSync(
+  resolve(process.cwd(), 'database/migrations/0006_normalize_organization_games.sql'),
+  'utf8',
+);
 
 describe('runtime database contract', () => {
   it.each([
@@ -29,5 +33,12 @@ describe('runtime database contract', () => {
     expect(baseline).toMatch(/fk_org_owner[\s\S]*?ON DELETE RESTRICT/i);
     expect(baseline).toMatch(/fk_teams_captain[\s\S]*?ON DELETE RESTRICT/i);
     expect(baseline).toMatch(/fk_comp_organizer[\s\S]*?ON DELETE RESTRICT/i);
+  });
+
+  it('expands allowed games into a normalized organization relationship', () => {
+    expect(organizationGamesMigration).toMatch(/CREATE TABLE IF NOT EXISTS `organization_games`/i);
+    expect(organizationGamesMigration).toMatch(/PRIMARY KEY \(`organization_id`, `game_slug`\)/i);
+    expect(organizationGamesMigration).toMatch(/INSERT IGNORE INTO `organization_games`/i);
+    expect(organizationGamesMigration).not.toMatch(/DROP COLUMN\s+`allowed_games`/i);
   });
 });

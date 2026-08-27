@@ -5,6 +5,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageProvider } from '@/components/providers/language-provider';
 import { AuthProvider } from '@/components/providers/auth-provider';
+import { DesignProvider } from '@/components/providers/design-provider';
 import { AppLayoutWrapper } from '@/components/layout/app-layout-wrapper';
 
 const outfit = Outfit({
@@ -51,11 +52,13 @@ export default function RootLayout({
     <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased flex flex-col min-h-screen">
         <ThemeProvider>
-          <LanguageProvider>
-            <AuthProvider>
-              <AppLayoutWrapper>{children}</AppLayoutWrapper>
-            </AuthProvider>
-          </LanguageProvider>
+          <DesignProvider>
+            <LanguageProvider>
+              <AuthProvider>
+                <AppLayoutWrapper>{children}</AppLayoutWrapper>
+              </AuthProvider>
+            </LanguageProvider>
+          </DesignProvider>
         </ThemeProvider>
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
       </body>

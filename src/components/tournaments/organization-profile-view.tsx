@@ -148,7 +148,7 @@ export function OrganizationProfileView({
             alt={org.name}
             fill
             sizes="100vw"
-            priority
+            loading="eager"
             unoptimized={shouldBypassImageOptimization(orgBanner)}
             onError={(e) => {
               e.currentTarget.src = '/images/default/banner-default.jpg';

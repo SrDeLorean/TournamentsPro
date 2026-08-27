@@ -58,8 +58,7 @@ export async function executeCas(
 
 // Compatibility helper. New code should prefer queryRows for SELECT statements
 // and executeCommand when affectedRows is required.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function queryDB<T = any>(sql: string, params: DatabaseParams = []): Promise<T[]> {
+export async function queryDB<T = RowDataPacket>(sql: string, params: DatabaseParams = []): Promise<T[]> {
   try {
     return await queryRows<T>(sql, params);
   } catch (error) {

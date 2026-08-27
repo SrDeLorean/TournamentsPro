@@ -69,8 +69,8 @@ export default async function OrganizacionPage({ params }: { params: Promise<{ g
   // 2. Fetch Competitions owned by this Org
   const competitions = await queryDB<CompetitionData>(
     `SELECT c.*, 
-            (SELECT COUNT(*) FROM matches m WHERE m.competition_id = c.id OR m.tournament_id = c.id) as total_matches,
-            (SELECT COUNT(*) FROM matches m WHERE (m.competition_id = c.id OR m.tournament_id = c.id) AND m.status = 'FINALIZADO') as finished_matches
+            (SELECT COUNT(*) FROM matches m WHERE m.competition_id = c.id) as total_matches,
+            (SELECT COUNT(*) FROM matches m WHERE m.competition_id = c.id AND m.status = 'FINALIZADO') as finished_matches
      FROM competitions c 
      LEFT JOIN users u ON c.organizer_id = u.id
      WHERE (c.organization_id = ? OR u.organization_id = ?) 
@@ -109,7 +109,7 @@ export default async function OrganizacionPage({ params }: { params: Promise<{ g
             COALESCE(ta.tag, UPPER(LEFT(COALESCE(ta.name, m.away_team_name, 'VIS'), 3))) as away_team_tag,
             ta.logo_url as away_logo
      FROM matches m
-     LEFT JOIN competitions c ON (m.competition_id = c.id OR m.tournament_id = c.id)
+     LEFT JOIN competitions c ON m.competition_id = c.id
      LEFT JOIN teams th ON (m.team_home_id = th.id OR m.home_team_id = th.id)
      LEFT JOIN teams ta ON (m.team_away_id = ta.id OR m.away_team_id = ta.id)
      LEFT JOIN users u ON c.organizer_id = u.id

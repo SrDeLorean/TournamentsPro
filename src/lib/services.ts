@@ -18,6 +18,7 @@ import { consumeSecurityRateLimit, createServiceAuthSession } from '@/lib/securi
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { GAMES_CATALOG } from '@/lib/games-data';
+import { replaceOrganizationGames } from '@/server/organizations/organization-games';
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -26,6 +27,18 @@ function getErrorMessage(error: unknown, fallback: string): string {
 interface AvailablePlayerRow {
   id: string; name: string; gamertag: string; email: string; position: string;
   primary_game_slug: string; organization_id: string | null; avatar_url: string | null; foto: string | null;
+}
+
+interface ContractCandidateDatabaseRow extends AvailablePlayerRow {
+  current_team_id: string | null;
+  current_team_name: string | null;
+  current_team_tag: string | null;
+}
+
+interface ContractCandidate {
+  id: string; name: string; gamertag: string; email?: string; position: string;
+  primary_game_slug?: string; organization_id?: string; avatar_url?: string; foto?: string;
+  current_team_id?: string; current_team_name?: string; current_team_tag?: string;
 }
 
 interface SquadRow {
@@ -414,6 +427,11 @@ export async function createManagedOrganizationService(data: ManagedOrganization
         JSON.stringify(data.socialMedia || {}), data.status || 'Activa',
       ],
     );
+    await replaceOrganizationGames(
+      transaction,
+      organizationId,
+      data.allowedGames || ['eafc26', 'valorant'],
+    );
     for (const organizerId of organizerIds) {
       await transaction.executeCommand('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
     }
@@ -458,6 +476,9 @@ export async function updateManagedOrganizationService(
         data.socialMedia ? JSON.stringify(data.socialMedia) : null, data.status ?? null, organizationId,
       ],
     );
+    if (data.allowedGames) {
+      await replaceOrganizationGames(transaction, organizationId, data.allowedGames);
+    }
     if (organizerIds) {
       await transaction.queryRows(
         "SELECT id FROM users WHERE organization_id = ? AND role = 'Organizador' FOR UPDATE",
@@ -968,7 +989,16 @@ export async function getAllPlayersForContractOfferService(gameSlug: string, sea
 
     sql += ` GROUP BY u.id ORDER BY u.name ASC LIMIT 100`;
 
-    const players = await queryDB(sql, params);
+    const rows = await queryDB<ContractCandidateDatabaseRow>(sql, params);
+    const players: ContractCandidate[] = rows.map((row) => ({
+      ...row,
+      organization_id: row.organization_id ?? undefined,
+      avatar_url: row.avatar_url ?? undefined,
+      foto: row.foto ?? undefined,
+      current_team_id: row.current_team_id ?? undefined,
+      current_team_name: row.current_team_name ?? undefined,
+      current_team_tag: row.current_team_tag ?? undefined,
+    }));
     return { success: true, players };
   } catch (error: unknown) {
     console.error('Error en getAllPlayersForContractOfferService:', error);
@@ -1123,8 +1153,8 @@ export async function generateFixtureService(
 
     const teams = enrolledTeams.map((team) => ({ id: team.team_id, name: team.team_name, tag: team.team_tag }));
     await transaction.executeCommand(
-      'DELETE FROM matches WHERE competition_id = ? OR tournament_id = ?',
-      [competitionId, competitionId],
+      'DELETE FROM matches WHERE competition_id = ?',
+      [competitionId],
     );
 
     const { startDate, selectedDays, selectedTimes, matchMode, format, groupCount, qualifiersPerGroup } = config;

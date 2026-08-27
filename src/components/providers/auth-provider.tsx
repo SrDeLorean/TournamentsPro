@@ -51,8 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchGlobalTeams = useCallback(() => {
-    fetch('/api/admin/teams')
-      .then((res) => res.json())
+    fetch('/api/teams?limit=200')
+      .then((res) => {
+        if (!res.ok) throw new Error(`No se pudieron cargar los equipos (${res.status})`);
+        return res.json();
+      })
       .then((data) => {
         const teams = data.teams || data.data?.teams;
         if (Array.isArray(teams) && teams.length > 0) {

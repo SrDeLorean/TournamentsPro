@@ -13,8 +13,11 @@ test('una ruta privada redirige a la portada con retorno seguro', async ({ page 
 
 test('la sesión anónima no expone datos', async ({ request }) => {
   const response = await request.get('/api/auth/session');
-  expect(response.status()).toBe(401);
-  await expect(response.json()).resolves.toMatchObject({ success: false });
+  expect(response.status()).toBe(200);
+  await expect(response.json()).resolves.toMatchObject({
+    success: true,
+    data: { authenticated: false, user: null },
+  });
 });
 
 test('readiness confirma MySQL y entrega correlación', async ({ request }) => {

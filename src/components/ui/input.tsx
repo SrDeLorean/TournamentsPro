@@ -1,6 +1,5 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -11,12 +10,14 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type = 'text', label, error, helperText, icon, id, ...props }, ref) => {
-    const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = React.useId();
+    const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : generatedId);
+    const messageId = `${inputId}-message`;
 
     return (
       <div className="w-full flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={inputId} className="text-[13px] font-medium text-[var(--text-secondary)]">
+          <label htmlFor={inputId} className="text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
             {label}
           </label>
         )}
@@ -26,36 +27,22 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={type}
             ref={ref}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error || helperText ? messageId : undefined}
             className={cn(
-              "w-full h-10 rounded-lg bg-[var(--bg-card)]/50 border border-[var(--border-card)] px-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--accent-cyan)]/50 focus-visible:border-[var(--accent-cyan)] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:border-[var(--border-card-hover)]",
+              "ui-control w-full h-10 px-3 text-[14px] placeholder:text-[var(--text-muted)]",
               icon && "pl-9",
-              error && "border-[var(--accent-crimson)] focus-visible:border-[var(--accent-crimson)] focus-visible:ring-[var(--accent-crimson)]/50 hover:border-[var(--accent-crimson)]",
+              error && "!border-[var(--accent-crimson)] focus:!shadow-[0_0_0_3px_var(--accent-crimson-bg)]",
               className
             )}
             {...props}
           />
         </div>
-        <AnimatePresence mode="wait">
-          {error ? (
-            <motion.span 
-              initial={{ opacity: 0, y: -5 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -5 }} 
-              className="text-[12px] font-medium text-[var(--accent-crimson)]"
-            >
-              {error}
-            </motion.span>
-          ) : helperText ? (
-            <motion.span 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              className="text-[12px] text-[var(--text-muted)]"
-            >
-              {helperText}
-            </motion.span>
-          ) : null}
-        </AnimatePresence>
+        {(error || helperText) && (
+          <span id={messageId} role={error ? 'alert' : undefined} className={cn("animate-fade-up text-[12px]", error ? "font-medium text-[var(--accent-crimson)]" : "text-[var(--text-muted)]")}>
+            {error || helperText}
+          </span>
+        )}
       </div>
     );
   }
@@ -71,46 +58,34 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, label, error, helperText, id, ...props }, ref) => {
-    const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = React.useId();
+    const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : generatedId);
+    const messageId = `${inputId}-message`;
 
     return (
       <div className="w-full flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={inputId} className="text-[13px] font-medium text-[var(--text-secondary)]">
+          <label htmlFor={inputId} className="text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
             {label}
           </label>
         )}
         <textarea
           id={inputId}
           ref={ref}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error || helperText ? messageId : undefined}
           className={cn(
-            "w-full min-h-[100px] rounded-lg bg-[var(--bg-card)]/50 border border-[var(--border-card)] p-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-[var(--accent-cyan)]/50 focus-visible:border-[var(--accent-cyan)] disabled:opacity-50 disabled:cursor-not-allowed resize-y shadow-sm hover:border-[var(--border-card-hover)]",
-            error && "border-[var(--accent-crimson)] focus-visible:border-[var(--accent-crimson)] focus-visible:ring-[var(--accent-crimson)]/50 hover:border-[var(--accent-crimson)]",
+            "ui-control w-full min-h-[100px] p-3 text-[14px] placeholder:text-[var(--text-muted)] resize-y",
+            error && "!border-[var(--accent-crimson)] focus:!shadow-[0_0_0_3px_var(--accent-crimson-bg)]",
             className
           )}
           {...props}
         />
-        <AnimatePresence mode="wait">
-          {error ? (
-            <motion.span 
-              initial={{ opacity: 0, y: -5 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -5 }} 
-              className="text-[12px] font-medium text-[var(--accent-crimson)]"
-            >
-              {error}
-            </motion.span>
-          ) : helperText ? (
-            <motion.span 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              className="text-[12px] text-[var(--text-muted)]"
-            >
-              {helperText}
-            </motion.span>
-          ) : null}
-        </AnimatePresence>
+        {(error || helperText) && (
+          <span id={messageId} role={error ? 'alert' : undefined} className={cn("animate-fade-up text-[12px]", error ? "font-medium text-[var(--accent-crimson)]" : "text-[var(--text-muted)]")}>
+            {error || helperText}
+          </span>
+        )}
       </div>
     );
   }

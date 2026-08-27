@@ -361,10 +361,10 @@ export async function regenerateFixtureAction(
 
     const reportedMatches = await queryDB<{ count: number }>(
       `SELECT COUNT(*) as count FROM matches 
-       WHERE (competition_id = ? OR tournament_id = ?) 
+       WHERE competition_id = ?
        AND (status IN ('POR_REVISAR', 'TERMINADO', 'DISPUTADO', 'FINALIZADO') 
             OR reported_score_home IS NOT NULL OR reported_score_away IS NOT NULL)`,
-      [competitionId, competitionId]
+      [competitionId]
     );
 
     const hasReportedResults = (reportedMatches[0]?.count || 0) > 0;
@@ -397,15 +397,15 @@ export async function advancePlayoffWinnerAction(
       return { success: false, error: 'ID de partido y equipo ganador requeridos.', code: 'MISSING_PARAMS' };
     }
 
-    const currentMatches = await queryDB<{ competition_id: string | null; tournament_id: string | null }>(
-      'SELECT competition_id, tournament_id FROM matches WHERE id = ?',
+    const currentMatches = await queryDB<{ competition_id: string | null }>(
+      'SELECT competition_id FROM matches WHERE id = ?',
       [matchId],
     );
     if (!currentMatches || currentMatches.length === 0) {
       return { success: false, error: 'Partido no encontrado.', code: 'NOT_FOUND' };
     }
 
-    const competitionId = currentMatches[0].competition_id || currentMatches[0].tournament_id;
+    const competitionId = currentMatches[0].competition_id;
     if (!competitionId) {
       return { success: false, error: 'El partido no está asociado a una competencia.', code: 'INVALID_MATCH' };
     }
