@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db';
+import { queryDB } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canCreateOrganization, canManageOrganization, isAdministrator } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
@@ -235,3 +235,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Error archivando organización' }, { status: 500 });
   }
 }
+

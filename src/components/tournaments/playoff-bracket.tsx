@@ -51,7 +51,7 @@ function getRoundWeight(roundName: string): number {
   return 0;
 }
 
-export function PlayoffBracket({ matches }: PlayoffBracketProps) {
+export function PlayoffBracket({ matches, brandColor = 'var(--game-brand)' }: PlayoffBracketProps) {
   // 1. Group matches by Base Round (e.g. "Cuartos" instead of "Cuartos (Ida)")
   const matchesByBaseRound = new Map<string, PlayoffMatch[]>();
 
@@ -139,7 +139,10 @@ export function PlayoffBracket({ matches }: PlayoffBracketProps) {
   }
 
   return (
-    <div className="w-full overflow-x-auto py-6 hide-scrollbar">
+    <div
+      className="game-bracket w-full overflow-x-auto py-4 hide-scrollbar"
+      style={{ '--bracket-brand': brandColor } as React.CSSProperties}
+    >
       <div className="flex items-stretch justify-start md:justify-center gap-8 min-w-max px-4">
         {sortedRounds.map((roundName) => {
           const roundPairs = baseRoundsMap.get(roundName) || [];
@@ -196,7 +199,7 @@ export function PlayoffBracket({ matches }: PlayoffBracketProps) {
 
                   return (
                     <div key={ida.id || idx} className="flex-1 flex flex-col justify-center py-2 relative">
-                      <div className="relative z-10 flex flex-col bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl shadow-lg overflow-hidden transition-all hover:border-[var(--accent-cyan)] hover:shadow-cyan-900/20">
+                      <div className="game-bracket-card relative z-10 flex flex-col bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl overflow-hidden transition-all">
                         
                         {/* TEAM A */}
                         <div className={`flex items-center justify-between p-2.5 border-b border-[var(--border-card)] ${teamAWon ? 'bg-[var(--accent-cyan-bg)]' : ''}`}>
@@ -214,12 +217,12 @@ export function PlayoffBracket({ matches }: PlayoffBracketProps) {
                                   <span className="text-[9px] opacity-50 mx-0.5">-</span>
                                   <span className="w-3.5 text-center">{hasVueltaPlayed ? teamA_Vuelta : '-'}</span>
                                 </div>
-                                <span className={`w-6 text-center text-sm font-black ${teamAWon ? 'text-[var(--accent-cyan)]' : 'text-slate-300'}`} title="Resultado Global">
+                                <span className={`w-6 text-center text-sm font-black ${teamAWon ? 'text-[var(--bracket-brand)]' : 'text-[var(--text-secondary)]'}`} title="Resultado Global">
                                   {(hasIdaPlayed || hasVueltaPlayed) ? teamA_Global : '-'}
                                 </span>
                               </>
                             ) : (
-                              <span className={`w-6 text-center text-sm font-black ${teamAWon ? 'text-[var(--accent-cyan)]' : 'text-slate-300'}`}>
+                              <span className={`w-6 text-center text-sm font-black ${teamAWon ? 'text-[var(--bracket-brand)]' : 'text-[var(--text-secondary)]'}`}>
                                 {hasIdaPlayed ? teamA_Ida : '-'}
                               </span>
                             )}
@@ -242,12 +245,12 @@ export function PlayoffBracket({ matches }: PlayoffBracketProps) {
                                   <span className="text-[9px] opacity-50 mx-0.5">-</span>
                                   <span className="w-3.5 text-center">{hasVueltaPlayed ? teamB_Vuelta : '-'}</span>
                                 </div>
-                                <span className={`w-6 text-center text-sm font-black ${teamBWon ? 'text-[var(--accent-cyan)]' : 'text-slate-300'}`} title="Resultado Global">
+                                <span className={`w-6 text-center text-sm font-black ${teamBWon ? 'text-[var(--bracket-brand)]' : 'text-[var(--text-secondary)]'}`} title="Resultado Global">
                                   {(hasIdaPlayed || hasVueltaPlayed) ? teamB_Global : '-'}
                                 </span>
                               </>
                             ) : (
-                              <span className={`w-6 text-center text-sm font-black ${teamBWon ? 'text-[var(--accent-cyan)]' : 'text-slate-300'}`}>
+                              <span className={`w-6 text-center text-sm font-black ${teamBWon ? 'text-[var(--bracket-brand)]' : 'text-[var(--text-secondary)]'}`}>
                                 {hasIdaPlayed ? teamB_Ida : '-'}
                               </span>
                             )}

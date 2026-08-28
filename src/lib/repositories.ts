@@ -270,6 +270,33 @@ export class OrganizationRepository extends BaseRepository<Organization> {
     return rows.length > 0 ? this.mapRow(rows[0]) : null;
   }
 
+  async getOrganizationsWithStats(gameSlug?: string): Promise<any[]> {
+    const isAll = !gameSlug || ['ALL', 'all', 'TODOS', 'todas'].includes(gameSlug);
+    const query = isAll
+      ? `
+        SELECT o.*, COUNT(c.id) as comp_count
+        FROM organizations o
+        LEFT JOIN users u ON u.organization_id = o.id
+        LEFT JOIN competitions c ON (c.organization_id = o.id OR c.organizer_id = u.id) 
+          AND c.status != 'Borrador'
+        GROUP BY o.id
+        ORDER BY comp_count DESC, o.name ASC
+      `
+      : `
+        SELECT o.*, COUNT(c.id) as comp_count
+        FROM organizations o
+        LEFT JOIN users u ON u.organization_id = o.id
+        LEFT JOIN competitions c ON (c.organization_id = o.id OR c.organizer_id = u.id) 
+          AND c.game_slug = ? 
+          AND c.status != 'Borrador'
+        GROUP BY o.id
+        ORDER BY comp_count DESC, o.name ASC
+      `;
+
+    const params = isAll ? [] : [gameSlug];
+    return await queryDB(query, params);
+  }
+
   async create(data: Partial<Organization>): Promise<Organization> {
     const id = data.id || `org-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const allowedGamesJson = data.allowedGames ? JSON.stringify(data.allowedGames) : '[]';
@@ -468,6 +495,45 @@ export class CompetitionRepository extends BaseRepository<Competition> {
   async findByGameSlug(gameSlug: string): Promise<Competition[]> {
     const rows = await queryDB<CompetitionRow>('SELECT * FROM competitions WHERE game_slug = ? ORDER BY created_at DESC', [gameSlug]);
     return rows.map(this.mapRow);
+  }
+
+  async getEnrolledTeams(competitionId: string): Promise<any[]> {
+    return await queryDB(
+      `SELECT * FROM competition_teams WHERE competition_id = ? AND status = 'CONFIRMADO'`,
+      [competitionId]
+    );
+  }
+
+  async removeEnrolledTeam(competitionId: string, teamId: string): Promise<void> {
+    await executeCommand(`DELETE FROM competition_teams WHERE competition_id = ? AND team_id = ?`, [competitionId, teamId]);
+  }
+
+  async getReportedMatchesCount(competitionId: string): Promise<number> {
+    const rows = await queryDB<{ count: number }>(
+      `SELECT COUNT(*) as count FROM matches 
+       WHERE competition_id = ?
+       AND (status IN ('POR_REVISAR', 'TERMINADO', 'DISPUTADO', 'FINALIZADO') 
+            OR reported_score_home IS NOT NULL OR reported_score_away IS NOT NULL)`,
+      [competitionId]
+    );
+    return rows[0]?.count || 0;
+  }
+
+  async getMatchCompetitionId(matchId: string): Promise<string | null> {
+    const rows = await queryDB<{ competition_id: string | null }>(
+      'SELECT competition_id FROM matches WHERE id = ?',
+      [matchId],
+    );
+    return rows[0]?.competition_id || null;
+  }
+
+  async upsertCompetitionTeam(enrollId: string, competitionId: string, teamId: string, teamName: string, teamTag: string | null): Promise<void> {
+    await executeCommand(
+      `INSERT INTO competition_teams (id, competition_id, team_id, team_name, team_tag, status)
+       VALUES (?, ?, ?, ?, ?, 'CONFIRMADO')
+       ON DUPLICATE KEY UPDATE status = 'CONFIRMADO'`,
+      [enrollId, competitionId, teamId, teamName, teamTag]
+    );
   }
 
   async create(data: Partial<Competition>): Promise<Competition> {

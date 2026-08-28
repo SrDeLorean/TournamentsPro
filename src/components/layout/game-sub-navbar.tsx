@@ -120,7 +120,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
             {canScrollLeft && (
               <button
                 onClick={() => scroll('left')}
-                className="p-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--accent-cyan)] shadow-md hover:scale-110 transition-all flex-shrink-0 z-10"
+                className="p-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--game-brand)] shadow-md hover:scale-110 transition-all flex-shrink-0 z-10"
                 aria-label="Desplazar a la izquierda"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -141,8 +141,9 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
                   <Link
                     key={sec.id}
                     href={href}
-                    onClick={() => {
+                    onClick={(event) => {
                       if (onSelectSection) {
+                        event.preventDefault();
                         onSelectSection(sec.id);
                       }
                     }}
@@ -151,16 +152,6 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
                         ? 'game-portal-nav-item-active shadow-md font-extrabold'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)] border-transparent'
                     }`}
-                    style={
-                      isActive
-                        ? {
-                            backgroundColor: `color-mix(in srgb, ${game.brandColor} 50%, var(--bg-card))`,
-                            borderColor: game.brandColor,
-                            color: `color-mix(in srgb, ${game.brandColor} 80%, var(--text-heading))`,
-                            boxShadow: `0 4px 15px color-mix(in srgb, ${game.brandColor} 30%, transparent)`,
-                          }
-                        : {}
-                    }
                   >
                     <span style={{ color: isActive ? game.brandColor : undefined }}>{sec.icon}</span>
                     <span>{sec.label}</span>
@@ -173,7 +164,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
             {canScrollRight && (
               <button
                 onClick={() => scroll('right')}
-                className="p-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--accent-cyan)] shadow-md hover:scale-110 transition-all flex-shrink-0 z-10"
+                className="p-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--game-brand)] shadow-md hover:scale-110 transition-all flex-shrink-0 z-10"
                 aria-label="Desplazar a la derecha"
               >
                 <ChevronRight className="w-3.5 h-3.5" />

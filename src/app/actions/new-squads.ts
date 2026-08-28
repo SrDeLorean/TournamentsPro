@@ -1,6 +1,6 @@
 'use server';
 
-import { queryDB } from '@/lib/db';
+import { dbProvider } from '@/lib/db/provider';
 import { requireTeamManager, requireUserManager } from '@/lib/auth-server';
 import { revalidatePath } from 'next/cache';
 import { removePlayerFromSquadService } from '@/lib/services';
@@ -54,7 +54,7 @@ export async function getNewTeamSquadAction(teamId: string) {
   try {
     if (!teamId) return { success: false, squad: [], error: 'ID de equipo requerido.' };
 
-    const squadRows = await queryDB<NewSquadRow>(
+    const squadRows = await dbProvider.query<NewSquadRow>(
       `SELECT 
         tm.id, tm.team_id, tm.user_id, tm.organization_name, tm.tactical_position, tm.role_in_team, tm.jersey_number, tm.joined_at,
         u.name as user_name, u.gamertag, u.email, u.avatar_url, u.foto
@@ -91,7 +91,7 @@ export async function getNewTeamSquadAction(teamId: string) {
 export async function getNewPlayerInscriptionsMatrixAction(teamId: string) {
   try {
     await requireTeamManager(teamId);
-    const rows = await queryDB<InscriptionRow>(
+    const rows = await dbProvider.query<InscriptionRow>(
       `SELECT 
         u.id as user_id,
         u.name as user_name,
@@ -158,7 +158,7 @@ export async function expelPlayerFromSquadAction(
 export async function getUserEnrolledTeamsAction(userId: string) {
   try {
     await requireUserManager(userId);
-    const rows = await queryDB<TeamEnrollmentRow>(
+    const rows = await dbProvider.query<TeamEnrollmentRow>(
       `SELECT tm.team_id, tm.organization_name, t.name as team_name, t.tag as team_tag, t.logo_url
        FROM team_members tm
        JOIN teams t ON tm.team_id = t.id

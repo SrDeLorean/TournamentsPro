@@ -1,6 +1,6 @@
 import { apiError, apiSuccess, mapUserRowToProfile, type UserRow } from '@/lib/api-types';
 import { getRequestUserSession } from '@/lib/auth-server';
-import { queryDB } from '@/lib/db';
+import { queryDB } from '@/lib/db/provider';
 
 export async function GET(request: Request) {
   try {
@@ -16,3 +16,4 @@ export async function GET(request: Request) {
     return apiError('No se pudo verificar la sesión', 500);
   }
 }
+

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
-import { Search, Building2, Trophy, RefreshCw, BarChart2 } from 'lucide-react';
+import { Search, Building2, Trophy, RefreshCw, BarChart2, LoaderCircle, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { GameConfig } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
@@ -59,6 +59,7 @@ export function ClassificationView({
   const [standings, setStandings] = useState<TeamStanding[]>([]);
   const [allMatches, setAllMatches] = useState<ClassificationMatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [activeTabs, setActiveTabs] = useState<Record<string, 'LIGA' | 'PLAYOFF'>>({});
 
@@ -131,6 +132,7 @@ export function ClassificationView({
 
   // 3. Fetch Matches & Calculate Standings
   const fetchAndCalculateStandings = useCallback(async (orgName: string, tournName: string, queryText: string) => {
+    setIsRefreshing(true);
     try {
       // Pedir TODOS los partidos (no solo FINALIZADOS) para poder poblar la tabla con 0 puntos si no han jugado.
       let url = `/api/matches?gameSlug=${game.slug}&_t=${Date.now()}`;
@@ -152,6 +154,8 @@ export function ClassificationView({
     } catch (err) {
       console.error('Error fetching standings matches:', err);
       setStandings([]);
+    } finally {
+      setIsRefreshing(false);
     }
   }, [game.slug, initialTournId]);
 
@@ -177,17 +181,23 @@ export function ClassificationView({
     return () => { isMounted = false; };
   }, [fetchAndCalculateStandings, fetchOrganizationsFromDB, fetchTournamentsFromDB, initialOrgName, initialTournName]);
 
+  useEffect(() => {
+    if (isLoading) return;
+    const debounceId = window.setTimeout(() => {
+      fetchAndCalculateStandings(selectedOrgName, selectedTournName, searchQuery.trim());
+    }, 320);
+    return () => window.clearTimeout(debounceId);
+  }, [fetchAndCalculateStandings, isLoading, searchQuery, selectedOrgName, selectedTournName]);
+
   // Handlers
   const handleSelectOrganization = (orgName: string) => {
     setSelectedOrgName(orgName);
     setSelectedTournName('TODAS');
     fetchTournamentsFromDB(orgName);
-    fetchAndCalculateStandings(orgName, 'TODAS', searchQuery);
   };
 
   const handleSelectTournament = (tournName: string) => {
     setSelectedTournName(tournName);
-    fetchAndCalculateStandings(selectedOrgName, tournName, searchQuery);
   };
 
   // Agrupar Clasificaciones por Organización -> Competencia (Usando tournaments base con fallback a allMatches)
@@ -288,13 +298,38 @@ export function ClassificationView({
         <>
           {/* ── 2. FILTROS EN TARJETA (GLASS-PANEL) ─────────────────────────────────── */}
           {(!hideSearchFilter || !hideOrgFilter || !hideCompFilter) && (
-            <div className="bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl border border-[var(--border-card)] shadow-xl space-y-5 backdrop-blur-md">
+            <div className="classification-filter-card game-query-panel bg-[var(--bg-card)] rounded-3xl border border-[var(--border-card)] shadow-xl backdrop-blur-md">
+              <div className="classification-filter-heading">
+                <div className="classification-filter-heading-copy">
+                  <span className="classification-filter-heading-icon" aria-hidden="true">
+                    <SlidersHorizontal className="size-4" />
+                  </span>
+                  <div>
+                    <h2>Explorar clasificación</h2>
+                    <p>Busca un equipo o acota la tabla por organización y competencia.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    handleSelectOrganization('TODAS');
+                  }}
+                  disabled={!searchQuery && selectedOrgName === 'TODAS' && selectedTournName === 'TODAS'}
+                  className="classification-filter-reset"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span>Restablecer</span>
+                </button>
+              </div>
               
               {/* BUSCADOR */}
               {!hideSearchFilter && (
-                <div className="relative w-full">
-                  <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <div className="game-search-control relative w-full">
+                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[var(--game-brand)]" />
                   <Input
+                    type="search"
+                    aria-label="Buscar en la clasificación"
                     placeholder="Buscar por equipo, organización o liga..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -303,22 +338,40 @@ export function ClassificationView({
                         fetchAndCalculateStandings(selectedOrgName, selectedTournName, searchQuery);
                       }
                     }}
-                    className="pl-12 py-3.5 text-xs sm:text-sm input-theme rounded-2xl glass-panel shadow-md w-full placeholder:text-[var(--text-muted)]"
+                    className="pl-11 pr-12 text-xs sm:text-sm w-full"
                   />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                    {isRefreshing ? (
+                      <LoaderCircle className="size-4 animate-spin text-[var(--game-brand)]" aria-label="Actualizando resultados" />
+                    ) : searchQuery ? (
+                      <button type="button" onClick={() => setSearchQuery('')} className="game-search-clear" aria-label="Limpiar búsqueda">
+                        <X className="size-4" />
+                      </button>
+                    ) : (
+                      <kbd className="game-search-hint">ENTER</kbd>
+                    )}
+                  </div>
                 </div>
               )}
 
+              <div className="classification-filter-grid">
+
               {/* ORGANIZACIONES */}
               {!hideOrgFilter && (
-                <div className="space-y-2 pt-1 font-mono">
-                  <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase">
-                    <Building2 className="w-3.5 h-3.5" style={{ color: brandColor }} />
-                    <span>ORGANIZACIONES DISPONIBLES EN BD</span>
+                <div className="classification-filter-section font-mono">
+                  <div className="classification-filter-label">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Building2 className="w-3.5 h-3.5 shrink-0" style={{ color: brandColor }} />
+                      <span className="truncate">Organizaciones</span>
+                    </span>
+                    <span className="classification-filter-count">{organizations.length}</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="game-filter-options mobile-scroll-row flex items-center gap-2 overflow-x-auto pb-1">
                     <button
+                      type="button"
+                      aria-pressed={selectedOrgName === 'TODAS'}
                       onClick={() => handleSelectOrganization('TODAS')}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${
+                      className={`classification-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border flex items-center gap-2 ${
                         selectedOrgName === 'TODAS'
                           ? 'shadow-md font-black'
                           : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -341,9 +394,11 @@ export function ClassificationView({
                       const isActive = selectedOrgName.toUpperCase() === org.name.toUpperCase();
                       return (
                         <button
+                          type="button"
+                          aria-pressed={isActive}
                           key={org.id}
                           onClick={() => handleSelectOrganization(org.name)}
-                          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${
+                          className={`classification-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border flex items-center gap-2 ${
                             isActive
                               ? 'shadow-md font-black'
                               : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -385,21 +440,26 @@ export function ClassificationView({
 
               {/* COMPETENCIAS */}
               {!hideCompFilter && (
-                <div className="space-y-2 pt-1 font-mono">
-                  <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase">
-                    <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                    <span>
+                <div className="classification-filter-section font-mono">
+                  <div className="classification-filter-label">
+                    <span className="flex min-w-0 items-center gap-2">
+                    <Trophy className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                    <span className="truncate">
                       {targetTeamName 
-                        ? 'COMPETENCIAS / TORNEOS EN DISPUTA' 
-                        : `COMPETENCIAS / TORNEOS DE ${selectedOrgName.toUpperCase()}`}
+                        ? 'Competencias en disputa'
+                        : selectedOrgName === 'TODAS' ? 'Competencias' : `Competencias de ${selectedOrgName}`}
                     </span>
+                    </span>
+                    <span className="classification-filter-count">{tournaments.length}</span>
                   </div>
                   
                   {tournaments.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="game-filter-options mobile-scroll-row flex items-center gap-2 overflow-x-auto pb-1">
                       <button
+                        type="button"
+                        aria-pressed={selectedTournName === 'TODAS'}
                         onClick={() => handleSelectTournament('TODAS')}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${
+                        className={`classification-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border flex items-center gap-2 ${
                           selectedTournName === 'TODAS'
                             ? 'shadow-md font-black'
                             : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -422,9 +482,11 @@ export function ClassificationView({
                       const isActive = selectedTournName.toUpperCase() === comp.name.toUpperCase();
                       return (
                         <button
+                          type="button"
+                          aria-pressed={isActive}
                           key={comp.id}
                           onClick={() => handleSelectTournament(comp.name)}
-                          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${
+                          className={`classification-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border flex items-center gap-2 ${
                             isActive
                               ? 'shadow-md font-black'
                               : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -463,6 +525,7 @@ export function ClassificationView({
                   )}
                 </div>
               )}
+              </div>
             </div>
           )}
 
@@ -579,7 +642,7 @@ export function ClassificationView({
                           const sortedGroups = Object.entries(groupsObj).sort((a, b) => a[0].localeCompare(b[0]));
 
                           return sortedGroups.map(([gName, gTeams]) => (
-                            <div key={gName} className="w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl">
+                            <div key={gName} className="game-data-surface w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl">
                               {sortedGroups.length > 1 && (
                                 <div className="px-4 py-3 bg-[var(--bg-card)] border-b border-[var(--border-card)] text-sm font-black uppercase text-[var(--accent-cyan)] tracking-wider">
                                   {gName}

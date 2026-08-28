@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db';
+import { queryDB } from '@/lib/db/provider';
 
 export async function GET(request: Request) {
   try {
@@ -95,3 +95,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, matches: [], error: error instanceof Error ? error.message : 'Error consultando partidos de BD' }, { status: 500 });
   }
 }
+

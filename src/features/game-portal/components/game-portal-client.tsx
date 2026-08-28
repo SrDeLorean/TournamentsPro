@@ -3,18 +3,17 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { getSectionMetadata } from '@/lib/section-config';
 import { GameSubNavbar, GameSection } from '@/components/layout/game-sub-navbar';
 import { PageHeader } from '@/components/ui/page-header';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { GameExplorerPanel } from '@/components/ui/game-explorer-panel';
 import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
 import { PlayerData } from '@/components/players/player-profile-view';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar } from '@/components/ui/avatar';
-import { Flame } from 'lucide-react';
+import { Flame, LoaderCircle, Trophy, Users } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useGamePlayers } from '@/features/game-portal/hooks/use-game-players';
 import { NewUserMyTeamsView as UserMyTeamsView } from '@/components/user/new-user-my-teams';
@@ -33,18 +32,33 @@ import {
   PlayerFichaCrudSection,
 } from '@/components/game/game-sections';
 
-const UserProfileSettingsView = dynamic(() => import('@/components/user/user-profile-settings-view').then(m => ({ default: m.UserProfileSettingsView })));
-const ClubSettingsView = dynamic(() => import('@/components/club/club-settings-view').then(m => ({ default: m.ClubSettingsView })));
-const TransferMarket = dynamic(() => import('@/components/transfers/transfer-market').then(m => ({ default: m.TransferMarket })));
-const TournamentHubView = dynamic(() => import('@/components/tournaments/tournament-hub-view').then(m => ({ default: m.TournamentHubView })));
-const FixtureScheduleView = dynamic(() => import('@/components/tournaments/fixture-schedule-view').then(m => ({ default: m.FixtureScheduleView })));
-const ClassificationView = dynamic(() => import('@/components/tournaments/classification-view').then(m => ({ default: m.ClassificationView })));
-const EsportsAnalyticsView = dynamic(() => import('@/components/stats/esports-analytics-view').then(m => ({ default: m.EsportsAnalyticsView })));
-const TeamProfileView = dynamic(() => import('@/components/teams/team-profile-view').then(m => ({ default: m.TeamProfileView })));
-const GameUIShowcasePage = dynamic(() => import('@/features/design-system/components/game-ui-showcase-client').then(m => ({ default: m.default })));
-const OrganizationDirectory = dynamic(() => import('@/components/tournaments/organization-directory').then(m => ({ default: m.OrganizationDirectory })));
-const TeamDirectory = dynamic(() => import('@/components/teams/team-directory').then(m => ({ default: m.TeamDirectory })));
-const PlayerProfileView = dynamic(() => import('@/components/players/player-profile-view').then(m => ({ default: m.PlayerProfileView })));
+function PortalChunkLoading() {
+  return (
+    <div className="portal-chunk-loading" role="status" aria-live="polite">
+      <div className="portal-chunk-loading-heading">
+        <LoaderCircle className="size-4 animate-spin" />
+        <span>Cargando módulo competitivo</span>
+      </div>
+      <div className="portal-chunk-loading-toolbar skeleton" />
+      <div className="portal-chunk-loading-grid" aria-hidden="true">
+        {[0, 1, 2].map((item) => <div key={item} className="portal-chunk-loading-card skeleton" />)}
+      </div>
+    </div>
+  );
+}
+
+const UserProfileSettingsView = dynamic(() => import('@/components/user/user-profile-settings-view').then(m => ({ default: m.UserProfileSettingsView })), { loading: () => <PortalChunkLoading /> });
+const ClubSettingsView = dynamic(() => import('@/components/club/club-settings-view').then(m => ({ default: m.ClubSettingsView })), { loading: () => <PortalChunkLoading /> });
+const TransferMarket = dynamic(() => import('@/components/transfers/transfer-market').then(m => ({ default: m.TransferMarket })), { loading: () => <PortalChunkLoading /> });
+const TournamentHubView = dynamic(() => import('@/components/tournaments/tournament-hub-view').then(m => ({ default: m.TournamentHubView })), { loading: () => <PortalChunkLoading /> });
+const FixtureScheduleView = dynamic(() => import('@/components/tournaments/fixture-schedule-view').then(m => ({ default: m.FixtureScheduleView })), { loading: () => <PortalChunkLoading /> });
+const ClassificationView = dynamic(() => import('@/components/tournaments/classification-view').then(m => ({ default: m.ClassificationView })), { loading: () => <PortalChunkLoading /> });
+const EsportsAnalyticsView = dynamic(() => import('@/components/stats/esports-analytics-view').then(m => ({ default: m.EsportsAnalyticsView })), { loading: () => <PortalChunkLoading /> });
+const TeamProfileView = dynamic(() => import('@/components/teams/team-profile-view').then(m => ({ default: m.TeamProfileView })), { loading: () => <PortalChunkLoading /> });
+const GameUIShowcasePage = dynamic(() => import('@/features/design-system/components/game-ui-showcase-client').then(m => ({ default: m.default })), { loading: () => <PortalChunkLoading /> });
+const OrganizationDirectory = dynamic(() => import('@/components/tournaments/organization-directory').then(m => ({ default: m.OrganizationDirectory })), { loading: () => <PortalChunkLoading /> });
+const TeamDirectory = dynamic(() => import('@/components/teams/team-directory').then(m => ({ default: m.TeamDirectory })), { loading: () => <PortalChunkLoading /> });
+const PlayerProfileView = dynamic(() => import('@/components/players/player-profile-view').then(m => ({ default: m.PlayerProfileView })), { loading: () => <PortalChunkLoading /> });
 
 
 
@@ -58,6 +72,7 @@ interface GamePortalClientProps {
 // ── Main Page Component ─────────────────────────────────────────────────────
 
 export default function GamePortalClient({ gameSlug, initialSection }: GamePortalClientProps) {
+  const router = useRouter();
   const { currentUser, userTeams, refetchTeams } = useAuth();
   const game = GAMES_CATALOG[gameSlug];
 
@@ -72,7 +87,7 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
 
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerData | null>(null);
   const defaultSection: GameSection = (initialSection as GameSection) || 'home';
-  const [activeSection, setActiveSection] = useState<GameSection>(defaultSection);
+  const activeSection = defaultSection;
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPosition, setSelectedPosition] = useState<string>('ALL');
   const { filteredPlayers, isLoadingPlayers } = useGamePlayers(game, activeSection, searchTerm, selectedPosition);
@@ -101,9 +116,9 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
   // ── Section Change Handler ────────────────────────────────────────────────
 
   const handleSectionChange = (sec: GameSection) => {
-    setActiveSection(sec);
     setSearchTerm('');
     setSelectedPlayer(null);
+    router.push(sec === 'home' ? `/${gameSlug}` : `/${gameSlug}/${sec}`);
   };
 
   return (
@@ -206,12 +221,23 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
                   <TacticalLoadingSkeleton game={game} message={`SINCRONIZANDO ATLETAS DE ${game.name.toUpperCase()}...`} />
                 ) : (
                   <>
-                    <FilterBar
-                      searchPlaceholder={meta.searchPlaceholder}
-                      searchValue={searchTerm}
-                      onSearchChange={setSearchTerm}
+                    <GameExplorerPanel
+                      title="Explorar jugadores"
+                      description="Busca atletas registrados por nombre, gamertag, club o posición."
                       brandColor={brandColor}
-                    />
+                      icon={<Users className="size-4" />}
+                      onReset={() => setSearchTerm('')}
+                      resetDisabled={!searchTerm}
+                    >
+                      <FilterBar
+                        searchPlaceholder={meta.searchPlaceholder}
+                        searchValue={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        count={filteredPlayers.length}
+                        countLabel="JUGADORES"
+                        brandColor={brandColor}
+                      />
+                    </GameExplorerPanel>
                     <PlayerCardGrid players={filteredPlayers} gameSlug={game.slug} brandColor={brandColor} />
                   </>
                 )}
@@ -226,38 +252,31 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
                 <TacticalLoadingSkeleton game={game} message={`ANALIZANDO RENDIMIENTOS DE ${game.name.toUpperCase()}...`} />
               ) : (
                 <>
-                  <FilterBar
-                    searchPlaceholder={meta.searchPlaceholder}
-                    searchValue={searchTerm}
-                    onSearchChange={setSearchTerm}
-                    options={[{ id: 'ALL', label: 'Todas las Posiciones' }, ...game.positions.map(p => ({ id: p, label: p }))]}
-                    activeFilter={selectedPosition}
-                    onFilterChange={setSelectedPosition}
+                  <GameExplorerPanel
+                    title="Explorar ranking"
+                    description="Compara el rendimiento de los atletas y filtra el top por posición."
                     brandColor={brandColor}
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                    {filteredPlayers.map((player, idx) => (
-                      <Card key={idx} className="glass-card-premium">
-                        <CardHeader>
-                          <div className="flex items-center justify-between mb-2">
-                            <Badge variant="cyan" style={{ backgroundColor: `color-mix(in srgb, ${brandColor} 15%, transparent)`, color: brandColor, borderColor: `color-mix(in srgb, ${brandColor} 40%, transparent)` }}>{player.pos}</Badge>
-                            <span className="text-xs font-mono font-bold text-amber-400">★ {player.rating}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Avatar fallback={player.name} size="md" status="online" />
-                            <div>
-                              <CardTitle className="text-base truncate group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r transition-all" style={{ backgroundImage: `linear-gradient(to right, ${brandColor}, #ffffff)` }}>{player.name}</CardTitle>
-                              <CardDescription>{player.team}</CardDescription>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardFooter className="text-xs text-[var(--text-muted)] flex justify-between bg-[var(--bg-main)]/40 mt-auto py-2">
-                          <span>Efectividad:</span>
-                          <span className="font-bold text-[var(--accent-emerald)]">{player.pss}</span>
-                        </CardFooter>
-                      </Card>
-                    ))}
-                  </div>
+                    icon={<Trophy className="size-4" />}
+                    onReset={() => {
+                      setSearchTerm('');
+                      setSelectedPosition('ALL');
+                    }}
+                    resetDisabled={!searchTerm && selectedPosition === 'ALL'}
+                  >
+                    <FilterBar
+                      searchPlaceholder={meta.searchPlaceholder}
+                      searchValue={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      options={[{ id: 'ALL', label: 'Todas las Posiciones' }, ...game.positions.map(p => ({ id: p, label: p }))]}
+                      activeFilter={selectedPosition}
+                      onFilterChange={setSelectedPosition}
+                      renderAsSelect
+                      count={filteredPlayers.length}
+                      countLabel="CLASIFICADOS"
+                      brandColor={brandColor}
+                    />
+                  </GameExplorerPanel>
+                  <PlayerCardGrid players={filteredPlayers} gameSlug={game.slug} brandColor={brandColor} />
                 </>
               )}
             </div>

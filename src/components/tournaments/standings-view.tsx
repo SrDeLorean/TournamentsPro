@@ -614,7 +614,7 @@ export function StandingsView({ game }: StandingsViewProps) {
             <span>{title}</span>
           </div>
         )}
-        <div className="w-full overflow-x-auto rounded-3xl border border-[var(--border-card)] glass-panel shadow-2xl">
+        <div className="game-data-surface w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl">
           <table className="w-full text-left border-collapse min-w-[760px] font-mono">
             <thead>
               <tr className="bg-slate-950/90 border-b border-[var(--border-card)] text-[10px] font-black uppercase text-cyan-400 tracking-wider">

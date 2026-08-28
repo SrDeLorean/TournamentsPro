@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db';
+import { queryDB } from '@/lib/db/provider';
 
 interface TournamentListRow {
   id: string;
@@ -67,3 +67,4 @@ export async function GET(request: Request) {
     );
   }
 }
+

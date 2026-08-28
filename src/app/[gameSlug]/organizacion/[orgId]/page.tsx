@@ -21,6 +21,20 @@ interface OrganizationRow extends OrgProfileData {
   founded_year?: string | number;
   allowed_games?: string | string[];
   redes_sociales?: string | Record<string, string>;
+  instagram?: string;
+  twitter?: string;
+  tiktok?: string;
+  whatsapp?: string;
+}
+
+function parseJsonField<T>(value: string | T | null | undefined, fallback: T): T {
+  if (typeof value !== 'string') return value ?? fallback;
+
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
 }
 
 export default async function OrganizacionPage({ params }: { params: Promise<{ gameSlug: string; orgId: string }> }) {
@@ -57,14 +71,22 @@ export default async function OrganizacionPage({ params }: { params: Promise<{ g
     );
   }
 
-  // Parse JSON fields safely
+  const parsedSocials = parseJsonField<Record<string, string>>(orgRaw.redes_sociales, {});
+
+  // Normalize persisted assets and optional profile fields before crossing into the client view.
   const org = {
     ...orgRaw,
     logoUrl: orgRaw.logo_url || orgRaw.logoUrl || '/images/default/logo-default.png',
     bannerUrl: orgRaw.banner_url || orgRaw.bannerUrl || gameConfig.bannerUrl || '/images/default/banner-default.jpg',
     foundedYear: String(orgRaw.founded_year || orgRaw.foundedYear || '2022'),
-    allowedGames: orgRaw.allowed_games ? (typeof orgRaw.allowed_games === 'string' ? JSON.parse(orgRaw.allowed_games) : orgRaw.allowed_games) : ['eafc26', 'valorant'],
-    socialMedia: orgRaw.redes_sociales ? (typeof orgRaw.redes_sociales === 'string' ? JSON.parse(orgRaw.redes_sociales) : orgRaw.redes_sociales) : {},
+    allowedGames: parseJsonField<string[]>(orgRaw.allowed_games, [gameSlug]),
+    socialMedia: {
+      ...parsedSocials,
+      ...(orgRaw.instagram ? { instagram: orgRaw.instagram } : {}),
+      ...(orgRaw.twitter ? { twitter: orgRaw.twitter } : {}),
+      ...(orgRaw.tiktok ? { tiktok: orgRaw.tiktok } : {}),
+      ...(orgRaw.whatsapp ? { whatsapp: orgRaw.whatsapp } : {}),
+    },
   };
 
   // 2. Fetch Competitions owned by this Org

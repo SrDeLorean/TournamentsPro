@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { queryDB } from '@/lib/db';
+import { dbProvider } from '@/lib/db/provider';
 import {
   getServerUserSession,
   requireServerActor,
@@ -101,11 +101,7 @@ export async function createOrGetDirectThreadAction(
     if (channelType === 'SOPORTE_ORGANIZADOR' && !['Administrador', 'Organizador'].includes(actor.role)) {
       return { success: false, error: 'No tienes permiso para crear este canal.' };
     }
-    const targets = await queryDB<{ id: string; name: string; role: string }>(
-      'SELECT id, name, role FROM users WHERE id = ? LIMIT 1',
-      [targetUserId],
-    );
-    const target = targets[0];
+    const target = await dbProvider.users.findById(targetUserId);
     if (!target) return { success: false, error: 'Usuario destino no encontrado.' };
 
     const res = await createOrGetDirectThreadService(

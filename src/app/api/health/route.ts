@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryRows } from '@/lib/db';
+import { queryRows } from '@/lib/db/provider';
 import { getRequestId, logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -28,3 +28,4 @@ export async function GET(request: Request) {
     return response;
   }
 }
+

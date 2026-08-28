@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db';
+import { queryDB } from '@/lib/db/provider';
 import { signToken } from '@/lib/auth';
 import { apiError, mapUserRowToProfile, type UserRow } from '@/lib/api-types';
 import { authorizationErrorResponse, requireValidMutationOrigin } from '@/lib/auth-server';
@@ -91,3 +91,4 @@ export async function POST(request: Request) {
     return apiError('Credential de Google inválida o expirada', 401, 'INVALID_GOOGLE_CREDENTIAL');
   }
 }
+

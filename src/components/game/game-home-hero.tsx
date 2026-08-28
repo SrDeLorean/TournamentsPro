@@ -35,7 +35,7 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
       <div className="game-home-hero relative min-h-[380px] sm:min-h-[460px] flex flex-col justify-end pb-8 sm:pb-12 pt-8">
         
         {/* Top Status & Category Badges */}
-        <div className="absolute top-0 left-0 w-full flex flex-wrap items-center justify-between gap-3 px-2 sm:px-0 z-10">
+        <div className="game-home-statusbar absolute top-0 left-0 w-full flex flex-wrap items-center justify-between gap-3 px-2 sm:px-0 z-10">
           <div className="flex items-center gap-2 flex-wrap">
             <span
               className="px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-1.5 backdrop-blur-md border"
@@ -62,7 +62,7 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
         <div className="game-home-copy relative z-10 max-w-5xl mt-auto px-2 sm:px-0">
           <div className="flex flex-col sm:flex-row sm:items-end gap-5 mb-5">
             <div
-              className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shadow-xl border-2 flex-shrink-0 backdrop-blur-xl transform hover:scale-105 transition-transform duration-500"
+              className="game-home-logo w-16 h-16 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shadow-xl border-2 flex-shrink-0 backdrop-blur-xl transform hover:scale-105 transition-transform duration-500"
               style={{
                 backgroundColor: `${brandColor}15`,
                 borderColor: `${brandColor}60`,
@@ -72,7 +72,7 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
             </div>
             <div className="pb-1 sm:pb-2">
               <h1
-                className="text-4xl sm:text-6xl lg:text-[5.5rem] font-black tracking-tight uppercase leading-[0.9] drop-shadow-xl"
+                className="game-home-title text-4xl sm:text-6xl lg:text-[5.5rem] font-black tracking-tight uppercase leading-[0.9]"
                 style={{ 
                   color: 'var(--text-heading)',
                   textShadow: `0 4px 30px ${brandColor}80` 
@@ -91,7 +91,7 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
         </div>
 
         {/* Quick Navigation Action Buttons */}
-        <div className="relative z-10 flex flex-wrap items-center gap-3 pt-6 sm:pt-8 px-2 sm:px-0">
+        <div className="game-home-actions relative z-10 flex flex-wrap items-center gap-3 pt-6 sm:pt-8 px-2 sm:px-0">
           <Button
             onClick={() => onNavigate('partidos')}
             className="font-black text-xs sm:text-sm h-11 sm:h-12 px-6 uppercase tracking-widest rounded-xl transition-all hover:scale-105 shadow-lg"

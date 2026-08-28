@@ -32,7 +32,8 @@ export function MatchCard({
 
   return (
     <div
-      className={`p-5 rounded-3xl backdrop-blur-md border transition-all duration-300 relative overflow-hidden group shadow-xl flex flex-col justify-between ${
+      data-status={match.status}
+      className={`game-match-card p-4 sm:p-5 rounded-2xl backdrop-blur-md border transition-all duration-300 relative overflow-hidden group flex flex-col justify-between ${
         isLive
           ? 'bg-gradient-to-b from-rose-950/40 via-[var(--bg-card)] to-[var(--bg-card)] border-rose-500/60 shadow-rose-500/20 ring-1 ring-rose-500/40'
           : 'bg-[var(--bg-card)] border-[var(--border-card)] hover:border-cyan-500/40 hover:bg-[var(--bg-card-hover)]'

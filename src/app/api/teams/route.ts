@@ -1,4 +1,4 @@
-import { queryDB } from '@/lib/db';
+import { queryDB } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { teamCreateBodySchema, teamUpdateBodySchema } from '@/lib/api-schemas';
 import { canManageTeam, isAdministrator } from '@/lib/authorization';
@@ -214,3 +214,4 @@ export async function PUT(request: Request) {
     return apiError(message, 500);
   }
 }
+

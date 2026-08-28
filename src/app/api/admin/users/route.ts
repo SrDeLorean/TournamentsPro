@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db';
+import { queryDB } from '@/lib/db/provider';
 import { hashPassword } from '@/lib/auth';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canAssignRole, canManageUser, isAdministrator } from '@/lib/authorization';
@@ -376,3 +376,4 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error actualizando usuario' }, { status: 500 });
   }
 }
+

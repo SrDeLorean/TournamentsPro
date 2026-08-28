@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB, executeCommand } from '@/lib/db';
+import { queryDB, executeCommand } from '@/lib/db/provider';
 import { getServerUserSession } from '@/lib/auth-server';
 
 export async function GET() {
@@ -80,3 +80,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Error al eliminar. Asegúrese de que no tenga datos dependientes.' }, { status: 500 });
   }
 }
+

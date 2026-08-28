@@ -10,6 +10,7 @@ import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loadi
 import { Pagination } from '@/components/ui/pagination';
 import { EsportsCard } from '@/components/ui/esports-card';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { GameExplorerPanel } from '@/components/ui/game-explorer-panel';
 import {
   Flame,
   Shield,
@@ -214,7 +215,19 @@ export function TeamDirectory({
       ) : (
         <>
           {/* ── TACTICAL FILTER & SEARCH TOOLBAR ────────────────────────────── */}
-          <div className="mb-8 mt-6">
+          <GameExplorerPanel
+            title="Explorar escuadras"
+            description="Encuentra clubes por nombre, tag, capitán o disciplina competitiva."
+            brandColor={activeBrandColor}
+            icon={<Users className="size-4" />}
+            onReset={() => {
+              setSearchTerm('');
+              setSelectedPlatform('TODOS');
+              setSelectedDiscipline('ALL');
+              setCurrentPage(1);
+            }}
+            resetDisabled={!searchTerm && selectedPlatform === 'TODOS' && selectedDiscipline === 'ALL'}
+          >
             <FilterBar
               searchPlaceholder="Buscar por club, tag de escuadra o capitán..."
               searchValue={searchTerm}
@@ -227,7 +240,7 @@ export function TeamDirectory({
               countLabel="EQUIPOS"
               brandColor={activeBrandColor}
             />
-          </div>
+          </GameExplorerPanel>
 
           {/* ── TEAMS GRID ─────────────────────────────────────────────────── */}
           {filteredTeams.length === 0 ? (
@@ -255,7 +268,7 @@ export function TeamDirectory({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="game-directory-grid">
                 {currentTeams.map((team, index) => {
                   const tGameSlug = team.gameSlug || team.game_slug || 'eafc26';
                   const tGameConfig = GAMES_CATALOG[tGameSlug] || gameConfig;

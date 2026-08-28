@@ -3,7 +3,7 @@
 import React from 'react';
 import { GameConfig } from '@/lib/games-data';
 import { Input } from '@/components/ui/input';
-import { Search, Building2, Trophy, X } from 'lucide-react';
+import { Search, Building2, Trophy, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
 
 export interface OrgOption {
   id: string;
@@ -33,6 +33,7 @@ interface MatchFilterToolbarProps {
 }
 
 export function MatchFilterToolbar({
+  game,
   searchQuery,
   setSearchQuery,
   statusFilter,
@@ -46,14 +47,40 @@ export function MatchFilterToolbar({
   totalMatchesCount,
 }: MatchFilterToolbarProps) {
   return (
-    <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xl space-y-4 font-mono backdrop-blur-md">
+    <div className="game-filter-card game-query-panel rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xl font-mono backdrop-blur-md" style={{ '--game-brand': game.brandColor } as React.CSSProperties}>
+      <div className="game-filter-heading font-sans">
+        <div className="game-filter-heading-copy">
+          <span className="game-filter-heading-icon" aria-hidden="true">
+            <SlidersHorizontal className="size-4" />
+          </span>
+          <div>
+            <h2>Explorar encuentros</h2>
+            <p>Encuentra partidos por club, estado, organización o torneo.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setSearchQuery('');
+            setStatusFilter('TODOS');
+            setSelectedOrgName('TODAS');
+            setSelectedTournName('TODAS');
+          }}
+          disabled={!searchQuery && statusFilter === 'TODOS' && selectedOrgName === 'TODAS' && selectedTournName === 'TODAS'}
+          className="game-filter-reset"
+        >
+          <RotateCcw className="size-3.5" />
+          <span>Restablecer</span>
+        </button>
+      </div>
       {/* 1. Search Bar + Status Filter Pills */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Search input */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <div className="game-search-control relative w-full md:w-96">
+          <Search className="w-4 h-4 text-[var(--game-brand)] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <Input
-            type="text"
+            type="search"
+            aria-label="Buscar partidos"
             placeholder="Buscar por club, equipo o torneo..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -62,7 +89,8 @@ export function MatchFilterToolbar({
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              className="game-search-clear absolute right-3 top-1/2 -translate-y-1/2"
+              aria-label="Limpiar búsqueda"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -70,7 +98,7 @@ export function MatchFilterToolbar({
         </div>
 
         {/* Status Filter Buttons */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs w-full md:w-auto justify-start md:justify-end">
+        <div className="game-segmented-filter mobile-scroll-row flex items-center gap-1.5 overflow-x-auto text-xs w-full md:w-auto justify-start md:justify-end">
           <button
             onClick={() => setStatusFilter('TODOS')}
             className={`px-3 py-1.5 rounded-full font-bold transition-all border ${
@@ -115,19 +143,25 @@ export function MatchFilterToolbar({
         </div>
       </div>
 
+      <div className="game-filter-grid">
       {/* 2. Organizations Selector */}
-      <div className="space-y-2 pt-2 border-t border-[var(--border-card)]">
-        <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase">
-          <Building2 className="w-3.5 h-3.5 text-cyan-400" />
-          <span>ORGANIZACIONES REGISTRADAS EN BD:</span>
+      <div className="game-filter-section game-filter-group">
+        <div className="game-filter-label">
+          <span className="flex min-w-0 items-center gap-2">
+            <Building2 className="w-3.5 h-3.5 shrink-0 text-[var(--game-brand)]" />
+            <span className="truncate">Organizaciones</span>
+          </span>
+          <span className="game-filter-count">{availableOrgs.length}</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="game-filter-options mobile-scroll-row flex items-center gap-2 overflow-x-auto pb-1">
           <button
+            type="button"
+            aria-pressed={selectedOrgName === 'TODAS'}
             onClick={() => {
               setSelectedOrgName('TODAS');
               setSelectedTournName('TODAS');
             }}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
+            className={`game-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border ${
               selectedOrgName === 'TODAS'
                 ? 'bg-cyan-950 border-cyan-400 text-cyan-300 shadow-md'
                 : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -140,12 +174,14 @@ export function MatchFilterToolbar({
             const isActive = selectedOrgName.toUpperCase() === org.name.toUpperCase();
             return (
               <button
+                type="button"
+                aria-pressed={isActive}
                 key={org.id}
                 onClick={() => {
                   setSelectedOrgName(org.name);
                   setSelectedTournName('TODAS');
                 }}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                className={`game-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border ${
                   isActive
                     ? 'bg-cyan-950 border-cyan-400 text-cyan-300 shadow-md ring-1 ring-cyan-400/40'
                     : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-cyan-500/40'
@@ -159,15 +195,20 @@ export function MatchFilterToolbar({
       </div>
 
       {/* 3. Competitions Selector */}
-      <div className="space-y-2 pt-2 border-t border-[var(--border-card)]">
-        <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase">
-          <Trophy className="w-3.5 h-3.5 text-amber-400" />
-          <span>COMPETENCIAS Y TORNEOS:</span>
+      <div className="game-filter-section game-filter-group">
+        <div className="game-filter-label">
+          <span className="flex min-w-0 items-center gap-2">
+            <Trophy className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+            <span className="truncate">Competencias</span>
+          </span>
+          <span className="game-filter-count">{availableTournaments.length}</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="game-filter-options mobile-scroll-row flex items-center gap-2 overflow-x-auto pb-1">
           <button
+            type="button"
+            aria-pressed={selectedTournName === 'TODAS'}
             onClick={() => setSelectedTournName('TODAS')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
+            className={`game-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border ${
               selectedTournName === 'TODAS'
                 ? 'bg-amber-950 border-amber-500 text-amber-300 shadow-md'
                 : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -180,9 +221,11 @@ export function MatchFilterToolbar({
             const isActive = selectedTournName.toUpperCase() === t.name.toUpperCase();
             return (
               <button
+                type="button"
+                aria-pressed={isActive}
                 key={t.id || t.name}
                 onClick={() => setSelectedTournName(t.name)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                className={`game-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border ${
                   isActive
                     ? 'bg-amber-950 border-amber-500 text-amber-300 shadow-md'
                     : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-amber-500/40'
@@ -193,6 +236,7 @@ export function MatchFilterToolbar({
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );

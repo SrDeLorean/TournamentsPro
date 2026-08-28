@@ -68,7 +68,7 @@ export function PlayerCardGrid({ players, gameSlug, brandColor }: PlayerCardGrid
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="game-directory-grid">
         {currentPlayers.map((player, idx) => (
           <PlayerCard key={player.id || idx} player={player} gameSlug={gameSlug} brandColor={brandColor} />
         ))}

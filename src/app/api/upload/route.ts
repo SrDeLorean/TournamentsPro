@@ -6,7 +6,7 @@ import { validateUpload, sanitizeUploadPath } from '@/lib/auth';
 import { apiError } from '@/lib/api-types';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canManageTeam } from '@/lib/authorization';
-import { queryDB } from '@/lib/db';
+import { queryDB } from '@/lib/db/provider';
 import { consumeSecurityRateLimit } from '@/lib/security';
 import { uploadRequestBodySchema } from '@/lib/api-schemas';
 
@@ -134,3 +134,4 @@ export async function POST(request: Request) {
     return apiError(message, 500);
   }
 }
+

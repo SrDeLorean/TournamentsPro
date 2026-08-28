@@ -10,6 +10,7 @@ import { Pagination } from '@/components/ui/pagination';
 
 import { EsportsCard } from '@/components/ui/esports-card';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { GameExplorerPanel } from '@/components/ui/game-explorer-panel';
 
 interface OrganizationDirectoryProps {
   gameSlug: string;
@@ -73,11 +74,11 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
       <div className="pt-4 sm:pt-6">
         <PageHeader
           badgeText="DIRECTORIO DE TORNEOS"
-          badgeIcon={<Trophy className="w-3.5 h-3.5" style={{ color: 'var(--game-brand)', fill: 'var(--game-brand)' }} />}
+          badgeIcon={<Trophy className="w-3.5 h-3.5" style={{ color: gameConfig.brandColor, fill: gameConfig.brandColor }} />}
           title="ORGANIZACIONES &"
           highlightTitle="TORNEOS"
           description={`Explora las comunidades oficiales, ligas verificadas y organizadores que administran el ecosistema competitivo de ${gameConfig.name}.`}
-          brandColor="var(--game-brand)"
+          brandColor={gameConfig.brandColor}
         />
       </div>
 
@@ -88,7 +89,17 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
       ) : (
         <>
           {/* ── TACTICAL FILTER BAR ────────────────────────────── */}
-          <div className="mb-8 mt-6">
+          <GameExplorerPanel
+            title="Explorar organizaciones"
+            description="Busca comunidades, ligas y organizadores oficiales por nombre o tag."
+            brandColor={gameConfig.brandColor}
+            icon={<Trophy className="size-4" />}
+            onReset={() => {
+              setSearchTerm('');
+              setCurrentPage(1);
+            }}
+            resetDisabled={!searchTerm}
+          >
             <FilterBar
               searchPlaceholder="Buscar organizaciones o comunidades por nombre o tag..."
               searchValue={searchTerm}
@@ -97,13 +108,13 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
                 setCurrentPage(1);
               }}
               count={filteredOrgs.length}
-              countLabel="ORGS ENCONTRADAS"
-              brandColor="var(--game-brand)"
+              countLabel="ORGANIZACIONES"
+              brandColor={gameConfig.brandColor}
             />
-          </div>
+          </GameExplorerPanel>
 
           {/* ── GRID ────────────────────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8 mt-6 pb-8">
+          <div className="game-directory-grid mt-6 pb-8">
             {currentOrgs.map((org, index) => {
               const displayOrg = org as OrganizationDisplayData;
               const bannerImg = displayOrg.banner_url || displayOrg.bannerUrl || gameConfig.bannerUrl || '/images/default/banner-default.jpg';
@@ -147,7 +158,7 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
                     </span>
                   }
                   actionText="VER PERFIL"
-                  brandColor="var(--game-brand)"
+                  brandColor={gameConfig.brandColor}
                   animationDelay={index * 50}
                 />
               );

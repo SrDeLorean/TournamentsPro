@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { queryDB } from '@/lib/db';
+import { dbProvider } from '@/lib/db/provider';
 import { getServerUserSession, requireServerActor } from '@/lib/auth-server';
 import { canManageOrganization } from '@/lib/authorization';
 import { validateSchema, uuidSchema, flexDatetimeSchema } from '@/lib/validation';
@@ -29,18 +29,25 @@ export async function getOrganizationSeasonsAction(organizationId?: string) {
       return { success: false, seasons: [], error: 'No autorizado para consultar estas temporadas.', code: 'FORBIDDEN' };
     }
 
-    let sql = `SELECT * FROM seasons`;
-    const params: string[] = [];
-
+    let seasons = [];
     if (session?.role !== 'Administrador' && targetOrgId) {
-      sql += ` WHERE organization_id = ? OR organization_id IS NULL`;
-      params.push(targetOrgId);
+      seasons = await dbProvider.seasons.findByOrganization(targetOrgId);
+    } else {
+      seasons = await dbProvider.seasons.findAll({ orderBy: 'created_at', orderDirection: 'DESC' });
     }
 
-    sql += ` ORDER BY created_at DESC`;
+    // Map to SeasonData format for backwards compatibility
+    const mappedSeasons: SeasonData[] = seasons.map(s => ({
+      id: s.id,
+      name: s.name,
+      organization_id: s.organizationId,
+      start_date: s.startDate,
+      end_date: s.endDate,
+      status: s.status,
+      created_at: s.createdAt,
+    }));
 
-    const seasons = await queryDB<SeasonData>(sql, params);
-    return { success: true, seasons };
+    return { success: true, seasons: mappedSeasons };
   } catch (error: unknown) {
     console.error('Error en getOrganizationSeasonsAction:', error);
     return { success: false, seasons: [], error: getActionErrorMessage(error, 'Error al cargar temporadas.'), code: 'INTERNAL_ERROR' };

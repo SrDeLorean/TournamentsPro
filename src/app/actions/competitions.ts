@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { executeCas, queryDB, withTransaction } from '@/lib/db';
+import { dbProvider } from '@/lib/db/provider';
 import {
   AuthorizationError,
   getServerUserSession,
@@ -176,12 +176,7 @@ export async function enrollTeamAction(competitionId: string, teamId: string, te
     }
 
     const enrollId = `ct-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    await queryDB(
-      `INSERT INTO competition_teams (id, competition_id, team_id, team_name, team_tag, status)
-       VALUES (?, ?, ?, ?, ?, 'CONFIRMADO')
-       ON DUPLICATE KEY UPDATE status = 'CONFIRMADO'`,
-      [enrollId, competitionId, teamId, teamName, teamTag || null]
-    );
+    await dbProvider.competitions.upsertCompetitionTeam(enrollId, competitionId, teamId, teamName, teamTag || null);
 
     revalidatePath(`/dashboard/competencias/${competitionId}`);
     return { success: true, message: `Equipo "${teamName}" inscrito correctamente.` };
@@ -207,8 +202,8 @@ export async function enrollIndividualAthleteAction(
       await requireCompetitionManager(competitionId);
     }
 
-    const result = await withTransaction(async (transaction) => {
-      const compRows = await transaction.queryRows<{ game_slug: string }>(
+    const result = await dbProvider.withTransaction(async (transaction) => {
+      const compRows = await transaction.query<{ game_slug: string }>(
         'SELECT game_slug FROM competitions WHERE id = ? FOR UPDATE',
         [competitionId],
       );
@@ -218,8 +213,8 @@ export async function enrollIndividualAthleteAction(
 
       const gameSlug = compRows[0].game_slug;
       const athleteLabel = gamertag || userName;
-      await transaction.queryRows('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId]);
-      const existingTeams = await transaction.queryRows<{ id: string }>(
+      await transaction.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId]);
+      const existingTeams = await transaction.query<{ id: string }>(
         'SELECT id FROM teams WHERE captain_id = ? AND game_slug = ? LIMIT 1 FOR UPDATE',
         [userId, gameSlug],
       );
@@ -227,12 +222,12 @@ export async function enrollIndividualAthleteAction(
 
       if (!teamId) {
         teamId = `team-solo-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        await transaction.executeCommand(
+        await transaction.execute(
           `INSERT INTO teams (id, name, tag, game_slug, captain_id, captain_name, platform, members_count, max_members, color, status)
            VALUES (?, ?, 'SOLO', ?, ?, ?, 'CROSSPLAY', 1, 2, '#00F0FF', 'Activo')`,
           [teamId, athleteLabel, gameSlug, userId, userName],
         );
-        await transaction.executeCommand(
+        await transaction.execute(
           `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
            VALUES (?, ?, ?, 'Individual', 'Capitan')
            ON DUPLICATE KEY UPDATE role_in_team = 'Capitan'`,
@@ -240,7 +235,7 @@ export async function enrollIndividualAthleteAction(
         );
       }
 
-      await transaction.executeCommand(
+      await transaction.execute(
         `INSERT INTO competition_teams (id, competition_id, team_id, team_name, team_tag, status)
          VALUES (?, ?, ?, ?, 'SOLO', 'CONFIRMADO')
          ON DUPLICATE KEY UPDATE status = 'CONFIRMADO', team_name = VALUES(team_name)`,
@@ -265,7 +260,7 @@ export async function removeEnrolledTeamAction(competitionId: string, teamId: st
       if (!(error instanceof AuthorizationError)) throw error;
       await requireCompetitionManager(competitionId);
     }
-    await queryDB(`DELETE FROM competition_teams WHERE competition_id = ? AND team_id = ?`, [competitionId, teamId]);
+    await dbProvider.competitions.removeEnrolledTeam(competitionId, teamId);
 
     revalidatePath(`/dashboard/competencias/${competitionId}`);
     return { success: true, message: 'Equipo retirado de la competencia.' };
@@ -291,16 +286,13 @@ export async function generateFixtureAction(
 ): Promise<{ success: boolean; message?: string; error?: string; code?: string }> {
   try {
     await requireCompetitionManager(competitionId);
-    const enrolledTeams = await queryDB<CompetitionTeamData>(
-      `SELECT * FROM competition_teams WHERE competition_id = ? AND status = 'CONFIRMADO'`,
-      [competitionId]
-    );
+    const enrolledTeams = await dbProvider.competitions.getEnrolledTeams(competitionId);
 
     if (enrolledTeams.length < 2) {
       return { success: false, error: 'Se requieren al menos 2 equipos confirmados para generar el fixture.', code: 'NOT_ENOUGH_TEAMS' };
     }
 
-    const competitions = await queryDB<CompetitionData>(
+    const competitions = await dbProvider.query<CompetitionData>(
       `SELECT * FROM competitions WHERE id = ?`,
       [competitionId]
     );
@@ -348,7 +340,7 @@ export async function regenerateFixtureAction(
 ): Promise<{ success: boolean; message?: string; error?: string; code?: string }> {
   try {
     await requireCompetitionManager(competitionId);
-    const competitions = await queryDB<CompetitionData>(
+    const competitions = await dbProvider.query<CompetitionData>(
       `SELECT * FROM competitions WHERE id = ?`,
       [competitionId]
     );
@@ -359,15 +351,8 @@ export async function regenerateFixtureAction(
 
     const competition = competitions[0];
 
-    const reportedMatches = await queryDB<{ count: number }>(
-      `SELECT COUNT(*) as count FROM matches 
-       WHERE competition_id = ?
-       AND (status IN ('POR_REVISAR', 'TERMINADO', 'DISPUTADO', 'FINALIZADO') 
-            OR reported_score_home IS NOT NULL OR reported_score_away IS NOT NULL)`,
-      [competitionId]
-    );
-
-    const hasReportedResults = (reportedMatches[0]?.count || 0) > 0;
+    const count = await dbProvider.competitions.getReportedMatchesCount(competitionId);
+    const hasReportedResults = count > 0;
 
     if (hasReportedResults) {
       const typedName = (configOptions?.confirmedNameCheck || '').trim();
@@ -397,33 +382,28 @@ export async function advancePlayoffWinnerAction(
       return { success: false, error: 'ID de partido y equipo ganador requeridos.', code: 'MISSING_PARAMS' };
     }
 
-    const currentMatches = await queryDB<{ competition_id: string | null }>(
-      'SELECT competition_id FROM matches WHERE id = ?',
-      [matchId],
-    );
-    if (!currentMatches || currentMatches.length === 0) {
-      return { success: false, error: 'Partido no encontrado.', code: 'NOT_FOUND' };
+    const competitionId = await dbProvider.competitions.getMatchCompetitionId(matchId);
+    if (!competitionId) {
+      return { success: false, error: 'El partido no está asociado a una competencia o no existe.', code: 'INVALID_MATCH' };
     }
 
-    const competitionId = currentMatches[0].competition_id;
-    if (!competitionId) {
-      return { success: false, error: 'El partido no está asociado a una competencia.', code: 'INVALID_MATCH' };
-    }
     await requireCompetitionManager(competitionId);
-    const result = await withTransaction(async (transaction) => {
-      const lockedMatches = await transaction.queryRows<PlayoffMatchRow>('SELECT * FROM matches WHERE id = ? FOR UPDATE', [matchId]);
+    const result = await dbProvider.withTransaction(async (transaction) => {
+      const lockedMatches = await transaction.query<PlayoffMatchRow>('SELECT * FROM matches WHERE id = ? FOR UPDATE', [matchId]);
       if (lockedMatches.length === 0) return { success: false, error: 'Partido no encontrado.', code: 'NOT_FOUND' };
       const currentMatch = lockedMatches[0];
       if (currentMatch.next_match_id) {
-        await transaction.queryRows('SELECT id FROM matches WHERE id = ? FOR UPDATE', [currentMatch.next_match_id]);
+        await transaction.query('SELECT id FROM matches WHERE id = ? FOR UPDATE', [currentMatch.next_match_id]);
       }
 
-      await executeCas(
-        transaction,
+      const res = await transaction.execute(
         "UPDATE matches SET winner_team_id = ?, status = 'TERMINADO' WHERE id = ? AND status <> 'TERMINADO'",
-        [winnerTeamId, matchId],
-        'El partido ya fue finalizado por otro usuario.',
+        [winnerTeamId, matchId]
       );
+
+      if ((res as any).affectedRows !== 1) {
+        throw new Error('El partido ya fue finalizado por otro usuario.');
+      }
 
       if (!currentMatch.next_match_id) {
         return { success: true, message: `¡Partido finalizado! El equipo "${winnerTeamName}" ha ganado la competencia.` };
@@ -432,7 +412,7 @@ export async function advancePlayoffWinnerAction(
       const nextMatchId = currentMatch.next_match_id;
       const nextSlot = currentMatch.next_match_slot || 'HOME';
       if (nextSlot === 'VUELTA_TARGET') {
-        await transaction.executeCommand(
+        await transaction.execute(
           `UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ?, away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?`,
           [
             currentMatch.away_team_id || currentMatch.team_away_id,
@@ -445,12 +425,12 @@ export async function advancePlayoffWinnerAction(
           ],
         );
       } else if (nextSlot === 'HOME') {
-        await transaction.executeCommand(
+        await transaction.execute(
           'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
           [winnerTeamId, winnerTeamName, winnerTeamId, nextMatchId],
         );
       } else if (nextSlot === 'AWAY') {
-        await transaction.executeCommand(
+        await transaction.execute(
           'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?',
           [winnerTeamId, winnerTeamName, winnerTeamId, nextMatchId],
         );

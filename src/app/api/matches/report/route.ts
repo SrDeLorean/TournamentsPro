@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB, executeCommand } from '@/lib/db';
+import { queryDB, executeCommand } from '@/lib/db/provider';
 import { getServerUserSession } from '@/lib/auth-server';
 import { randomUUID } from 'crypto';
 
@@ -61,3 +61,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
+

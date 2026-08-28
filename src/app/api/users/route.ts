@@ -1,4 +1,4 @@
-import { queryDB } from '@/lib/db';
+import { queryDB } from '@/lib/db/provider';
 import { hashPassword } from '@/lib/auth';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canManageUser, isAdministrator } from '@/lib/authorization';
@@ -278,3 +278,4 @@ export async function PUT(request: Request) {
     return apiError(message, 500);
   }
 }
+

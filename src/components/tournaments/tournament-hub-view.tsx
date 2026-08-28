@@ -154,7 +154,7 @@ export function TournamentHubView({ game, initialSection = 'competencias' }: Tou
       )}
 
       {/* Navigation Sub-Tabs Strip */}
-      <div className="flex items-center gap-2 overflow-x-auto scrollbar-none p-1.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
+      <div className="game-interior-tabs flex items-center gap-1.5 overflow-x-auto scrollbar-none p-1.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
         <button
           onClick={() => setActiveTab('TORNEOS')}
           className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 flex-shrink-0 ${
@@ -278,7 +278,7 @@ export function TournamentHubView({ game, initialSection = 'competencias' }: Tou
             <Badge variant="violet">Fase de Liga</Badge>
           </div>
 
-          <div className="overflow-x-auto scrollbar-none">
+          <div className="game-data-surface overflow-x-auto scrollbar-none rounded-xl border border-[var(--border-card)]">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[var(--border-card)] text-[10px] uppercase font-mono font-bold text-[var(--text-muted)]">

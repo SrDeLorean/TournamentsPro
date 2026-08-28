@@ -26,6 +26,8 @@ import {
   Info,
   Globe2,
   X,
+  SlidersHorizontal,
+  RotateCcw,
 } from 'lucide-react';
 import { MatchReportModal } from '@/components/matches/match-report-modal';
 import { CountryFlag } from '@/components/ui/country-flag';
@@ -112,6 +114,7 @@ export function FixtureScheduleView({
   const [tournaments, setTournaments] = useState<TournamentOption[]>([]);
   const [matches, setMatches] = useState<FixtureMatchItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filters & Carousel State
   const [searchQuery, setSearchQuery] = useState('');
@@ -226,6 +229,7 @@ export function FixtureScheduleView({
 
   // 3. Fetch Real Matches from Local Database API (/api/matches)
   const fetchMatchesFromDB = useCallback(async (orgName: string, tournName: string, queryText: string, status: string) => {
+    setIsRefreshing(true);
     try {
       let url = `/api/matches?gameSlug=${game.slug}`;
       if (orgName !== 'TODAS') url += `&organizationName=${encodeURIComponent(orgName)}`;
@@ -287,6 +291,8 @@ export function FixtureScheduleView({
     } catch (err) {
       console.error('Error fetching matches:', err);
       setMatches([]);
+    } finally {
+      setIsRefreshing(false);
     }
   }, [game.slug, initialTournId, targetTeamName]);
 
@@ -317,6 +323,14 @@ export function FixtureScheduleView({
     };
   }, [fetchOrganizationsFromDB, fetchTournamentsFromDB, fetchMatchesFromDB, initialOrgName, initialTournName]);
 
+  useEffect(() => {
+    if (isLoading) return;
+    const debounceId = window.setTimeout(() => {
+      fetchMatchesFromDB(selectedOrgName, selectedTournName, searchQuery.trim(), statusFilter);
+    }, 320);
+    return () => window.clearTimeout(debounceId);
+  }, [fetchMatchesFromDB, isLoading, searchQuery, selectedOrgName, selectedTournName, statusFilter]);
+
   // Cascading Selection: Click Organization -> Fetch linked Tournaments & Matches from Local DB
   const handleSelectOrganization = (orgName: string) => {
     setSelectedOrgName(orgName);
@@ -325,7 +339,6 @@ export function FixtureScheduleView({
     setSelectedDate('');
     setDatePage(0);
     fetchTournamentsFromDB(orgName);
-    fetchMatchesFromDB(orgName, 'TODAS', searchQuery, statusFilter);
   };
 
   // Click Tournament -> Fetch Matches from Local DB
@@ -334,7 +347,6 @@ export function FixtureScheduleView({
     setSelectedTimeSlot('TODOS');
     setSelectedDate('');
     setDatePage(0);
-    fetchMatchesFromDB(selectedOrgName, tournName, searchQuery, statusFilter);
   };
 
   // Dynamically computed list of Organizations (API + loaded matches fallback)
@@ -575,12 +587,40 @@ export function FixtureScheduleView({
       )}
 
       {/* ── 2. FILTROS Y BÚSQUEDA (SIEMPRE VISIBLES) ─────────────────── */}
-      <div className="bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl border border-[var(--border-card)] shadow-xl space-y-5 backdrop-blur-md">
+      <div className="game-filter-card game-query-panel bg-[var(--bg-card)] rounded-3xl border border-[var(--border-card)] shadow-xl backdrop-blur-md">
+        <div className="game-filter-heading">
+          <div className="game-filter-heading-copy">
+            <span className="game-filter-heading-icon" aria-hidden="true">
+              <SlidersHorizontal className="size-4" />
+            </span>
+            <div>
+              <h2>Explorar partidos</h2>
+              <p>Filtra encuentros por estado, organización, competencia, fecha y horario.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setStatusFilter('TODOS');
+              setSelectedTimeSlot('TODOS');
+              setSelectedDate('');
+              handleSelectOrganization('TODAS');
+            }}
+            disabled={!searchQuery && statusFilter === 'TODOS' && selectedOrgName === 'TODAS' && selectedTournName === 'TODAS' && selectedTimeSlot === 'TODOS'}
+            className="game-filter-reset"
+          >
+            <RotateCcw className="size-3.5" />
+            <span>Restablecer</span>
+          </button>
+        </div>
         {/* BARRA DE BÚSQUEDA */}
         {!hideSearchFilter && (
-          <div className="relative w-full">
-            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <div className="game-search-control relative w-full">
+            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[var(--game-brand)]" />
             <Input
+              type="search"
+              aria-label="Buscar partidos"
               placeholder="Buscar en la base de datos local (equipos, competencias, organizaciones)..."
               value={searchQuery}
               onChange={(e) => {
@@ -589,22 +629,31 @@ export function FixtureScheduleView({
                 setSelectedTimeSlot('TODOS');
                 setSelectedDate('');
                 setDatePage(0);
-                fetchMatchesFromDB(selectedOrgName, selectedTournName, val, statusFilter);
               }}
-              className="pl-12 py-3.5 text-xs sm:text-sm input-theme rounded-2xl glass-panel shadow-md w-full placeholder:text-[var(--text-muted)]"
+              className="pl-11 pr-12 text-xs sm:text-sm w-full"
             />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+              {isRefreshing ? (
+                <RefreshCw className="size-4 animate-spin text-[var(--game-brand)]" aria-label="Actualizando partidos" />
+              ) : searchQuery ? (
+                <button type="button" onClick={() => setSearchQuery('')} className="game-search-clear" aria-label="Limpiar búsqueda">
+                  <X className="size-4" />
+                </button>
+              ) : (
+                <kbd className="game-search-hint">BUSCAR</kbd>
+              )}
+            </div>
           </div>
         )}
 
       {/* ── 3. BOTONES DE FILTRO DE ESTADO (CON BRANDCOLOR DE DISCIPLINA) ───────────── */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-mono">
+      <div className="game-segmented-filter mobile-scroll-row flex items-center gap-2 overflow-x-auto pb-1 font-mono">
         <button
           onClick={() => {
             setStatusFilter('TODOS');
             setSelectedTimeSlot('TODOS');
             setSelectedDate('');
             setDatePage(0);
-            fetchMatchesFromDB(selectedOrgName, selectedTournName, searchQuery, 'TODOS');
           }}
           className={`px-4 py-2 rounded-full text-xs font-bold transition-all border flex items-center gap-2 select-none active:scale-95 ${
             statusFilter === 'TODOS'
@@ -640,7 +689,6 @@ export function FixtureScheduleView({
             setSelectedTimeSlot('TODOS');
             setSelectedDate('');
             setDatePage(0);
-            fetchMatchesFromDB(selectedOrgName, selectedTournName, searchQuery, 'EN_VIVO');
           }}
           className={`px-4 py-2 rounded-full text-xs font-bold transition-all border flex items-center gap-2 select-none active:scale-95 ${
             statusFilter === 'EN_VIVO'
@@ -677,7 +725,6 @@ export function FixtureScheduleView({
             setSelectedTimeSlot('TODOS');
             setSelectedDate('');
             setDatePage(0);
-            fetchMatchesFromDB(selectedOrgName, selectedTournName, searchQuery, 'PROXIMOS');
           }}
           className={`px-4 py-2 rounded-full text-xs font-bold transition-all border flex items-center gap-2 select-none active:scale-95 ${
             statusFilter === 'PROXIMOS'
@@ -714,7 +761,6 @@ export function FixtureScheduleView({
             setSelectedTimeSlot('TODOS');
             setSelectedDate('');
             setDatePage(0);
-            fetchMatchesFromDB(selectedOrgName, selectedTournName, searchQuery, 'FINALIZADOS');
           }}
           className={`px-4 py-2 rounded-full text-xs font-bold transition-all border flex items-center gap-2 select-none active:scale-95 ${
             statusFilter === 'FINALIZADOS'
@@ -746,17 +792,23 @@ export function FixtureScheduleView({
         </button>
       </div>
 
+      <div className="game-filter-grid">
       {/* ── 4. ORGANIZACIONES / MADRE EN BD LOCAL ──────────────────────────── */}
       {!hideOrgFilter && availableOrganizations.length > 0 && (
-        <div className="space-y-3 p-4 glass-panel rounded-2xl border border-[var(--border-card)] relative z-10">
-          <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase">
-            <Building2 className="w-4 h-4" style={{ color: brandColor }} />
-            <span>ORGANIZACIONES DISPONIBLES EN BD</span>
+        <div className="game-filter-section game-filter-group font-mono">
+          <div className="game-filter-label">
+            <span className="flex min-w-0 items-center gap-2">
+              <Building2 className="w-3.5 h-3.5 shrink-0" style={{ color: brandColor }} />
+              <span className="truncate">Organizaciones</span>
+            </span>
+            <span className="game-filter-count">{availableOrganizations.length}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="game-filter-options mobile-scroll-row flex items-center gap-2 overflow-x-auto pb-1">
             <button
+              type="button"
+              aria-pressed={selectedOrgName === 'TODAS'}
               onClick={() => handleSelectOrganization('TODAS')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${
+              className={`game-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border flex items-center gap-2 ${
                 selectedOrgName === 'TODAS'
                   ? 'shadow-md font-black'
                   : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -780,9 +832,11 @@ export function FixtureScheduleView({
               const isActive = selectedOrgName.toUpperCase() === org.name.toUpperCase();
               return (
                 <button
+                  type="button"
+                  aria-pressed={isActive}
                   key={org.id}
                   onClick={() => handleSelectOrganization(org.name)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${
+                  className={`game-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border flex items-center gap-2 ${
                     isActive
                       ? 'shadow-md font-black'
                       : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -824,19 +878,24 @@ export function FixtureScheduleView({
 
       {/* ── 5. COMPETENCIAS EN BD LOCAL FILTRADAS EN CASCADA ────────────────── */}
       {!hideCompFilter && availableTournaments.length > 0 && (
-        <div className="space-y-3 p-4 glass-panel rounded-2xl border border-[var(--border-card)] relative z-10">
-          <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <span>
+        <div className="game-filter-section game-filter-group font-mono">
+          <div className="game-filter-label">
+            <span className="flex min-w-0 items-center gap-2">
+            <Trophy className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+            <span className="truncate">
               {targetTeamName 
-                ? 'COMPETENCIAS EN LAS QUE PARTICIPA EL EQUIPO'
-                : `COMPETENCIAS / TORNEOS DE ${selectedOrgName.toUpperCase()}`}
+                ? 'Competencias del equipo'
+                : selectedOrgName === 'TODAS' ? 'Competencias' : `Competencias de ${selectedOrgName}`}
             </span>
+            </span>
+            <span className="game-filter-count">{availableTournaments.length}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="game-filter-options mobile-scroll-row flex items-center gap-2 overflow-x-auto pb-1">
             <button
+              type="button"
+              aria-pressed={selectedTournName === 'TODAS'}
               onClick={() => handleSelectTournament('TODAS')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${
+              className={`game-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border flex items-center gap-2 ${
                 selectedTournName === 'TODAS'
                   ? 'shadow-md font-black'
                   : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -860,9 +919,11 @@ export function FixtureScheduleView({
               const isActive = selectedTournName.toUpperCase() === comp.name.toUpperCase();
               return (
                 <button
+                  type="button"
+                  aria-pressed={isActive}
                   key={comp.id}
                   onClick={() => handleSelectTournament(comp.name)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2 ${
+                  className={`game-filter-chip px-3.5 py-1.5 text-xs font-bold transition-all border flex items-center gap-2 ${
                     isActive
                       ? 'shadow-md font-black'
                       : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -900,6 +961,7 @@ export function FixtureScheduleView({
           </div>
         </div>
       )}
+      </div>
 
       </div>
 
@@ -910,14 +972,16 @@ export function FixtureScheduleView({
         <>
       {/* ── 6. CARRUSEL DE FECHAS EN CALENDARIO CON BOTONES < > A LOS COSTADOS ────────────────── */}
       {calendarDays.length > 0 && (
-        <div className="space-y-4 pt-3 pb-3 bg-[var(--bg-card)] p-4 sm:p-5 rounded-3xl border border-[var(--border-card)] shadow-2xl text-center backdrop-blur-md font-mono">
+        <div className="game-calendar-panel space-y-4 bg-[var(--bg-card)] p-4 sm:p-5 rounded-3xl border border-[var(--border-card)] shadow-xl text-center backdrop-blur-md font-mono">
           
           {/* Header centered */}
-          <div className="flex items-center justify-center gap-2">
-            <Calendar className="w-5 h-5 animate-pulse" style={{ color: brandColor }} />
-            <span className="text-xs sm:text-sm font-black text-[var(--text-heading)] uppercase tracking-wider">
+          <div className="game-calendar-heading flex items-center justify-between gap-3 text-left">
+            <div className="flex min-w-0 items-center gap-2">
+              <Calendar className="w-5 h-5 shrink-0" style={{ color: brandColor }} />
+              <span className="truncate text-xs sm:text-sm font-black text-[var(--text-heading)] uppercase tracking-wider">
               FECHAS DISPONIBLES EN CALENDARIO
-            </span>
+              </span>
+            </div>
             <span
               className="text-[10px] font-bold px-2.5 py-0.5 rounded-full"
               style={{
@@ -948,7 +1012,7 @@ export function FixtureScheduleView({
             <div
               ref={dateCarouselRef}
               data-date-carousel
-              className="flex items-center justify-start sm:justify-center gap-3 overflow-x-auto scroll-smooth py-2.5 pb-4 flex-1 px-1"
+              className="game-calendar-track flex items-center justify-start gap-2.5 overflow-x-auto scroll-smooth py-2 pb-3 flex-1 px-1"
               style={{
                 scrollbarWidth: 'thin',
                 scrollbarColor: `${brandColor} var(--bg-main)`,
@@ -960,25 +1024,27 @@ export function FixtureScheduleView({
                   <button
                     key={day.dateStr}
                     onClick={() => setSelectedDate(day.dateStr)}
-                    className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition-all text-center min-w-[135px] shrink-0 relative overflow-hidden group shadow-xl ${
+                    aria-pressed={isActive}
+                    aria-label={`${day.label}, ${day.count} partidos`}
+                    className={`game-calendar-day flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-center min-w-[124px] shrink-0 relative overflow-hidden group ${
                       isActive
-                        ? 'border-white text-slate-950 scale-105 font-black ring-4'
+                        ? 'game-calendar-day-active font-black'
                         : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
                     }`}
                     style={
                       isActive
                         ? {
                             backgroundColor: brandColor,
-                            borderColor: '#ffffff',
-                            color: '#05070d',
-                            boxShadow: `0 0 25px ${brandColor}`,
+                            borderColor: brandColor,
+                            color: 'var(--game-on-brand)',
+                            boxShadow: `0 12px 28px -16px ${brandColor}`,
                           }
                         : undefined
                     }
                   >
                     <span
                       className={`text-[11px] uppercase font-black tracking-wider ${
-                        isActive ? 'text-slate-950' : ''
+                        isActive ? 'text-[var(--game-on-brand)]' : ''
                       }`}
                       style={{ color: !isActive ? brandColor : undefined }}
                     >
@@ -986,7 +1052,7 @@ export function FixtureScheduleView({
                     </span>
                     <span
                       className={`text-2xl font-black my-0.5 tracking-tight ${
-                        isActive ? 'text-slate-950' : 'text-[var(--text-heading)]'
+                        isActive ? 'text-[var(--game-on-brand)]' : 'text-[var(--text-heading)]'
                       }`}
                     >
                       {day.dayDDMM}
@@ -994,7 +1060,7 @@ export function FixtureScheduleView({
                     <span
                       className={`text-[9px] font-bold py-0.5 px-2.5 rounded-full uppercase mt-1 transition-colors ${
                         isActive
-                          ? 'bg-slate-950 text-white font-black'
+                          ? 'bg-black/25 text-[var(--game-on-brand)] font-black'
                           : 'bg-[var(--bg-card)] text-[var(--text-muted)] border border-[var(--border-card)]'
                       }`}
                     >
@@ -1154,7 +1220,7 @@ export function FixtureScheduleView({
                     </div>
 
                     {/* TABLA HIGH-TECH ORDENADA POR HORA DE 00:01 A 23:59 */}
-                    <div className="w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl font-mono">
+                    <div className="game-data-surface w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl font-mono">
                       <table className="w-full text-left border-collapse min-w-[720px]">
                         <thead>
                           <tr className="bg-[var(--bg-card)] border-b border-[var(--border-card)] text-[10px] font-black uppercase tracking-wider" style={{ color: brandColor }}>

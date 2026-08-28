@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { queryDB } from '@/lib/db';
+import { dbProvider } from '@/lib/db/provider';
 import { validateSchema, requiredIdSchema, uuidSchema } from '@/lib/validation';
 import { z } from 'zod';
 import {
@@ -101,7 +101,7 @@ export async function approveExtraordinaryTransferAction(applicationId: string, 
     }
 
     const actor = await requireServerActor(['Administrador', 'Organizador']);
-    const applications = await queryDB<{ competition_id: string | null; team_id: string }>(
+    const applications = await dbProvider.query<{ competition_id: string | null; team_id: string }>(
       'SELECT competition_id, team_id FROM transfer_applications WHERE id = ? LIMIT 1',
       [applicationId],
     );
@@ -130,7 +130,7 @@ export async function rejectExtraordinaryTransferAction(applicationId: string, o
     }
 
     const actor = await requireServerActor(['Administrador', 'Organizador']);
-    const applications = await queryDB<{ competition_id: string | null; team_id: string }>(
+    const applications = await dbProvider.query<{ competition_id: string | null; team_id: string }>(
       'SELECT competition_id, team_id FROM transfer_applications WHERE id = ? LIMIT 1',
       [applicationId],
     );
@@ -172,11 +172,7 @@ export async function createTransferPostAction(data: CreateTransferPostData) {
       if (!data.teamId) return { success: false, error: 'Equipo requerido.', code: 'MISSING_TEAM' };
       await requireTeamManager(data.teamId);
     }
-    const users = await queryDB<{ name: string; gamertag: string }>(
-      'SELECT name, gamertag FROM users WHERE id = ? LIMIT 1',
-      [actor.userId],
-    );
-    const user = users[0];
+    const user = await dbProvider.users.findById(actor.userId);
     const res = await createTransferPostService({
       ...data,
       userId: actor.userId,
@@ -278,7 +274,7 @@ export async function sendClubContractOfferAction(data: {
 export async function getOutgoingOffersAction(teamId: string, gameSlug: string) {
   try {
     await requireTeamManager(teamId);
-    const offers = await queryDB<Record<string, unknown>>(
+    const offers = await dbProvider.query<Record<string, unknown>>(
       `SELECT 
         tro.id,
         tro.game_slug,
@@ -306,7 +302,7 @@ export async function getOutgoingOffersAction(teamId: string, gameSlug: string) 
 
 export async function cancelTransferOfferAction(offerId: string) {
   try {
-    const offers = await queryDB<{ team_id: string }>('SELECT team_id FROM transfer_offers WHERE id = ? LIMIT 1', [offerId]);
+    const offers = await dbProvider.query<{ team_id: string }>('SELECT team_id FROM transfer_offers WHERE id = ? LIMIT 1', [offerId]);
     if (!offers[0]) return { success: false, error: 'Oferta no encontrada.' };
     await requireTeamManager(offers[0].team_id);
     const result = await cancelTransferOfferService(offerId, offers[0].team_id);
@@ -323,7 +319,7 @@ export async function cancelTransferOfferAction(offerId: string) {
 export async function respondOrdinaryTransferApplicationAction(applicationId: string, accept: boolean) {
   try {
     const actor = await requireServerActor();
-    const applications = await queryDB<{ team_id: string }>(
+    const applications = await dbProvider.query<{ team_id: string }>(
       'SELECT team_id FROM transfer_applications WHERE id = ? LIMIT 1',
       [applicationId],
     );
@@ -344,7 +340,7 @@ export async function respondOrdinaryTransferApplicationAction(applicationId: st
 export async function cancelTransferApplicationAction(applicationId: string) {
   try {
     const actor = await requireServerActor();
-    const applications = await queryDB<{ applicant_user_id: string }>(
+    const applications = await dbProvider.query<{ applicant_user_id: string }>(
       'SELECT applicant_user_id FROM transfer_applications WHERE id = ? LIMIT 1',
       [applicationId],
     );

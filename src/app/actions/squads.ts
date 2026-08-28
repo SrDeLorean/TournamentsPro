@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { queryDB } from '@/lib/db';
+import { dbProvider } from '@/lib/db/provider';
 import { z } from 'zod';
 import { validateSchema, requiredIdSchema } from '@/lib/validation';
 import {
@@ -59,7 +59,6 @@ interface PlayerMatrixEntry {
   jersey_number: number | null; tactical_position: string | null; organizations: OrganizationEntry[];
 }
 interface AcceptedPlayerOffer { player_user_id: string; pitch_message: string | null }
-interface UserNameRow { name: string | null; gamertag: string | null }
 interface EnrolledTeamRow {
   team_id: string; team_name: string; team_tag: string | null; logo_url: string | null; banner_url: string | null;
   captain_id: string | null; captain_name: string | null; game_slug: string | null; jersey_number: number | null;
@@ -182,7 +181,7 @@ export async function checkTeamManagementPermissionAction(userId: string, teamId
 
 export async function updateSquadMemberJerseyAction(memberId: string, jerseyNumber: number | null) {
   try {
-    const members = await queryDB<{ team_id: string }>('SELECT team_id FROM team_members WHERE id = ? LIMIT 1', [memberId]);
+    const members = await dbProvider.query<{ team_id: string }>('SELECT team_id FROM team_members WHERE id = ? LIMIT 1', [memberId]);
     if (!members[0]) return { success: false, error: 'Miembro no encontrado.' };
     await requireTeamManager(members[0].team_id);
     const res = await updateSquadMemberJerseyService(memberId, jerseyNumber);
@@ -199,7 +198,7 @@ export async function updateSquadMemberJerseyAction(memberId: string, jerseyNumb
 export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug: string) {
   try {
     await requireTeamManager(teamId);
-    const rows = await queryDB<PlayerMatrixRow>(
+    const rows = await dbProvider.query<PlayerMatrixRow>(
       `SELECT 
         u.id as user_id,
         u.name as user_name,
@@ -224,7 +223,7 @@ export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug
     );
 
     // Fetch accepted contract offers for this team
-    const acceptedOffers = await queryDB<AcceptedPlayerOffer>(
+    const acceptedOffers = await dbProvider.query<AcceptedPlayerOffer>(
       `SELECT player_user_id, pitch_message FROM transfer_offers WHERE team_id = ? AND status = 'ACEPTADO'`,
       [teamId]
     );
@@ -305,11 +304,11 @@ export async function getUserEnrolledTeamsAction(userId: string, gameSlug: strin
     await requireUserManager(userId);
     if (!userId) return { success: false, teams: [], error: 'ID de usuario requerido' };
 
-    const userRows = await queryDB<UserNameRow>(`SELECT name, gamertag FROM users WHERE id = ? LIMIT 1`, [userId]);
-    const uName = userRows[0]?.name || '';
-    const uGamertag = userRows[0]?.gamertag || uName;
+    const user = await dbProvider.users.findById(userId);
+    const uName = user?.name || '';
+    const uGamertag = user?.gamertag || uName;
 
-    const rows = await queryDB<EnrolledTeamRow>(
+    const rows = await dbProvider.query<EnrolledTeamRow>(
       `SELECT 
         t.id as team_id,
         t.name as team_name,
@@ -339,7 +338,7 @@ export async function getUserEnrolledTeamsAction(userId: string, gameSlug: strin
     );
 
     // Also fetch accepted contract offers for this user
-    const acceptedOffers = await queryDB<AcceptedTeamOffer>(
+    const acceptedOffers = await dbProvider.query<AcceptedTeamOffer>(
       `SELECT team_id, pitch_message FROM transfer_offers WHERE player_user_id = ? AND status = 'ACEPTADO'`,
       [userId]
     );

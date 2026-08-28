@@ -6,6 +6,7 @@ import { TransferListing } from '@/lib/data-store';
 import { GAMES_CATALOG, GameConfig } from '@/lib/games-data';
 import { Button } from '@/components/ui/button';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { GameExplorerPanel } from '@/components/ui/game-explorer-panel';
 import { PageHeader } from '@/components/ui/page-header';
 import { EsportsCard } from '@/components/ui/esports-card';
 import {
@@ -315,7 +316,18 @@ export function TransferMarket({ game }: TransferMarketProps) {
       </div>
 
       {/* ── BARRA DE FILTROS UNIFICADA CON SELECTORES ─────────────────────────── */}
-      <div className="space-y-4">
+      <GameExplorerPanel
+        title="Explorar el mercado"
+        description="Busca atletas, vacantes y fichajes; combina tipo de publicación y antigüedad."
+        brandColor={currentGameObj.brandColor}
+        icon={<ArrowRightLeft className="size-4" />}
+        onReset={() => {
+          setSearchTerm('');
+          setActiveTab('ALL');
+          setTimeFilter('ALL');
+        }}
+        resetDisabled={!searchTerm && activeTab === 'ALL' && timeFilter === 'ALL'}
+      >
         <FilterBar
           searchPlaceholder="Buscar por posición, gamertag o nombre de club..."
           searchValue={searchTerm}
@@ -332,40 +344,28 @@ export function TransferMarket({ game }: TransferMarketProps) {
           count={activeTab === 'REALIZADOS' ? filteredCompletedTransfers.length : filteredTransfers.length}
           countLabel={activeTab === 'REALIZADOS' ? 'FICHADOS' : 'PUBLICACIONES ACTIVAS'}
           brandColor={currentGameObj.brandColor}
-        />
-
-        {/* SELECTOR DE ANTIGÜEDAD Y ORDEN */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 bg-[var(--bg-card)] border border-[var(--border-card)] px-4 py-2.5 rounded-2xl shadow-sm backdrop-blur-md font-mono">
-          <div className="flex items-center gap-2">
+        >
+          <label className="game-filter-inline-select">
             <Calendar className="w-4 h-4 shrink-0" style={{ color: currentGameObj.brandColor }} />
-            <span className="text-xs font-bold text-[var(--text-muted)] uppercase shrink-0">Antigüedad:</span>
-          </div>
-          <select
-            value={timeFilter}
-            onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
-            className="bg-[var(--bg-main)] border border-[var(--border-card)] px-3 py-1.5 rounded-xl text-xs font-bold text-[var(--text-heading)] focus:outline-none cursor-pointer focus:border-[var(--border-card-hover)] transition-colors"
-            style={{
-              borderColor: `color-mix(in srgb, ${currentGameObj.brandColor} 40%, var(--border-card))`,
-            }}
-          >
-            <option value="ALL" className="bg-[#0b101b] text-slate-100">
-              🗓️ Todos ({dbGameConfig.postExpirationDays} Días)
-            </option>
-            <option value="TODAY" className="bg-[#0b101b] text-slate-100">
-              ⚡ Hoy (Últimas 24H)
-            </option>
-            <option value="3_DAYS" className="bg-[#0b101b] text-slate-100">
-              📅 Últimos 3 Días
-            </option>
-            <option value="7_DAYS" className="bg-[#0b101b] text-slate-100">
-              🗓️ Últimos {dbGameConfig.postExpirationDays} Días
-            </option>
-            <option value="OLDEST" className="bg-[#0b101b] text-slate-100">
-              ⏳ Más Antiguos Primero
-            </option>
-          </select>
-        </div>
-      </div>
+            <span>Antigüedad</span>
+            <select
+              aria-label="Filtrar publicaciones por antigüedad"
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
+              className="ui-control min-w-0 flex-1 px-3 text-xs font-bold text-[var(--text-heading)] lg:w-52"
+              style={{
+                borderColor: `color-mix(in srgb, ${currentGameObj.brandColor} 40%, var(--border-card))`,
+              }}
+            >
+              <option value="ALL">Todos ({dbGameConfig.postExpirationDays} días)</option>
+              <option value="TODAY">Hoy (últimas 24 h)</option>
+              <option value="3_DAYS">Últimos 3 días</option>
+              <option value="7_DAYS">Últimos {dbGameConfig.postExpirationDays} días</option>
+              <option value="OLDEST">Más antiguos primero</option>
+            </select>
+          </label>
+        </FilterBar>
+      </GameExplorerPanel>
 
       {/* 🏆 TRASPASOS REALIZADOS SECTION */}
       {activeTab === 'REALIZADOS' ? (
@@ -377,7 +377,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="game-directory-grid">
             {filteredCompletedTransfers.map((item, index) => (
               <EsportsCard
                 key={item.id}
@@ -430,7 +430,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="game-directory-grid">
             {filteredTransfers.map((item, index) => {
               const isPlayerListing = item.type === 'JUGADOR_BUSCA_CLUB';
               const targetRole = isPlayerListing ? 'Jugador' : 'Capitán';

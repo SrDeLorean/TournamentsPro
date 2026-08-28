@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { executeCas, queryDB, withTransaction } from '@/lib/db';
+import { executeCas, queryDB, withTransaction } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canApproveMatch, canReportMatch } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
@@ -161,3 +161,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error procesando aprobación del partido' }, { status: 500 });
   }
 }
+

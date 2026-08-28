@@ -76,13 +76,14 @@ export function DateCarousel({
   const currentIdx = calendarDays.findIndex((d) => d.dateStr === selectedDate);
 
   return (
-    <div className="space-y-4 pt-3 pb-3 bg-[var(--bg-card)] p-4 sm:p-5 rounded-3xl border border-[var(--border-card)] shadow-2xl text-center font-mono backdrop-blur-md">
+    <div className="game-calendar-panel space-y-4 bg-[var(--bg-card)] p-4 sm:p-5 rounded-3xl border border-[var(--border-card)] shadow-xl text-center font-mono backdrop-blur-md">
       {/* Header centered */}
-      <div className="flex items-center justify-center gap-2">
-        <Calendar className="w-5 h-5 animate-pulse" style={{ color: brandColor }} />
+      <div className="game-calendar-heading flex items-center justify-between gap-3 text-left">
+        <div className="flex min-w-0 items-center gap-2">
+        <Calendar className="w-5 h-5 shrink-0" style={{ color: brandColor }} />
         <span className="text-xs sm:text-sm font-mono font-black text-[var(--text-heading)] uppercase tracking-wider">
           FECHAS DISPONIBLES EN CALENDARIO
-        </span>
+        </span></div>
         <Badge variant="cyan" className="text-[10px] font-mono font-bold px-2.5 py-0.5">
           {calendarDays.length} FECHAS
         </Badge>
@@ -106,7 +107,7 @@ export function DateCarousel({
         <div
           ref={carouselRef}
           data-date-carousel
-          className="flex items-center justify-start sm:justify-center gap-3 overflow-x-auto scroll-smooth py-2.5 pb-4 flex-1 px-1"
+          className="game-calendar-track flex items-center justify-start gap-2.5 overflow-x-auto scroll-smooth py-2 pb-3 flex-1 px-1"
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: `${brandColor}90 var(--bg-main)`,
@@ -118,18 +119,20 @@ export function DateCarousel({
               <button
                 key={day.dateStr}
                 onClick={() => onSelectDate(day.dateStr)}
-                className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition-all text-center min-w-[135px] shrink-0 relative overflow-hidden group shadow-xl ${
+                aria-pressed={isActive}
+                aria-label={`${day.label}, ${day.count} partidos`}
+                className={`game-calendar-day flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-center min-w-[124px] shrink-0 relative overflow-hidden group ${
                   isActive
-                    ? 'border-white text-white scale-105 font-black ring-4 shadow-2xl'
+                    ? 'game-calendar-day-active font-black'
                     : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-primary)] hover:border-cyan-400/60 hover:bg-[var(--bg-card-hover)]'
                 }`}
                 style={
                   isActive
                     ? {
                         background: `linear-gradient(135deg, ${brandColor}, #111827)`,
-                        borderColor: '#ffffff',
-                        boxShadow: `0 0 25px ${brandColor}80`,
-                        color: '#ffffff',
+                        borderColor: brandColor,
+                        boxShadow: `0 12px 28px -16px ${brandColor}`,
+                        color: 'var(--game-on-brand)',
                       }
                     : {}
                 }

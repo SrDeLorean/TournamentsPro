@@ -1,6 +1,6 @@
 'use server';
 
-import { queryDB } from '@/lib/db';
+import { dbProvider } from '@/lib/db/provider';
 import { revalidatePath } from 'next/cache';
 import { AuthorizationError, requireServerActor, requireTeamManager, requireUserManager } from '@/lib/auth-server';
 import { respondPlayerContractOfferService } from '@/lib/services';
@@ -15,7 +15,7 @@ export async function issueNewContractOfferService(teamId: string, playerUserId:
       const offerId = `off-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const pitchMessage = `[Organización: ${orgName}] Propuesta formal de contrato.`;
       
-      await queryDB(
+      await dbProvider.query(
         `INSERT INTO transfer_offers (id, game_slug, team_id, player_user_id, offered_by_user_id, position, pitch_message, offer_type, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'OFERTA_CLUB', 'PENDIENTE')`,
         [offerId, gameSlug, teamId, playerUserId, actor.userId, position, pitchMessage]
@@ -33,7 +33,7 @@ export async function issueNewContractOfferService(teamId: string, playerUserId:
 export async function respondNewContractOfferService(offerId: string, action: 'ACEPTADO' | 'RECHAZADO') {
   try {
     const actor = await requireServerActor();
-    const offers = await queryDB<{ player_user_id: string }>('SELECT player_user_id FROM transfer_offers WHERE id = ?', [offerId]);
+    const offers = await dbProvider.query<{ player_user_id: string }>('SELECT player_user_id FROM transfer_offers WHERE id = ?', [offerId]);
     if (!offers || offers.length === 0) throw new Error('Oferta no encontrada.');
     const offer = offers[0];
     if (actor.role !== 'Administrador' && offer.player_user_id !== actor.userId) {
@@ -53,7 +53,7 @@ export async function respondNewContractOfferService(offerId: string, action: 'A
 export async function getSentContractsByTeamAction(teamId: string) {
   try {
     await requireTeamManager(teamId);
-    const rows = await queryDB<Record<string, unknown>>(
+    const rows = await dbProvider.query<Record<string, unknown>>(
       `SELECT o.*, u.name as player_name, u.gamertag, u.avatar_url 
        FROM transfer_offers o
        JOIN users u ON o.player_user_id = u.id
@@ -70,7 +70,7 @@ export async function getSentContractsByTeamAction(teamId: string) {
 export async function getUserOffersAction(userId: string) {
   try {
     await requireUserManager(userId);
-    const rows = await queryDB<Record<string, unknown>>(
+    const rows = await dbProvider.query<Record<string, unknown>>(
       `SELECT o.*, t.name as team_name, t.tag as team_tag, t.logo_url 
        FROM transfer_offers o
        JOIN teams t ON o.team_id = t.id
