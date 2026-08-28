@@ -42,7 +42,7 @@ export function FilterBar({
 
   return (
     <div
-      className="ui-filter-bar p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 text-[var(--text-primary)]"
+      className="ui-filter-bar game-filter-panel p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 text-[var(--text-primary)]"
       style={{ '--filter-brand': brandColor } as React.CSSProperties}
     >
       {/* 1. SEARCH INPUT WITH CLEAR BUTTON */}

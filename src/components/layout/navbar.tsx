@@ -2,35 +2,26 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useTranslation } from '@/components/providers/language-provider';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { Trophy, Shield, Gamepad2, Users, User, ChevronDown, Sparkles, Settings, Info, Home, Menu, X, Flag, LogIn, UserPlus, MessageSquare } from 'lucide-react';
+import { Trophy, Shield, Users, User, Sparkles, Settings, Info, Home, Menu, X, Flag, LogIn, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { GAMES_CATALOG } from '@/lib/games-data';
-import { GameLogo } from '@/components/ui/game-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 
 import { AdminNavbar } from '@/components/layout/admin-navbar';
 import { NavLinks } from '@/components/layout/nav-links';
 
-export function Navbar() {
-  const { t } = useTranslation();
+export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
   const { currentUser, isAuthenticated } = useAuth();
 
-  const [isGamesOpen, setIsGamesOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const gamesRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (gamesRef.current && !gamesRef.current.contains(event.target as Node)) {
-        setIsGamesOpen(false);
-      }
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
         setIsSettingsOpen(false);
       }
@@ -40,7 +31,7 @@ export function Navbar() {
   }, []);
 
   // Keep hook ordering stable across authentication changes.
-  if (isAuthenticated) {
+  if (isAuthenticated && !forcePublic) {
     return <AdminNavbar />;
   }
 

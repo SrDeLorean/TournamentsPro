@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/mensajes", "/moderacion", "/atleta", "/club"];
+const PROTECTED_PREFIXES = ["/dashboard", "/mensajes", "/atleta", "/club"];
 
 export function proxy(request: NextRequest) {
   const needsSession = PROTECTED_PREFIXES.some((prefix) =>
@@ -24,7 +24,6 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/mensajes/:path*",
-    "/moderacion/:path*",
     "/atleta/:path*",
     "/club/:path*",
   ],

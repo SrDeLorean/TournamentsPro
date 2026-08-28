@@ -15,6 +15,22 @@ export const PUBLIC_GAME_SECTIONS = [
 
 export type PublicGameSection = (typeof PUBLIC_GAME_SECTIONS)[number];
 
+export const PUBLIC_GAME_NAV_ITEMS = [
+  { id: 'home', label: 'Home' },
+  { id: 'organizaciones', label: 'Organizaciones' },
+  { id: 'competencias', label: 'Torneos' },
+  { id: 'clasificacion', label: 'Clasificación' },
+  { id: 'partidos', label: 'Partidos' },
+  { id: 'traspasos', label: 'Traspasos' },
+  { id: 'equipos', label: 'Equipos' },
+  { id: 'jugadores', label: 'Jugadores' },
+  { id: 'tops', label: 'Tops' },
+  { id: 'infografia', label: 'Infografía' },
+  { id: 'datos', label: 'Datos' },
+] as const;
+
+export type PublicGameNavigationSection = (typeof PUBLIC_GAME_NAV_ITEMS)[number]['id'];
+
 export function isPublicGameSection(value: string): value is PublicGameSection {
   return PUBLIC_GAME_SECTIONS.includes(value as PublicGameSection);
 }

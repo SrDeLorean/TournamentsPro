@@ -9,6 +9,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { UserAthleteSubnavbar } from '@/components/layout/user-athlete-subnavbar';
 import { TeamClubSubnavbar } from '@/components/layout/team-club-subnavbar';
 import { MobileResponsiveSubnavbar } from '@/components/layout/mobile-responsive-subnavbar';
+import { PUBLIC_GAME_NAV_ITEMS } from '@/lib/section-config';
 import {
   Trophy, Award, Calendar, ArrowRightLeft, Users, UserCheck, Star, PieChart, Database, Home, ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -40,18 +41,20 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const sections: { id: GameSection; label: string; icon: React.ReactNode }[] = [
-    { id: 'home', label: 'Home', icon: <Home className="w-3.5 h-3.5" /> },
-    { id: 'organizaciones', label: 'Torneos', icon: <Trophy className="w-3.5 h-3.5" /> },
-    { id: 'clasificacion', label: 'Clasificación', icon: <Award className="w-3.5 h-3.5" /> },
-    { id: 'partidos', label: 'Partidos', icon: <Calendar className="w-3.5 h-3.5" /> },
-    { id: 'traspasos', label: 'Traspasos', icon: <ArrowRightLeft className="w-3.5 h-3.5" /> },
-    { id: 'equipos', label: 'Equipos', icon: <Users className="w-3.5 h-3.5" /> },
-    { id: 'jugadores', label: 'Jugadores', icon: <UserCheck className="w-3.5 h-3.5" /> },
-    { id: 'tops', label: 'Tops', icon: <Star className="w-3.5 h-3.5" /> },
-    { id: 'infografia', label: 'Infografía', icon: <PieChart className="w-3.5 h-3.5" /> },
-    { id: 'datos', label: 'Datos', icon: <Database className="w-3.5 h-3.5" /> },
-  ];
+  const sectionIcons: Record<(typeof PUBLIC_GAME_NAV_ITEMS)[number]['id'], React.ReactNode> = {
+    home: <Home className="w-3.5 h-3.5" />,
+    organizaciones: <Users className="w-3.5 h-3.5" />,
+    competencias: <Trophy className="w-3.5 h-3.5" />,
+    clasificacion: <Award className="w-3.5 h-3.5" />,
+    partidos: <Calendar className="w-3.5 h-3.5" />,
+    traspasos: <ArrowRightLeft className="w-3.5 h-3.5" />,
+    equipos: <Users className="w-3.5 h-3.5" />,
+    jugadores: <UserCheck className="w-3.5 h-3.5" />,
+    tops: <Star className="w-3.5 h-3.5" />,
+    infografia: <PieChart className="w-3.5 h-3.5" />,
+    datos: <Database className="w-3.5 h-3.5" />,
+  };
+  const sections = PUBLIC_GAME_NAV_ITEMS.map((section) => ({ ...section, icon: sectionIcons[section.id] }));
 
   // Detect current active section from URL path if not passed explicitly
   const currentSection = activeSection || (() => {
@@ -92,14 +95,10 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
       <MobileResponsiveSubnavbar game={game} activeSection={currentSection} onSelectSection={onSelectSection} />
 
       {/* 💻 DESKTOP 4-TIER SUBNAVBAR STACK (>= md) */}
-      <div className="hidden md:block">
+      <div className="game-portal-navigation hidden md:block">
         {/* 🎮 SUB-NAVBAR NIVEL 2: SECCIONES DEL JUEGO */}
         <div
-          className="w-full bg-[var(--bg-card)] border-b border-[var(--border-card)] backdrop-blur-xl z-40 transition-all duration-300 shadow-md"
-          style={{
-            background: `linear-gradient(to right, color-mix(in srgb, ${game.brandColor} 25%, var(--bg-card)), var(--bg-card))`,
-            borderBottom: `2px solid color-mix(in srgb, ${game.brandColor} 40%, transparent)`
-          }}
+          className="game-portal-navbar w-full z-40 transition-all duration-300"
         >
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-11 flex items-center justify-between gap-2 relative">
             {/* Game Identifier Badge on Left */}
@@ -149,7 +148,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
                     }}
                     className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border ${
                       isActive
-                        ? 'shadow-md scale-102 font-extrabold'
+                        ? 'game-portal-nav-item-active shadow-md font-extrabold'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)] border-transparent'
                     }`}
                     style={

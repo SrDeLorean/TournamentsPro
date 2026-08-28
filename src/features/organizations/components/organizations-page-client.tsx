@@ -403,6 +403,7 @@ export default function OrganizationsModulePage() {
               return (
                 <EsportsCard
                   key={org.id}
+                  entityType="organization"
                   title={org.name}
                   subtitle={`🎮 ${gameCfg?.name || 'eSports'} | ${org.tag ? `[${org.tag}]` : 'Madre'}`}
                   description={org.description || `Organización oficial eSports y administradora de torneos competitivos.`}

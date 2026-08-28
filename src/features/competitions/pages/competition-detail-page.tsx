@@ -1,6 +1,5 @@
 import React, { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { queryDB } from '@/lib/db';
 import { CompetitionData, CompetitionTeamData } from '@/app/actions/competitions';
 import {
@@ -9,10 +8,7 @@ import {
   type AvailableUser,
   type CompetitionMatch,
 } from '@/app/dashboard/competencias/[id]/competition-tabs';
-import { GAMES_CATALOG, GAME_MODE_OPTIONS } from '@/lib/games-data';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft } from 'lucide-react';
+import { GAME_MODE_OPTIONS } from '@/lib/games-data';
 import { requireCompetitionManager } from '@/lib/auth-server';
 
 export const revalidate = 0; // Dynamic RSC rendering
@@ -79,87 +75,8 @@ export default async function CompetitionDetailPage({ params }: DetailPageProps)
   }
 
   const { competition, enrolledTeams, availableTeams, availableUsers, isIndividual, matches } = data;
-  const gameConfig = GAMES_CATALOG[competition.game_slug] || GAMES_CATALOG['eafc26'];
-  const brandColor = gameConfig?.brandColor || '#00F0FF';
-
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Header Breadcrumb */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/dashboard/competencias"
-          className="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--accent-cyan)] flex items-center gap-1.5 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Volver al Listado de Competencias</span>
-        </Link>
-
-        <Badge
-          variant={
-            competition.status === 'En Curso' || competition.status === 'Activo'
-              ? 'violet'
-              : competition.status === 'Finalizada' || competition.status === 'Finalizado'
-              ? 'emerald'
-              : competition.status === 'Inscripcion'
-              ? 'cyan'
-              : competition.status === 'Borrador'
-              ? 'gold'
-              : 'rose'
-          }
-          className="text-xs uppercase font-mono font-black"
-        >
-          {competition.status === 'Borrador'
-            ? '📝 Borrador'
-            : competition.status === 'Inscripcion'
-            ? '📝 Inscripción'
-            : competition.status === 'En Curso' || competition.status === 'Activo'
-            ? '⚡ En Curso'
-            : competition.status === 'Finalizada' || competition.status === 'Finalizado'
-            ? '🏆 Finalizada'
-            : '🔴 Eliminada'}
-        </Badge>
-      </div>
-
-      {/* Identity Header Banner */}
-      <Card className="p-6 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-card)] space-y-4 shadow-2xl relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div
-              className="w-16 h-16 rounded-2xl bg-[var(--bg-main)] border-2 flex items-center justify-center font-black text-2xl shadow-xl flex-shrink-0"
-              style={{ borderColor: brandColor, color: brandColor }}
-            >
-              {gameConfig?.icon || '🏆'}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-black text-[var(--text-heading)] uppercase tracking-wider">{competition.name}</h1>
-                <span
-                  className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, ${brandColor} 18%, transparent)`,
-                    borderColor: brandColor,
-                    color: brandColor,
-                  }}
-                >
-                  {gameConfig?.name}
-                </span>
-                {isIndividual && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-amber-950/80 text-amber-300 border border-amber-500/40">
-                    Individual (Atletas Directos)
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-[var(--text-muted)] font-mono mt-1 flex items-center gap-3 flex-wrap">
-                <span>Formato: <strong className="text-[var(--accent-cyan)]">{competition.mode_format}</strong></span>
-                <span>• Inicio: <strong className="text-emerald-400">{new Date(competition.fecha_inicio).toLocaleDateString('es-ES')}</strong></span>
-                <span>• Término: <strong className="text-[var(--text-secondary)]">{competition.fecha_termino ? new Date(competition.fecha_termino).toLocaleDateString('es-ES') : 'TBD (Nullable)'}</strong></span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* 🗂️ SISTEMA DE 5 PESTAÑAS (CompetitionTabs Client Component) */}
+    <div className="management-page">
       <Suspense fallback={<div className="text-xs font-mono text-cyan-400 p-4">Cargando pestañas de competencia...</div>}>
         <CompetitionTabs
           competition={competition}

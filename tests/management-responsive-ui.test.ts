@@ -48,7 +48,7 @@ describe('management workspace UI', () => {
     expect(moderation).toContain('getUsersByRoleAction');
     expect(moderation).toContain('banUserFromChatAction');
     expect(moderation).not.toContain('Dummy data');
-    expect(proxy).toContain('"/moderacion"');
+    expect(proxy).toContain('"/dashboard"');
     expect(chat).toContain('isMobileConversationOpen');
     expect(chat).toContain('Volver a conversaciones');
   });
@@ -120,5 +120,29 @@ describe('management workspace UI', () => {
       expect(source).toContain('<ConfirmModal');
       expect(source).not.toMatch(/\b(?:window\.)?confirm\s*\(/);
     }
+  });
+
+  it('keeps the organizer competition workspace inside the shared management system', async () => {
+    const [page, tabs, fixture, schedule, classification, styles] = await Promise.all([
+      readFile('src/features/competitions/pages/competition-detail-page.tsx', 'utf8'),
+      readFile('src/app/dashboard/competencias/[id]/competition-tabs.tsx', 'utf8'),
+      readFile('src/app/dashboard/competencias/[id]/fixture-generator.tsx', 'utf8'),
+      readFile('src/components/tournaments/fixture-schedule-view.tsx', 'utf8'),
+      readFile('src/components/tournaments/classification-view.tsx', 'utf8'),
+      readFile('src/app/globals.css', 'utf8'),
+    ]);
+
+    expect(page).toContain('className="management-page"');
+    expect(tabs).toContain('<ManagementHero');
+    expect(tabs).toContain('<ManagementMetrics>');
+    expect(tabs).toContain('<ManagementTabs');
+    expect(tabs).toContain('<DataTable');
+    expect(tabs).toContain('<ConfirmModal');
+    expect(tabs).not.toMatch(/\b(?:window\.)?confirm\s*\(/);
+    expect(fixture).toContain('competition-fixture-generator');
+    expect(schedule).toContain('fixture-schedule-view');
+    expect(classification).toContain('classification-view');
+    expect(styles).toContain('.competition-overview-grid');
+    expect(styles).toContain('.competition-enrollment-control');
   });
 });

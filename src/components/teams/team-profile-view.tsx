@@ -7,10 +7,10 @@ import { TeamData } from '@/lib/data-store';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { SubSubNavbar, SubSubTabOption } from '@/components/layout/sub-sub-navbar';
 import { ClubManagementModal } from '@/components/teams/club-management-modal';
 import {
-  Users, Calendar, ArrowRightLeft, BarChart3, History, Monitor, Award, CheckCircle2, MessageSquare, Sparkles, Settings
+  Users, Calendar, ArrowRightLeft, BarChart3, History, Monitor, Award, CheckCircle2,
+  MessageSquare, Sparkles, Settings, ArrowLeft, Gamepad2, ShieldCheck
 } from 'lucide-react';
 
 import { getNewTeamSquadAction } from '@/app/actions/new-squads';
@@ -19,6 +19,7 @@ import { GAMES_CATALOG } from '@/lib/games-data';
 import { ClassificationView } from '@/components/tournaments/classification-view';
 import { FixtureScheduleView } from '@/components/tournaments/fixture-schedule-view';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
+import { useAuth } from '@/components/providers/auth-provider';
 
 interface TeamProfileViewProps {
   team: TeamData;
@@ -51,6 +52,7 @@ type LegacyTeamData = TeamData & { captain?: string; logo?: string };
 export type ProfileTab = 'plantilla' | 'posiciones' | 'calendario' | 'traspasos' | 'estadisticas' | 'historico';
 
 export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileViewProps) {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('plantilla');
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
@@ -79,14 +81,13 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
   // Dynamic theme color for team profile matching the active game
   const activeColor = brandColor || team.color || '#00F0FF';
 
-  // Sub-Sub-Menu Tabs Definition following the system standard
-  const profileSubSubTabs: SubSubTabOption<ProfileTab>[] = [
-    { id: 'plantilla', label: 'Plantilla Roster', icon: <Users className="w-3.5 h-3.5" />, badge: 8 },
+  const profileTabs: Array<{ id: ProfileTab; label: string; icon: React.ReactNode; badge?: number }> = [
+    { id: 'plantilla', label: 'Plantilla', icon: <Users className="size-4" />, badge: squad.length },
     { id: 'posiciones', label: 'Posiciones Liga', icon: <Award className="w-3.5 h-3.5" /> },
-    { id: 'calendario', label: 'Calendario Partidos', icon: <Calendar className="w-3.5 h-3.5" /> },
-    { id: 'traspasos', label: 'Fichajes & Bajas', icon: <ArrowRightLeft className="w-3.5 h-3.5" /> },
+    { id: 'calendario', label: 'Calendario', icon: <Calendar className="w-3.5 h-3.5" /> },
+    { id: 'traspasos', label: 'Movimientos', icon: <ArrowRightLeft className="w-3.5 h-3.5" /> },
     { id: 'estadisticas', label: 'Estadísticas', icon: <BarChart3 className="w-3.5 h-3.5" /> },
-    { id: 'historico', label: 'Histórico & Palmarés', icon: <History className="w-3.5 h-3.5" /> },
+    { id: 'historico', label: 'Palmarés', icon: <History className="w-3.5 h-3.5" /> },
   ];
 
   // Group real squad by organization
@@ -101,7 +102,7 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
     return acc;
   }, {});
 
-  const vacantPositions = ['DFC', 'LI', 'MCD'];
+  const vacantPositions = team.vacantPositions || [];
 
   const teamBanner = team?.bannerUrl || '/images/hero.jpg';
   const teamLogo = team?.logoUrl || (team as LegacyTeamData).logo;
@@ -109,13 +110,25 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
   const teamName = team?.name || 'Escuadra eSports';
   const teamTag = team?.tag || 'TP';
   const teamDesc = team?.description || 'Escuadra registrada en el circuito eSports.';
+  const role = currentUser?.role?.toLowerCase() || '';
+  const canManage = Boolean(currentUser && (
+    ['administrador', 'admin', 'organizador'].includes(role) ||
+    currentUser.id === team.captainId ||
+    currentUser.teamId === team.id ||
+    currentUser.name?.toLowerCase() === team.captainName?.toLowerCase() ||
+    currentUser.gamertag?.toLowerCase() === team.captainName?.toLowerCase()
+  ));
+  const occupancy = Math.min(100, Math.round((team.membersCount / Math.max(team.maxMembers, 1)) * 100));
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300 -mt-px">
-      {/* 1. Full-Width Edge-to-Edge Banner Background Header (100% Unfiltered Image) */}
-      <div className="relative w-full left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-slate-950 border-b border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[240px] sm:min-h-[340px] flex flex-col justify-end">
-        {/* Full Bleed Banner Image Graphic (Pure 100% Opacity, Zero Filter) */}
-        <div className="absolute inset-0 z-0">
+    <div className="public-team-profile animate-in fade-in duration-300">
+      <div className="public-team-breadcrumb">
+        <Link href="/equipos"><ArrowLeft className="size-4" />Todos los equipos</Link>
+        <span>/</span><span>{game?.name || team.gameSlug}</span>
+      </div>
+
+      <section className="public-team-hero">
+        <div className="public-team-banner">
           <Image
             src={teamBanner}
             alt={teamName}
@@ -126,18 +139,15 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
             onError={(e) => {
               e.currentTarget.src = '/images/default/banner-default.jpg';
             }}
-            className="object-cover opacity-100"
+            className="object-cover"
           />
-          {/* Bottom Fade gradient for text readability only */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+          <div className="public-team-banner-overlay" />
         </div>
 
-        {/* Content Box Layered Over the Full Width Banner */}
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
-          <div className="flex flex-row items-center gap-3 sm:gap-6">
-            {/* Team Crest Shield */}
+        <div className="public-team-hero-content">
+          <div className="public-team-identity">
             <div
-              className="relative w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl bg-slate-950 border-2 sm:border-4 flex items-center justify-center font-black text-lg sm:text-3xl shadow-2xl flex-shrink-0 overflow-hidden"
+              className="public-team-logo"
               style={{ borderColor: activeColor, color: activeColor }}
             >
               {teamLogo ? (
@@ -157,79 +167,54 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
               )}
             </div>
 
-            {/* Team Details */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight uppercase drop-shadow-md">
-                  {teamName}
-                </h1>
-                <span
-                  className="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold border"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, ${activeColor} 30%, transparent)`,
-                    borderColor: activeColor,
-                    color: '#FFFFFF',
-                  }}
-                >
-                  {teamTag}
-                </span>
+            <div className="public-team-copy">
+              <p className="public-team-eyebrow"><ShieldCheck className="size-3.5" />Ficha pública verificada</p>
+              <div className="public-team-title-row">
+                <h1>{teamName}</h1>
+                <span style={{ borderColor: activeColor }}>{teamTag}</span>
               </div>
-
-              <p className="text-xs sm:text-sm text-slate-200 font-medium line-clamp-1 drop-shadow-sm">
-                {teamDesc}
-              </p>
-
-              <div className="flex items-center gap-3 text-xs text-slate-300 pt-1 flex-wrap font-semibold">
-                <span className="flex items-center gap-1">
-                  <Monitor className="w-3.5 h-3.5" style={{ color: activeColor }} />
-                  {team.platform}
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1 text-emerald-400 font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {team.status}
-                </span>
-                <span>•</span>
-                <span>Capitán: <strong className="text-white">{team.captainName || (team as LegacyTeamData).captain}</strong></span>
+              <p className="public-team-description">{teamDesc}</p>
+              <div className="public-team-facts">
+                <span><Gamepad2 className="size-3.5" />{game?.name}</span>
+                <span><Monitor className="size-3.5" />{team.platform}</span>
+                <span className="is-active"><CheckCircle2 className="size-3.5" />{team.status}</span>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons: Contact Captain & Manage Club */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              onClick={() => setIsManageModalOpen(true)}
-              className="font-extrabold text-xs uppercase tracking-wider bg-purple-600 hover:bg-purple-500 text-white shadow-xl flex items-center gap-1.5"
-            >
-              <Settings className="w-4 h-4" />
-              Gestión de Club (Administrar)
-            </Button>
-
+          <div className="public-team-actions">
+            {canManage ? (
+              <Button onClick={() => setIsManageModalOpen(true)} variant="outline">
+                <Settings className="size-4" />Administrar club
+              </Button>
+            ) : null}
             <Link href="/mensajes">
-              <Button
-                className="font-extrabold text-xs uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-xl flex items-center gap-2"
-              >
-                <MessageSquare className="w-4 h-4" />
-                Contactar Capitán ({team.captainName || (team as LegacyTeamData).captain})
+              <Button className="public-team-primary-action">
+                <MessageSquare className="size-4" />Contactar capitán
               </Button>
             </Link>
           </div>
         </div>
+        <div className="public-team-metrics">
+          <div><strong>{team.membersCount}/{team.maxMembers}</strong><span>integrantes</span></div>
+          <div><strong>{occupancy}%</strong><span>ocupación</span></div>
+          <div><strong>{vacantPositions.length}</strong><span>vacantes</span></div>
+          <div><strong>{team.palmares || '—'}</strong><span>palmarés</span></div>
+        </div>
+      </section>
 
-        {/* 📌 Standardized Sub-Sub-Navbar Level 3 */}
-        <SubSubNavbar
-          tabs={profileSubSubTabs}
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          brandColor={activeColor}
-        />
-      </div>
+      <nav className="public-team-tabs" aria-label="Secciones del perfil">
+        {profileTabs.map((tab) => (
+          <button key={tab.id} type="button" className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}>
+            {tab.icon}<span>{tab.label}</span>{tab.badge !== undefined ? <small>{tab.badge}</small> : null}
+          </button>
+        ))}
+      </nav>
 
-      {/* Tab Content Display Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="public-team-content">
         
         {/* Vacant Positions Recruitment Strip */}
-        <div className="p-4 rounded-2xl glass-panel border border-[var(--border-card)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+        {vacantPositions.length > 0 ? <div className="public-team-recruitment">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-400" />
             <div>
@@ -244,19 +229,19 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
 
           <div className="flex items-center gap-1.5 flex-wrap">
             {vacantPositions.map((pos) => (
-              <span key={pos} className="px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-amber-300 font-mono font-bold text-xs">
+              <span key={pos}>
                 + {pos}
               </span>
             ))}
           </div>
-        </div>
+        </div> : null}
 
         {activeTab === 'plantilla' && (
           <div className="space-y-6">
             {isLoading ? (
-              <div className="p-12 text-center text-[var(--text-muted)]">Cargando plantilla...</div>
+              <div className="public-team-empty">Cargando plantilla...</div>
             ) : Object.keys(squadByOrg).length === 0 ? (
-              <div className="p-12 text-center text-[var(--text-muted)] glass-panel rounded-2xl border border-[var(--border-card)]">No hay jugadores registrados.</div>
+              <div className="public-team-empty">No hay jugadores registrados en esta plantilla.</div>
             ) : (
               Object.entries(squadByOrg).map(([orgName, players]) => (
                 <div key={orgName} className="p-4 sm:p-6 rounded-2xl glass-panel border border-[var(--border-card)] space-y-4">
@@ -297,15 +282,15 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
         )}
 
         {activeTab === 'traspasos' && (
-          <div className="rounded-2xl glass-panel border border-[var(--border-card)] p-4 sm:p-6 space-y-4">
+          <div className="public-team-panel space-y-4">
              <h3 className="font-extrabold text-base text-[var(--text-heading)] uppercase mb-4">Historial de Fichajes y Bajas</h3>
              {isLoading ? (
                 <div className="p-12 text-center text-[var(--text-muted)]">Cargando historial...</div>
              ) : contracts.length === 0 ? (
                 <div className="p-12 text-center text-[var(--text-muted)]">No hay registros de transferencias.</div>
              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
+                <div className="ui-data-table-shell overflow-x-auto rounded-xl border border-[var(--border-card)]">
+                  <table className="ui-table ui-data-table-responsive w-full text-sm text-left">
                     <thead className="text-xs text-[var(--text-muted)] uppercase bg-black/50 border-b border-[var(--border-card)]">
                       <tr>
                         <th className="px-4 py-3">Jugador</th>
@@ -320,14 +305,16 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
                         const orgName = orgMatch ? orgMatch[1] : 'General';
                         return (
                           <tr key={c.id} className="border-b border-[var(--border-card)] hover:bg-white/5">
-                            <td className="px-4 py-3 font-medium flex items-center gap-2">
+                            <td data-label="Jugador" className="px-4 py-3 font-medium">
+                              <span className="flex items-center gap-2">
                               <Avatar src={c.avatar_url} fallback={c.player_name} className="w-6 h-6" /> {c.player_name}
+                              </span>
                             </td>
-                            <td className="px-4 py-3 text-[var(--text-muted)] uppercase text-xs font-bold">{orgName}</td>
-                            <td className="px-4 py-3 text-[var(--text-muted)]">
+                            <td data-label="Organización" className="px-4 py-3 text-[var(--text-muted)] uppercase text-xs font-bold">{orgName}</td>
+                            <td data-label="Fecha" className="px-4 py-3 text-[var(--text-muted)]">
                               {new Date(c.created_at).toLocaleString()}
                             </td>
-                            <td className="px-4 py-3">
+                            <td data-label="Estado" className="px-4 py-3">
                               <Badge variant={
                                 c.status === 'ACEPTADO' ? 'emerald' : 
                                 c.status === 'RECHAZADO' ? 'rose' : 
@@ -354,12 +341,11 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
         )}
       </div>
 
-      {/* Club Management Modal */}
-      <ClubManagementModal
+      {canManage ? <ClubManagementModal
         team={team}
         isOpen={isManageModalOpen}
         onClose={() => setIsManageModalOpen(false)}
-      />
+      /> : null}
     </div>
   );
 }

@@ -13,6 +13,8 @@ export interface GameConfig {
   bgGradient: string;
   positions: string[];
   bannerUrl: string;
+  backdropPosition?: string;
+  backdropPositionMobile?: string;
   logoUrl: string;         // Local path to logo PNG/SVG (e.g. /images/games/valorant.png)
   teamBadgeText?: string;
   teamTitle?: string;
@@ -36,6 +38,8 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     bgGradient: 'from-[#FF4654]/25 via-[#111823] to-[#090D14]',
     positions: ['Duelista', 'Controlador', 'Iniciador', 'Centinela'],
     bannerUrl: '/images/games-background/valorant.jpg',
+    backdropPosition: 'center top',
+    backdropPositionMobile: '56% top',
     logoUrl: '/images/games/valorant.png',
     teamBadgeText: 'Directorio de Escuadras Tácticas 5v5',
     teamTitle: 'ESCUADRAS',
@@ -57,6 +61,8 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     bgGradient: 'from-[#077D7E]/30 via-[#083844] to-[#023031]',
     positions: ['POR', 'DFC', 'LD', 'LI', 'MCD', 'MC', 'MCO', 'EI', 'ED', 'DC'],
     bannerUrl: '/images/games-background/eafc.jpg',
+    backdropPosition: 'center top',
+    backdropPositionMobile: '48% top',
     logoUrl: '/images/games/eafc26.png',
     teamBadgeText: 'Directorio de Clubes eSports FC 26',
     teamTitle: 'DIRECTORIO DE',
@@ -78,6 +84,8 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     bgGradient: 'from-[#DE9B35]/25 via-[#1A1813] to-[#0F0E0B]',
     positions: ['AWPer', 'Entry Fragger', 'IGL', 'Support', 'Lurker'],
     bannerUrl: '/images/games-background/csgo.jpg',
+    backdropPosition: 'center top',
+    backdropPositionMobile: '58% top',
     logoUrl: '/images/games/csgo.png',
     teamBadgeText: 'Directorio de Equipos CS2 5v5',
     teamTitle: 'EQUIPOS',
@@ -99,6 +107,8 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     bgGradient: 'from-[#0AC8B9]/25 via-[#091428] to-[#030914]',
     positions: ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'],
     bannerUrl: '/images/games-background/lol.jpg',
+    backdropPosition: 'center top',
+    backdropPositionMobile: '52% top',
     logoUrl: '/images/games/lol.webp',
     teamBadgeText: 'Directorio de Escuadras MOBA 5v5',
     teamTitle: 'ESCUADRAS',
@@ -120,6 +130,8 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     bgGradient: 'from-[#0084FF]/25 via-[#0B1E36] to-[#040C17]',
     positions: ['Delantero', 'Defensa', 'Rotador Global'],
     bannerUrl: '/images/games-background/rocketleague.jpg',
+    backdropPosition: 'center top',
+    backdropPositionMobile: '50% top',
     logoUrl: '/images/games/rocketleague.png',
     teamBadgeText: 'Directorio de Equipos Vehiculares 3v3',
     teamTitle: 'EQUIPOS',
@@ -141,6 +153,8 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     bgGradient: 'from-[#9d4dbb]/30 via-[#4c51f7]/25 to-[#f3af19]/20',
     positions: ['IGL', 'Fragger', 'Support', 'Anchor'],
     bannerUrl: '/images/games-background/fortnite.jpg',
+    backdropPosition: 'center top',
+    backdropPositionMobile: '54% top',
     logoUrl: '/images/games/fortnite.png',
     teamBadgeText: 'Directorio de Escuadras Battle Royale',
     teamTitle: 'ESCUADRAS',

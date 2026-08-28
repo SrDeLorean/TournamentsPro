@@ -7,6 +7,7 @@ import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { PlayerProfileView, PlayerData } from '@/components/players/player-profile-view';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
+import { GamePortalBackdrop, getGamePortalStyle } from '@/components/game/game-portal-backdrop';
 import type { UserProfile } from '@/lib/data-store';
 
 interface PlayerPageProps {
@@ -38,7 +39,7 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
         }
       })
       .catch((err) => console.error('Error fetching player by id:', err));
-  }, [playerId]);
+  }, [currentUser?.id, playerId]);
 
   const activeUser = dbUser || (isSelf ? currentUser : (currentUser?.id && currentUser.id.toLowerCase() === normalizedId ? currentUser : null));
 
@@ -97,7 +98,7 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
     avatarUrl: activeUser?.avatarUrl || activeUser?.foto || matchedKnown?.avatarUrl || '/images/default/logo-default.png',
     bannerUrl: activeUser?.bannerUrl || matchedKnown?.bannerUrl || '/images/default/banner-default.jpg',
     stats: {
-      ...((activeUser as any)?.aggregatedStats || {
+      ...((activeUser as (UserProfile & { aggregatedStats?: PlayerData['stats'] }) | null)?.aggregatedStats || {
         matches: 42,
         goals: 24,
         assists: 15,
@@ -121,18 +122,19 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
 
   return (
     <div
-      className="min-h-screen pb-20 relative transition-all duration-500 bg-[var(--bg-main)] text-[var(--text-primary)]"
-      style={{
-        '--game-brand': game.brandColor,
-        '--game-accent': game.accentColor,
-      } as React.CSSProperties}
+      className="game-portal min-h-screen pb-20 relative transition-all duration-500 bg-[var(--bg-main)] text-[var(--text-primary)]"
+      data-game={game.slug}
+      style={getGamePortalStyle(game)}
     >
       {/* Game Sub Navbar with 'jugadores' active section */}
       <GameSubNavbar game={game} activeSection="jugadores" />
 
       {/* Main Full Bleed Player Profile Banner Attached Directly to Sub-Navbar with Margin 0 / Padding 0 */}
-      <div className="w-full pt-0 pb-6 relative">
-        <PlayerProfileView player={player} brandColor={game.brandColor} />
+      <div className="game-portal-stage w-full min-h-screen pt-0 pb-6 relative">
+        <GamePortalBackdrop game={game} />
+        <div className="relative z-10">
+          <PlayerProfileView player={player} brandColor={game.brandColor} />
+        </div>
       </div>
     </div>
   );

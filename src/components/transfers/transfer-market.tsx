@@ -381,6 +381,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
             {filteredCompletedTransfers.map((item, index) => (
               <EsportsCard
                 key={item.id}
+                entityType="user"
                 href="#"
                 title={`${item.playerName} (@${item.playerGamertag})`}
                 subtitle={`🎮 ${currentGameObj.name}`}
@@ -440,6 +441,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
               return (
                 <EsportsCard
                   key={item.id}
+                  entityType={isPlayerListing ? 'user' : 'team'}
                   href={chatHref}
                   title={isPlayerListing ? item.userName : item.teamName || item.userName}
                   subtitle={`🎮 ${currentGameObj.name} | 🖥️ ${item.platform}`}

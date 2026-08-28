@@ -264,6 +264,7 @@ export function TeamDirectory({
                   return (
                     <EsportsCard
                       key={team.id}
+                      entityType="team"
                       onClick={() => setSelectedTeam(team)}
                       title={team.name}
                       subtitle={`🎮 ${tGameConfig?.name || 'FC 26'} | 🖥️ ${team.platform || 'CROSSPLAY'}`}

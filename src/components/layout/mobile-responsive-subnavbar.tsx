@@ -7,8 +7,9 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { GameConfig } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
+import { PUBLIC_GAME_NAV_ITEMS } from '@/lib/section-config';
 import {
-  Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard
+  Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, UserCheck, Calendar, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard
 } from 'lucide-react';
 
 export type MobileSubnavSegment = 'game' | 'athlete' | 'club';
@@ -38,16 +39,24 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
   );
 
   // 1. Game Sections
-  const gameSections = [
-    { id: 'home', label: 'Home', href: `/${game.slug}`, icon: <Home className="w-3.5 h-3.5" /> },
-    { id: 'organizaciones', label: 'Torneos', href: `/${game.slug}/organizaciones`, icon: <Trophy className="w-3.5 h-3.5" /> },
-    { id: 'equipos', label: 'Equipos', href: `/${game.slug}/equipos`, icon: <Users className="w-3.5 h-3.5" /> },
-    { id: 'clasificacion', label: 'Clasificación', href: `/${game.slug}/clasificacion`, icon: <Award className="w-3.5 h-3.5" /> },
-    { id: 'traspasos', label: 'Fichajes', href: `/${game.slug}/traspasos`, icon: <ArrowRightLeft className="w-3.5 h-3.5" /> },
-    { id: 'tops', label: 'Tops', href: `/${game.slug}/tops`, icon: <Star className="w-3.5 h-3.5" /> },
-    { id: 'infografia', label: 'Stats', href: `/${game.slug}/infografia`, icon: <PieChart className="w-3.5 h-3.5" /> },
-    { id: 'datos', label: 'Datos', href: `/${game.slug}/datos`, icon: <Database className="w-3.5 h-3.5" /> },
-  ];
+  const gameSectionIcons: Record<(typeof PUBLIC_GAME_NAV_ITEMS)[number]['id'], React.ReactNode> = {
+    home: <Home className="w-3.5 h-3.5" />,
+    organizaciones: <Users className="w-3.5 h-3.5" />,
+    competencias: <Trophy className="w-3.5 h-3.5" />,
+    clasificacion: <Award className="w-3.5 h-3.5" />,
+    partidos: <Calendar className="w-3.5 h-3.5" />,
+    traspasos: <ArrowRightLeft className="w-3.5 h-3.5" />,
+    equipos: <Users className="w-3.5 h-3.5" />,
+    jugadores: <UserCheck className="w-3.5 h-3.5" />,
+    tops: <Star className="w-3.5 h-3.5" />,
+    infografia: <PieChart className="w-3.5 h-3.5" />,
+    datos: <Database className="w-3.5 h-3.5" />,
+  };
+  const gameSections = PUBLIC_GAME_NAV_ITEMS.map((section) => ({
+    ...section,
+    href: section.id === 'home' ? `/${game.slug}` : `/${game.slug}/${section.id}`,
+    icon: gameSectionIcons[section.id],
+  }));
 
   const userId = currentUser?.id || 'usr-1784762163316';
 
@@ -69,18 +78,21 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
   ];
 
   return (
-    <div className="block md:hidden w-full bg-slate-950 border-b border-[var(--border-card)] shadow-lg">
+    <div
+      className="game-portal-mobile-nav block md:hidden w-full border-b border-[var(--border-card)] shadow-lg"
+      style={{ '--game-brand': game.brandColor } as React.CSSProperties}
+    >
       
       {/* 1. Top Mobile Segmented Controller (1 Row) */}
-      <div className="flex items-center justify-around border-b border-white/10 p-1 bg-slate-900/90 text-xs font-black">
+      <div className="game-portal-mobile-segments flex items-center justify-around border-b border-[var(--border-card)] p-1 text-xs font-black">
         
         {/* Segment 1: JUEGO */}
         <button
           onClick={() => setActiveSegment('game')}
           className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeSegment === 'game'
-              ? 'bg-cyan-500 text-slate-950 shadow-md font-black'
-              : 'text-slate-400 hover:text-white'
+              ? 'game-portal-mobile-segment-active shadow-md font-black'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)]'
           }`}
         >
           <Gamepad2 className="w-3.5 h-3.5" />
@@ -93,8 +105,8 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
             onClick={() => setActiveSegment('athlete')}
             className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               activeSegment === 'athlete'
-                ? 'bg-cyan-500 text-slate-950 shadow-md font-black'
-                : 'text-slate-400 hover:text-white'
+                ? 'game-portal-mobile-segment-active shadow-md font-black'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)]'
             }`}
           >
             <User className="w-3.5 h-3.5" />
@@ -108,8 +120,8 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
             onClick={() => setActiveSegment('club')}
             className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               activeSegment === 'club'
-                ? 'bg-purple-600 text-white shadow-md font-black'
-                : 'text-slate-400 hover:text-white'
+                ? 'game-portal-mobile-segment-active shadow-md font-black'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)]'
             }`}
           >
             <Shield className="w-3.5 h-3.5 text-purple-400" />
@@ -133,8 +145,8 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
                 onClick={() => onSelectSection && onSelectSection(sec.id as GameSection)}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
-                    ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black'
-                    : 'bg-slate-900/80 text-slate-300 border-white/10 hover:bg-slate-800'
+                    ? 'game-portal-mobile-link-active shadow-md font-black'
+                    : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:bg-[var(--bg-card-hover)]'
                 }`}
               >
                 {sec.icon}
@@ -153,8 +165,8 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
                 href={opt.href}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
-                    ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black'
-                    : 'bg-cyan-950/70 text-cyan-200 border-cyan-500/40 hover:bg-cyan-900'
+                    ? 'game-portal-mobile-link-active shadow-md font-black'
+                    : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:bg-[var(--bg-card-hover)]'
                 }`}
               >
                 {opt.icon}
@@ -173,8 +185,8 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
                 href={opt.href}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
-                    ? 'bg-purple-600 text-white border-purple-400 shadow-md font-black'
-                    : 'bg-purple-950/70 text-purple-200 border-purple-500/40 hover:bg-purple-900'
+                    ? 'game-portal-mobile-link-active shadow-md font-black'
+                    : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:bg-[var(--bg-card-hover)]'
                 }`}
               >
                 {opt.icon}

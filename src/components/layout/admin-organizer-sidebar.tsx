@@ -36,7 +36,7 @@ export function AdminOrganizerSidebar() {
     },
     {
       title: 'Gestión Organizaciones',
-      href: '/organizaciones',
+      href: '/dashboard/organizaciones',
       icon: <Building2 className="w-4 h-4 text-emerald-400" />,
       badge: 'Orgs.',
     },
@@ -54,25 +54,25 @@ export function AdminOrganizerSidebar() {
     },
     {
       title: 'Usuarios / Atletas',
-      href: '/usuarios',
+      href: '/dashboard/usuarios',
       icon: <Users className="w-4 h-4 text-emerald-400" />,
       badge: 'Directorio',
     },
     {
       title: 'Equipos / Clubes',
-      href: '/equipos',
+      href: '/dashboard/equipos',
       icon: <Shield className="w-4 h-4 text-amber-400" />,
       badge: 'Escuadras',
     },
     {
       title: 'Reportar Encuentros',
-      href: '/matchday',
+      href: '/dashboard/matchday',
       icon: <CheckCircle2 className="w-4 h-4 text-rose-400" />,
       badge: 'Matchday',
     },
     {
       title: 'Moderación & Chat Global',
-      href: '/moderacion',
+      href: '/dashboard/moderacion',
       icon: <MessageSquare className="w-4 h-4 text-orange-400" />,
       badge: 'Bans/Chat',
     },
@@ -81,9 +81,9 @@ export function AdminOrganizerSidebar() {
   const organizerNavItems = [
     { title: 'Centro operativo', href: '/dashboard', icon: <LayoutDashboard className="w-4 h-4 text-[var(--accent-cyan)]" />, badge: 'Inicio' },
     { title: 'Mis competencias', href: '/dashboard/competencias', icon: <Swords className="w-4 h-4 text-[var(--accent-violet)]" />, badge: 'Ligas' },
-    { title: 'Usuarios / Atletas', href: '/usuarios', icon: <Users className="w-4 h-4 text-[var(--accent-cyan)]" />, badge: 'Directorio' },
-    { title: 'Clubes inscritos', href: '/equipos', icon: <Shield className="w-4 h-4 text-[var(--accent-gold)]" />, badge: 'Clubes' },
-    { title: 'Operación matchday', href: '/matchday', icon: <CheckCircle2 className="w-4 h-4 text-[var(--accent-crimson)]" />, badge: 'Partidos' },
+    { title: 'Usuarios / Atletas', href: '/dashboard/usuarios', icon: <Users className="w-4 h-4 text-[var(--accent-cyan)]" />, badge: 'Directorio' },
+    { title: 'Clubes inscritos', href: '/dashboard/equipos', icon: <Shield className="w-4 h-4 text-[var(--accent-gold)]" />, badge: 'Clubes' },
+    { title: 'Operación matchday', href: '/dashboard/matchday', icon: <CheckCircle2 className="w-4 h-4 text-[var(--accent-crimson)]" />, badge: 'Partidos' },
   ];
 
   const globalNavItems = isAdmin ? adminNavItems : organizerNavItems;

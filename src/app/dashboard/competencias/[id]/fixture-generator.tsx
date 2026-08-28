@@ -396,7 +396,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
   const currentMatchGroup = matchesByMatchday[currentMatchdayNum] || [];
 
   return (
-    <div className="space-y-6">
+    <div className="competition-fixture-generator space-y-6">
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
       <RegenerateWarningModal

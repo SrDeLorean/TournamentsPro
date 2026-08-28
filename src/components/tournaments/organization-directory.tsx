@@ -114,6 +114,7 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
               return (
                 <EsportsCard
                   key={org.id}
+                  entityType="organization"
                   href={`/${gameSlug}/organizacion/${org.id}`}
                   title={org.name}
                   subtitle={org.tag ? `[${org.tag}] Comunidad eSports` : 'Comunidad eSports'}

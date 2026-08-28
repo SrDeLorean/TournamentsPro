@@ -49,7 +49,7 @@ export function PageHeader({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="ui-page-header flex flex-col lg:flex-row lg:items-center justify-between gap-8 p-5 sm:p-7 lg:p-9"
+      className="ui-page-header game-section-hero flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-8 p-5 sm:p-7 lg:p-9"
       style={{ '--page-brand': brandColor } as React.CSSProperties}
     >
       {/* Left Title & Description */}

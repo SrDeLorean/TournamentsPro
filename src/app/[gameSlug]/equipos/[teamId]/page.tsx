@@ -2,12 +2,12 @@
 
 import React, { use } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { TeamProfileView } from '@/components/teams/team-profile-view';
 import { initialTeams, type TeamData } from '@/lib/data-store';
 import { Button } from '@/components/ui/button';
+import { LoaderCircle, SearchX } from 'lucide-react';
+import { GamePortalBackdrop, getGamePortalStyle } from '@/components/game/game-portal-backdrop';
 
 interface TeamPageProps {
   params: Promise<{ gameSlug: string; teamId: string }>;
@@ -15,9 +15,9 @@ interface TeamPageProps {
 
 export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
   const { gameSlug, teamId } = use(params);
-  const router = useRouter();
-
   const [fetchedTeam, setFetchedTeam] = React.useState<TeamData | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState('');
 
   // Support game slugs including csgo / cs2 alias
   let game = GAMES_CATALOG[gameSlug];
@@ -26,11 +26,16 @@ export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
   }
 
   React.useEffect(() => {
-    fetch(`/api/teams`)
-      .then((res) => res.json())
-      .then((data: { success?: boolean; teams?: TeamData[] }) => {
-        if (data.success && Array.isArray(data.teams)) {
-          const matched = data.teams.find(
+    let active = true;
+    fetch('/api/teams?limit=200')
+      .then((res) => {
+        if (!res.ok) throw new Error(`No se pudo cargar el equipo (${res.status})`);
+        return res.json();
+      })
+      .then((data: { teams?: TeamData[]; data?: { teams?: TeamData[] } }) => {
+        const teams = data.data?.teams ?? data.teams ?? [];
+        if (active && Array.isArray(teams)) {
+          const matched = teams.find(
             (t) =>
               t.id?.toLowerCase() === teamId.toLowerCase() ||
               t.tag?.toLowerCase() === teamId.toLowerCase() ||
@@ -39,7 +44,11 @@ export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
           if (matched) setFetchedTeam(matched);
         }
       })
-      .catch((err) => console.error('Error fetching team page data:', err));
+      .catch((error: unknown) => {
+        if (active) setLoadError(error instanceof Error ? error.message : 'No se pudo cargar el equipo.');
+      })
+      .finally(() => { if (active) setIsLoading(false); });
+    return () => { active = false; };
   }, [teamId]);
 
   // Find team by ID, slugified name, or tag (Fallback matching)
@@ -48,28 +57,7 @@ export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
     t.id.toLowerCase() === normalizedTeamId ||
     t.tag.toLowerCase() === normalizedTeamId ||
     t.name.toLowerCase().replace(/\s+/g, '-') === normalizedTeamId
-  ) || {
-    id: teamId,
-    name: 'Escuadra eSports',
-    tag: 'TP',
-    gameSlug: gameSlug as TeamData['gameSlug'],
-    gameName: game?.name || 'EA SPORTS FC 26',
-    captainId: 'usr-admin',
-    captainName: 'Administrador',
-    platform: 'CROSSPLAY',
-    membersCount: 1,
-    maxMembers: 45,
-    color: game?.brandColor || '#00F0FF',
-    logoText: 'TP',
-    description: 'Escuadra oficial registrada en el circuito eSports.',
-    logoUrl: '/images/default/logo-default.png',
-    bannerUrl: '/images/default/banner-default.jpg',
-    status: 'ACTIVO',
-    disputando: 'Torneo Oficial',
-    palmares: 'Club Registrado',
-    vacantPositions: ['DFC', 'LI', 'MCD'],
-    members: [],
-  };
+  );
 
   const team = fetchedTeam || defaultTeam;
 
@@ -85,35 +73,41 @@ export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
     );
   }
 
+  if (isLoading && !team) {
+    return (
+      <main className="public-team-state" style={{ '--profile-accent': game.brandColor } as React.CSSProperties}>
+        <LoaderCircle className="size-8 animate-spin" />
+        <h1>Cargando ficha del equipo</h1>
+        <p>Estamos reuniendo la plantilla y su información competitiva.</p>
+      </main>
+    );
+  }
+
+  if (!team) {
+    return (
+      <main className="public-team-state" style={{ '--profile-accent': game.brandColor } as React.CSSProperties}>
+        <SearchX className="size-9" />
+        <h1>Equipo no encontrado</h1>
+        <p>{loadError || 'La ficha solicitada no existe o ya no está disponible.'}</p>
+        <Link href="/equipos"><Button variant="primary">Explorar equipos</Button></Link>
+      </main>
+    );
+  }
+
   return (
-    <div
-      className="min-h-screen pb-20 relative transition-all duration-500 bg-[var(--bg-main)] text-[var(--text-primary)]"
+    <main
+      className="game-portal game-portal-stage public-team-page"
+      data-game={game.slug}
       style={{
-        '--game-brand': game.brandColor,
-        '--game-accent': game.accentColor,
+        ...getGamePortalStyle(game),
+        '--profile-accent': game.brandColor,
+        '--profile-accent-secondary': game.accentColor,
       } as React.CSSProperties}
     >
-      {/* Game Sub Navbar with 'equipos' active section */}
-      <GameSubNavbar
-        game={game}
-        activeSection="equipos"
-        onSelectSection={(section) => {
-          if (section === 'home') {
-            router.push(`/${game.slug}`);
-          } else {
-            router.push(`/${game.slug}`);
-          }
-        }}
-      />
-
-      {/* Main Full Bleed Team Profile Banner Attached Directly to Sub-Navbar with Margin 0 / Padding 0 */}
-      <div className="w-full pt-0 pb-6 relative">
-        <TeamProfileView
-          team={team}
-          brandColor={game.brandColor}
-          onBack={() => router.push(`/${game.slug}`)}
-        />
+      <GamePortalBackdrop game={game} />
+      <div className="relative z-10">
+        <TeamProfileView team={team} brandColor={game.brandColor} />
       </div>
-    </div>
+    </main>
   );
 }

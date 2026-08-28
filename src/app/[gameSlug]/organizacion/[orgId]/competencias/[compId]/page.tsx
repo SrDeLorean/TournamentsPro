@@ -5,6 +5,7 @@ import { GAMES_CATALOG } from '@/lib/games-data';
 import { Trophy } from 'lucide-react';
 
 import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
+import { GamePortalBackdrop, getGamePortalStyle } from '@/components/game/game-portal-backdrop';
 import {
   PublicCompetitionDetailView,
   type CompetitionDetail,
@@ -91,15 +92,14 @@ export default async function PublicCompetitionDetailPage({
 
   return (
     <div
-      className="min-h-screen pb-20 relative transition-all duration-500 text-[var(--text-primary)] bg-[var(--bg-main)]"
-      style={{
-        '--game-brand': gameConfig.brandColor,
-        '--game-accent': gameConfig.accentColor,
-      } as React.CSSProperties}
+      className="game-portal min-h-screen pb-20 relative transition-all duration-500 text-[var(--text-primary)] bg-[var(--bg-main)]"
+      data-game={gameConfig.slug}
+      style={getGamePortalStyle(gameConfig)}
     >
       <GameSubNavbar game={gameConfig} activeSection="organizaciones" />
 
-      <div className="relative w-full min-h-screen">
+      <div className="game-portal-stage relative w-full min-h-screen">
+        <GamePortalBackdrop game={gameConfig} />
         <div className="standard-page-wrapper pt-0">
           <PublicCompetitionDetailView
             gameSlug={gameSlug}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { CompetitionData, CompetitionTeamData } from '@/app/actions/competitions';
@@ -15,10 +16,20 @@ import { FixtureGenerator } from './fixture-generator';
 import { FixtureScheduleView } from '@/components/tournaments/fixture-schedule-view';
 import { ClassificationView } from '@/components/tournaments/classification-view';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { DataTable, type ColumnDef } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
-  Trophy, Calendar, Shield, Settings, Users, Plus, Trash2, Activity, Zap, Check, UserCheck
+  ManagementHero,
+  ManagementMetrics,
+  ManagementSection,
+  ManagementTabs,
+  MetricCard,
+  type ManagementTab,
+} from '@/components/dashboard/management-ui';
+import {
+  Trophy, Calendar, Shield, Settings, Users, Plus, Trash2, Activity, Zap, Check, UserCheck,
+  ArrowLeft, Clock3, Gamepad2, ListChecks, PlayCircle, ExternalLink, AlertTriangle
 } from 'lucide-react';
 
 interface CompetitionTabsProps {
@@ -79,7 +90,10 @@ export function CompetitionTabs({
   const pathname = usePathname();
 
   // Persistir la pestaña activa en la URL (?tab=...)
-  const activeTab = (searchParams.get('tab') as CompetitionTabType) || 'dashboard';
+  const requestedTab = searchParams.get('tab');
+  const activeTab: CompetitionTabType = ['dashboard', 'fixture', 'standings', 'teams', 'settings'].includes(requestedTab ?? '')
+    ? requestedTab as CompetitionTabType
+    : 'dashboard';
 
   const setActiveTab = (tab: CompetitionTabType) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -88,6 +102,8 @@ export function CompetitionTabs({
   };
 
   const [selectedTeamToEnroll, setSelectedTeamToEnroll] = useState<string>('');
+  const [teamToRemove, setTeamToRemove] = useState<CompetitionTeamData | null>(null);
+  const [statusToApply, setStatusToApply] = useState<CompetitionStatus | null>(null);
   const [isPending, startTransition] = useTransition();
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
@@ -136,29 +152,30 @@ export function CompetitionTabs({
   };
 
   // 2. Retirar Equipo
-  const handleRemoveTeam = (teamId: string, teamName: string) => {
-    startOperation(`Retiro de Equipo: ${teamName}`);
-    startTransition(async () => {
-      const res = await removeEnrolledTeamAction(competition.id, teamId);
-      if (res.success) {
-        endSuccess(res.message || 'Equipo retirado.');
-      } else {
-        endError(res.error || 'Error al retirar equipo.');
-      }
-    });
+  const handleRemoveTeam = async () => {
+    if (!teamToRemove) return;
+    startOperation(`Retiro de participante: ${teamToRemove.team_name}`);
+    const res = await removeEnrolledTeamAction(competition.id, teamToRemove.team_id);
+    if (!res.success) {
+      const message = res.error || 'Error al retirar participante.';
+      endError(message);
+      throw new Error(message);
+    }
+    endSuccess(res.message || 'Participante retirado correctamente.');
+    setTeamToRemove(null);
   };
 
   // 3. Cambiar Estado
-  const handleStatusChange = (newStatus: CompetitionStatus) => {
+  const handleStatusChange = async (newStatus: CompetitionStatus) => {
     startOperation(`Cambio de Estado a: ${newStatus}`);
-    startTransition(async () => {
-      const res = await updateCompetitionStatusAction(competition.id, newStatus);
-      if (res.success) {
-        endSuccess(res.message || 'Estado actualizado.');
-      } else {
-        endError(res.error || 'Error al actualizar estado.');
-      }
-    });
+    const res = await updateCompetitionStatusAction(competition.id, newStatus);
+    if (!res.success) {
+      const message = res.error || 'Error al actualizar estado.';
+      endError(message);
+      throw new Error(message);
+    }
+    endSuccess(res.message || 'Estado actualizado.');
+    setStatusToApply(null);
   };
 
   // Standings calculation
@@ -208,157 +225,121 @@ export function CompetitionTabs({
     (t) => !enrolledSet.has(t.id) && (t.game_slug === competition.game_slug || !t.game_slug)
   );
 
-  const tabButtons = [
-    { id: 'dashboard', label: '1. Dashboard (Resumen)', icon: Activity, color: '#A855F7' },
-    { id: 'fixture', label: '2. Fixture y Partidos', icon: Calendar, color: '#00F0FF' },
-    { id: 'standings', label: '3. Tabla de Posiciones', icon: Trophy, color: '#F59E0B' },
-    { id: 'teams', label: `4. Inscripción de Clubes (${enrolledTeams.length})`, icon: Users, color: '#10B981' },
-    { id: 'settings', label: '5. Configuración y Estado', icon: Settings, color: '#EF4444' },
+  const tabButtons: ManagementTab<CompetitionTabType>[] = [
+    { id: 'dashboard', label: 'Resumen operativo', shortLabel: 'Resumen', icon: Activity, tone: 'violet' },
+    { id: 'fixture', label: 'Fixture y partidos', shortLabel: 'Fixture', icon: Calendar, count: matches.length, tone: 'cyan' },
+    { id: 'standings', label: 'Clasificación', shortLabel: 'Tabla', icon: Trophy, tone: 'gold' },
+    { id: 'teams', label: isIndividual ? 'Atletas inscritos' : 'Clubes inscritos', shortLabel: 'Inscritos', icon: Users, count: enrolledTeams.length, tone: 'emerald' },
+    { id: 'settings', label: 'Configuración', shortLabel: 'Ajustes', icon: Settings, tone: 'crimson' },
   ];
 
+  const participantColumns: ColumnDef<CompetitionTeamData>[] = [
+    {
+      header: isIndividual ? 'Atleta' : 'Club',
+      accessorKey: 'team_name',
+      sortable: true,
+      cell: (row) => <div><strong className="text-[var(--text-heading)]">{row.team_name}</strong><span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">{row.team_tag || 'Sin identificador'}</span></div>,
+    },
+    { header: 'Estado', accessorKey: 'status', sortable: true, cell: (row) => <span className="competition-status-pill"><Check className="size-3" />{row.status}</span> },
+    { header: 'Inscripción', accessorKey: 'enrolled_at', sortable: true, cell: (row) => new Date(row.enrolled_at).toLocaleDateString('es-CL') },
+  ];
+
+  const competitionStatusLabel = competition.status === 'Activo' ? 'En curso' : competition.status;
+
   return (
-    <div className="space-y-6">
+    <div className="competition-workspace">
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
-      {/* SISTEMA DE 5 PESTAÑAS HORIZONTALES (ESTILO ESPORTS CON BORDES NEÓN) */}
-      <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3 overflow-x-auto scrollbar-none font-mono">
-        {tabButtons.map((tb) => {
-          const isActive = activeTab === tb.id;
-          const Icon = tb.icon;
-          return (
-            <button
-              key={tb.id}
-              onClick={() => setActiveTab(tb.id as CompetitionTabType)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 border ${
-                isActive
-                  ? 'bg-[var(--bg-main)] shadow-xl scale-[1.02]'
-                  : 'bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-card)] hover:border-[var(--border-card-hover)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
-              }`}
-              style={{
-                borderColor: isActive ? tb.color : undefined,
-                boxShadow: isActive ? `0 0 15px color-mix(in srgb, ${tb.color} 30%, transparent)` : undefined,
-                color: isActive ? tb.color : undefined,
-              }}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tb.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      <ConfirmModal
+        isOpen={Boolean(teamToRemove)}
+        onClose={() => setTeamToRemove(null)}
+        onConfirm={handleRemoveTeam}
+        title={`Retirar ${isIndividual ? 'atleta' : 'club'}`}
+        description={`${teamToRemove?.team_name ?? 'Este participante'} dejará de formar parte de la competencia.`}
+        confirmText="Confirmar retiro"
+        variant="danger"
+        consequences={['Se quitará del listado de participantes.', 'El fixture existente no se regenerará automáticamente.']}
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(statusToApply)}
+        onClose={() => setStatusToApply(null)}
+        onConfirm={() => statusToApply ? handleStatusChange(statusToApply) : undefined}
+        title="Cambiar estado de competencia"
+        description={`La competencia pasará de ${competition.status} a ${statusToApply ?? ''}.`}
+        confirmText={`Cambiar a ${statusToApply ?? ''}`}
+        variant={statusToApply === 'Deshabilitado' ? 'danger' : 'warning'}
+        confirmationText={statusToApply === 'Deshabilitado' ? competition.name : undefined}
+        consequences={statusToApply === 'Deshabilitado' ? ['La competencia dejará de estar operativa.', 'Los datos se conservarán mediante eliminación lógica.'] : []}
+      />
+
+      <ManagementHero
+        eyebrow="Centro de competencia"
+        title={competition.name}
+        description={`${gameConfig.name} · ${competition.mode_format} · ${isIndividual ? 'modalidad individual' : 'modalidad por equipos'}`}
+        icon={Gamepad2}
+        tone="violet"
+        badge={competitionStatusLabel}
+        actions={
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Link href="/dashboard/competencias" className="ui-button ui-button-outline inline-flex h-10 w-full items-center justify-center gap-2 px-4 text-sm font-semibold sm:w-auto"><ArrowLeft className="size-4" />Competencias</Link>
+            <Link href={`/dashboard/matchday?competition=${competition.id}`} className="ui-button ui-button-primary inline-flex h-10 w-full items-center justify-center gap-2 px-4 text-sm font-bold sm:w-auto"><PlayCircle className="size-4" />Ir a Matchday<ExternalLink className="size-3" /></Link>
+          </div>
+        }
+      >
+        <div className="competition-hero-facts">
+          <span><Calendar className="size-3.5" />Inicio <strong>{new Date(competition.fecha_inicio).toLocaleDateString('es-CL')}</strong></span>
+          <span><Clock3 className="size-3.5" />Término <strong>{competition.fecha_termino ? new Date(competition.fecha_termino).toLocaleDateString('es-CL') : 'Por definir'}</strong></span>
+          <span><Shield className="size-3.5" />Organiza <strong>{competition.organizer_name || 'Organización asignada'}</strong></span>
+        </div>
+      </ManagementHero>
+
+      <ManagementMetrics>
+        <MetricCard label={isIndividual ? 'Atletas' : 'Clubes'} value={enrolledTeams.length} hint={`${isIndividual ? availableUsers.length : availableToEnroll.length} disponibles`} icon={Users} tone="emerald" />
+        <MetricCard label="Partidos" value={totalMatches} hint={`${pendingMatches} pendientes`} icon={Calendar} tone="cyan" />
+        <MetricCard label="Completado" value={`${progressPercent}%`} hint={`${playedMatches} resultados cerrados`} icon={ListChecks} tone="violet" />
+        <MetricCard label="Estado" value={competitionStatusLabel} hint={competition.mode_format} icon={Zap} tone="gold" />
+      </ManagementMetrics>
+
+      <ManagementTabs tabs={tabButtons} activeTab={activeTab} onChange={setActiveTab} label="Módulos de la competencia" />
 
       {/* 📌 PESTAÑA 1: DASHBOARD (RESUMEN) */}
       {activeTab === 'dashboard' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in duration-200">
-          {/* Card 1: Reglas y Sistema */}
-          <Card className="p-5 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-card)] space-y-3 shadow-xl">
-            <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-2.5">
-              <h3 className="text-xs font-black uppercase text-purple-400 tracking-wider flex items-center gap-2">
-                <Shield className="w-4 h-4 text-purple-400" />
-                Reglas y Sistema
-              </h3>
-              <span className="text-[10px] font-mono text-[var(--accent-cyan)] font-bold uppercase">eSports Spec</span>
-            </div>
-            <div className="space-y-2 text-xs font-mono">
-              <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                <span className="text-[var(--text-muted)]">Modalidad:</span>
-                <strong className="text-[var(--text-heading)] bg-[var(--bg-main)] px-2 py-0.5 rounded border border-[var(--border-card)]">{competition.mode_format}</strong>
-              </div>
-              <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                <span className="text-[var(--text-muted)]">Tipo de Torneo:</span>
-                <strong className="text-[var(--text-heading)] bg-[var(--bg-main)] px-2 py-0.5 rounded border border-[var(--border-card)] uppercase">
-                  {competition.mode_format?.toLowerCase().includes('playoff') ? 'PLAYOFF' : competition.mode_format?.toLowerCase().includes('hibrid') ? 'LIGA HÍBRIDA' : 'LIGA'}
-                </strong>
-              </div>
-              <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                <span className="text-[var(--text-muted)]">Plataforma Oficial:</span>
-                <strong className="text-[var(--accent-cyan)] font-bold">CROSSPLAY</strong>
-              </div>
-              
-              {(competition.mode_format || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes('HIBRID') && (
-                <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                  <span className="text-[var(--text-muted)]">Clasifican a Playoffs:</span>
-                  <strong className="text-amber-400 font-bold">Top {competition.qualifiers_per_group || 2} de cada grupo</strong>
-                </div>
-              )}
+        <div className="competition-overview-grid animate-in fade-in duration-200">
+          <ManagementSection title="Reglas y sistema" description="Configuración competitiva vigente" icon={Shield} tone="violet">
+            <dl className="competition-detail-list">
+              <div><dt>Modalidad</dt><dd>{competition.mode_format}</dd></div>
+              <div><dt>Tipo de torneo</dt><dd>{competition.mode_format?.toLowerCase().includes('playoff') ? 'Playoff' : competition.mode_format?.toLowerCase().includes('hibrid') ? 'Liga híbrida' : 'Liga'}</dd></div>
+              <div><dt>Formato de partido</dt><dd>{competition.match_mode === 'IdaVuelta' ? 'Ida y vuelta' : 'Partido único'}</dd></div>
+              <div><dt>Mercado</dt><dd>{competition.transfer_market_mode?.replaceAll('_', ' ')}</dd></div>
+            </dl>
+          </ManagementSection>
 
-              <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                <span className="text-[var(--text-muted)]">Formato de Partido:</span>
-                <strong className="text-emerald-400 font-bold">
-                  {competition.match_mode === 'IdaVuelta' ? 'Ida y Vuelta' : 'Partido Único'}
-                </strong>
-              </div>
-              <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                <span className="text-[var(--text-muted)]">Auto-Avance:</span>
-                <strong className="text-rose-400 font-bold">Manual</strong>
-              </div>
+          <ManagementSection title="Progreso competitivo" description={`${playedMatches} de ${totalMatches} partidos finalizados`} icon={Activity} tone="cyan">
+            <div className="competition-progress" aria-label={`${progressPercent}% completado`}>
+              <div className="competition-progress-copy"><strong>{progressPercent}%</strong><span>{pendingMatches ? `${pendingMatches} partidos pendientes` : totalMatches ? 'Calendario completado' : 'Fixture aún no generado'}</span></div>
+              <div className="competition-progress-track"><span style={{ width: `${progressPercent}%` }} /></div>
             </div>
-          </Card>
+          </ManagementSection>
 
-          {/* Card 2: Progreso de Competición */}
-          <Card className="p-5 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-card)] space-y-3 shadow-xl flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-2.5">
-                <h3 className="text-xs font-black uppercase text-[var(--accent-cyan)] tracking-wider flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-[var(--accent-cyan)]" />
-                  Progreso de Competición
-                </h3>
-                <span className="text-[10px] font-mono text-emerald-400 font-bold">{progressPercent}%</span>
-              </div>
-              <div className="space-y-3 mt-3">
-                <div className="flex items-center justify-between text-xs font-mono font-bold">
-                  <span className="text-[var(--text-secondary)]">Progreso Total:</span>
-                  <span className="text-[var(--accent-cyan)]">{playedMatches} / {totalMatches} Partidos Jugados</span>
-                </div>
-                <div className="w-full h-3 rounded-full bg-[var(--bg-main)] border border-[var(--border-card)] overflow-hidden relative">
-                  <div className="h-full bg-gradient-to-r from-purple-500 via-cyan-400 to-emerald-400 transition-all duration-500 rounded-full" style={{ width: `${progressPercent}%` }} />
-                </div>
-              </div>
+          <ManagementSection title="Próximo paso" description="Acción sugerida para mantener la operación al día" icon={Zap} tone="emerald">
+            <div className="competition-next-step">
+              <div className="competition-next-step-icon">{totalMatches === 0 ? <Calendar className="size-5" /> : pendingMatches > 0 ? <PlayCircle className="size-5" /> : <Trophy className="size-5" />}</div>
+              <div><strong>{totalMatches === 0 ? 'Generar el fixture' : pendingMatches > 0 ? 'Gestionar la jornada' : 'Cerrar la competencia'}</strong><p>{totalMatches === 0 ? 'Define fechas y cruces para habilitar el calendario.' : pendingMatches > 0 ? 'Revisa resultados y actas pendientes en Matchday.' : 'Todos los encuentros registrados están finalizados.'}</p></div>
             </div>
-            <div className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-main)] p-2 rounded-lg border border-[var(--border-card)] mt-2">
-              💡 Actualización automática tras el visto bueno de actas en Matchday.
-            </div>
-          </Card>
-
-          {/* Card 3: Métricas Rápidas */}
-          <Card className="p-5 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-card)] space-y-3 shadow-xl">
-            <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-2.5">
-              <h3 className="text-xs font-black uppercase text-emerald-400 tracking-wider flex items-center gap-2">
-                <Zap className="w-4 h-4 text-emerald-400" />
-                Métricas Rápidas
-              </h3>
-              <span className="text-[10px] font-mono text-purple-400 font-bold">{enrolledTeams.length} Clubes</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
-              <div className="p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)]">
-                <span className="text-[10px] text-[var(--text-muted)] block uppercase">Jugados</span>
-                <strong className="text-emerald-400 text-lg font-black">{playedMatches}</strong>
-              </div>
-              <div className="p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)]">
-                <span className="text-[10px] text-[var(--text-muted)] block uppercase">Pendientes</span>
-                <strong className="text-amber-400 text-lg font-black">{pendingMatches}</strong>
-              </div>
-              <div className="p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)]">
-                <span className="text-[10px] text-[var(--text-muted)] block uppercase">Completado</span>
-                <strong className="text-[var(--accent-cyan)] text-lg font-black">{progressPercent}%</strong>
-              </div>
-            </div>
-          </Card>
+            <Button type="button" variant="outline" className="mt-4 w-full" onClick={() => setActiveTab(totalMatches === 0 ? 'fixture' : pendingMatches > 0 ? 'fixture' : 'settings')}>Continuar operación</Button>
+          </ManagementSection>
         </div>
       )}
 
       {/* ⚙️ PESTAÑA 2: FIXTURE Y PARTIDOS (MOMENTO FIXTURE OFICIAL & SCHEDULE VIEW SIN FILTROS REPETIDOS) */}
       {activeTab === 'fixture' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          <FixtureGenerator competition={competition} enrolledTeams={enrolledTeams} matches={matches} />
+          <ManagementSection title="Generación del fixture" description="Configura la estructura, fechas y cruces oficiales" icon={Settings} tone="violet">
+            <FixtureGenerator competition={competition} enrolledTeams={enrolledTeams} matches={matches} />
+          </ManagementSection>
 
-          <div className="pt-4 border-t border-[var(--border-card)] space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase text-[var(--accent-cyan)] tracking-wider flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[var(--accent-cyan)]" />
-                CALENDARIO & JORNADAS DE ESTA COMPETENCIA
-              </h3>
-            </div>
+          <ManagementSection title="Calendario y jornadas" description="Consulta el despliegue operativo de todos los encuentros" icon={Calendar} tone="cyan">
             <FixtureScheduleView
               game={gameConfig}
               initialTournName={competition.name}
@@ -368,13 +349,13 @@ export function CompetitionTabs({
               hideSearchFilter={true}
               hideHeader={true}
             />
-          </div>
+          </ManagementSection>
         </div>
       )}
 
       {/* 🏆 PESTAÑA 3: TABLA DE POSICIONES (STANDINGS VIEW OFICIAL DE CLASIFICACIÓN SIN FILTROS REPETIDOS) */}
       {activeTab === 'standings' && (
-        <div className="animate-in fade-in duration-200 space-y-4">
+        <ManagementSection title="Tabla de posiciones" description="Rendimiento, puntos y diferencia de cada participante" icon={Trophy} tone="gold" className="animate-in fade-in duration-200">
           <ClassificationView
             game={gameConfig}
             initialTournName={competition.name}
@@ -384,34 +365,29 @@ export function CompetitionTabs({
             hideSearchFilter={true}
             hideHeader={true}
           />
-        </div>
+        </ManagementSection>
       )}
 
       {/* 🛡️ PESTAÑA 4: INSCRIPCIÓN DE CLUBES O ATLETAS INDIVIDUALES */}
       {activeTab === 'teams' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          {/* Formulario Selector */}
-          <Card className="p-5 bg-[var(--bg-card)] backdrop-blur-md border border-emerald-500/40 space-y-3 shadow-2xl">
-            <h3 className="text-xs font-black uppercase text-emerald-400 flex items-center gap-2">
-              {isIndividual ? <UserCheck className="w-4 h-4 text-amber-400" /> : <Plus className="w-4 h-4 text-emerald-400" />}
-              {isIndividual
-                ? `Inscribir Atleta / Jugador Directo (Modalidad Individual ${competition.mode_format})`
-                : `Inscribir Club Existente (Modalidad Equipos ${competition.mode_format})`}
-            </h3>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3">
+          <ManagementSection
+            title={isIndividual ? 'Inscribir atleta' : 'Inscribir club'}
+            description={`Agrega un participante disponible a ${competition.name}`}
+            icon={isIndividual ? UserCheck : Plus}
+            tone="emerald"
+          >
+            <div className="competition-enrollment-control">
               {isIndividual ? (
                 <select
                   value={selectedTeamToEnroll}
                   onChange={(e) => setSelectedTeamToEnroll(e.target.value)}
-                  className="w-full sm:flex-1 p-2.5 rounded-xl input-theme font-mono text-xs outline-none focus:border-amber-500"
+                  className="ui-control w-full min-w-0 flex-1 px-3 text-xs"
                 >
-                  <option value="" className="bg-[#0b101b] text-slate-100">
-                    -- Seleccionar Jugador / Atleta Disponible ({availableUsers.length} disponibles) --
-                  </option>
+                  <option value="">Seleccionar atleta ({availableUsers.length} disponibles)</option>
                   {availableUsers.map((u) => (
-                    <option key={u.id} value={u.id} className="bg-[#0b101b] text-slate-100">
-                      👤 {u.name} ({u.gamertag || 'Sin Gamertag'}) — Pos: {u.position || 'General'}
+                    <option key={u.id} value={u.id}>
+                      {u.name} · {u.gamertag || 'Sin gamertag'} · {u.position || 'General'}
                     </option>
                   ))}
                 </select>
@@ -419,12 +395,12 @@ export function CompetitionTabs({
                 <select
                   value={selectedTeamToEnroll}
                   onChange={(e) => setSelectedTeamToEnroll(e.target.value)}
-                  className="w-full sm:flex-1 p-2.5 rounded-xl input-theme font-mono text-xs outline-none focus:border-emerald-500"
+                  className="ui-control w-full min-w-0 flex-1 px-3 text-xs"
                 >
-                  <option value="" className="bg-[#0b101b] text-slate-100">-- Seleccionar Equipo de {gameConfig.name} ({availableToEnroll.length} disponibles) --</option>
+                  <option value="">Seleccionar club de {gameConfig.name} ({availableToEnroll.length} disponibles)</option>
                   {availableToEnroll.map((t) => (
-                    <option key={t.id} value={t.id} className="bg-[#0b101b] text-slate-100">
-                      🛡️ {t.name} [{t.tag}] — ({t.platform})
+                    <option key={t.id} value={t.id}>
+                      {t.name} [{t.tag}] · {t.platform || 'Plataforma no informada'}
                     </option>
                   ))}
                 </select>
@@ -433,98 +409,72 @@ export function CompetitionTabs({
               <Button
                 onClick={isIndividual ? handleEnrollAthlete : handleEnrollTeam}
                 disabled={isPending || !selectedTeamToEnroll}
-                className={`w-full sm:w-auto font-black text-xs px-6 py-2.5 rounded-xl shadow-lg flex items-center gap-2 ${
-                  isIndividual
-                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-slate-950'
-                }`}
+                className="w-full gap-2 font-black sm:w-auto"
               >
                 <Plus className="w-4 h-4" />
                 <span>{isIndividual ? 'Inscribir Atleta' : 'Inscribir Club'}</span>
               </Button>
             </div>
-          </Card>
+          </ManagementSection>
 
-          {/* Grid de Clubes Confirmados */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {enrolledTeams.map((t) => (
-              <div key={t.id} className="p-3.5 rounded-xl bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-card)] flex items-center justify-between shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[var(--bg-main)] border border-emerald-500/40 flex items-center justify-center font-black text-xs text-emerald-400 shadow-md">
-                    {t.team_tag || 'TEAM'}
-                  </div>
-                  <div>
-                    <h4 className="font-black text-xs text-[var(--text-heading)]">{t.team_name}</h4>
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold flex items-center gap-1">
-                      <Check className="w-3 h-3 text-emerald-400" />
-                      CONFIRMADO
-                    </span>
-                  </div>
-                </div>
-
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleRemoveTeam(t.team_id, t.team_name)}
-                  className="text-xs text-rose-400 hover:bg-rose-950 p-2"
-                  title="Retirar equipo"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ))}
-          </div>
+          <ManagementSection title={isIndividual ? 'Atletas confirmados' : 'Clubes confirmados'} description={`${enrolledTeams.length} participantes habilitados para competir`} icon={Users} tone="emerald">
+            <DataTable
+              columns={participantColumns}
+              data={enrolledTeams}
+              searchField={(row) => `${row.team_name} ${row.team_tag || ''}`}
+              searchPlaceholder={isIndividual ? 'Buscar atleta...' : 'Buscar club...'}
+              emptyMessage="Aún no existen participantes inscritos en esta competencia."
+              defaultPageSize={10}
+              ariaLabel="Participantes inscritos en la competencia"
+              actions={(row) => <Button size="sm" variant="ghost" onClick={() => setTeamToRemove(row)} className="gap-1.5 text-[var(--accent-crimson)]" title="Retirar participante"><Trash2 className="size-3.5" /><span className="hidden sm:inline">Retirar</span></Button>}
+            />
+          </ManagementSection>
         </div>
       )}
 
       {/* ⚙️ PESTAÑA 5: CONFIGURACIÓN Y ESTADO */}
       {activeTab === 'settings' && (
-        <Card className="p-6 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-card)] space-y-4 shadow-2xl animate-in fade-in duration-200">
-          <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
-            <Settings className="w-4 h-4 text-amber-400" />
-            Configuraciones Administrativas del Torneo
-          </h3>
-
-          <div className="space-y-4">
-            <label className="text-xs font-mono text-[var(--text-muted)] block">
-              Cambiar Estado General de la Competencia (Soft Delete & Transiciones):
-            </label>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="competition-settings-grid animate-in fade-in duration-200">
+          <ManagementSection title="Ciclo de vida" description="Controla la visibilidad y operación general" icon={Settings} tone="gold">
+            <div className="competition-status-actions">
               <Button
-                onClick={() => handleStatusChange('Borrador')}
+                onClick={() => setStatusToApply('Borrador')}
                 disabled={competition.status === 'Borrador'}
-                className="bg-amber-950/80 text-amber-300 border border-amber-500/40 hover:bg-amber-900 text-xs font-black py-3 rounded-xl"
+                variant="outline"
               >
-                Set a BORRADOR
+                Borrador
               </Button>
 
               <Button
-                onClick={() => handleStatusChange('Activo')}
+                onClick={() => setStatusToApply('Activo')}
                 disabled={competition.status === 'Activo'}
-                className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900 text-xs font-black py-3 rounded-xl"
+                variant="outline"
               >
-                Set a ACTIVO
+                Activo
               </Button>
 
               <Button
-                onClick={() => handleStatusChange('Finalizado')}
+                onClick={() => setStatusToApply('Finalizado')}
                 disabled={competition.status === 'Finalizado'}
-                className="bg-purple-950/80 text-purple-300 border border-purple-500/40 hover:bg-purple-900 text-xs font-black py-3 rounded-xl"
+                variant="outline"
               >
-                Set a FINALIZADO
+                Finalizado
               </Button>
 
               <Button
-                onClick={() => handleStatusChange('Deshabilitado')}
+                onClick={() => setStatusToApply('Deshabilitado')}
                 disabled={competition.status === 'Deshabilitado'}
-                className="bg-rose-950/80 text-rose-300 border border-rose-500/40 hover:bg-rose-900 text-xs font-black py-3 rounded-xl"
+                variant="danger"
               >
-                DESHABILITAR (Soft Delete)
+                Deshabilitar
               </Button>
             </div>
-          </div>
-        </Card>
+          </ManagementSection>
+
+          <ManagementSection title="Zona sensible" description="Estas acciones afectan la operación de todos los participantes" icon={AlertTriangle} tone="crimson">
+            <div className="competition-danger-note"><AlertTriangle className="size-5" /><div><strong>Protección activa</strong><p>Deshabilitar requiere escribir el nombre exacto de la competencia. Los datos no se eliminan y pueden recuperarse.</p></div></div>
+          </ManagementSection>
+        </div>
       )}
     </div>
   );

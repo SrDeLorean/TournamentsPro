@@ -35,6 +35,7 @@ export interface UserRow {
   rating: number;
   status: string;
   avatar_url: string | null;
+  banner_url: string | null;
   organization_id: string | null;
   is_banned: number;
   ban_reason: string | null;
@@ -158,6 +159,19 @@ export interface UserProfile {
   rating: number;
   status: string;
   avatarUrl: string | null;
+  bannerUrl: string | null;
+  country: string | null;
+  bio: string | null;
+  socialMedia: {
+    whatsapp?: string;
+    instagram?: string;
+    twitch?: string;
+    youtube?: string;
+    tiktok?: string;
+    discord?: string;
+    twitter?: string;
+    website?: string;
+  };
   organizationId: string | null;
   isBanned: boolean;
   banReason: string | null;
@@ -350,6 +364,19 @@ export function mapUserRowToProfile(row: UserRow): UserProfile {
     rating: row.rating,
     status: row.status,
     avatarUrl: row.avatar_url,
+    bannerUrl: row.banner_url,
+    country: row.country || null,
+    bio: row.bio || null,
+    socialMedia: {
+      whatsapp: row.whatsapp || undefined,
+      instagram: row.instagram || undefined,
+      twitch: row.twitch || undefined,
+      youtube: row.youtube || undefined,
+      tiktok: row.tiktok || undefined,
+      discord: row.discord || undefined,
+      twitter: row.twitter || undefined,
+      website: row.website || undefined,
+    },
     organizationId: row.organization_id,
     isBanned: Boolean(row.is_banned),
     banReason: row.ban_reason,

@@ -1,21 +1,26 @@
 {
-  "generated_at": "2026-08-28T00:10:25.905314+00:00",
+  "generated_at": "2026-08-28T03:30:27.833388+00:00",
   "nodes": {
     "src_app_dashboard_competencias_competitions_client": {
-      "code_fingerprint": "cd5ac53edd258263eac8b9ebe2d25f5cabe6b5ee742e064818c59e6318199b7e",
+      "code_fingerprint": "13464c2ea034e557eb9595912e81d4c277fcf0bd5832e6352328f0a6a33c7ed9",
       "label": "competitions-client.tsx",
-      "last": "2026-08-28T00:08:30.881789+00:00",
+      "last": "2026-08-28T00:19:59.944750+00:00",
       "provenance": [
+        {
+          "date": "2026-08-28T00:19:59.944750+00:00",
+          "outcome": "useful",
+          "q": "quiero que mejores los table, modal, eliminar, alertas que se generan en la gestion global."
+        },
         {
           "date": "2026-08-28T00:08:30.881789+00:00",
           "outcome": "useful",
           "q": "Por ultimo, necesito que todas las vistas de gestion global tengan la misma esencia y estilo. Idealmente manten el formato del centro de moderacion que generaste. Idealmente generar elementos UI para ir replicandolo en las otras vistas y adaptando los mismos o generar compuestos para satisfacer a cada vista. IDEALMENTE poder ajustar todas las vista mediante el archivo css o los UI si necesita ajustes menores. Por lo tanto, mejora la generacion (ya avansaste), el despliege de los componentes interiores y los mismos componentes."
         }
       ],
-      "score": 0.999969241,
+      "score": 1.993713597,
       "source_file": "src/app/dashboard/competencias/competitions-client.tsx",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     },
     "src_app_moderacion_page": {
       "code_fingerprint": "fc355d1dc44bae22d2ddf94f89533c189f9fec1b5310aeb63ffceec83af1f352",
@@ -28,26 +33,31 @@
           "q": "Actualizar el grafo y mejorar la página /moderacion y sus componentes internos"
         }
       ],
-      "score": 0.99972176,
+      "score": 0.996518267,
       "source_file": "src/app/moderacion/page.tsx",
       "status": "tentative",
       "uses": 1
     },
     "src_components_admin_games_management_view": {
-      "code_fingerprint": "a0860257505562451fe6cb910405b881dfc87b76903133a380564bc5457c4e2d",
+      "code_fingerprint": "39251971075e4b9f84a19c94f317b0034ed43f80e50a6a04b6e1095285c23ce3",
       "label": "games-management-view.tsx",
-      "last": "2026-08-28T00:08:30.881789+00:00",
+      "last": "2026-08-28T00:19:59.944750+00:00",
       "provenance": [
+        {
+          "date": "2026-08-28T00:19:59.944750+00:00",
+          "outcome": "useful",
+          "q": "quiero que mejores los table, modal, eliminar, alertas que se generan en la gestion global."
+        },
         {
           "date": "2026-08-28T00:08:30.881789+00:00",
           "outcome": "useful",
           "q": "Por ultimo, necesito que todas las vistas de gestion global tengan la misma esencia y estilo. Idealmente manten el formato del centro de moderacion que generaste. Idealmente generar elementos UI para ir replicandolo en las otras vistas y adaptando los mismos o generar compuestos para satisfacer a cada vista. IDEALMENTE poder ajustar todas las vista mediante el archivo css o los UI si necesita ajustes menores. Por lo tanto, mejora la generacion (ya avansaste), el despliege de los componentes interiores y los mismos componentes."
         }
       ],
-      "score": 0.999969241,
+      "score": 1.993713597,
       "source_file": "src/components/admin/games-management-view.tsx",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     },
     "src_components_admin_moderation_dashboard_view": {
       "code_fingerprint": "56df0eb42608f8711deeac385a1e324e879be171a8cbeb492908ff534783fa09",
@@ -60,7 +70,7 @@
           "q": "Por ultimo, necesito que todas las vistas de gestion global tengan la misma esencia y estilo. Idealmente manten el formato del centro de moderacion que generaste. Idealmente generar elementos UI para ir replicandolo en las otras vistas y adaptando los mismos o generar compuestos para satisfacer a cada vista. IDEALMENTE poder ajustar todas las vista mediante el archivo css o los UI si necesita ajustes menores. Por lo tanto, mejora la generacion (ya avansaste), el despliege de los componentes interiores y los mismos componentes."
         }
       ],
-      "score": 0.999969241,
+      "score": 0.996764954,
       "source_file": "src/components/admin/moderation-dashboard-view.tsx",
       "status": "tentative",
       "uses": 1
@@ -76,7 +86,7 @@
           "q": "Actualizar el grafo y mejorar la página /moderacion y sus componentes internos"
         }
       ],
-      "score": 0.99972176,
+      "score": 0.996518267,
       "source_file": "src/components/admin/moderation-dashboard-view.tsx",
       "status": "tentative",
       "uses": 1
@@ -92,7 +102,7 @@
           "q": "Actualizar el grafo y mejorar la página /moderacion y sus componentes internos"
         }
       ],
-      "score": 0.99972176,
+      "score": 0.996518267,
       "source_file": "src/components/chat/chat-system.tsx",
       "status": "tentative",
       "uses": 1
@@ -108,7 +118,7 @@
           "q": "Por ultimo, necesito que todas las vistas de gestion global tengan la misma esencia y estilo. Idealmente manten el formato del centro de moderacion que generaste. Idealmente generar elementos UI para ir replicandolo en las otras vistas y adaptando los mismos o generar compuestos para satisfacer a cada vista. IDEALMENTE poder ajustar todas las vista mediante el archivo css o los UI si necesita ajustes menores. Por lo tanto, mejora la generacion (ya avansaste), el despliege de los componentes interiores y los mismos componentes."
         }
       ],
-      "score": 0.999969241,
+      "score": 0.996764954,
       "source_file": "src/components/dashboard/management-ui.tsx",
       "status": "tentative",
       "uses": 1
@@ -124,7 +134,7 @@
           "q": "Actualizar el grafo y mejorar la página /moderacion y sus componentes internos"
         }
       ],
-      "score": 0.99972176,
+      "score": 0.996518267,
       "source_file": "src/components/dashboard/management-ui.tsx",
       "status": "tentative",
       "uses": 1
@@ -140,42 +150,100 @@
           "q": "Por ultimo, necesito que todas las vistas de gestion global tengan la misma esencia y estilo. Idealmente manten el formato del centro de moderacion que generaste. Idealmente generar elementos UI para ir replicandolo en las otras vistas y adaptando los mismos o generar compuestos para satisfacer a cada vista. IDEALMENTE poder ajustar todas las vista mediante el archivo css o los UI si necesita ajustes menores. Por lo tanto, mejora la generacion (ya avansaste), el despliege de los componentes interiores y los mismos componentes."
         }
       ],
-      "score": 0.999969241,
+      "score": 0.996764954,
       "source_file": "src/components/matches/matchday-report-view.tsx",
       "status": "tentative",
       "uses": 1
     },
-    "src_components_ui_data_table_datatable": {
-      "code_fingerprint": "53b9767cc5a1ac77ba71435451018fc43e694868ffabba516613c6ae550fd099",
-      "label": "DataTable()",
-      "last": "2026-08-27T23:53:05.292476+00:00",
+    "src_components_ui_confirm_modal_confirmmodal": {
+      "code_fingerprint": "65fbcf7c9f011207b02c2cce19eb985a9cfbab8d8f69d8b6c2f4405a7357df99",
+      "label": "ConfirmModal()",
+      "last": "2026-08-28T00:19:59.944750+00:00",
       "provenance": [
+        {
+          "date": "2026-08-28T00:19:59.944750+00:00",
+          "outcome": "useful",
+          "q": "quiero que mejores los table, modal, eliminar, alertas que se generan en la gestion global."
+        }
+      ],
+      "score": 0.996948643,
+      "source_file": "src/components/ui/confirm-modal.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_components_ui_crud_alert_crudalertbanner": {
+      "code_fingerprint": "c11dd281a2fbdf2393b14d5430eaec52fa9697b7cebea869507ad85e076e8074",
+      "label": "CrudAlertBanner()",
+      "last": "2026-08-28T00:19:59.944750+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-28T00:19:59.944750+00:00",
+          "outcome": "useful",
+          "q": "quiero que mejores los table, modal, eliminar, alertas que se generan en la gestion global."
+        }
+      ],
+      "score": 0.996948643,
+      "source_file": "src/components/ui/crud-alert.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_components_ui_data_table_datatable": {
+      "code_fingerprint": "6bc16b4ce40bb8b03a87b74442f4eb68f630a87785b72cf279101ec3fb54d467",
+      "label": "DataTable()",
+      "last": "2026-08-28T00:19:59.944750+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-28T00:19:59.944750+00:00",
+          "outcome": "useful",
+          "q": "quiero que mejores los table, modal, eliminar, alertas que se generan en la gestion global."
+        },
         {
           "date": "2026-08-27T23:53:05.292476+00:00",
           "outcome": "useful",
           "q": "Actualizar el grafo y mejorar la página /moderacion y sus componentes internos"
         }
       ],
-      "score": 0.99972176,
+      "score": 1.993466909,
       "source_file": "src/components/ui/data-table.tsx",
+      "status": "preferred",
+      "uses": 2
+    },
+    "src_components_ui_modal_modal": {
+      "code_fingerprint": "813cec06d50fdf1203e13a9280ef67597eef3a9113f0da4e97b20cbf90149c32",
+      "label": "Modal()",
+      "last": "2026-08-28T00:19:59.944750+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-28T00:19:59.944750+00:00",
+          "outcome": "useful",
+          "q": "quiero que mejores los table, modal, eliminar, alertas que se generan en la gestion global."
+        }
+      ],
+      "score": 0.996948643,
+      "source_file": "src/components/ui/modal.tsx",
       "status": "tentative",
       "uses": 1
     },
     "src_features_organizations_components_organizations_page_client": {
-      "code_fingerprint": "3b7bffdacc04603459df44fd54076d3ebdd2af92ea535c275de762763f68a1e5",
+      "code_fingerprint": "fe26260a23ce160d4f26febf97c2e051b7c1f5a2481501e99bfd48c4bee7f17b",
       "label": "organizations-page-client.tsx",
-      "last": "2026-08-28T00:08:30.881789+00:00",
+      "last": "2026-08-28T00:19:59.944750+00:00",
       "provenance": [
+        {
+          "date": "2026-08-28T00:19:59.944750+00:00",
+          "outcome": "useful",
+          "q": "quiero que mejores los table, modal, eliminar, alertas que se generan en la gestion global."
+        },
         {
           "date": "2026-08-28T00:08:30.881789+00:00",
           "outcome": "useful",
           "q": "Por ultimo, necesito que todas las vistas de gestion global tengan la misma esencia y estilo. Idealmente manten el formato del centro de moderacion que generaste. Idealmente generar elementos UI para ir replicandolo en las otras vistas y adaptando los mismos o generar compuestos para satisfacer a cada vista. IDEALMENTE poder ajustar todas las vista mediante el archivo css o los UI si necesita ajustes menores. Por lo tanto, mejora la generacion (ya avansaste), el despliege de los componentes interiores y los mismos componentes."
         }
       ],
-      "score": 0.999969241,
+      "score": 1.993713597,
       "source_file": "src/features/organizations/components/organizations-page-client.tsx",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     },
     "src_features_teams_components_teams_page_client": {
       "code_fingerprint": "c876a2514339852ec7344df446c92431de2b7c32b5f36c5c1cbc44ac044e0665",
@@ -188,7 +256,7 @@
           "q": "Por ultimo, necesito que todas las vistas de gestion global tengan la misma esencia y estilo. Idealmente manten el formato del centro de moderacion que generaste. Idealmente generar elementos UI para ir replicandolo en las otras vistas y adaptando los mismos o generar compuestos para satisfacer a cada vista. IDEALMENTE poder ajustar todas las vista mediante el archivo css o los UI si necesita ajustes menores. Por lo tanto, mejora la generacion (ya avansaste), el despliege de los componentes interiores y los mismos componentes."
         }
       ],
-      "score": 0.999969241,
+      "score": 0.996764954,
       "source_file": "src/features/teams/components/teams-page-client.tsx",
       "status": "tentative",
       "uses": 1
@@ -204,7 +272,7 @@
           "q": "Por ultimo, necesito que todas las vistas de gestion global tengan la misma esencia y estilo. Idealmente manten el formato del centro de moderacion que generaste. Idealmente generar elementos UI para ir replicandolo en las otras vistas y adaptando los mismos o generar compuestos para satisfacer a cada vista. IDEALMENTE poder ajustar todas las vista mediante el archivo css o los UI si necesita ajustes menores. Por lo tanto, mejora la generacion (ya avansaste), el despliege de los componentes interiores y los mismos componentes."
         }
       ],
-      "score": 0.999969241,
+      "score": 0.996764954,
       "source_file": "src/features/users/components/users-page-client.tsx",
       "status": "tentative",
       "uses": 1

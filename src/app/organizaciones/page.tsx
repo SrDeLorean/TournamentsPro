@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import OrganizationsPageClient from '@/features/organizations/components/organizations-page-client';
+import GlobalDirectoryPage from '@/components/public/global-directory-page';
 
 export const metadata: Metadata = {
   title: 'Organizaciones | TorneosPro',
-  description: 'Directorio y administración de organizaciones eSports.',
+  description: 'Directorio público de organizaciones y comunidades eSports.',
 };
 
 export default function OrganizationsPage() {
-  return <OrganizationsPageClient />;
+  return <GlobalDirectoryPage kind="organizations" />;
 }

@@ -525,6 +525,7 @@ export default function UsersModulePage() {
                 return (
                   <EsportsCard
                     key={user.id}
+                    entityType="user"
                     onClick={() => setSelectedPlayer(toPlayerData(user))}
                     title={user.name}
                     subtitle={`🎮 ${gameCfg?.name || 'FC 26'} | @${user.gamertag || user.name}`}

@@ -561,7 +561,7 @@ export function FixtureScheduleView({
   const emptyState = getEmptyStateMessage();
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-16">
+    <div className="fixture-schedule-view w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-16">
       {/* ── 1. ENCABEZADO PRINCIPAL (PageHeader) - PERMANENTE EN DOM ────────── */}
       {!hideHeader && (
         <PageHeader

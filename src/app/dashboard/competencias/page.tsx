@@ -2,7 +2,7 @@ import React from 'react';
 import { queryDB } from '@/lib/db';
 import { CompetitionData } from '@/app/actions/competitions';
 import { CompetitionsListClient } from './competitions-client';
-import { getServerUserSession } from '@/lib/auth-server';
+import { getServerUserSession, requireServerActor } from '@/lib/auth-server';
 
 export const revalidate = 0; // Dynamic RSC rendering
 
@@ -36,6 +36,7 @@ async function getOrganizerCompetitions(): Promise<CompetitionData[]> {
 }
 
 export default async function CompetitionsPage() {
+  await requireServerActor(['Administrador', 'Organizador']);
   const session = await getServerUserSession();
   const competitions = await getOrganizerCompetitions();
 

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import UsersPageClient from '@/features/users/components/users-page-client';
+import GlobalDirectoryPage from '@/components/public/global-directory-page';
 
 export const metadata: Metadata = {
   title: 'Atletas y usuarios | TorneosPro',
-  description: 'Directorio y gestión de atletas registrados en TorneosPro.',
+  description: 'Directorio público de atletas registrados en TorneosPro.',
 };
 
 export default function UsersPage() {
-  return <UsersPageClient />;
+  return <GlobalDirectoryPage kind="users" />;
 }

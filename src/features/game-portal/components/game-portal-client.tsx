@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 import Link from 'next/link';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { getSectionMetadata } from '@/lib/section-config';
@@ -10,8 +9,7 @@ import { GameSubNavbar, GameSection } from '@/components/layout/game-sub-navbar'
 import { PageHeader } from '@/components/ui/page-header';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
-import { TeamDirectory } from '@/components/teams/team-directory';
-import { PlayerProfileView, PlayerData } from '@/components/players/player-profile-view';
+import { PlayerData } from '@/components/players/player-profile-view';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,11 +17,11 @@ import { Avatar } from '@/components/ui/avatar';
 import { Flame } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useGamePlayers } from '@/features/game-portal/hooks/use-game-players';
-import { OrganizationDirectory } from '@/components/tournaments/organization-directory';
 import { NewUserMyTeamsView as UserMyTeamsView } from '@/components/user/new-user-my-teams';
 
 // ── Extracted Components ────────────────────────────────────────────────────
 import { GameHomeHero } from '@/components/game/game-home-hero';
+import { GamePortalBackdrop, getGamePortalStyle } from '@/components/game/game-portal-backdrop';
 import { PlayerCardGrid } from '@/components/game/player-card-grid';
 import {
   PlayerStatsSection,
@@ -35,51 +33,20 @@ import {
   PlayerFichaCrudSection,
 } from '@/components/game/game-sections';
 
-// ── Lazy-loaded Heavy Components (P3: dynamic imports) ──────────────────────
-const UserProfileSettingsView = dynamic(
-  () => import('@/components/user/user-profile-settings-view').then(m => ({ default: m.UserProfileSettingsView })),
-  { loading: () => <div className="skeleton h-96 rounded-xl" /> }
-);
+const UserProfileSettingsView = dynamic(() => import('@/components/user/user-profile-settings-view').then(m => ({ default: m.UserProfileSettingsView })));
+const ClubSettingsView = dynamic(() => import('@/components/club/club-settings-view').then(m => ({ default: m.ClubSettingsView })));
+const TransferMarket = dynamic(() => import('@/components/transfers/transfer-market').then(m => ({ default: m.TransferMarket })));
+const TournamentHubView = dynamic(() => import('@/components/tournaments/tournament-hub-view').then(m => ({ default: m.TournamentHubView })));
+const FixtureScheduleView = dynamic(() => import('@/components/tournaments/fixture-schedule-view').then(m => ({ default: m.FixtureScheduleView })));
+const ClassificationView = dynamic(() => import('@/components/tournaments/classification-view').then(m => ({ default: m.ClassificationView })));
+const EsportsAnalyticsView = dynamic(() => import('@/components/stats/esports-analytics-view').then(m => ({ default: m.EsportsAnalyticsView })));
+const TeamProfileView = dynamic(() => import('@/components/teams/team-profile-view').then(m => ({ default: m.TeamProfileView })));
+const GameUIShowcasePage = dynamic(() => import('@/features/design-system/components/game-ui-showcase-client').then(m => ({ default: m.default })));
+const OrganizationDirectory = dynamic(() => import('@/components/tournaments/organization-directory').then(m => ({ default: m.OrganizationDirectory })));
+const TeamDirectory = dynamic(() => import('@/components/teams/team-directory').then(m => ({ default: m.TeamDirectory })));
+const PlayerProfileView = dynamic(() => import('@/components/players/player-profile-view').then(m => ({ default: m.PlayerProfileView })));
 
-const ClubSettingsView = dynamic(
-  () => import('@/components/club/club-settings-view').then(m => ({ default: m.ClubSettingsView })),
-  { loading: () => <div className="skeleton h-64 rounded-xl" /> }
-);
 
-const TransferMarket = dynamic(
-  () => import('@/components/transfers/transfer-market').then(m => ({ default: m.TransferMarket })),
-  { loading: () => <div className="skeleton h-64 rounded-xl" /> }
-);
-
-const TournamentHubView = dynamic(
-  () => import('@/components/tournaments/tournament-hub-view').then(m => ({ default: m.TournamentHubView })),
-  { loading: () => <div className="skeleton h-64 rounded-xl" /> }
-);
-
-const FixtureScheduleView = dynamic(
-  () => import('@/components/tournaments/fixture-schedule-view').then(m => ({ default: m.FixtureScheduleView })),
-  { loading: () => <div className="skeleton h-96 rounded-xl" /> }
-);
-
-const ClassificationView = dynamic(
-  () => import('@/components/tournaments/classification-view').then(m => ({ default: m.ClassificationView })),
-  { loading: () => <div className="skeleton h-96 rounded-xl" /> }
-);
-
-const EsportsAnalyticsView = dynamic(
-  () => import('@/components/stats/esports-analytics-view').then(m => ({ default: m.EsportsAnalyticsView })),
-  { loading: () => <div className="skeleton h-64 rounded-xl" /> }
-);
-
-const TeamProfileView = dynamic(
-  () => import('@/components/teams/team-profile-view').then(m => ({ default: m.TeamProfileView })),
-  { loading: () => <div className="skeleton h-64 rounded-xl" /> }
-);
-
-const GameUIShowcasePage = dynamic(
-  () => import('@/features/design-system/components/game-ui-showcase-client').then(m => ({ default: m.default })),
-  { loading: () => <div className="skeleton h-96 rounded-xl" /> }
-);
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -141,27 +108,14 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
 
   return (
     <div
-      className="min-h-screen pb-20 relative transition-all duration-500 text-[var(--text-primary)] bg-[var(--bg-main)]"
-      style={{
-        '--game-brand': game.brandColor,
-        '--game-accent': game.accentColor,
-      } as React.CSSProperties}
+      className="game-portal min-h-screen pb-20 relative transition-all duration-500 text-[var(--text-primary)] bg-[var(--bg-main)]"
+      data-game={game.slug}
+      style={getGamePortalStyle(game)}
     >
       <GameSubNavbar game={game} activeSection={activeSection} onSelectSection={handleSectionChange} />
 
-      <div className="relative w-full min-h-screen">
-        {/* Fixed Background Banner */}
-        <div className="absolute top-0 left-0 right-0 h-[800px] w-full overflow-hidden pointer-events-none z-0">
-          <Image
-            src={game.bannerUrl}
-            alt={game.name}
-            fill
-            sizes="100vw"
-            loading="eager"
-            className="w-full h-full object-cover object-top opacity-[0.75] dark:opacity-95 filter contrast-[1.25] saturate-[1.2] brightness-[1.25] dark:brightness-100 dark:contrast-[1.3] dark:saturate-[1.25] transition-all duration-300"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--bg-main)]" />
-        </div>
+      <div className="game-portal-stage relative w-full min-h-screen">
+        <GamePortalBackdrop game={game} />
 
         <div className="standard-page-wrapper pt-0 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-forwards" key={activeSection}>
           {/* Section Header (excluded for sections that have their own PageHeader) */}
@@ -214,7 +168,7 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
           )}
 
           {/* ── DATOS / INFOGRAFIA / TOPS (Analytics) ─────────────────── */}
-          {['datos', 'infografia'].includes(activeSection as string) && (
+          {activeSection === 'infografia' && (
             <div className="pt-3 sm:pt-4">
               <EsportsAnalyticsView game={game} />
             </div>

@@ -91,6 +91,7 @@ import { UserCheck, Star, Award, Shield } from 'lucide-react';
 function PlayerCard({ player, gameSlug, brandColor }: { player: PlayerCardData; gameSlug: string; brandColor: string }) {
   return (
     <EsportsCard
+      entityType="user"
       href={`/${gameSlug}/jugadores/${player.id}`}
       title={player.name}
       subtitle={`🎮 ID: ${player.gameId}`}

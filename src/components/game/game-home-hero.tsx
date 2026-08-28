@@ -30,9 +30,9 @@ interface GameHomeHeroProps {
 
 export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: GameHomeHeroProps) {
   return (
-    <div className="space-y-10 sm:space-y-14 pt-3 sm:pt-4">
+    <div className="game-home space-y-10 sm:space-y-14 pt-3 sm:pt-4">
       {/* 1. IMMERSIVE EDGE-TO-EDGE HERO OVERLAY */}
-      <div className="relative min-h-[380px] sm:min-h-[460px] flex flex-col justify-end pb-8 sm:pb-12 pt-8">
+      <div className="game-home-hero relative min-h-[380px] sm:min-h-[460px] flex flex-col justify-end pb-8 sm:pb-12 pt-8">
         
         {/* Top Status & Category Badges */}
         <div className="absolute top-0 left-0 w-full flex flex-wrap items-center justify-between gap-3 px-2 sm:px-0 z-10">
@@ -59,7 +59,7 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
         </div>
 
         {/* Title & Tagline Showcase (Massive Typography) */}
-        <div className="relative z-10 max-w-5xl mt-auto px-2 sm:px-0">
+        <div className="game-home-copy relative z-10 max-w-5xl mt-auto px-2 sm:px-0">
           <div className="flex flex-col sm:flex-row sm:items-end gap-5 mb-5">
             <div
               className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shadow-xl border-2 flex-shrink-0 backdrop-blur-xl transform hover:scale-105 transition-transform duration-500"
@@ -85,7 +85,7 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
               </p>
             </div>
           </div>
-          <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed max-w-3xl font-medium pt-2 drop-shadow-md backdrop-blur-sm bg-[var(--bg-main)]/40 p-4 rounded-xl border border-[var(--border-card)]/50">
+          <p className="game-home-description text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed max-w-3xl font-medium p-4 rounded-xl border border-[var(--border-card)]/50">
             {game.description}
           </p>
         </div>
@@ -150,11 +150,11 @@ function GameMetricsStripe({ brandColor }: { brandColor: string }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+    <div className="game-home-metrics grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5">
       {metrics.map((m, i) => (
         <div
           key={i}
-          className="relative group p-6 rounded-2xl bg-[var(--bg-card)]/40 backdrop-blur-md border shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden"
+          className="game-home-metric relative group p-4 sm:p-6 rounded-2xl border transition-all duration-300 hover:-translate-y-1 overflow-hidden"
           style={{ borderColor: `${brandColor}30` }}
         >
           <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none" style={{ background: `radial-gradient(circle at top right, ${m.color}, transparent 70%)` }} />
@@ -184,14 +184,14 @@ function MatchdaySpotlight({ brandColor, matches }: { brandColor: string; matche
             Encuentro Estelar
           </h3>
         </div>
-        <span className="text-[10px] sm:text-xs font-mono font-black tracking-widest text-rose-400 uppercase bg-rose-950/40 px-3 py-1.5 rounded-full border border-rose-500/30">
+        <span className="text-[10px] sm:text-xs font-mono font-black tracking-widest text-rose-500 uppercase bg-rose-500/10 px-3 py-1.5 rounded-full border border-rose-500/30">
           Transmisión Oficial
         </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {matches.map((m) => (
-          <div key={m.id} className="group p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)]/40 backdrop-blur-xl border border-[var(--border-card)] relative overflow-hidden shadow-2xl transition-all hover:border-white/20">
+          <div key={m.id} className="game-home-match group p-5 sm:p-8 rounded-3xl border border-[var(--border-card)] relative overflow-hidden transition-all">
             
             {/* Background Glow */}
             <div className="absolute inset-0 opacity-5 group-hover:opacity-20 transition-opacity duration-700 pointer-events-none" style={{ background: `radial-gradient(circle at center, ${brandColor}, transparent 60%)` }} />
@@ -256,7 +256,7 @@ function GameModuleCards({ game, brandColor, onNavigate }: { game: GameConfig; b
         <div
           key={mod.key}
           onClick={() => onNavigate(mod.key)}
-          className="relative p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)]/60 backdrop-blur-xl border border-[var(--border-card)] hover:border-[var(--text-muted)] transition-all duration-500 cursor-pointer group shadow-xl flex flex-col justify-between overflow-hidden hover:-translate-y-2 hover:shadow-2xl"
+          className="game-home-module relative p-6 sm:p-8 rounded-3xl border border-[var(--border-card)] transition-all duration-300 cursor-pointer group flex flex-col justify-between overflow-hidden hover:-translate-y-1"
         >
           {/* Animated Hover Background */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none" style={{ background: `radial-gradient(circle at bottom left, ${brandColor}, transparent 80%)` }} />

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import TeamsPageClient from '@/features/teams/components/teams-page-client';
+import GlobalDirectoryPage from '@/components/public/global-directory-page';
 
 export const metadata: Metadata = {
   title: 'Equipos y clubes | TorneosPro',
-  description: 'Directorio global y administración de equipos y clubes eSports.',
+  description: 'Directorio público de equipos y clubes eSports.',
 };
 
 export default function TeamsPage() {
-  return <TeamsPageClient />;
+  return <GlobalDirectoryPage kind="teams" />;
 }

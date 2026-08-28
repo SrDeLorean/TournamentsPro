@@ -1,5 +1,4 @@
-import React from 'react';
-import { MatchdayReportView } from '@/components/matches/matchday-report-view';
+import { permanentRedirect } from 'next/navigation';
 
 export const metadata = {
   title: 'Reportar Encuentros & Matchday | TournamentsPro',
@@ -7,5 +6,5 @@ export const metadata = {
 };
 
 export default function MatchdayPage() {
-  return <MatchdayReportView />;
+  permanentRedirect('/dashboard/matchday');
 }
