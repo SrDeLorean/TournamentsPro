@@ -37,6 +37,7 @@ import {
   ShieldAlert,
   Users,
   Ban,
+  ArrowLeft,
 } from 'lucide-react';
 
 import { useSearchParams } from 'next/navigation';
@@ -87,6 +88,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
 
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string>(activeConvId || '');
+  const [isMobileConversationOpen, setIsMobileConversationOpen] = useState(Boolean(activeConvId));
   const [channelFilter, setChannelFilter] = useState<'ALL' | 'DIRECTO' | 'SOPORTE_ORGANIZADOR' | 'ANUNCIO_ADMIN'>('ALL');
   const [messages, setMessages] = useState<ChatMessageRecord[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -205,7 +207,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
         'DIRECTO',
         `Anuncio: ${urlTopic || targetName}`
       ).then((res) => {
-        if (res.success && res.threadId) {
+        if (res.success && 'threadId' in res && res.threadId) {
           setSelectedThreadId(res.threadId);
           loadThreads();
           if (urlTopic) {
@@ -375,7 +377,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
       `Chat con ${targetName}`
     );
 
-    if (res.success && res.threadId) {
+    if (res.success && 'threadId' in res && res.threadId) {
       setSelectedThreadId(res.threadId);
       setShowNewChatModal(false);
       loadThreads();
@@ -450,10 +452,10 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
   }
 
   return (
-    <div className="w-full h-[700px] glass-panel border border-[var(--border-card)] rounded-3xl overflow-hidden shadow-2xl grid grid-cols-1 md:grid-cols-12 text-[var(--text-primary)]">
+    <div className="grid h-[calc(100dvh-10rem)] min-h-[32rem] w-full grid-cols-1 overflow-hidden rounded-2xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xl md:h-[700px] md:grid-cols-12 md:rounded-3xl">
       
       {/* 📁 LEFT SIDEBAR: Channels & Contacts */}
-      <div className="md:col-span-4 border-r border-[var(--border-card)] bg-[var(--bg-card)] flex flex-col justify-between">
+      <div className={`${isMobileConversationOpen ? 'hidden md:flex' : 'flex'} flex-col justify-between border-r border-[var(--border-card)] bg-[var(--bg-card)] md:col-span-4`}>
         <div className="p-4 border-b border-[var(--border-card)] space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -552,7 +554,10 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
               return (
                 <button
                   key={thread.id}
-                  onClick={() => setSelectedThreadId(thread.id)}
+                  onClick={() => {
+                    setSelectedThreadId(thread.id);
+                    setIsMobileConversationOpen(true);
+                  }}
                   className={`w-full p-3.5 text-left flex items-start gap-3 transition-all ${
                     isSelected
                       ? 'bg-[var(--accent-cyan-bg)] border-l-4 border-[var(--accent-cyan)]'
@@ -603,30 +608,33 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
       </div>
 
       {/* 💬 RIGHT DISPLAY: Active Chat Messages */}
-      <div className="md:col-span-8 flex flex-col justify-between bg-[var(--bg-main)]">
+      <div className={`${isMobileConversationOpen ? 'flex' : 'hidden md:flex'} flex-col justify-between bg-[var(--bg-main)] md:col-span-8`}>
         {activeThread ? (
           <>
             {/* Header of Active Conversation */}
-            <div className="p-4 border-b border-[var(--border-card)] bg-[var(--bg-card)] flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-4">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                <button type="button" onClick={() => setIsMobileConversationOpen(false)} className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] text-[var(--text-secondary)] md:hidden" aria-label="Volver a conversaciones">
+                  <ArrowLeft className="size-4" />
+                </button>
                 <Avatar fallback={activeThread.participantName} status="online" size="md" />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-extrabold text-sm text-[var(--text-heading)] uppercase flex items-center gap-1.5">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h4 className="flex min-w-0 items-center gap-1.5 truncate text-xs font-extrabold uppercase text-[var(--text-heading)] sm:text-sm">
                       {getRoleIcon(activeThread.participantRole)}
-                      <span>{activeThread.title}</span>
+                      <span className="truncate">{activeThread.title}</span>
                     </h4>
-                    <Badge variant={getRoleBadgeVariant(activeThread.participantRole)} className="text-[10px] font-mono">
+                    <Badge variant={getRoleBadgeVariant(activeThread.participantRole)} className="hidden text-[10px] font-mono sm:inline-flex">
                       {activeThread.participantRole}
                     </Badge>
                   </div>
-                  <p className="text-xs text-[var(--text-muted)] font-mono">
+                  <p className="truncate font-mono text-[10px] text-[var(--text-muted)] sm:text-xs">
                     Contacto: {activeThread.participantName} | Canal eSports MySQL
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 font-mono">
+              <div className="flex shrink-0 items-center gap-1.5 font-mono">
                 {canBanOthers && activeThread && activeThread.participantId !== 'usr-all' && (
                   <Button
                     size="sm"
@@ -635,10 +643,10 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                     className="text-[11px] font-mono border-rose-500/40 text-rose-400 hover:bg-rose-950/80 flex items-center gap-1 h-8 rounded-xl"
                   >
                     <Ban className="w-3.5 h-3.5" />
-                    Banear Usuario
+                    <span className="hidden sm:inline">Banear usuario</span>
                   </Button>
                 )}
-                <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                <span className="hidden items-center gap-1 text-[11px] font-bold text-[var(--accent-emerald)] xl:flex">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   En Línea
                 </span>

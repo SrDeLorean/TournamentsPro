@@ -2,30 +2,26 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { NotificationCenter } from '@/components/notifications/notification-center';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { GAMES_CATALOG } from '@/lib/games-data';
 import {
-  Trophy, Shield, Settings, LogOut, CheckCircle2, ChevronDown, Sparkles, Home, Gamepad2, Users, Flag, Info
+  Trophy, Settings, LogOut, ChevronDown, Sparkles
 } from 'lucide-react';
 import { NavLinks } from '@/components/layout/nav-links';
 
 export function AdminOrganizerHeader() {
   const router = useRouter();
-  const pathname = usePathname();
-  const { currentUser, logout, activeGameSlug, setActiveGameSlug } = useAuth();
+  const { currentUser, logout } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isGamesOpen, setIsGamesOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
-  const gamesRef = useRef<HTMLDivElement>(null);
 
   const roleStr = (currentUser?.role || '').toLowerCase();
   const isAdmin = roleStr === 'administrador' || roleStr === 'admin';
@@ -39,28 +35,25 @@ export function AdminOrganizerHeader() {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
         setIsSettingsOpen(false);
       }
-      if (gamesRef.current && !gamesRef.current.contains(event.target as Node)) {
-        setIsGamesOpen(false);
-      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-slate-950/95 border-b border-[var(--border-card)] backdrop-blur-xl transition-all duration-300 shadow-xl h-14">
+    <header className="sticky top-0 z-50 h-14 w-full border-b border-[var(--border-card)] bg-[var(--bg-nav)]/95 shadow-[var(--shadow-soft)] backdrop-blur-xl transition-all duration-300">
       <div className="w-full px-3 sm:px-6 h-full flex items-center justify-between gap-2 sm:gap-4">
         
         {/* Left Side: Brand Tag Connected to Sidebar */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-600 to-amber-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <Trophy className="w-4 h-4 text-cyan-400" />
+              <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-[var(--bg-main)]">
+                <Trophy className="w-4 h-4 text-[var(--accent-cyan)]" />
               </div>
             </div>
             <div className="hidden lg:flex flex-col text-left">
-              <span className="text-sm sm:text-base font-black tracking-tight text-white uppercase leading-none">
+              <span className="text-sm sm:text-base font-black tracking-tight text-[var(--text-heading)] uppercase leading-none">
                 TOURNAMENTS<span className="text-cyan-400">PRO</span>
               </span>
               <span className="text-[9px] text-cyan-300 font-bold tracking-widest uppercase mt-0.5">
@@ -75,10 +68,12 @@ export function AdminOrganizerHeader() {
         </div>
 
         {/* 🌐 Center: Public Layout Navigation Views (Vistas Públicas Integradas) */}
-        <NavLinks />
+        <div className="hidden min-w-0 flex-1 justify-center 2xl:flex">
+          <NavLinks />
+        </div>
 
         {/* Right Side Controls ONLY: 1. Bell, 2. Settings Gear, 3. User Info Dropdown */}
-        <div className="flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
           
           {/* 🔔 1. Campana de Notificaciones eSports */}
           <NotificationCenter />
@@ -87,7 +82,7 @@ export function AdminOrganizerHeader() {
           <div className="relative" ref={settingsRef}>
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-              className="p-2 rounded-xl bg-slate-900 border border-white/10 text-slate-300 hover:text-cyan-400 transition-all shadow-sm"
+              className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-2 text-[var(--text-secondary)] shadow-sm transition-all hover:text-[var(--accent-cyan)]"
               title="Configuración de Tema e Idioma"
             >
               <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-cyan-400' : ''}`} />
@@ -130,11 +125,11 @@ export function AdminOrganizerHeader() {
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-2.5 p-1.5 rounded-xl bg-slate-900 border border-white/10 hover:border-cyan-400/60 transition-all shadow-sm"
+              className="flex items-center gap-2.5 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-1.5 shadow-sm transition-all hover:border-[var(--border-card-hover)]"
             >
               <Avatar fallback={currentUser?.name || 'User'} status="online" size="sm" />
               <div className="hidden sm:flex flex-col text-left">
-                <span className="font-extrabold text-xs text-white leading-tight truncate max-w-[120px]">
+                <span className="max-w-[120px] truncate text-xs font-extrabold leading-tight text-[var(--text-heading)]">
                   {currentUser?.name}
                 </span>
                 <span className="text-[10px] text-cyan-400 font-mono font-bold">

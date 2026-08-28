@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  CheckCircle2, X, Upload, Camera, AlertCircle
+  CheckCircle2, X, Upload, Camera, AlertCircle, UserCircle2
 } from 'lucide-react';
 
 interface MatchReportModalProps {
@@ -88,25 +88,95 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
     setIsSubmitting(true);
 
     try {
-      // Simulate backend match report submission
-      console.log('Enviando reporte con payload:', {
+      const payload = {
         matchId: currentMatch.id,
         homeScore,
         awayScore,
         mvpName,
-        dynamicStats
+        dynamicStats,
+        participantsStats,
+        gameSlug: currentMatch.gameSlug
+      };
+
+      const res = await fetch('/api/matches/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al enviar el reporte');
+      }
 
       setIsSubmitting(false);
-      setSuccessNotice(`¡Marcador ${homeScore} - ${awayScore} reportado exitosamente! Enviado a validación del organizador.`);
+      setSuccessNotice(`¡Marcador ${homeScore} - ${awayScore} reportado exitosamente! Enviado a validación.`);
       setTimeout(() => {
         setSuccessNotice('');
         onClose();
       }, 3000);
-    } catch {
-      setErrorMsg('Error al enviar el reporte de partido');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al enviar el reporte de partido');
       setIsSubmitting(false);
+    }
+  };
+
+  const [riotId, setRiotId] = useState('');
+  const [matchHistory, setMatchHistory] = useState<any[]>([]);
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Nuevo estado para múltiples jugadores
+  const [participantsStats, setParticipantsStats] = useState<any[] | null>(null);
+
+  const isRiotGame = currentMatch.gameSlug === 'lol' || currentMatch.gameSlug === 'valorant';
+
+  const handleSearchHistory = async () => {
+    if (!riotId) {
+      setErrorMsg('Ingresa un Riot ID válido (ej. Jugador#LAS)');
+      return;
+    }
+    setIsFetchingHistory(true);
+    setErrorMsg('');
+    setMatchHistory([]);
+    try {
+      const res = await fetch(`/api/integrations/riot/history?riotId=${encodeURIComponent(riotId)}&gameSlug=${currentMatch.gameSlug}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al conectar con Riot Games');
+      setMatchHistory(data.history);
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setIsFetchingHistory(false);
+    }
+  };
+
+  const handleSelectRiotMatch = async (matchId: string) => {
+    setIsSyncing(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch(`/api/integrations/riot/match?matchId=${matchId}&gameSlug=${currentMatch.gameSlug}&gamertag=${encodeURIComponent(riotId.split('#')[0])}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al conectar con Riot Games');
+      
+      if (data.participants) {
+        setParticipantsStats(data.participants);
+        
+        if (data.matchScore) {
+          setHomeScore(data.matchScore.team1);
+          setAwayScore(data.matchScore.team2);
+        }
+        
+        setSuccessNotice(`¡Estadísticas de ${data.participants.length} jugadores importadas exitosamente!`);
+      } else {
+        setDynamicStats(data.stats); // Fallback if API hasn't updated
+        setSuccessNotice(`¡Estadísticas importadas exitosamente!`);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -118,7 +188,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-emerald-950/80 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 font-black text-xl shadow-xl">
-              ⚽
+              🎮
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -155,6 +225,57 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
         )}
 
         <form onSubmit={handleSubmitReport} className="space-y-5">
+          
+          {isRiotGame && (
+            <div className="p-4 rounded-xl border border-[#EB0029]/30 bg-[#EB0029]/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-[#EB0029] block tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#EB0029] animate-pulse"></span>
+                  Integración Automática Riot Games
+                </span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)]">Busca el historial reciente usando un Riot ID para autocompletar las estadísticas del partido.</p>
+              
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Riot ID (ej. Faker#SKT1)"
+                  value={riotId}
+                  onChange={(e) => setRiotId(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-lg input-theme text-xs font-mono"
+                />
+                <Button type="button" onClick={handleSearchHistory} disabled={isFetchingHistory} className="bg-[#EB0029] hover:bg-[#EB0029]/80 text-white whitespace-nowrap">
+                  {isFetchingHistory ? 'Buscando...' : 'Ver Historial'}
+                </Button>
+              </div>
+
+              {matchHistory.length > 0 && (
+                <div className="mt-3 space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">Últimas Partidas (Click para importar)</span>
+                  {matchHistory.map((h, i) => (
+                    <div 
+                      key={i} 
+                      onClick={() => handleSelectRiotMatch(h.matchId)}
+                      className={`p-3 rounded-lg border border-[#EB0029]/20 bg-[var(--bg-card)] hover:border-[#EB0029] cursor-pointer flex justify-between items-center transition-all ${isSyncing ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${h.result === 'Victoria' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                            {h.result}
+                          </span>
+                          <span className="text-xs font-bold text-white">{h.champion}</span>
+                        </div>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-1">{h.date} • Duración: {h.duration}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-mono font-bold text-[#EB0029]">{h.kda} KDA</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           
           {/* Score Counter Box */}
           <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4">
@@ -193,36 +314,115 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
             </div>
           </div>
 
-          {/* MVP Selection Input */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold uppercase text-[var(--text-heading)] block">Jugador MVP del Partido (Opcional)</label>
-            <input
-              type="text"
-              placeholder="ej. @SrDeLorean"
-              value={mvpName}
-              onChange={(e) => setMvpName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl input-theme text-xs font-bold font-mono"
-            />
-          </div>
 
-          {/* Dynamic Stats for MVP / Reporter */}
-          {gameSchema.length > 0 && (
-            <div className="p-4 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)]">
-              <span className="text-[10px] font-black uppercase text-emerald-400 block tracking-wider mb-3">
-                📊 Estadísticas del MVP / Capitán
-              </span>
-              <div className="grid grid-cols-2 gap-3">
-                {gameSchema.map((stat, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{stat.label}</label>
-                    <input
-                      type={stat.type || 'number'}
-                      value={dynamicStats[stat.key] || 0}
-                      onChange={(e) => handleStatChange(stat.key, e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg input-theme text-xs font-bold font-mono"
-                    />
+          {!participantsStats ? (
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider ml-1">Atleta Destacado (MVP)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <UserCircle2 className="w-5 h-5 text-[var(--text-muted)]" />
                   </div>
-                ))}
+                  <input
+                    type="text"
+                    required
+                    value={mvpName}
+                    onChange={(e) => setMvpName(e.target.value)}
+                    placeholder="Gamertag del MVP"
+                    className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-card)] rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm font-medium transition-all"
+                  />
+                </div>
+              </div>
+
+              {gameSchema.length > 0 && (
+                <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4">
+                  <span className="text-[10px] font-black uppercase text-[var(--text-muted)] block tracking-wider">Estadísticas del MVP</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    {gameSchema.map((stat) => (
+                      <div key={stat.key} className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{stat.label}</label>
+                        <input
+                          type={stat.type === 'number' ? 'number' : 'text'}
+                          required
+                          value={dynamicStats[stat.key] || ''}
+                          onChange={(e) => handleStatChange(stat.key, e.target.value)}
+                          placeholder={`Ej: ${stat.type === 'number' ? '0' : '-'}`}
+                          className="w-full px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-xs font-mono transition-all"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-emerald-400 uppercase flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    10 Jugadores Cargados
+                  </h4>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">Revisa las estadísticas importadas antes de enviar el reporte oficial.</p>
+                </div>
+              </div>
+              
+              <div className="bg-[var(--bg-main)] border border-[var(--border-card)] rounded-xl overflow-hidden">
+                <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[var(--bg-card)] sticky top-0 border-b border-[var(--border-card)] z-10">
+                      <tr>
+                        <th className="px-3 py-2 font-black text-[var(--text-muted)] uppercase">Jugador (Riot ID)</th>
+                        {gameSchema.map(stat => (
+                          <th key={stat.key} className="px-2 py-2 font-black text-[var(--text-muted)] uppercase text-center">{stat.label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-card)] font-mono">
+                      {/* TEAM A HEADER */}
+                      <tr className="bg-emerald-500/10 border-l-2 border-emerald-500">
+                        <td colSpan={gameSchema.length + 1} className="px-3 py-1 text-[10px] font-black uppercase text-emerald-400 tracking-wider">
+                          Team A
+                        </td>
+                      </tr>
+                      {/* TEAM A PLAYERS */}
+                      {(participantsStats.filter((p: any) => p.teamId === 'Blue' || p.teamId === 100).length === 5 
+                        ? participantsStats.filter((p: any) => p.teamId === 'Blue' || p.teamId === 100)
+                        : participantsStats.slice(0, 5)
+                      ).map((p: any, idx: number) => (
+                        <tr key={`a-${idx}`} className="hover:bg-[var(--bg-card-hover)] transition-colors border-l-2 border-emerald-500/20">
+                          <td className="px-3 py-2 font-bold text-white truncate max-w-[120px]">{p.riotId}</td>
+                          {gameSchema.map(stat => (
+                            <td key={stat.key} className={`px-2 py-2 text-center ${stat.key === 'acs' || stat.key === 'kills' ? 'font-bold text-white' : 'text-[var(--text-muted)]'}`}>
+                              {p.stats[stat.key] !== undefined ? p.stats[stat.key] : '-'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+
+                      {/* TEAM B HEADER */}
+                      <tr className="bg-rose-500/10 border-l-2 border-rose-500 mt-2">
+                        <td colSpan={gameSchema.length + 1} className="px-3 py-1 text-[10px] font-black uppercase text-rose-400 tracking-wider">
+                          Team B
+                        </td>
+                      </tr>
+                      {/* TEAM B PLAYERS */}
+                      {(participantsStats.filter((p: any) => p.teamId === 'Red' || p.teamId === 200).length === 5 
+                        ? participantsStats.filter((p: any) => p.teamId === 'Red' || p.teamId === 200)
+                        : participantsStats.slice(5, 10)
+                      ).map((p: any, idx: number) => (
+                        <tr key={`b-${idx}`} className="hover:bg-[var(--bg-card-hover)] transition-colors border-l-2 border-rose-500/20">
+                          <td className="px-3 py-2 font-bold text-white truncate max-w-[120px]">{p.riotId}</td>
+                          {gameSchema.map(stat => (
+                            <td key={stat.key} className={`px-2 py-2 text-center ${stat.key === 'acs' || stat.key === 'kills' ? 'font-bold text-white' : 'text-[var(--text-muted)]'}`}>
+                              {p.stats[stat.key] !== undefined ? p.stats[stat.key] : '-'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

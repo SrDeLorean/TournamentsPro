@@ -10,6 +10,7 @@ export interface CrudState {
   startTime?: string;
   endTime?: string;
   durationMs?: number;
+  startEpoch?: number;
   message?: string;
 }
 
@@ -26,6 +27,7 @@ export function useCrudNotifier() {
       status: 'LOADING',
       actionName,
       startTime: timeStr,
+      startEpoch: now.getTime(),
     });
   };
 
@@ -37,6 +39,7 @@ export function useCrudNotifier() {
       actionName: prev.actionName,
       startTime: prev.startTime,
       endTime: timeStr,
+      durationMs: prev.startEpoch ? now.getTime() - prev.startEpoch : undefined,
       message,
     }));
   };
@@ -49,6 +52,7 @@ export function useCrudNotifier() {
       actionName: prev.actionName,
       startTime: prev.startTime,
       endTime: timeStr,
+      durationMs: prev.startEpoch ? now.getTime() - prev.startEpoch : undefined,
       message,
     }));
   };
@@ -72,11 +76,12 @@ interface CrudAlertProps {
 }
 
 export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
+  const autoDismissMs = 6000;
   useEffect(() => {
     if (state.status === 'SUCCESS') {
       const timer = setTimeout(() => {
         onClose();
-      }, 7000);
+      }, autoDismissMs);
       return () => clearTimeout(timer);
     }
   }, [state.status, onClose]);
@@ -93,7 +98,10 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className={`fixed top-5 right-5 z-[99999] max-w-md w-full p-4 rounded-xl border backdrop-blur-xl shadow-xl flex items-start justify-between gap-3 ${
+          role={isError ? 'alert' : 'status'}
+          aria-live={isError ? 'assertive' : 'polite'}
+          aria-atomic="true"
+          className={`fixed inset-x-3 top-3 z-[99999] mx-auto w-auto max-w-md overflow-hidden rounded-2xl border p-4 backdrop-blur-xl shadow-2xl sm:inset-x-auto sm:right-5 sm:top-5 sm:w-full ${
             isLoading
               ? 'bg-[var(--bg-card)]/95 border-[var(--accent-cyan)]/50 text-[var(--accent-cyan)] shadow-[0_4px_20px_color-mix(in_srgb,var(--accent-cyan)_20%,transparent)]'
               : isSuccess
@@ -101,12 +109,13 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
               : 'bg-[var(--bg-card)]/95 border-[var(--accent-crimson)]/50 text-[var(--accent-crimson)] shadow-[0_4px_20px_color-mix(in_srgb,var(--accent-crimson)_20%,transparent)]'
           }`}
         >
-          <div className="flex items-start gap-3">
+          <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             {isLoading && <Loader2 className="w-5 h-5 text-[var(--accent-cyan)] animate-spin mt-0.5 flex-shrink-0" />}
             {isSuccess && <CheckCircle2 className="w-5 h-5 text-[var(--accent-emerald)] mt-0.5 flex-shrink-0" />}
             {isError && <XCircle className="w-5 h-5 text-[var(--accent-crimson)] mt-0.5 flex-shrink-0" />}
 
-            <div className="space-y-1 text-xs">
+            <div className="min-w-0 space-y-1 text-xs">
               <div className="flex items-center gap-2">
                 <span className="font-bold uppercase tracking-wider text-[var(--text-heading)] text-sm">
                   {isLoading && `Procesando...`}
@@ -114,13 +123,13 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
                   {isError && `Error en Operación`}
                 </span>
               </div>
-              <p className="font-semibold text-[var(--text-primary)]">{state.actionName}</p>
+              <p className="break-words font-semibold text-[var(--text-primary)]">{state.actionName || 'Actualizando información'}</p>
 
               {state.message && (
                 <p className="font-medium text-[var(--text-secondary)] font-sans leading-relaxed mt-1 text-[13px]">{state.message}</p>
               )}
 
-              <div className="flex items-center gap-3 text-[11px] font-mono text-[var(--text-muted)] pt-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-[var(--text-muted)] pt-1">
                 {state.startTime && (
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
@@ -136,16 +145,29 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
                 {isLoading && (
                   <span className="animate-pulse text-[var(--accent-cyan)] font-semibold">● Ejecutando en base de datos...</span>
                 )}
+                {typeof state.durationMs === 'number' && <span>{state.durationMs < 1000 ? `${state.durationMs} ms` : `${(state.durationMs / 1000).toFixed(1)} s`}</span>}
               </div>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Cerrar notificación"
             className="p-1.5 rounded-lg hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
+          </div>
+          {isSuccess && (
+            <motion.div
+              aria-hidden="true"
+              className="absolute inset-x-0 bottom-0 h-1 origin-left bg-[var(--accent-emerald)]"
+              initial={{ scaleX: 1 }}
+              animate={{ scaleX: 0 }}
+              transition={{ duration: autoDismissMs / 1000, ease: 'linear' }}
+            />
+          )}
         </motion.div>
       )}
     </AnimatePresence>

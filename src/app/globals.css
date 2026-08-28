@@ -826,3 +826,261 @@
   animation: gradient-x 3s ease infinite;
   background-size: 200% 200%;
 }
+
+/* Management lists become readable record cards on phones instead of tiny wide tables. */
+
+/* Global management surface. Keep layout/theme adjustments centralized here. */
+.management-page {
+  width: 100%;
+  max-width: 96rem;
+  margin-inline: auto;
+  padding: 1rem 0.75rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.management-hero,
+.management-section {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-card);
+  border-radius: var(--ui-radius-panel);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.management-hero-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at top right, var(--management-soft), transparent 48%);
+}
+
+.management-hero-main,
+.management-hero-copy,
+.management-hero-kicker,
+.management-actions,
+.management-metric-layout,
+.management-section-heading {
+  display: flex;
+}
+
+.management-hero-main {
+  position: relative;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem;
+}
+
+.management-hero-copy { min-width: 0; align-items: flex-start; gap: 0.75rem; }
+.management-hero-icon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  border: 1px solid;
+  border-radius: 1rem;
+  background: var(--management-soft);
+}
+.management-hero-icon svg { width: 1.25rem; height: 1.25rem; }
+.management-hero-text { min-width: 0; display: grid; gap: 0.375rem; }
+.management-hero-kicker { flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.management-eyebrow,
+.management-metric-label { font: 900 0.625rem/1.2 ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.18em; }
+.management-title { max-width: 64rem; color: var(--text-heading); font-size: clamp(1.25rem, 3vw, 1.875rem); font-weight: 900; line-height: 1.1; letter-spacing: -0.025em; text-transform: uppercase; text-wrap: balance; }
+.management-description { max-width: 48rem; color: var(--text-secondary); font-size: 0.75rem; line-height: 1.65; text-wrap: pretty; }
+.management-actions { width: 100%; flex-wrap: wrap; gap: 0.5rem; }
+.management-actions > * { flex: 1 1 auto; }
+.management-hero-content { position: relative; padding: 1rem; border-top: 1px solid var(--border-card); }
+
+.management-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.management-metric { min-width: 0; padding: 1rem; border-color: var(--border-card); background: var(--bg-card); transition: background-color 160ms ease, transform 160ms ease; }
+.management-metric:hover { background: var(--bg-card-hover); transform: translateY(-1px); }
+.management-metric-layout { align-items: flex-start; gap: 0.75rem; }
+.management-metric-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; border: 1px solid; border-radius: 0.75rem; }
+.management-metric-icon svg { width: 1.25rem; height: 1.25rem; }
+.management-metric-copy { min-width: 0; }
+.management-metric-label { overflow: hidden; color: var(--text-muted); letter-spacing: 0.08em; text-overflow: ellipsis; white-space: nowrap; }
+.management-metric-value { margin-top: 0.25rem; overflow: hidden; color: var(--text-heading); font-size: clamp(1.25rem, 2vw, 1.5rem); font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.management-metric-hint { margin-top: 0.25rem; overflow: hidden; color: var(--text-secondary); font-size: 0.6875rem; text-overflow: ellipsis; white-space: nowrap; }
+
+.management-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border-card); border-radius: var(--ui-radius-panel); background: var(--bg-card); }
+.management-tab { display: flex; min-width: 0; min-height: 2.75rem; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid transparent; border-radius: 0.75rem; color: var(--text-secondary); font-size: 0.6875rem; font-weight: 900; text-align: left; transition: 160ms ease; }
+.management-tab:hover { border-color: var(--border-card); background: var(--bg-card-hover); }
+.management-tab-active { box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+.management-tab-icon { width: 1rem; height: 1rem; flex: 0 0 auto; }
+.management-tab-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.management-tab-count { padding: 0.125rem 0.375rem; border-radius: 0.375rem; background: color-mix(in srgb, currentColor 12%, transparent); font: 800 0.5625rem/1.2 ui-monospace, monospace; }
+
+.management-section-header { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; border-bottom: 1px solid var(--border-card); }
+.management-section-heading { min-width: 0; align-items: flex-start; gap: 0.75rem; }
+.management-section-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; margin-top: 0.125rem; flex: 0 0 auto; border-radius: 0.75rem; }
+.management-section-copy { min-width: 0; }
+.management-section-title { color: var(--text-heading); font-size: 0.875rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+.management-section-description { margin-top: 0.25rem; color: var(--text-secondary); font-size: 0.75rem; line-height: 1.5; }
+.management-section-action { width: 100%; }
+.management-section-action > * { width: 100%; }
+.management-section-content { min-width: 0; padding: 0.75rem; }
+.management-toolbar { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--border-card); border-radius: 1rem; background: color-mix(in srgb, var(--bg-main) 58%, var(--bg-card)); }
+.management-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+
+.ui-modal-form-body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+  width: 100%;
+  min-height: 2.625rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--ui-radius-control);
+  background: var(--bg-main);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+.ui-modal-form { display: flex; max-height: min(52rem, calc(100dvh - 1rem)); flex-direction: column; overflow: hidden !important; }
+.ui-modal-form-header { flex: 0 0 auto; }
+.ui-modal-form-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.ui-modal-form-actions { position: sticky; bottom: -1.5rem; z-index: 2; margin-inline: -1rem; padding: 1rem; background: color-mix(in srgb, var(--bg-card) 96%, transparent); backdrop-filter: blur(1rem); }
+@media (min-width: 640px) {
+  .ui-modal-form-actions { margin-inline: -1.5rem; padding-inline: 1.5rem; }
+}
+.ui-modal-form-body :is(input, select, textarea):focus {
+  border-color: color-mix(in srgb, var(--accent-cyan) 55%, var(--border-card));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 12%, transparent);
+}
+.ui-modal-form-body :is(.bg-slate-900, .bg-slate-950) { background: var(--bg-subtle) !important; }
+.ui-modal-form-body :is(.text-white, .text-slate-100, .text-slate-200) { color: var(--text-primary) !important; }
+.ui-modal-form-body :is(.text-slate-300, .text-slate-400) { color: var(--text-secondary) !important; }
+.ui-management-card { min-width: 0; isolation: isolate; }
+.ui-management-card:focus-within { border-color: var(--card-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-brand) 14%, transparent); }
+.ui-data-table-shell { overflow: hidden; box-shadow: var(--shadow-card); }
+.ui-data-table-shell .ui-table thead { background: color-mix(in srgb, var(--bg-card) 94%, transparent); }
+.ui-data-table-shell .ui-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--bg-subtle) 55%, transparent); }
+.ui-data-table-shell .ui-table tbody tr:hover { background: var(--bg-card-hover); }
+.ui-data-table-shell .ui-table th button:focus-visible,
+.ui-data-table-toolbar :is(button, input, select):focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
+.ui-confirm-modal .ui-control { border-color: color-mix(in srgb, var(--accent-crimson) 35%, var(--border-card)); }
+.ui-confirm-modal .ui-control:focus { border-color: var(--accent-crimson); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-crimson) 14%, transparent); }
+.ui-alert::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 0.2rem; background: currentColor; opacity: 0.75; }
+
+@media (min-width: 640px) {
+  .ui-data-table-shell .ui-table thead { position: sticky; top: 0; z-index: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .management-metric,
+  .management-tab,
+  .ui-management-card { transition: none; }
+  .management-metric:hover,
+  .ui-management-card:hover { transform: none; }
+}
+
+@media (min-width: 640px) {
+  .management-page { padding: 1.5rem 1.25rem; gap: 1.5rem; }
+  .management-hero-main, .management-hero-content { padding: 1.5rem; }
+  .management-hero-copy { gap: 1rem; }
+  .management-hero-icon { width: 3.5rem; height: 3.5rem; }
+  .management-hero-icon svg { width: 1.75rem; height: 1.75rem; }
+  .management-description { font-size: 0.875rem; }
+  .management-metric { padding: 1.25rem; }
+  .management-section-header { flex-direction: row; align-items: center; justify-content: space-between; padding: 1.25rem; }
+  .management-section-action, .management-section-action > * { width: auto; }
+  .management-section-content { padding: 1.25rem; }
+  .management-toolbar { flex-direction: row; align-items: center; justify-content: space-between; padding: 1rem; }
+  .management-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+}
+
+@media (min-width: 768px) {
+  .management-tabs { display: flex; overflow-x: auto; }
+  .management-tab { min-width: max-content; flex: 1; font-size: 0.75rem; }
+}
+
+@media (min-width: 1024px) {
+  .management-hero-main { flex-direction: row; align-items: center; justify-content: space-between; }
+  .management-actions { width: auto; justify-content: flex-end; }
+  .management-actions > * { flex: 0 0 auto; }
+  .management-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .management-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1280px) {
+  .management-page { padding: 2rem; }
+  .management-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 639px) {
+  .ui-data-table-responsive,
+  .ui-data-table-responsive tbody {
+    display: block;
+    width: 100%;
+  }
+
+  table.ui-data-table-responsive {
+    min-width: 0 !important;
+  }
+
+  .ui-data-table-responsive thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .ui-data-table-responsive tbody {
+    padding: 0.65rem;
+  }
+
+  .ui-data-table-responsive tbody tr {
+    display: grid;
+    gap: 0;
+    margin-bottom: 0.65rem;
+    overflow: hidden;
+    border: 1px solid var(--border-card);
+    border-radius: min(var(--ui-radius-card), 1rem);
+    background: var(--bg-subtle);
+  }
+
+  .ui-data-table-responsive tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .ui-data-table-responsive tbody td {
+    display: grid;
+    grid-template-columns: minmax(5.75rem, 35%) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    border-bottom: 1px solid var(--border-card);
+    padding: 0.7rem 0.8rem;
+    text-align: right;
+    white-space: normal;
+  }
+
+  .ui-data-table-responsive tbody td::before {
+    content: attr(data-label);
+    min-width: 0;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .ui-data-table-responsive tbody td:last-child {
+    border-bottom: 0;
+  }
+
+  .ui-data-table-responsive tbody td[data-label="Acciones"] > * {
+    width: 100%;
+  }
+
+  .ui-data-table-responsive tbody td[data-empty="true"] {
+    display: block;
+    text-align: center;
+  }
+
+  .ui-data-table-responsive tbody td[data-empty="true"]::before {
+    content: none;
+  }
+}

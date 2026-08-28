@@ -26,11 +26,11 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
       {/* Render dedicated minimal header for Admin/Organizer, or original Navbar for Players */}
       {isAdminOrOrganizer ? <AdminOrganizerHeader /> : <Navbar />}
 
-      {/* Main Flex Wrapper with Joined Left Sidebar for Admin / Organizer */}
-      <div className="flex flex-1 relative min-w-0">
+      {/* Shared workspace shell. Phones and tablets use the drawer; desktop keeps the rail visible. */}
+      <div className="relative flex min-w-0 flex-1">
         <AdminOrganizerSidebar />
 
-        <main className={`flex-grow min-w-0 min-h-screen overflow-x-clip transition-all duration-300 w-full page-transition ${isAdminOrOrganizer ? 'md:pl-64' : ''}`}>
+        <main className={`min-h-screen min-w-0 flex-grow overflow-x-clip transition-[padding] duration-300 w-full page-transition ${isAdminOrOrganizer ? 'pt-[3.25rem] lg:pl-72 lg:pt-0' : ''}`}>
           {children}
         </main>
       </div>

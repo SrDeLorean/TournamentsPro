@@ -37,9 +37,9 @@ export function ModalForm({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-xl p-0 overflow-hidden bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] shadow-2xl font-mono text-[var(--text-primary)]">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel={title} closeOnBackdrop={!isSubmitting} closeOnEscape={!isSubmitting} closeDisabled={isSubmitting} className="ui-modal-form max-w-xl p-0 overflow-hidden bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] shadow-2xl font-mono text-[var(--text-primary)]">
       <div
-        className="p-4 sm:p-5 pr-12 border-b border-[var(--border-card)] flex items-center justify-between"
+        className="ui-modal-form-header p-4 sm:p-5 pr-12 border-b border-[var(--border-card)] flex items-center justify-between"
         style={{
           backgroundColor: `color-mix(in srgb, ${brandColor} 12%, transparent)`,
         }}
@@ -50,10 +50,10 @@ export function ModalForm({
         </div>
       </div>
 
-      <form onSubmit={onSubmit} className="p-4 sm:p-6 space-y-5">
+      <form onSubmit={onSubmit} className="ui-modal-form-body p-4 sm:p-6 space-y-5">
         {/* BANNER ALERTA ÉXITO */}
         {successMessage && (
-          <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
+          <div className="p-3.5 rounded-xl bg-[var(--accent-emerald-bg)] border border-[var(--accent-emerald)]/50 text-[var(--accent-emerald)] text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
             <span>{successMessage}</span>
           </div>
@@ -61,7 +61,7 @@ export function ModalForm({
 
         {/* BANNER ALERTA ERROR */}
         {errorMessage && (
-          <div className="p-3.5 rounded-xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
+          <div className="p-3.5 rounded-xl bg-[var(--accent-crimson-bg)] border border-[var(--accent-crimson)]/50 text-[var(--accent-crimson)] text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
             <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
@@ -69,7 +69,7 @@ export function ModalForm({
 
         {/* BANNER ALERTA INFO */}
         {infoMessage && (
-          <div className="p-3.5 rounded-xl bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
+          <div className="p-3.5 rounded-xl bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/50 text-[var(--accent-cyan)] text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
             <Info className="w-4 h-4 text-cyan-400 flex-shrink-0" />
             <span>{infoMessage}</span>
           </div>
@@ -77,7 +77,7 @@ export function ModalForm({
 
         {children}
 
-        <div className="pt-5 border-t border-[var(--border-card)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 mt-4">
+        <div className="ui-modal-form-actions pt-5 border-t border-[var(--border-card)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 mt-4">
           <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-4 py-2.5 rounded-xl">
             Cancelar
           </Button>

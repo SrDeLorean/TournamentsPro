@@ -6,12 +6,20 @@ import { GAMES_CATALOG, GAME_MODE_OPTIONS, GameModeOption } from '@/lib/games-da
 import { CompetitionData, createCompetitionAction, updateCompetitionStatusAction, CompetitionStatus } from '@/app/actions/competitions';
 import { DataTable, ColumnDef } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trophy, Plus, Eye, Trash2, Calendar } from 'lucide-react';
+import { Trophy, Plus, Eye, Trash2, Calendar, ClipboardList, Radio, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getOrganizationSeasonsAction, SeasonData } from '@/app/actions/seasons';
+import {
+  ManagementHero,
+  ManagementMetrics,
+  ManagementPage,
+  ManagementTabs,
+  MetricCard,
+} from '@/components/dashboard/management-ui';
 
 interface CompetitionsListClientProps {
   competitions: CompetitionData[];
@@ -25,6 +33,7 @@ type TimeFilter = 'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC';
 export function CompetitionsListClient({ competitions, allowedGames = [], userRole }: CompetitionsListClientProps) {
   const { currentUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deletingCompetition, setDeletingCompetition] = useState<CompetitionData | null>(null);
   const [isPending, startTransition] = useTransition();
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
@@ -100,6 +109,17 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
         endError(res.error || 'Error al cambiar estado.');
       }
     });
+  };
+
+  const handleDeleteCompetition = async (competition: CompetitionData) => {
+    startOperation(`Eliminación de competencia: ${competition.name}`);
+    const res = await updateCompetitionStatusAction(competition.id, 'Eliminada');
+    if (!res.success) {
+      const message = res.error || 'No se pudo eliminar la competencia.';
+      endError(message);
+      throw new Error(message);
+    }
+    endSuccess(res.message || `La competencia "${competition.name}" fue eliminada.`);
   };
 
   const columns: ColumnDef<CompetitionData>[] = [
@@ -240,82 +260,47 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
   }, [competitions, activeTab, timeFilter, searchTerm]);
 
   return (
-    <div className="space-y-6">
+    <ManagementPage>
+      <ManagementHero
+        eyebrow="Gestión global · Circuito competitivo"
+        title="Gestión y control de competencias"
+        description="Administra ligas, torneos, inscripciones y la generación de fixtures desde una operación unificada."
+        icon={Trophy}
+        tone="violet"
+        badge={userRole === 'Administrador' ? 'Vista administrativa' : 'Vista organizador'}
+        actions={(
+          <Button onClick={() => setIsModalOpen(true)}>
+            <Plus className="mr-2 size-4" /> Crear competencia
+          </Button>
+        )}
+      />
+
+      <ManagementMetrics>
+        <MetricCard label="Competencias" value={competitions.length} hint="Registros totales" icon={Trophy} tone="violet" />
+        <MetricCard label="En curso" value={competitions.filter((item) => item.status === 'En Curso').length} hint="Operación activa" icon={Radio} tone="cyan" />
+        <MetricCard label="Inscripciones" value={competitions.filter((item) => item.status === 'Inscripcion').length} hint="Convocatorias abiertas" icon={ClipboardList} tone="gold" />
+        <MetricCard label="Finalizadas" value={competitions.filter((item) => item.status === 'Finalizada').length} hint="Histórico cerrado" icon={CheckCircle2} tone="emerald" />
+      </ManagementMetrics>
+
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
       {/* Sub-navigation Tabs con los 5 estados */}
-      <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3 overflow-x-auto scrollbar-none font-mono">
-        <button
-          onClick={() => setActiveTab('all')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 flex-shrink-0 ${
-            activeTab === 'all'
-              ? 'bg-[var(--accent-violet)] text-slate-950 shadow-lg'
-              : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <Trophy className="w-3.5 h-3.5" />
-          <span>Todas ({competitions.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('Borrador')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 flex-shrink-0 ${
-            activeTab === 'Borrador'
-              ? 'bg-amber-400 text-slate-950 shadow-lg'
-              : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📝 Borrador</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('Inscripcion')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 flex-shrink-0 ${
-            activeTab === 'Inscripcion'
-              ? 'bg-[var(--accent-cyan)] text-slate-950 shadow-lg'
-              : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📝 Inscripción</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('En Curso')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 flex-shrink-0 ${
-            activeTab === 'En Curso'
-              ? 'bg-purple-500 text-white shadow-lg'
-              : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>⚡ En Curso</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('Finalizada')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 flex-shrink-0 ${
-            activeTab === 'Finalizada'
-              ? 'bg-emerald-500 text-slate-950 shadow-lg'
-              : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>🏆 Finalizada</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('Eliminada')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 flex-shrink-0 ${
-            activeTab === 'Eliminada'
-              ? 'bg-[var(--accent-crimson)] text-white shadow-lg'
-              : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          <span>🔴 Eliminada</span>
-        </button>
-      </div>
+      <ManagementTabs
+        label="Estados de competencias"
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        tabs={[
+          { id: 'all', label: 'Todas', count: competitions.length, icon: Trophy, tone: 'violet' },
+          { id: 'Borrador', label: 'Borrador', count: competitions.filter((item) => item.status === 'Borrador').length, icon: ClipboardList, tone: 'gold' },
+          { id: 'Inscripcion', label: 'Inscripción', count: competitions.filter((item) => item.status === 'Inscripcion').length, icon: Calendar, tone: 'cyan' },
+          { id: 'En Curso', label: 'En curso', count: competitions.filter((item) => item.status === 'En Curso').length, icon: Radio, tone: 'violet' },
+          { id: 'Finalizada', label: 'Finalizada', count: competitions.filter((item) => item.status === 'Finalizada').length, icon: CheckCircle2, tone: 'emerald' },
+          { id: 'Eliminada', label: 'Eliminada', count: competitions.filter((item) => item.status === 'Eliminada').length, icon: ShieldAlert, tone: 'crimson' },
+        ]}
+      />
 
       {/* Selector de Filtros y Antigüedad */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--bg-card)] border border-[var(--border-card)] p-4 rounded-2xl shadow-sm backdrop-blur-md font-mono">
+      <div className="management-toolbar font-mono">
         <div className="flex items-center gap-2 flex-1">
           <select
             value={activeTab}
@@ -371,7 +356,11 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
             {/* Selector Rápido de Estado */}
             <select
               value={row.status}
-              onChange={(e) => handleStatusChange(row.id, row.name, row.status, e.target.value as CompetitionStatus)}
+              onChange={(e) => {
+                const targetStatus = e.target.value as CompetitionStatus;
+                if (targetStatus === 'Eliminada') setDeletingCompetition(row);
+                else handleStatusChange(row.id, row.name, row.status, targetStatus);
+              }}
               className="bg-[var(--bg-main)] border border-[var(--border-card)] px-2 py-1 rounded-lg text-[11px] font-bold text-[var(--text-heading)] focus:outline-none cursor-pointer hover:border-[var(--border-card-hover)] transition-colors"
             >
               <option value="Borrador" className="bg-[#0b101b] text-slate-100">📝 Borrador</option>
@@ -385,7 +374,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => handleStatusChange(row.id, row.name, row.status, 'Eliminada')}
+                onClick={() => setDeletingCompetition(row)}
                 className="text-xs text-[var(--accent-crimson)] hover:bg-[var(--accent-crimson-bg)] p-2 rounded-xl transition-colors"
                 title="Eliminar Competencia (Alerta de Peligro)"
               >
@@ -572,6 +561,23 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
           </div>
         </div>
       </ModalForm>
-    </div>
+      {deletingCompetition && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setDeletingCompetition(null)}
+          onConfirm={() => handleDeleteCompetition(deletingCompetition)}
+          title={`Eliminar competencia: ${deletingCompetition.name}`}
+          description="La competencia se moverá al estado Eliminada y dejará de aparecer en la operación activa."
+          confirmText="Eliminar competencia"
+          variant="danger"
+          confirmationText={deletingCompetition.name}
+          consequences={[
+            'Se cerrará su operación competitiva activa.',
+            'No aceptará nuevas inscripciones ni cambios de fixture.',
+            'Permanecerá disponible como registro histórico eliminado.',
+          ]}
+        />
+      )}
+    </ManagementPage>
   );
 }

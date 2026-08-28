@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
@@ -24,6 +23,12 @@ import {
   X,
   FileCheck,
 } from 'lucide-react';
+import {
+  ManagementHero,
+  ManagementMetrics,
+  ManagementPage,
+  MetricCard,
+} from '@/components/dashboard/management-ui';
 
 export interface MatchdayReportItem {
   id: string;
@@ -179,10 +184,14 @@ export function MatchdayReportView() {
   }, [selectedGameSlug, selectedTournName, statusFilter, clubSearch]);
 
   useEffect(() => {
+    // Synchronize filters with the tournament API when the management view mounts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTournaments();
   }, [fetchTournaments]);
 
   useEffect(() => {
+    // Each filter change intentionally refreshes the server-backed match list.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMatches();
   }, [selectedGameSlug, selectedTournName, statusFilter, clubSearch, fetchMatches]);
 
@@ -288,15 +297,24 @@ export function MatchdayReportView() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 font-sans">
+    <ManagementPage className="font-sans">
       
       {/* ── 1. PAGE HEADER ────────────────────────────────────────────────── */}
-      <PageHeader
-        badgeText="Gestión Global • Encuentros & Fichas de Juego"
-        title="REPORTAR ENCUENTROS & MATCHDAY"
+      <ManagementHero
+        eyebrow="Gestión global · Encuentros y fichas"
+        title="Reportar encuentros y matchday"
         description="Módulo oficial de reporte de fichas de juego, envío de comprobantes y validación de visto bueno para organizadores y capitanes."
-        brandColor="#FF4654"
+        icon={FileCheck}
+        tone="crimson"
+        badge={`${matches.length} encuentros`}
       />
+
+      <ManagementMetrics>
+        <MetricCard label="Encuentros" value={matches.length} hint="Resultados filtrados" icon={Trophy} tone="violet" />
+        <MetricCard label="Programados" value={matches.filter((match) => match.status === 'PROGRAMADO').length} hint="Pendientes de disputa" icon={Gamepad2} tone="gold" />
+        <MetricCard label="Por revisar" value={matches.filter((match) => match.status === 'POR_REVISAR').length} hint="Esperan visto bueno" icon={FileCheck} tone="crimson" />
+        <MetricCard label="Finalizados" value={matches.filter((match) => match.status === 'FINALIZADO').length} hint="Resultados confirmados" icon={CheckCircle2} tone="emerald" />
+      </ManagementMetrics>
 
       {actionSuccessMsg && (
         <div className="p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs font-mono font-bold flex items-center gap-2 animate-in fade-in shadow-xl">
@@ -306,7 +324,7 @@ export function MatchdayReportView() {
       )}
 
       {/* ── 2. CONTROLES Y FILTROS SOBRE LA TABLA (JUEGO, COMPETENCIA, BUSCADOR CLUB) ── */}
-      <div className="p-5 rounded-3xl glass-panel border border-[var(--border-card)] shadow-2xl space-y-4 font-mono">
+      <div className="management-toolbar !block space-y-4 font-mono">
         
         {/* Fila 1: Buscador por Nombre del Club & Restablecer */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -426,7 +444,7 @@ export function MatchdayReportView() {
 
       {/* ── 3. TABLA DE PARTIDOS A REPORTAR (FORMATO TABLE UI ADAPTATIVO A TEMAS) ────── */}
       <div className="table-container-theme font-mono">
-        <table className="ui-table min-w-[840px]">
+        <table className="ui-table ui-data-table-responsive min-w-[840px]">
           <thead>
             <tr>
               <th className="p-4 w-44">
@@ -482,7 +500,7 @@ export function MatchdayReportView() {
                   <tr key={m.id} className="hover:bg-[var(--bg-card-hover)] transition-colors group">
                     
                     {/* 1. DÍA / HORA LIMPIOS + BANDERA REAL Y INFO */}
-                    <td className="p-4 whitespace-nowrap">
+                    <td data-label="Día / Hora" className="p-4 whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="text-xs font-black tracking-tight" style={{ color: gameConfig.brandColor }}>
                           {formatDayDate(m.matchDate)}
@@ -508,7 +526,7 @@ export function MatchdayReportView() {
                     </td>
 
                     {/* 2. DISCIPLINA ESPORTS */}
-                    <td className="p-4 whitespace-nowrap">
+                    <td data-label="Disciplina" className="p-4 whitespace-nowrap">
                       <Badge
                         variant="cyan"
                         className="text-[10px] font-bold py-1 px-2.5 flex items-center gap-1.5 shadow-sm"
@@ -520,7 +538,7 @@ export function MatchdayReportView() {
                     </td>
 
                     {/* 3. ENFRENTAMIENTO CENTRAL */}
-                    <td className="p-4">
+                    <td data-label="Enfrentamiento" className="p-4">
                       <div className="flex items-center justify-center gap-3 w-full">
                         {/* Club Local */}
                         <div className="flex items-center gap-2 flex-1 justify-end text-right">
@@ -552,7 +570,7 @@ export function MatchdayReportView() {
                     </td>
 
                     {/* 4. COMPETENCIA & JORNADA */}
-                    <td className="p-4 text-center whitespace-nowrap">
+                    <td data-label="Competencia" className="p-4 text-center whitespace-nowrap">
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-xs font-extrabold text-[var(--text-heading)] truncate max-w-[140px]">
                           {m.tournamentName}
@@ -564,7 +582,7 @@ export function MatchdayReportView() {
                     </td>
 
                     {/* 5. ESTADO */}
-                    <td className="p-4 text-center whitespace-nowrap">
+                    <td data-label="Estado" className="p-4 text-center whitespace-nowrap">
                       {m.status === 'POR_REVISAR' ? (
                         <Badge variant="rose" className="animate-pulse text-[10px] font-bold py-1 px-2.5">
                           ⏳ POR REVISAR
@@ -585,7 +603,7 @@ export function MatchdayReportView() {
                     </td>
 
                     {/* 6. ACCIONES (Reportar Ficha vs Visto Bueno vs Analizar) */}
-                    <td className="p-4 text-right whitespace-nowrap">
+                    <td data-label="Acciones" className="p-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         {m.status === 'POR_REVISAR' && isAdminOrOrganizer ? (
                           <Button
@@ -715,6 +733,6 @@ export function MatchdayReportView() {
           </div>
         </div>
       )}
-    </div>
+    </ManagementPage>
   );
 }

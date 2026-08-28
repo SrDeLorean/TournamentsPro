@@ -34,6 +34,11 @@ export async function POST(request: Request) {
     await executeCommand(`
       INSERT INTO games (slug, name, category, team_size, positions_json, brand_color, stats_schema)
       VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        name = VALUES(name),
+        category = VALUES(category),
+        brand_color = VALUES(brand_color),
+        stats_schema = VALUES(stats_schema)
     `, [
       slug, 
       name, 
@@ -44,12 +49,34 @@ export async function POST(request: Request) {
       stats_schema ? JSON.stringify(stats_schema) : null
     ]);
 
-    return NextResponse.json({ success: true, message: 'Juego creado exitosamente' });
+    return NextResponse.json({ success: true, message: 'Juego guardado exitosamente' });
   } catch (error: any) {
     console.error('POST /api/admin/games error:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      return NextResponse.json({ error: 'El slug ya existe' }, { status: 400 });
+    return NextResponse.json({ error: 'Error interno del servidor al guardar.' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerUserSession();
+    if (!session || (session.role !== 'Administrador' && session.role !== 'Admin')) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get('slug');
+
+    if (!slug) {
+      return NextResponse.json({ error: 'Slug es requerido' }, { status: 400 });
+    }
+
+    await executeCommand('DELETE FROM games WHERE slug = ?', [slug]);
+    return NextResponse.json({ success: true, message: 'Juego eliminado' });
+  } catch (error: any) {
+    console.error('DELETE /api/admin/games error:', error);
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+       return NextResponse.json({ error: 'No se puede eliminar la disciplina porque tiene equipos, jugadores o torneos asociados.' }, { status: 400 });
+    }
+    return NextResponse.json({ error: 'Error al eliminar. Asegúrese de que no tenga datos dependientes.' }, { status: 500 });
   }
 }

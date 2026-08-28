@@ -27,6 +27,13 @@ import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
+import {
+  ManagementPage,
+  ManagementMetrics,
+  ManagementTabs,
+  MetricCard,
+  type ManagementTab,
+} from '@/components/dashboard/management-ui';
 
 // Catalog of Game Modes (Modalidades de Juego) per eSports Game
 export const GAME_MODES: Record<string, { id: string; name: string; format: string; description: string }[]> = {
@@ -106,9 +113,11 @@ interface EnrolledTeam {
   status?: string;
 }
 
+type OrganizerTab = 'approvals' | 'fixture' | 'enrolled' | 'seasons';
+
 export function OrganizerDashboardView() {
   const { currentUser, activeGameSlug, setActiveGameSlug } = useAuth();
-  const [activeTab, setActiveTab] = useState<'approvals' | 'fixture' | 'enrolled' | 'seasons'>('approvals');
+  const [activeTab, setActiveTab] = useState<OrganizerTab>('approvals');
 
   // Selected Game State for Organizer (Synced with global activeGameSlug)
   const selectedGameSlug = activeGameSlug || 'eafc26';
@@ -260,13 +269,20 @@ export function OrganizerDashboardView() {
 
   const pendingApprovals = matches.filter((m) => m.status === 'POR_REVISAR');
 
+  const tabs: ManagementTab<OrganizerTab>[] = [
+    { id: 'approvals', label: 'Visto bueno', shortLabel: 'Revisión', count: pendingApprovals.length, icon: FileCheck, tone: 'gold' },
+    { id: 'fixture', label: `Fixtures ${activeGameMode.format}`, shortLabel: 'Fixtures', count: matches.length, icon: Clock, tone: 'cyan' },
+    { id: 'enrolled', label: 'Escuadras inscritas', shortLabel: 'Escuadras', count: filteredEnrolledTeams.length, icon: Shield, tone: 'emerald' },
+    { id: 'seasons', label: 'Competencias', count: filteredTournaments.length, icon: Calendar, tone: 'violet' },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <ManagementPage>
       {/* Header Banner with Organization Identity & Game / Mode Selectors */}
-      <div className="rounded-2xl bg-slate-950 border border-purple-500/30 shadow-2xl overflow-hidden">
+      <section className="overflow-hidden rounded-[var(--ui-radius-panel)] border border-[var(--border-card)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
         {/* Banner Image */}
         {userOrg?.banner_url && (
-          <div className="h-32 w-full relative overflow-hidden bg-slate-900">
+          <div className="relative h-28 w-full overflow-hidden bg-[var(--bg-subtle)] sm:h-36">
             <Image
               src={userOrg.banner_url}
               alt={userOrg.name}
@@ -275,14 +291,14 @@ export function OrganizerDashboardView() {
               unoptimized={shouldBypassImageOptimization(userOrg.banner_url)}
               className="object-cover opacity-50"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] via-[var(--bg-card)]/40 to-transparent" />
           </div>
         )}
 
-        <div className="p-6 pt-4 space-y-6">
+        <div className="space-y-5 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="relative w-16 h-16 rounded-2xl bg-slate-900 border-2 border-purple-400 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xl">
+              <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--accent-violet)]/40 bg-[var(--bg-subtle)] shadow-lg sm:size-16">
                 {userOrg?.logo_url ? (
                   <Image
                     src={userOrg.logo_url}
@@ -293,20 +309,20 @@ export function OrganizerDashboardView() {
                     className="object-cover"
                   />
                 ) : (
-                  <Building2 className="w-8 h-8 text-purple-300" />
+                    <Building2 className="w-8 h-8 text-[var(--accent-violet)]" />
                 )}
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-black uppercase text-white tracking-wider">
+                  <h1 className="text-xl sm:text-2xl font-black uppercase text-[var(--text-heading)] tracking-wider">
                     {userOrg ? userOrg.name : 'Panel del Organizador eSports'}
                   </h1>
-                  <Badge className="bg-purple-900 text-purple-300 border-purple-400 font-mono text-[10px] uppercase">
+                  <Badge variant="violet" className="font-mono text-[10px] uppercase">
                     {userOrg ? `[${userOrg.tag}]` : 'Organizador'}
                   </Badge>
                 </div>
                 {userOrg && (
-                  <p className="text-xs font-mono text-purple-300 font-bold flex items-center gap-2 mt-1">
+                  <p className="mt-1 flex flex-wrap items-center gap-2 font-mono text-xs font-bold text-[var(--accent-violet)]">
                     <span><MapPin className="w-3 h-3 inline mr-0.5" />{userOrg.country || 'Venezuela'}</span>
                     <span>• Est. {userOrg.founded_year || '2019'}</span>
                     <span>• ★ {userOrg.rating || '4.98'} Rating</span>
@@ -317,11 +333,11 @@ export function OrganizerDashboardView() {
 
             {/* Assigned Organizers List */}
             {userOrg?.organizers && userOrg.organizers.length > 0 && (
-              <div className="p-3 rounded-xl bg-slate-900/90 border border-white/10 space-y-1">
-                <span className="text-[10px] font-mono uppercase text-slate-400 font-black block">Co-Organizadores Asignados:</span>
-                <div className="flex items-center gap-2">
+              <div className="max-w-full space-y-1 rounded-xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-3">
+                <span className="block font-mono text-[10px] font-black uppercase text-[var(--text-muted)]">Equipo organizador</span>
+                <div className="flex max-w-full flex-wrap items-center gap-2">
                   {userOrg.organizers.map((oUser) => (
-                    <div key={oUser.id} className="flex items-center gap-1 text-[11px] font-bold text-cyan-300">
+                    <div key={oUser.id} className="flex items-center gap-1 text-[11px] font-bold text-[var(--accent-cyan)]">
                       <Avatar fallback={oUser.name} src={oUser.avatar_url || oUser.foto} size="sm" />
                       <span>@{oUser.gamertag || oUser.name}</span>
                     </div>
@@ -332,7 +348,7 @@ export function OrganizerDashboardView() {
           </div>
 
           {/* GAME SELECTOR IN ORGANIZER PANEL */}
-          <div className="pt-4 border-t border-white/10 space-y-4">
+          <div className="space-y-4 border-t border-[var(--border-card)] pt-4">
             <div className="space-y-2">
               <label className="text-[10px] font-mono uppercase font-black tracking-widest text-cyan-400 block">
                 ● 1. SELECCIONAR DISCIPLINA ESPORTS:
@@ -347,7 +363,7 @@ export function OrganizerDashboardView() {
                       className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 border flex-shrink-0 ${
                         isSelected
                           ? 'shadow-lg text-slate-950 scale-105 font-black'
-                          : 'bg-slate-900/90 text-slate-300 border-white/10 hover:border-white/30'
+                          : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:border-[var(--border-card-hover)]'
                       }`}
                       style={
                         isSelected
@@ -368,7 +384,7 @@ export function OrganizerDashboardView() {
             </div>
 
             {/* MODALIDAD DE JUEGO SELECTOR IN ORGANIZER PANEL */}
-            <div className="space-y-2 pt-2 border-t border-white/5">
+            <div className="space-y-2 border-t border-[var(--border-card)] pt-3">
               <label className="text-[10px] font-mono uppercase font-black tracking-widest text-purple-400 block flex items-center gap-1.5">
                 <Swords className="w-3.5 h-3.5 text-purple-400" />
                 ● 2. SELECCIONAR MODALIDAD DE JUEGO A GESTIONAR ({activeGame.name}):
@@ -382,13 +398,13 @@ export function OrganizerDashboardView() {
                       onClick={() => setSelectedGameModeId(mode.id)}
                       className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border flex-shrink-0 ${
                         isSelected
-                          ? 'bg-purple-600 text-white border-purple-400 shadow-lg shadow-purple-950/60 scale-105'
-                          : 'bg-slate-900/80 text-slate-300 border-white/10 hover:border-white/20'
+                          ? 'bg-[var(--accent-violet-bg)] text-[var(--accent-violet)] border-[var(--accent-violet)]/40 shadow-sm'
+                          : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:border-[var(--border-card-hover)]'
                       }`}
                     >
-                      <Layers className="w-3.5 h-3.5 text-purple-300" />
+                      <Layers className="w-3.5 h-3.5 text-[var(--accent-violet)]" />
                       <span>{mode.name}</span>
-                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-purple-200">
+                      <span className="rounded bg-black/10 px-1.5 py-0.5 font-mono text-[9px] text-inherit dark:bg-white/10">
                         {mode.format}
                       </span>
                     </button>
@@ -396,7 +412,7 @@ export function OrganizerDashboardView() {
                 })}
               </div>
               {activeGameMode && (
-                <div className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/20 text-[11px] font-mono text-purple-200 flex items-center justify-between">
+                <div className="flex flex-col gap-2 rounded-xl border border-[var(--accent-violet)]/20 bg-[var(--accent-violet-bg)] p-3 font-mono text-[11px] text-[var(--text-secondary)] sm:flex-row sm:items-center sm:justify-between">
                   <span>Modo Activo: <strong>{activeGameMode.name}</strong> ({activeGameMode.format}) — {activeGameMode.description}</span>
                   <Badge variant="cyan" className="font-mono text-[9px]">COMPETENCIA VIGENTE</Badge>
                 </div>
@@ -404,118 +420,41 @@ export function OrganizerDashboardView() {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* KPI Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4 bg-slate-950 border border-amber-500/40 flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-amber-950 border border-amber-500/30 text-amber-400">
-            <FileCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs text-slate-400 font-mono uppercase font-bold">Por Revisar (Visto Bueno)</div>
-            <div className="text-xl font-black text-amber-300">{pendingApprovals.length} Partidos</div>
-          </div>
-        </Card>
-
-        <Card className="p-4 bg-slate-950 border border-cyan-500/30 flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-cyan-950 border border-cyan-500/30 text-cyan-400">
-            <Trophy className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs text-slate-400 font-mono uppercase font-bold">Torneos ({activeGameMode.format})</div>
-            <div className="text-xl font-black text-cyan-300">{filteredTournaments.length} Competencias</div>
-          </div>
-        </Card>
-
-        <Card className="p-4 bg-slate-950 border border-emerald-500/30 flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-emerald-950 border border-emerald-500/30 text-emerald-400">
-            <Shield className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs text-slate-400 font-mono uppercase font-bold">Equipos {activeGame.name}</div>
-            <div className="text-xl font-black text-emerald-300">{filteredEnrolledTeams.length} Escuadras</div>
-          </div>
-        </Card>
-
-        <Card className="p-4 bg-slate-950 border border-purple-500/30 flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-purple-950 border border-purple-500/30 text-purple-400">
-            <Calendar className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs text-slate-400 font-mono uppercase font-bold">Modalidad Activa</div>
-            <div className="text-sm font-black text-purple-300">{activeGameMode.name}</div>
-          </div>
-        </Card>
-      </div>
+      <ManagementMetrics>
+        <MetricCard label="Por revisar" value={pendingApprovals.length} hint="Partidos reportados" icon={FileCheck} tone="gold" />
+        <MetricCard label={`Torneos ${activeGameMode.format}`} value={filteredTournaments.length} hint="Competencias activas" icon={Trophy} tone="cyan" />
+        <MetricCard label={`Equipos ${activeGame.name}`} value={filteredEnrolledTeams.length} hint="Escuadras inscritas" icon={Shield} tone="emerald" />
+        <MetricCard label="Modalidad activa" value={activeGameMode.name} hint={activeGameMode.format} icon={Calendar} tone="violet" />
+      </ManagementMetrics>
 
       {actionMsg && (
-        <div className="p-4 rounded-xl bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div role="status" className="flex items-center gap-2 rounded-xl border border-[var(--accent-emerald)]/30 bg-[var(--accent-emerald-bg)] p-4 text-xs font-bold text-[var(--accent-emerald)]">
+          <CheckCircle2 className="w-4 h-4" />
           <span>{actionMsg}</span>
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => setActiveTab('approvals')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'approvals' ? 'bg-amber-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-          }`}
-        >
-          <FileCheck className="w-4 h-4" />
-          1. Visto Bueno & Revisión ({pendingApprovals.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('fixture')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'fixture' ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          2. Fixtures [{activeGameMode.format}] ({matches.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('enrolled')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'enrolled' ? 'bg-emerald-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-          }`}
-        >
-          <Shield className="w-4 h-4" />
-          3. Escuadras {activeGame.name} ({filteredEnrolledTeams.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('seasons')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'seasons' ? 'bg-purple-600 text-white shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          4. Competencias [{activeGameMode.format}] ({filteredTournaments.length})
-        </button>
-      </div>
+      <ManagementTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} label="Módulos de operación del organizador" />
 
       {/* TAB 1: VISTO BUENO */}
       {activeTab === 'approvals' && (
-        <Card className="p-6 bg-slate-950 border border-amber-500/30 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black uppercase text-amber-300 tracking-wider flex items-center gap-2">
-              <FileCheck className="w-4 h-4 text-amber-400" />
+        <Card className="space-y-4 border border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-[var(--text-heading)]">
+              <FileCheck className="w-4 h-4 text-[var(--accent-gold)]" />
               Módulo de Visto Bueno: Partidos Reportados por Capitanes
             </h3>
-            <Badge className="bg-amber-950 text-amber-300 border-amber-500/30 font-mono text-[10px]">
+            <Badge variant="gold" className="w-fit font-mono text-[10px]">
               {pendingApprovals.length} En Espera de Homologación
             </Badge>
           </div>
 
           {pendingApprovals.length === 0 ? (
-            <div className="p-8 text-center rounded-2xl bg-slate-900/60 border border-white/10 space-y-2">
-              <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-              <p className="text-xs font-bold text-slate-300 uppercase">¡No hay partidos pendientes de Visto Bueno!</p>
+            <div className="space-y-2 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-8 text-center">
+              <CheckCircle2 className="mx-auto w-8 h-8 text-[var(--accent-emerald)]" />
+              <p className="text-xs font-bold uppercase text-[var(--text-secondary)]">No hay partidos pendientes de visto bueno</p>
             </div>
           ) : (
             <DataTable
@@ -524,15 +463,15 @@ export function OrganizerDashboardView() {
                   header: 'Encuentro Reportado',
                   cell: (r) => (
                     <div>
-                      <div className="font-bold text-white text-xs">{r.home_team_name} VS {r.away_team_name}</div>
-                      <div className="text-[10px] font-mono text-cyan-400">Jornada #{r.matchday}</div>
+                      <div className="text-xs font-bold text-[var(--text-heading)]">{r.home_team_name} VS {r.away_team_name}</div>
+                      <div className="font-mono text-[10px] text-[var(--accent-cyan)]">Jornada #{r.matchday}</div>
                     </div>
                   ),
                 },
                 {
                   header: 'Marcador Enviado',
                   cell: (r) => (
-                    <span className="font-mono font-black text-amber-300 text-sm bg-slate-900 px-3 py-1 rounded-lg border border-amber-500/30">
+                    <span className="rounded-lg border border-[var(--accent-gold)]/30 bg-[var(--accent-gold-bg)] px-3 py-1 font-mono text-sm font-black text-[var(--accent-gold)]">
                       {r.reported_score_home} - {r.reported_score_away}
                     </span>
                   ),
@@ -541,16 +480,16 @@ export function OrganizerDashboardView() {
                   header: 'Comprobante',
                   cell: (r) =>
                     r.proof_url ? (
-                      <a href={r.proof_url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400 font-bold hover:underline flex items-center gap-1">
+                      <a href={r.proof_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs font-bold text-[var(--accent-cyan)] hover:underline">
                         <ImageIcon className="w-3.5 h-3.5" /> Captura WebP
                       </a>
                     ) : (
-                      <span className="text-slate-500 text-[10px]">Sin imagen</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">Sin imagen</span>
                     ),
                 },
                 {
                   header: 'Estado',
-                  cell: () => <Badge className="bg-amber-950 text-amber-300 border-amber-500/40">⏳ POR_REVISAR</Badge>,
+                  cell: () => <Badge variant="gold">Por revisar</Badge>,
                 },
               ]}
               data={pendingApprovals}
@@ -573,11 +512,11 @@ export function OrganizerDashboardView() {
 
       {/* TAB 2: FIXTURES */}
       {activeTab === 'fixture' && (
-        <Card className="p-6 bg-slate-950 border border-cyan-500/30 space-y-4">
+        <Card className="space-y-4 border border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-black uppercase text-cyan-300 tracking-wider flex items-center gap-2">
-                <Clock className="w-4 h-4 text-cyan-400" />
+              <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-[var(--text-heading)]">
+                <Clock className="w-4 h-4 text-[var(--accent-cyan)]" />
                 Generación de Fixtures simultáneos ({activeGame.name} • {activeGameMode.name})
               </h3>
             </div>
@@ -595,13 +534,13 @@ export function OrganizerDashboardView() {
 
           <DataTable
             columns={[
-              { header: 'Jornada', cell: (r) => <span className="font-mono font-bold text-cyan-400">Jornada #{r.matchday}</span> },
-              { header: 'Local VS Visitante', cell: (r) => <span className="font-bold text-white">{r.home_team_name} VS {r.away_team_name}</span> },
-              { header: 'Horario Simultáneo', accessorKey: 'match_date', className: 'font-mono text-slate-300' },
+              { header: 'Jornada', cell: (r) => <span className="font-mono font-bold text-[var(--accent-cyan)]">Jornada #{r.matchday}</span> },
+              { header: 'Local VS Visitante', cell: (r) => <span className="font-bold text-[var(--text-heading)]">{r.home_team_name} VS {r.away_team_name}</span> },
+              { header: 'Horario Simultáneo', accessorKey: 'match_date', className: 'font-mono text-[var(--text-secondary)]' },
               {
                 header: 'Resultado Final',
                 cell: (r) => (
-                  <span className="font-mono font-bold text-slate-200">
+                  <span className="font-mono font-bold text-[var(--text-primary)]">
                     {r.score_home !== null ? `${r.score_home} - ${r.score_away}` : 'Pendiente'}
                   </span>
                 ),
@@ -632,18 +571,18 @@ export function OrganizerDashboardView() {
 
       {/* TAB 3: EQUIPOS INSCRITOS POR JUEGO */}
       {activeTab === 'enrolled' && (
-        <Card className="p-6 bg-slate-950 border border-emerald-500/30 space-y-4">
-          <h3 className="text-sm font-black uppercase text-emerald-300 tracking-wider flex items-center gap-2">
-            <Shield className="w-4 h-4 text-emerald-400" />
+        <Card className="space-y-4 border border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-5">
+          <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-[var(--text-heading)]">
+            <Shield className="w-4 h-4 text-[var(--accent-emerald)]" />
             Nómina de Escuadras Inscritas en {activeGame.name} ({activeGameMode.name})
           </h3>
 
           <DataTable
             columns={[
-              { header: 'Nombre del Club', cell: (r) => <span className="font-black text-white">{r.name} [{r.tag}]</span> },
-              { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-mono text-cyan-400 uppercase font-bold' },
-              { header: 'Capitán', accessorKey: 'captain_name', className: 'font-bold text-slate-300' },
-              { header: 'Estado', cell: (r) => <Badge className="bg-emerald-950 text-emerald-300">{r.status || 'Inscrito'}</Badge> },
+              { header: 'Nombre del Club', cell: (r) => <span className="font-black text-[var(--text-heading)]">{r.name} [{r.tag}]</span> },
+              { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-mono text-[var(--accent-cyan)] uppercase font-bold' },
+              { header: 'Capitán', accessorKey: 'captain_name', className: 'font-bold text-[var(--text-secondary)]' },
+              { header: 'Estado', cell: (r) => <Badge variant="emerald">{r.status || 'Inscrito'}</Badge> },
             ]}
             data={filteredEnrolledTeams}
             searchPlaceholder="Buscar club inscrito..."
@@ -654,21 +593,21 @@ export function OrganizerDashboardView() {
 
       {/* TAB 4: TEMPORADAS & COMPETENCIAS */}
       {activeTab === 'seasons' && (
-        <Card className="p-6 bg-slate-950 border border-purple-500/30 space-y-4">
-          <h3 className="text-sm font-black uppercase text-purple-300 tracking-wider flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-purple-400" />
+        <Card className="space-y-4 border border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-5">
+          <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-[var(--text-heading)]">
+            <Calendar className="w-4 h-4 text-[var(--accent-violet)]" />
             Torneos y Competencias en Modalidad {activeGameMode.name} ({activeGameMode.format})
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredTournaments.map((t) => (
-              <div key={t.id} className="p-4 rounded-2xl bg-slate-900 border border-purple-500/30 space-y-2">
+              <div key={t.id} className="space-y-2 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-4">
                 <div className="flex items-center justify-between">
-                  <span className="font-black text-white text-sm uppercase">{t.name}</span>
+                  <span className="text-sm font-black uppercase text-[var(--text-heading)]">{t.name}</span>
                   <Badge variant="cyan" className="font-mono text-[10px]">{t.status || 'ACTIVO'}</Badge>
                 </div>
-                <p className="text-xs text-slate-300 font-mono">
-                  Disciplina: <strong className="text-purple-300 uppercase">{t.game_slug || selectedGameSlug}</strong> • Modalidad: <strong className="text-cyan-300">{activeGameMode.format}</strong>
+                <p className="font-mono text-xs text-[var(--text-secondary)]">
+                  Disciplina: <strong className="uppercase text-[var(--accent-violet)]">{t.game_slug || selectedGameSlug}</strong> • Modalidad: <strong className="text-[var(--accent-cyan)]">{activeGameMode.format}</strong>
                 </p>
               </div>
             ))}
@@ -688,6 +627,6 @@ export function OrganizerDashboardView() {
           variant="success"
         />
       )}
-    </div>
+    </ManagementPage>
   );
 }

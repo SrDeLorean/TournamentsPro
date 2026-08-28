@@ -27,7 +27,38 @@ export async function GET(request: Request) {
       if (!rows || rows.length === 0) {
         return apiError('Usuario no encontrado', 404);
       }
-      return apiSuccess({ user: mapUserRowToProfile(rows[0]) });
+      
+      const user = mapUserRowToProfile(rows[0]);
+      
+      // AGGREGATE STATS
+      const statsRows = await queryDB<{stats_json: string}>('SELECT stats_json FROM match_player_stats WHERE player_id = ?', [userId]);
+      const aggregatedStats: Record<string, number> = { matches: statsRows.length };
+      
+      const rateMetrics = ['acs', 'adr', 'hs_percent', 'kd', 'score', 'winrate'];
+      const statCounts: Record<string, number> = {};
+
+      statsRows.forEach(row => {
+          try {
+            const stats = typeof row.stats_json === 'string' ? JSON.parse(row.stats_json) : row.stats_json;
+            for (const key in stats) {
+                if (!aggregatedStats[key]) {
+                  aggregatedStats[key] = 0;
+                  statCounts[key] = 0;
+                }
+                aggregatedStats[key] += Number(stats[key]) || 0;
+                statCounts[key] += 1;
+            }
+          } catch(e) {}
+      });
+
+      // Calcular promedios para métricas de ratio
+      for (const key of rateMetrics) {
+        if (aggregatedStats[key] && statCounts[key]) {
+          aggregatedStats[key] = Number((aggregatedStats[key] / statCounts[key]).toFixed(2));
+        }
+      }
+
+      return apiSuccess({ user: { ...user, aggregatedStats } });
     }
 
     // List users with optional filters and pagination

@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { PageHeader } from '@/components/ui/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/components/providers/auth-provider';
-import { Building2, Plus, Shield, Edit, Users, Trophy, Star, Trash2 } from 'lucide-react';
+import { Building2, Plus, Shield, Edit, Users, Trophy, Star, Trash2, Gamepad2, Activity } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
@@ -19,6 +19,13 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { Pagination } from '@/components/ui/pagination';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import { getDirectoryEndpoint } from '@/lib/directory-endpoints';
+import {
+  ManagementHero,
+  ManagementMetrics,
+  ManagementPage,
+  ManagementTabs,
+  MetricCard,
+} from '@/components/dashboard/management-ui';
 
 interface OrganizerOption {
   id: string;
@@ -90,6 +97,7 @@ export default function OrganizationsModulePage() {
   const [availableOrganizers, setAvailableOrganizers] = useState<OrganizerOption[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [editingOrg, setEditingOrg] = useState<OrganizationRecord | null>(null);
+  const [deletingOrg, setDeletingOrg] = useState<OrganizationRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Image Upload State for Modals
@@ -300,10 +308,6 @@ export default function OrganizationsModulePage() {
   };
 
   const handleDeleteOrg = async (organization: OrganizationRecord) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar la organización "${organization.name}"? Esta acción no se puede deshacer.`)) {
-      return;
-    }
-    
     startOperation(`Eliminación de Organización: ${organization.name}`);
     try {
       const res = await fetch('/api/admin/organizations', {
@@ -317,47 +321,51 @@ export default function OrganizationsModulePage() {
         endSuccess(`La organización "${organization.name}" fue eliminada correctamente.`);
         refreshOrganizations();
       } else {
-        endError(data.error || 'Error al eliminar la organización.');
+        throw new Error(data.error || 'Error al eliminar la organización.');
       }
     } catch (e: unknown) {
-      endError(errorMessage(e, 'Error de conexión al eliminar la organización.'));
+      const message = errorMessage(e, 'Error de conexión al eliminar la organización.');
+      endError(message);
+      throw new Error(message);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      <PageHeader
-        badgeText="Módulo de Organizaciones Madre"
-        title="ORGANIZACIONES & ASIGNACIÓN DE"
-        highlightTitle="COMPETENCIAS."
+    <ManagementPage>
+      <ManagementHero
+        eyebrow="Gestión global · Ecosistema competitivo"
+        title="Organizaciones y asignación de competencias"
         description="Explora las Organizaciones eSports oficiales, asignación de organizadores vinculados y disciplinas autorizadas."
+        icon={Building2}
+        tone="violet"
+        badge={isAdmin ? 'Control administrativo' : 'Directorio global'}
+        actions={isAdmin ? (
+          <Button onClick={openCreateModal}>
+            <Plus className="mr-2 size-4" /> Nueva organización
+          </Button>
+        ) : undefined}
       />
+
+      <ManagementMetrics>
+        <MetricCard label="Organizaciones" value={organizations.length} hint="Registros totales" icon={Building2} tone="violet" />
+        <MetricCard label="Activas" value={organizations.filter((org) => !org.status || org.status.toLowerCase() === 'activa').length} hint="Operación vigente" icon={Activity} tone="emerald" />
+        <MetricCard label="Organizadores" value={organizations.reduce((total, org) => total + (org.organizers_count || org.organizers?.length || 0), 0)} hint="Asignaciones activas" icon={Users} tone="cyan" />
+        <MetricCard label="Disciplinas" value={Object.keys(GAMES_CATALOG).length} hint="Catálogo disponible" icon={Gamepad2} tone="gold" />
+      </ManagementMetrics>
 
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
       {/* Navigation Tabs (Solo para Administradores) */}
       {isAdmin && (
-        <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab('directory')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'directory' ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            Directorio de Organizaciones
-          </button>
-
-          <button
-            onClick={() => setActiveTab('admin')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'admin' ? 'bg-purple-600 text-white shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            Administración & Asignación de Organizadores
-          </button>
-        </div>
+        <ManagementTabs
+          label="Secciones de organizaciones"
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          tabs={[
+            { id: 'directory', label: 'Directorio de organizaciones', shortLabel: 'Directorio', count: filteredOrgs.length, icon: Building2, tone: 'cyan' },
+            { id: 'admin', label: 'Administración y asignaciones', shortLabel: 'Administrar', count: organizations.length, icon: Shield, tone: 'violet' },
+          ]}
+        />
       )}
 
       {/* TAB 1: DIRECTORIO DE ORGANIZACIONES MADRE */}
@@ -376,7 +384,7 @@ export default function OrganizationsModulePage() {
             brandColor="#A855F7"
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="management-grid">
             {currentOrgs.map((org, index) => {
               const bannerImg = org.banner_url || org.bannerUrl || '/images/default/banner-default.jpg';
               const logoImg = org.logo_url || org.logoUrl || '/images/default/logo-default.png';
@@ -543,7 +551,7 @@ export default function OrganizationsModulePage() {
                 <Button size="sm" variant="ghost" onClick={() => openEditModal(row)} className="text-xs text-purple-300 hover:bg-purple-950 p-2">
                   <Edit className="w-3.5 h-3.5" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => handleDeleteOrg(row)} className="text-xs text-rose-400 hover:bg-rose-950/50 p-2">
+                <Button size="sm" variant="ghost" onClick={() => setDeletingOrg(row)} aria-label={`Eliminar ${row.name}`} title={`Eliminar ${row.name}`} className="text-xs text-rose-400 hover:bg-rose-950/50 p-2">
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
@@ -762,6 +770,23 @@ export default function OrganizationsModulePage() {
           </div>
         </ModalForm>
       )}
-    </div>
+      {deletingOrg && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setDeletingOrg(null)}
+          onConfirm={() => handleDeleteOrg(deletingOrg)}
+          title={`Eliminar organización: ${deletingOrg.name}`}
+          description="La organización dejará de estar disponible en la gestión global. Revisa las consecuencias antes de continuar."
+          confirmText="Eliminar organización"
+          variant="danger"
+          confirmationText={deletingOrg.name}
+          consequences={[
+            'Se eliminará el registro de la organización.',
+            'Sus asignaciones de organizadores podrían dejar de estar disponibles.',
+            'Esta operación no se puede deshacer desde la interfaz.',
+          ]}
+        />
+      )}
+      </ManagementPage>
   );
 }

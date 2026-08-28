@@ -2,7 +2,6 @@ import React from 'react';
 import { queryDB } from '@/lib/db';
 import { CompetitionData } from '@/app/actions/competitions';
 import { CompetitionsListClient } from './competitions-client';
-import { PageHeader } from '@/components/ui/page-header';
 import { getServerUserSession } from '@/lib/auth-server';
 
 export const revalidate = 0; // Dynamic RSC rendering
@@ -41,20 +40,10 @@ export default async function CompetitionsPage() {
   const competitions = await getOrganizerCompetitions();
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      <PageHeader
-        badgeText="Módulo del Organizador eSports"
-        title="GESTIÓN & CONTROL DE"
-        highlightTitle="COMPETENCIAS."
-        description="Administra ligas, torneos, la inscripción de clubes y la generación automática de fixtures simultáneos."
-        brandColor="#A855F7"
-      />
-
-      <CompetitionsListClient 
-        competitions={competitions} 
-        allowedGames={session?.allowedGames || []} 
-        userRole={session?.role || 'Jugador'}
-      />
-    </div>
+    <CompetitionsListClient
+      competitions={competitions}
+      allowedGames={session?.allowedGames || []}
+      userRole={session?.role || 'Jugador'}
+    />
   );
 }

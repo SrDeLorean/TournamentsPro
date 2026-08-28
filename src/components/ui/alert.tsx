@@ -29,7 +29,9 @@ export function Alert({ variant = 'info', title, children, className, ...props }
 
   return (
     <div
-      className={cn("p-4 rounded-xl border flex items-start gap-3 backdrop-blur-md shadow-sm transition-all animate-in fade-in zoom-in-95 duration-300", configs[variant].bg, className)}
+      role={variant === 'danger' ? 'alert' : 'status'}
+      aria-live={variant === 'danger' ? 'assertive' : 'polite'}
+      className={cn("ui-alert relative overflow-hidden p-4 rounded-xl border flex items-start gap-3 backdrop-blur-md shadow-sm transition-all animate-in fade-in zoom-in-95 duration-300", configs[variant].bg, className)}
       {...props}
     >
       {configs[variant].icon}

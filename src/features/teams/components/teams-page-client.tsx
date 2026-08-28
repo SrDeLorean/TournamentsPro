@@ -3,11 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { PageHeader } from '@/components/ui/page-header';
 import { TeamDirectory } from '@/components/teams/team-directory';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, ShieldAlert, Unlock, Edit, Plus, UserPlus, X } from 'lucide-react';
+import { Shield, ShieldAlert, Unlock, Edit, Plus, UserPlus, X, Activity, Trophy } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDirectoryEndpoint } from '@/lib/directory-endpoints';
 import { DataTable, ColumnDef } from '@/components/ui/data-table';
@@ -21,6 +20,13 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
+import {
+  ManagementHero,
+  ManagementMetrics,
+  ManagementPage,
+  ManagementTabs,
+  MetricCard,
+} from '@/components/dashboard/management-ui';
 
 interface TeamManager {
   id: string;
@@ -365,49 +371,42 @@ export default function TeamsModulePage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      <PageHeader
-        badgeText="Módulo de Clubes eSports"
-        title="MÓDULO DE GESTIÓN & DIRECTORIO DE"
-        highlightTitle="CLUBES."
+    <ManagementPage>
+      <ManagementHero
+        eyebrow="Gestión global · Clubes y plantillas"
+        title="Directorio y gestión de escuadras"
         description="Explora las fichas de clubes de todas las disciplinas, administra información de escuadras y gestiona sanciones."
+        icon={Shield}
+        tone="violet"
+        badge={isAdminOrOrganizer ? 'Operación habilitada' : 'Directorio global'}
+        actions={isAdminOrOrganizer ? (
+          <Button onClick={openCreateModal}>
+            <Plus className="mr-2 size-4" /> Registrar escuadra
+          </Button>
+        ) : undefined}
       />
+
+      <ManagementMetrics>
+        <MetricCard label="Escuadras" value={teams.length} hint="Clubes registrados" icon={Shield} tone="violet" />
+        <MetricCard label="Activas" value={teams.filter((team) => !team.is_banned).length} hint="Disponibles para competir" icon={Activity} tone="emerald" />
+        <MetricCard label="Integrantes" value={teams.reduce((total, team) => total + (team.members_count || 0), 0)} hint="Plantillas declaradas" icon={UserPlus} tone="cyan" />
+        <MetricCard label="Sancionadas" value={bannedTeams.length} hint="Bloqueos vigentes" icon={ShieldAlert} tone="crimson" />
+      </ManagementMetrics>
 
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
       {/* Navigation Tabs (Solo para Administrador u Organizador) */}
       {isAdminOrOrganizer && (
-        <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab('directory')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'directory' ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            Directorio de Escuadras
-          </button>
-
-          <button
-            onClick={() => setActiveTab('crud')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'crud' ? 'bg-purple-600 text-white shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            Gestión de Escuadras ({teams.length})
-          </button>
-
-          <button
-            onClick={() => setActiveTab('banned')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'banned' ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-900 border border-white/10 text-slate-300'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" />
-            Menú de Desbaneo ({bannedTeams.length})
-          </button>
-        </div>
+        <ManagementTabs
+          label="Secciones de escuadras"
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          tabs={[
+            { id: 'directory', label: 'Directorio de escuadras', shortLabel: 'Directorio', count: teams.length, icon: Trophy, tone: 'cyan' },
+            { id: 'crud', label: 'Gestión de escuadras', shortLabel: 'Gestionar', count: teams.length, icon: Shield, tone: 'violet' },
+            { id: 'banned', label: 'Menú de desbaneo', shortLabel: 'Sanciones', count: bannedTeams.length, icon: ShieldAlert, tone: 'crimson' },
+          ]}
+        />
       )}
 
       {/* TAB 1: DIRECTORIO DE ESCUADRAS (TODAS LAS DISCIPLINAS DESDE LA BASE DE DATOS SIN FILTROS) */}
@@ -839,6 +838,6 @@ export default function TeamsModulePage() {
         team={managingRosterTeam}
         onRosterUpdated={refreshTeams}
       />
-    </div>
+    </ManagementPage>
   );
 }

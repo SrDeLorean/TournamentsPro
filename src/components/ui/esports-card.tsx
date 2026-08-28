@@ -156,7 +156,7 @@ export function EsportsCard({
 
   const cardContent = (
     <div
-      className="rounded-3xl border border-[var(--border-card)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] backdrop-blur-xl relative overflow-hidden flex flex-col h-full transition-all duration-500 hover:-translate-y-1.5 hover:border-[var(--card-brand)] shadow-xl hover:shadow-[0_12px_40px_color-mix(in_srgb,var(--card-brand)_25%,transparent)] group text-[var(--text-primary)]"
+      className="ui-management-card rounded-3xl border border-[var(--border-card)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] backdrop-blur-xl relative overflow-hidden flex flex-col h-full transition-all duration-500 hover:-translate-y-1.5 hover:border-[var(--card-brand)] shadow-xl hover:shadow-[0_12px_40px_color-mix(in_srgb,var(--card-brand)_25%,transparent)] group text-[var(--text-primary)]"
       style={{ '--card-brand': brandColor } as React.CSSProperties}
     >
       {/* ── Top Discipline Brand Accent Strip ──────────────────── */}

@@ -28,8 +28,9 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
   const [dbUser, setDbUser] = React.useState<UserProfile | null>(null);
 
   React.useEffect(() => {
-    if (!playerId) return;
-    fetch(`/api/users?id=${playerId}`)
+    const fetchId = (playerId === 'me' || playerId === 'ficha') ? currentUser?.id : playerId;
+    if (!fetchId) return;
+    fetch(`/api/users?id=${fetchId}`)
       .then((res) => res.json())
       .then((data: { success?: boolean; user?: UserProfile }) => {
         if (data.success && data.user) {
@@ -39,7 +40,7 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
       .catch((err) => console.error('Error fetching player by id:', err));
   }, [playerId]);
 
-  const activeUser = isSelf ? currentUser : (dbUser || (currentUser?.id && currentUser.id.toLowerCase() === normalizedId ? currentUser : null));
+  const activeUser = dbUser || (isSelf ? currentUser : (currentUser?.id && currentUser.id.toLowerCase() === normalizedId ? currentUser : null));
 
   const validPositions = game?.positions || [];
   const rawPos = activeUser?.gameProfiles?.[gameSlug]?.position || (gameSlug === activeUser?.primaryGame ? activeUser?.position : undefined) || (validPositions.includes(activeUser?.position ?? '') ? activeUser?.position : undefined);
@@ -96,11 +97,13 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
     avatarUrl: activeUser?.avatarUrl || activeUser?.foto || matchedKnown?.avatarUrl || '/images/default/logo-default.png',
     bannerUrl: activeUser?.bannerUrl || matchedKnown?.bannerUrl || '/images/default/banner-default.jpg',
     stats: {
-      matches: 42,
-      goals: 24,
-      assists: 15,
-      mvps: 8,
-      winrate: '79%',
+      ...((activeUser as any)?.aggregatedStats || {
+        matches: 42,
+        goals: 24,
+        assists: 15,
+        mvps: 8,
+        winrate: '79%',
+      })
     },
   };
 

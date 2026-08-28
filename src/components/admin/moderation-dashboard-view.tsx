@@ -1,179 +1,229 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Shield, MessageSquare, Ban, CheckCircle2, UserX, AlertTriangle, Users, Search, RefreshCw, MoreVertical } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { AlertTriangle, Ban, CheckCircle2, Gamepad2, MessageSquare, RefreshCw, Shield, UserX, Users } from 'lucide-react';
+import {
+  banUserFromChatAction,
+  getUsersByRoleAction,
+  unbanUserFromChatAction,
+} from '@/app/actions/chat';
 import { ChatSystem } from '@/components/chat/chat-system';
+import {
+  ManagementHero,
+  ManagementMetrics,
+  ManagementPage,
+  ManagementSection,
+  ManagementTabs,
+  MetricCard,
+  type ManagementTab,
+} from '@/components/dashboard/management-ui';
+import { Alert } from '@/components/ui/alert';
+import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table';
+import { ModalForm } from '@/components/ui/modal-form';
+import { GAMES_CATALOG } from '@/lib/games-data';
+
+interface ModeratedUser {
+  id: string;
+  name: string;
+  gamertag: string;
+  role: string;
+  gameSlug?: string | null;
+  isBanned?: boolean;
+  banReason?: string | null;
+}
+
+type ModerationTab = 'bans' | 'chat';
+type ActionMessage = { type: 'success' | 'danger'; text: string } | null;
+
+const MODERATED_ROLES = ['Administrador', 'Organizador', 'Capitan', 'Jugador'] as const;
 
 export function ModerationDashboard() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'bans'>('bans');
-  
-  // Dummy data for banned users
-  const bannedUsers = [
-    { id: 1, name: 'TrollGamer99', gamertag: 'xXTrollXx', reason: 'Lenguaje Inapropiado', date: '2023-10-25', status: 'banned', game: 'EA FC 26' },
-    { id: 2, name: 'RageQuitter', gamertag: 'RageQuitPro', reason: 'Abandono frecuente', date: '2023-10-22', status: 'suspended', game: 'NBA 2K25' },
-    { id: 3, name: 'ToxicPlayer', gamertag: 'Toxic123', reason: 'Acoso a otros jugadores', date: '2023-10-20', status: 'banned', game: 'Valorant' },
+  const [activeTab, setActiveTab] = useState<ModerationTab>('bans');
+  const [users, setUsers] = useState<ModeratedUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isBanModalOpen, setIsBanModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [banReason, setBanReason] = useState('Infracción disciplinaria del reglamento eSports.');
+  const [actionMessage, setActionMessage] = useState<ActionMessage>(null);
+
+  const loadUsers = useCallback(async (refresh = false) => {
+    if (refresh) setIsRefreshing(true);
+    else setIsLoading(true);
+    try {
+      const results = await Promise.all(MODERATED_ROLES.map((role) => getUsersByRoleAction(role)));
+      const userMap = new Map<string, ModeratedUser>();
+      for (const result of results) {
+        if (!result.success) continue;
+        for (const user of (result.data ?? []) as ModeratedUser[]) userMap.set(user.id, user);
+      }
+      setUsers([...userMap.values()].sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (error: unknown) {
+      console.error('Error cargando usuarios para moderación:', error);
+      setActionMessage({ type: 'danger', text: 'No fue posible cargar el directorio de moderación.' });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => loadUsers());
+  }, [loadUsers]);
+
+  const bannedUsers = useMemo(() => users.filter((user) => user.isBanned), [users]);
+  const availableUsers = useMemo(() => users.filter((user) => !user.isBanned && user.role !== 'Administrador'), [users]);
+  const gamesUnderModeration = useMemo(() => new Set(users.map((user) => user.gameSlug).filter(Boolean)).size, [users]);
+
+  const tabs: ManagementTab<ModerationTab>[] = [
+    { id: 'bans', label: 'Cuentas y sanciones', shortLabel: 'Sanciones', count: bannedUsers.length, icon: Ban, tone: 'crimson' },
+    { id: 'chat', label: 'Monitor de chat', shortLabel: 'Chat', icon: MessageSquare, tone: 'cyan' },
   ];
 
-  // Dummy data for chat channels
-  const chatChannels = [
-    { id: 'general', name: 'Chat General Global', active: 1245 },
-    { id: 'admin', name: 'Soporte y Reclamos', active: 42 },
-    { id: 'eafc26', name: 'EA FC 26 Hub', active: 890 },
-  ];
+  const openBanModal = () => {
+    setSelectedUserId(availableUsers[0]?.id ?? '');
+    setBanReason('Infracción disciplinaria del reglamento eSports.');
+    setIsBanModalOpen(true);
+  };
+
+  const handleBan = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedUserId || !banReason.trim()) return;
+    setIsSubmitting(true);
+    const result = await banUserFromChatAction(selectedUserId, banReason.trim());
+    setIsSubmitting(false);
+    if (!result.success) {
+      setActionMessage({ type: 'danger', text: result.error || 'No fue posible aplicar la sanción.' });
+      return;
+    }
+    setIsBanModalOpen(false);
+    setActionMessage({ type: 'success', text: result.message || 'Sanción aplicada correctamente.' });
+    await loadUsers(true);
+  };
+
+  const handleUnban = async (user: ModeratedUser) => {
+    setIsSubmitting(true);
+    const result = await unbanUserFromChatAction(user.id);
+    setIsSubmitting(false);
+    if (!result.success) {
+      setActionMessage({ type: 'danger', text: result.error || 'No fue posible levantar la sanción.' });
+      return;
+    }
+    setActionMessage({ type: 'success', text: `Se restauró el acceso de @${user.gamertag}.` });
+    await loadUsers(true);
+  };
+
+  const gameFilters = Object.values(GAMES_CATALOG).map((game) => ({ label: game.name, value: game.slug }));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in zoom-in-95 duration-500">
-      
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant="gold" className="text-[10px] font-black uppercase">
-              Centro de Seguridad
-            </Badge>
-            <Badge variant="cyan" className="text-[10px] font-black uppercase">
-              Global Admin
-            </Badge>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
-            <Shield className="w-8 h-8 text-orange-500" />
-            Moderación & Chat
-          </h1>
-          <p className="text-slate-400 font-mono text-sm mt-1 max-w-2xl">
-            Panel central para la gestión de comportamiento, desbaneos de cuentas y monitoreo de chats globales.
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10 hover:text-orange-300"
-          >
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            Reportes Pendientes (12)
+    <ManagementPage>
+      <ManagementHero
+        eyebrow="Seguridad y convivencia"
+        title="Centro de moderación"
+        description="Gestiona sanciones reales, restaura accesos y supervisa conversaciones con controles protegidos y auditados."
+        icon={Shield}
+        tone="crimson"
+        badge="Solo administración"
+        actions={
+          <Button onClick={openBanModal} disabled={availableUsers.length === 0} variant="danger" className="w-full sm:w-auto">
+            <UserX className="size-4" />Nueva sanción
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* TABS */}
-      <div className="flex items-center gap-2 border-b border-[var(--border-card)] mb-6 overflow-x-auto pb-px">
-        <button
-          onClick={() => setActiveTab('bans')}
-          className={`flex items-center gap-2 px-4 py-3 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${
-            activeTab === 'bans'
-              ? 'border-orange-500 text-orange-400 bg-orange-500/5'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-          }`}
+      <ManagementMetrics>
+        <MetricCard label="Sanciones activas" value={bannedUsers.length} hint="Cuentas restringidas" icon={Ban} tone="crimson" />
+        <MetricCard label="Usuarios supervisados" value={users.length} hint="Directorio real" icon={Users} tone="cyan" />
+        <MetricCard label="Disciplinas" value={gamesUnderModeration} hint="Juegos con usuarios" icon={Gamepad2} tone="violet" />
+        <MetricCard label="Estado operativo" value="En línea" hint="Acciones auditadas" icon={CheckCircle2} tone="emerald" />
+      </ManagementMetrics>
+
+      {actionMessage ? (
+        <Alert variant={actionMessage.type} title={actionMessage.type === 'success' ? 'Operación completada' : 'No se pudo completar'}>
+          {actionMessage.text}
+        </Alert>
+      ) : null}
+
+      <ManagementTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} label="Módulos de moderación" />
+
+      {activeTab === 'bans' ? (
+        <ManagementSection
+          title="Sanciones activas"
+          description="Cuentas con acceso al chat suspendido. Las restauraciones se aplican inmediatamente."
+          icon={AlertTriangle}
+          tone="crimson"
+          action={
+            <Button variant="outline" onClick={() => void loadUsers(true)} disabled={isRefreshing} className="w-full sm:w-auto">
+              <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />Actualizar
+            </Button>
+          }
         >
-          <Ban className="w-4 h-4" />
-          Cuentas y Bans
-        </button>
-        <button
-          onClick={() => setActiveTab('chat')}
-          className={`flex items-center gap-2 px-4 py-3 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${
-            activeTab === 'chat'
-              ? 'border-cyan-500 text-cyan-400 bg-cyan-500/5'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4" />
-          Monitor de Chat Global
-        </button>
-      </div>
-
-      {/* CONTENT: BANS */}
-      {activeTab === 'bans' && (
-        <div className="space-y-6">
-          <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative w-full sm:w-96">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input 
-                type="text" 
-                placeholder="Buscar usuario por nombre, gamertag o ID..." 
-                className="w-full bg-slate-950 border border-[var(--border-card)] rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-orange-500/50"
-              />
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button size="sm" variant="outline" className="border-slate-700 w-full sm:w-auto">
-                Filtrar por Juego
+          <DataTable
+            data={bannedUsers}
+            searchPlaceholder="Buscar por nombre, gamertag, rol o disciplina..."
+            filterOptions={[{ key: 'gameSlug', label: 'Disciplina', options: gameFilters }]}
+            brandColor="var(--accent-crimson)"
+            emptyMessage={isLoading ? 'Cargando sanciones...' : 'No hay sanciones activas.'}
+            columns={[
+              {
+                header: 'Usuario',
+                cell: (user) => (
+                  <div className="flex items-center gap-3">
+                    <Avatar fallback={user.name} size="md" status="offline" />
+                    <div className="min-w-0"><p className="truncate font-bold text-[var(--text-heading)]">{user.name}</p><p className="truncate font-mono text-[10px] text-[var(--accent-cyan)]">@{user.gamertag}</p></div>
+                  </div>
+                ),
+              },
+              { header: 'Motivo', cell: (user) => <span className="text-[var(--accent-crimson)]">{user.banReason || 'Sanción disciplinaria'}</span> },
+              { header: 'Disciplina', cell: (user) => <Badge variant="slate">{GAMES_CATALOG[user.gameSlug || '']?.name || user.gameSlug || 'Global'}</Badge> },
+              { header: 'Rol', cell: (user) => <Badge variant={user.role === 'Organizador' ? 'violet' : 'cyan'}>{user.role}</Badge> },
+              { header: 'Estado', cell: () => <Badge variant="rose">Baneado</Badge> },
+            ]}
+            actions={(user) => (
+              <Button size="sm" variant="outline" disabled={isSubmitting} onClick={() => void handleUnban(user)} className="text-[var(--accent-emerald)]">
+                <CheckCircle2 className="size-3.5" />Restaurar
               </Button>
-              <Button size="sm" className="bg-orange-600 hover:bg-orange-500 text-white w-full sm:w-auto">
-                <UserX className="w-4 h-4 mr-2" />
-                Nuevo Ban
-              </Button>
-            </div>
-          </div>
-
-          <div className="glass-panel overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-300">
-                <thead className="bg-slate-900/80 text-xs uppercase font-black text-slate-500 border-b border-[var(--border-card)]">
-                  <tr>
-                    <th className="px-6 py-4">Usuario / Atleta</th>
-                    <th className="px-6 py-4">Motivo de Sanción</th>
-                    <th className="px-6 py-4">Juego</th>
-                    <th className="px-6 py-4">Fecha</th>
-                    <th className="px-6 py-4">Estado</th>
-                    <th className="px-6 py-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border-card)]">
-                  {bannedUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-slate-900/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar fallback={user.name} size="md" status="offline" />
-                          <div>
-                            <div className="font-bold text-white uppercase">{user.name}</div>
-                            <div className="text-[10px] text-cyan-400 font-mono">@{user.gamertag}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-rose-400 font-medium">{user.reason}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge variant="slate" className="bg-slate-800 text-slate-300">{user.game}</Badge>
-                      </td>
-                      <td className="px-6 py-4 font-mono text-slate-400">{user.date}</td>
-                      <td className="px-6 py-4">
-                        <Badge variant={user.status === 'banned' ? 'rose' : 'gold'} className="uppercase text-[10px]">
-                          {user.status === 'banned' ? 'Baneado' : 'Suspendido'}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button size="sm" variant="outline" className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 h-8">
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                          Desbanear
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {bannedUsers.length === 0 && (
-              <div className="p-8 text-center text-slate-500 flex flex-col items-center">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2 opacity-50" />
-                <p>No hay usuarios baneados actualmente.</p>
-              </div>
             )}
-          </div>
-        </div>
-      )}
+          />
+        </ManagementSection>
+      ) : null}
 
-      {/* CONTENT: CHAT */}
-      {activeTab === 'chat' && (
-        <div className="h-[750px] relative rounded-xl overflow-hidden border border-[var(--border-card)] shadow-xl">
-          <React.Suspense fallback={<div className="p-8 text-center text-slate-400">Cargando sistema de chat...</div>}>
-            <ChatSystem />
-          </React.Suspense>
-        </div>
-      )}
-      
-    </div>
+      {activeTab === 'chat' ? (
+        <ManagementSection title="Monitor de chat" description="Canales, soporte y conversaciones disponibles según permisos." icon={MessageSquare} tone="cyan" className="[&>div:last-child]:p-0 sm:[&>div:last-child]:p-0">
+          <div className="min-h-[32rem] overflow-hidden rounded-b-[var(--ui-radius-panel)]">
+            <Suspense fallback={<div className="flex min-h-[32rem] items-center justify-center text-sm text-[var(--text-muted)]"><RefreshCw className="mr-2 size-4 animate-spin" />Cargando chat...</div>}>
+              <ChatSystem />
+            </Suspense>
+          </div>
+        </ManagementSection>
+      ) : null}
+
+      <ModalForm
+        isOpen={isBanModalOpen}
+        onClose={() => setIsBanModalOpen(false)}
+        title="Aplicar sanción de chat"
+        subtitle="El usuario perderá acceso y sus sesiones serán revocadas."
+        onSubmit={handleBan}
+        isSubmitting={isSubmitting}
+        submitButtonText="Confirmar sanción"
+        brandColor="var(--accent-crimson)"
+        infoMessage="La acción quedará registrada en la auditoría de seguridad."
+      >
+        <label className="block space-y-2">
+          <span className="text-xs font-bold uppercase text-[var(--text-secondary)]">Usuario</span>
+          <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)} required className="ui-control h-11 w-full">
+            {availableUsers.map((user) => <option key={user.id} value={user.id}>{user.name} (@{user.gamertag}) · {user.role}</option>)}
+          </select>
+        </label>
+        <label className="block space-y-2">
+          <span className="text-xs font-bold uppercase text-[var(--text-secondary)]">Motivo</span>
+          <textarea value={banReason} onChange={(event) => setBanReason(event.target.value)} required minLength={8} rows={4} className="ui-control w-full resize-y p-3" />
+        </label>
+      </ModalForm>
+    </ManagementPage>
   );
 }

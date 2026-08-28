@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PageHeader } from '@/components/ui/page-header';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +31,13 @@ import { GAMES_CATALOG } from '@/lib/games-data';
 import { EsportsCard } from '@/components/ui/esports-card';
 import { Pagination } from '@/components/ui/pagination';
 import { getDirectoryEndpoint } from '@/lib/directory-endpoints';
+import {
+  ManagementHero,
+  ManagementMetrics,
+  ManagementPage,
+  ManagementTabs,
+  MetricCard,
+} from '@/components/dashboard/management-ui';
 
 interface UserRecord {
   id: string;
@@ -426,52 +432,45 @@ export default function UsersModulePage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      <PageHeader
-        badgeText="Módulo de Gestión eSports"
-        title="MÓDULO DE DEPURACIÓN Y GESTIÓN DE"
-        highlightTitle="USUARIOS."
+    <ManagementPage>
+      <ManagementHero
+        eyebrow="Gestión global · Identidades y acceso"
+        title="Directorio y gestión de usuarios"
         description="Directorio público de atletas, administración de perfiles y menú de desbaneos."
+        icon={Users}
+        tone="cyan"
+        badge={canManage ? `${isAdmin ? 'Administrador' : 'Organizador'}` : 'Directorio global'}
+        actions={canManage ? (
+          <Button onClick={openCreateModal}>
+            <Plus className="mr-2 size-4" /> Crear usuario
+          </Button>
+        ) : undefined}
       />
+
+      <ManagementMetrics>
+        <MetricCard label="Usuarios" value={usersList.length} hint="Cuentas registradas" icon={Users} tone="cyan" />
+        <MetricCard label="Atletas activos" value={sortedActiveDirectoryUsers.length} hint="Directorio visible" icon={Award} tone="emerald" />
+        <MetricCard label="Roles" value={new Set(usersList.map((user) => user.role).filter(Boolean)).size} hint="Perfiles de acceso" icon={UserCheck} tone="violet" />
+        <MetricCard label="Sancionados" value={bannedUsers.length} hint="Requieren revisión" icon={ShieldAlert} tone="crimson" />
+      </ManagementMetrics>
 
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
       {/* Navigation Tabs per Module (Solo para Administrador u Organizador) */}
       {canManage && (
-        <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3 overflow-x-auto scrollbar-none font-mono">
-          <button
-            onClick={() => {
-              setSelectedPlayer(null);
-              setActiveTab('directory');
-            }}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'directory' ? 'bg-[var(--accent-cyan)] text-slate-950 shadow-lg' : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Directorio de Atletas
-          </button>
-
-          <button
-            onClick={() => setActiveTab('management')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'management' ? 'bg-[var(--accent-violet)] text-slate-950 shadow-lg' : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            Gestión & Roles ({isAdmin ? 'Administrador' : 'Organizador'})
-          </button>
-
-          <button
-            onClick={() => setActiveTab('banned')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'banned' ? 'bg-[var(--accent-crimson)] text-white shadow-lg' : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" />
-            Menú de Desbaneo ({bannedUsers.length})
-          </button>
-        </div>
+        <ManagementTabs
+          label="Secciones de usuarios"
+          activeTab={activeTab}
+          onChange={(tab) => {
+            setSelectedPlayer(null);
+            setActiveTab(tab);
+          }}
+          tabs={[
+            { id: 'directory', label: 'Directorio de atletas', shortLabel: 'Directorio', count: sortedActiveDirectoryUsers.length, icon: Users, tone: 'cyan' },
+            { id: 'management', label: 'Gestión y roles', shortLabel: 'Gestionar', count: usersList.length, icon: UserCheck, tone: 'violet' },
+            { id: 'banned', label: 'Menú de desbaneo', shortLabel: 'Sanciones', count: bannedUsers.length, icon: ShieldAlert, tone: 'crimson' },
+          ]}
+        />
       )}
 
       {/* TAB 1: DIRECTORIO PÚBLICO DE ATLETAS */}
@@ -485,7 +484,7 @@ export default function UsersModulePage() {
         ) : (
           <div className="space-y-6">
             {/* BARRA UNIFICADA DE FILTRO Y ANTIGÜEDAD */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-[var(--bg-card)] border border-[var(--border-card)] p-3 sm:p-4 rounded-2xl shadow-sm backdrop-blur-md font-mono">
+            <div className="management-toolbar font-mono">
               <div className="min-w-0 flex-1">
                 <FilterBar
                   searchPlaceholder="Buscar por Gamertag, nombre o posición..."
@@ -517,7 +516,7 @@ export default function UsersModulePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="management-grid">
               {currentDirectoryUsers.map((user, index) => {
                 const uGameSlug = user.primaryGame || user.primary_game || user.gameSlug || user.game_slug || 'eafc26';
                 const gameCfg = GAMES_CATALOG[uGameSlug] || GAMES_CATALOG['eafc26'];
@@ -912,6 +911,6 @@ export default function UsersModulePage() {
           reasonPlaceholder="Motivo de la infracción o sanción..."
         />
       )}
-    </div>
+    </ManagementPage>
   );
 }
