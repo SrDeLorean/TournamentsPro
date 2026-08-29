@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { dbProvider } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';

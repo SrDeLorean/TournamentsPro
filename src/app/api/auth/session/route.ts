@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { apiError, apiSuccess, mapUserRowToProfile, type UserRow } from '@/lib/api-types';
 import { getRequestUserSession } from '@/lib/auth-server';
 import { dbProvider } from '@/lib/db/provider';

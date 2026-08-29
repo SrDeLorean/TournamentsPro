@@ -6,9 +6,13 @@
 2. Verificar variables obligatorias sin imprimir sus valores: MySQL, `JWT_SECRET`, Google
    Client ID y `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` estable entre instancias.
 3. Ejecutar `npm ci`, `npm run db:migrate:check`, `npm test`, `npm run lint` y
-   `npm run build` sobre el mismo commit que será desplegado.
+   `npm run build` sobre el mismo commit que será desplegado. El script de build copia
+   `public` y `.next/static` dentro de `.next/standalone`; no desplegar únicamente
+   `server.js`, porque las rutas `/_next/static/*` quedarían incompletas.
 4. Aplicar `npm run db:migrate` con una cuenta de migración separada.
-5. Arrancar el artefacto standalone con una cuenta MySQL sin `ALTER`, `CREATE` ni `DROP`.
+5. Arrancar el artefacto standalone con `npm start` y una cuenta MySQL sin `ALTER`,
+   `CREATE` ni `DROP`. En Hostinger, conservar `npm run build` como comando de build y
+   `npm start` como comando de inicio para que HTML, CSS y JavaScript pertenezcan al mismo build.
 6. Consultar `/api/health` y comprobar `status=ok`, MySQL disponible y `x-request-id`.
 7. Ejecutar `npm run test:e2e` contra el nuevo entorno antes de enviar tráfico completo.
 8. Supervisar 401/403/429, errores SQL y latencia durante el despliegue gradual.

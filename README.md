@@ -173,6 +173,10 @@ npm run build
 npm run start
 ```
 
+El build prepara un artefacto autocontenido en `.next/standalone`, incluyendo
+`.next/static` y `public`. Esto es obligatorio al publicar el servidor standalone en
+Hostinger; evita respuestas 404 en hojas CSS o chunks JavaScript después de recargar.
+
 ---
 
 ## 📂 Estructura del Proyecto

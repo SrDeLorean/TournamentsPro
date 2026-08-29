@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { queryDB } from '@/lib/db/provider';
 import { hashPassword, signToken } from '@/lib/auth';

@@ -277,3 +277,11 @@ export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> imple
     });
   }
 }
+
+
+export class SupabaseGameRepository extends SupabaseBaseRepository<any> {
+  protected tableName = 'games';
+  protected primaryKey = 'slug';
+  protected mapRow(row: any) { return row; }
+  protected mapToDb(entity: any) { return entity; }
+}
