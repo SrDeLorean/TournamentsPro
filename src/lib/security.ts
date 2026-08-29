@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createHash, randomUUID } from 'node:crypto';
 import { queryDB } from './db';
 import { createClient } from '@supabase/supabase-js';

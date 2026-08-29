@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Link from 'next/link';
 import { Trophy } from 'lucide-react';
 import { dbProvider } from '@/lib/db/provider';

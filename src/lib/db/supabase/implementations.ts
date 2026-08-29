@@ -2,7 +2,11 @@ import { SupabaseBaseRepository } from './repositories';
 import { supabase } from './client';
 import type { 
   User, Organization, Team, Competition, Season,
-  IUserRepository, IOrganizationRepository, ITeamRepository, ICompetitionRepository, ISeasonRepository 
+  IUserRepository, IOrganizationRepository, ITeamRepository, ICompetitionRepository, ISeasonRepository,
+  Match,
+  Game,
+  IMatchRepository,
+  IGameRepository
 } from '../interfaces';
 
 function toSnakeCase(obj: Record<string, any>): Record<string, any> {
@@ -216,6 +220,7 @@ export class SupabaseSeasonRepository extends SupabaseBaseRepository<Season> imp
 }
 
 export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> implements IMatchRepository {
+  protected primaryKey = 'id';
   protected tableName = 'matches';
 
   protected mapRow(row: any): Match {

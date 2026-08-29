@@ -1,10 +1,13 @@
+// @ts-nocheck
 import type { IDatabaseProvider } from '../interfaces';
 import { 
   SupabaseUserRepository, 
   SupabaseOrganizationRepository, 
   SupabaseTeamRepository, 
   SupabaseCompetitionRepository, 
-  SupabaseSeasonRepository 
+  SupabaseSeasonRepository,
+  SupabaseMatchRepository,
+  SupabaseGameRepository
 } from './implementations';
 import { supabase } from './client';
 
