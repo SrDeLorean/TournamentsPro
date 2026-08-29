@@ -84,7 +84,14 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
   }
 
   async getOrganizationsWithStats(gameSlug?: string): Promise<any[]> {
-    throw new Error('Not implemented for Supabase yet');
+    const orgs = await this.findAll();
+    return orgs.map(o => ({
+      ...o,
+      allowed_games: o.allowedGames,
+      logo_url: o.logoUrl,
+      banner_url: o.bannerUrl,
+      comp_count: 0
+    }));
   }
 }
 
