@@ -7,6 +7,7 @@ import { LanguageProvider } from '@/components/providers/language-provider';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { DesignProvider } from '@/components/providers/design-provider';
 import { AppLayoutWrapper } from '@/components/layout/app-layout-wrapper';
+import { ChunkErrorHandler } from '@/components/providers/chunk-error-handler';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -51,6 +52,7 @@ export default function RootLayout({
   return (
     <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased flex flex-col min-h-screen">
+        <ChunkErrorHandler />
         <ThemeProvider>
           <DesignProvider>
             <LanguageProvider>

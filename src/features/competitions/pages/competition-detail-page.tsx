@@ -120,7 +120,19 @@ async function getCompetitionDetails(id: string) {
 
 export default async function CompetitionDetailPage({ params }: DetailPageProps) {
   const { id } = await params;
-  await requireCompetitionManager(id);
+  
+  try {
+    await requireCompetitionManager(id);
+  } catch (error: any) {
+    const { getServerUserSession } = await import('@/lib/auth-server');
+    const session = await getServerUserSession();
+    if (!session) {
+      const { redirect } = await import('next/navigation');
+      redirect(`/auth/login?redirectTo=/dashboard/competencias/${id}`);
+    }
+    notFound();
+  }
+
   const data = await getCompetitionDetails(id);
 
   if (!data) {

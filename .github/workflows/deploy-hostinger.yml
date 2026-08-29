@@ -40,6 +40,7 @@ jobs:
           # Copy static files to the standalone directory
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/
+          if [ -f public/.htaccess ]; then cp public/.htaccess .next/standalone/.htaccess; fi
           cp package.json .next/standalone/
           cp -r database .next/standalone/
           

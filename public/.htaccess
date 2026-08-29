@@ -1,0 +1,41 @@
+# =====================================================================
+# Hostinger Auto-Deployment & Next.js Header Configuration
+# Generado automáticamente para sincronización desde GitHub Actions
+# =====================================================================
+
+# 1. Asegurar MIME Types correctos para CSS, JS y JSON
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+  AddType text/css .css
+  AddType application/json .json
+  AddType image/svg+xml .svg
+</IfModule>
+
+# 2. Desactivar la caché en páginas HTML para móviles y navegadores
+# Esto asegura que al hacer git push, el celular descargue siempre la versión nueva
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+  
+  # Caché inmutable a largo plazo solo para estáticos estables (imágenes, fuentes)
+  <FilesMatch "\.(png|jpg|jpeg|gif|ico|svg|woff|woff2)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Permisos CORS para recursos estáticos
+  Header set Access-Control-Allow-Origin "*"
+</IfModule>
+
+# 3. Reglas de Reescritura para rutas de Next.js
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Permitir archivos y carpetas existentes (incluyendo _next/static)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+</IfModule>
