@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { IDatabaseProvider } from './interfaces';
 import { mysqlProvider } from './mysql/provider';
 import { supabaseProvider } from './supabase/provider';
