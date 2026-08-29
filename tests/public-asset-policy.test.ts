@@ -18,7 +18,7 @@ describe('public image policy', () => {
   });
 
   it('loads the game portal LCP banner eagerly', async () => {
-    const source = await readFile('src/features/game-portal/components/game-portal-client.tsx', 'utf8');
-    expect(source).toMatch(/src=\{game\.bannerUrl\}[\s\S]*?loading="eager"/);
+    const source = await readFile('src/components/game/game-portal-backdrop.tsx', 'utf8');
+    expect(source).toMatch(/src=\{game\.bannerUrl\}[\s\S]*?priority/);
   });
 });

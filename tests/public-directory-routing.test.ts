@@ -72,4 +72,21 @@ describe('public directory routing', () => {
     expect(legacyMatchday).toContain("permanentRedirect('/dashboard/matchday')");
     expect(legacyModeration).toContain("permanentRedirect('/dashboard/moderacion')");
   });
+
+  it('shares a dedicated mobile layer across public routes with and without game slug', async () => {
+    const [styles, mobileGameNav, publicNavbar, informationPage] = await Promise.all([
+      readFile('src/app/globals.css', 'utf8'),
+      readFile('src/components/layout/mobile-responsive-subnavbar.tsx', 'utf8'),
+      readFile('src/components/layout/navbar.tsx', 'utf8'),
+      readFile('src/app/informacion/page.tsx', 'utf8'),
+    ]);
+
+    expect(styles).toContain('Mobile-first polish shared by public routes with and without a game slug.');
+    expect(styles).toContain('.game-portal-mobile-links');
+    expect(styles).toContain('.public-directory-page');
+    expect(styles).toContain('.public-info-page');
+    expect(mobileGameNav).toContain('showSegmentSwitcher');
+    expect(publicNavbar).toContain('aria-controls="public-mobile-navigation"');
+    expect(informationPage).toContain('public-info-page');
+  });
 });

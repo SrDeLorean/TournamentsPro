@@ -1,3 +1,5 @@
+SET session_replication_role = replica;
+
 -- Supabase Data Migration
 
 INSERT INTO "games" ("slug", "name", "category", "team_size", "max_roster_members", "max_squad_cap", "max_transfers_per_window", "post_expiration_days", "positions_json", "brand_color", "created_at", "stats_schema", "ui_config")
@@ -552,3 +554,6 @@ VALUES
   ('f5df2c8ee76fe3432057be1113917ddb321640580192bd8b6d883cc20b5d915a', 'auth-login-account', 5, '2026-08-28T04:15:19.000Z', '2026-08-28T04:30:19.000Z', '2026-08-28T00:16:48.000Z'),
   ('feb03a58daee97b9a3b33019b26044039773403797775c1c63b66a48ce9d6f35', 'auth-login-account', 1, '2026-08-27T21:08:00.000Z', '2026-08-27T21:23:00.000Z', '2026-08-27T17:08:00.000Z');
 
+
+
+SET session_replication_role = DEFAULT;

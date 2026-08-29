@@ -1,27 +1,41 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Shield, Gamepad2, Users, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, Globe2, Shield, Gamepad2, Users, Sparkles, Trophy } from 'lucide-react';
 
 export default function InformationPage() {
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-      <div className="text-center space-y-4">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/30 text-[var(--accent-cyan)] text-xs font-bold">
+    <main className="public-info-page">
+      <section className="public-info-hero">
+        <div className="public-info-hero-glow" />
+        <div className="public-info-copy">
+          <div className="public-info-badge">
           <Sparkles className="w-4 h-4" />
           Acerca de TorneosEsport PRO
+          </div>
+          <h1>La plataforma de gestión eSports multijuego</h1>
+          <p>Conectamos organizaciones, clubes y atletas en un entorno competitivo seguro, rápido y personalizado para cada disciplina.</p>
+          <div className="public-info-actions">
+            <Link href="/" className="public-info-primary">Explorar plataforma <ArrowRight className="size-4" /></Link>
+            <Link href="/organizaciones" className="public-info-secondary">Ver organizaciones</Link>
+          </div>
         </div>
-        <h1 className="text-3xl sm:text-5xl font-black text-[var(--text-heading)] tracking-tight">
-          La Plataforma de Gestión eSports Multijuego
-        </h1>
-        <p className="text-sm sm:text-base text-[var(--text-secondary)] max-w-2xl mx-auto leading-relaxed">
-          Diseñada para conectar organizaciones de torneos, clubes eSports y jugadores en un entorno seguro, veloz y personalizado para cada disciplina.
-        </p>
-      </div>
+        <div className="public-info-summary" aria-label="Resumen de plataforma">
+          <div><Globe2 className="size-5" /><strong>Global</strong><span>Una comunidad conectada</span></div>
+          <div><Trophy className="size-5" /><strong>Competitivo</strong><span>Torneos y clasificaciones</span></div>
+          <div><Shield className="size-5" /><strong>Seguro</strong><span>Roles y gestión verificada</span></div>
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="glass-panel-hover">
+      <section className="public-info-content" aria-labelledby="public-info-capabilities">
+        <header className="public-info-section-heading">
+          <div><p>Capacidades principales</p><h2 id="public-info-capabilities">Todo el circuito en un solo lugar</h2></div>
+          <span>Tres pilares del ecosistema</span>
+        </header>
+        <div className="public-info-grid">
+        <Card className="public-info-card glass-panel-hover">
           <CardHeader>
-            <Gamepad2 className="w-8 h-8 text-[var(--accent-cyan)] mb-2" />
+            <div className="public-info-card-icon is-cyan"><Gamepad2 className="size-6" /></div>
             <CardTitle>Portales Exclusivos</CardTitle>
             <CardDescription>Experiencia inmersiva por juego</CardDescription>
           </CardHeader>
@@ -30,9 +44,9 @@ export default function InformationPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-panel-hover">
+        <Card className="public-info-card glass-panel-hover">
           <CardHeader>
-            <Shield className="w-8 h-8 text-[var(--accent-emerald)] mb-2" />
+            <div className="public-info-card-icon is-emerald"><Shield className="size-6" /></div>
             <CardTitle>Multitenancy de Organizaciones</CardTitle>
             <CardDescription>Control total para organizadores</CardDescription>
           </CardHeader>
@@ -41,9 +55,9 @@ export default function InformationPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-panel-hover">
+        <Card className="public-info-card glass-panel-hover">
           <CardHeader>
-            <Users className="w-8 h-8 text-[var(--accent-violet)] mb-2" />
+            <div className="public-info-card-icon is-violet"><Users className="size-6" /></div>
             <CardTitle>Perfiles eSports de Jugador</CardTitle>
             <CardDescription>Cuentas unificadas por usuario</CardDescription>
           </CardHeader>
@@ -52,6 +66,7 @@ export default function InformationPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+      </section>
+    </main>
   );
 }

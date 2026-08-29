@@ -38,7 +38,7 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
   return (
     <header className="app-navbar sticky top-0 z-50 w-full h-14 border-b transition-colors duration-300 flex items-center">
       {/* Thin Banner Stripe (h-12 / 48px) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex items-center justify-between gap-2">
+      <div className="app-navbar-inner max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full h-full flex items-center justify-between gap-2">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-600 to-amber-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform">
@@ -125,7 +125,11 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
           {/* Mobile Hamburger Toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] transition-colors"
+            className="app-navbar-mobile-toggle lg:hidden p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] transition-colors"
+            type="button"
+            aria-label={isMobileMenuOpen ? 'Cerrar menú principal' : 'Abrir menú principal'}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="public-mobile-navigation"
           >
             {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
@@ -134,8 +138,8 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed top-14 left-0 right-0 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain glass-panel rounded-none border-x-0 border-t-0 p-4 space-y-3 z-40 shadow-2xl animate-in slide-in-from-top duration-200">
-          <div className="space-y-1">
+        <div id="public-mobile-navigation" className="app-navbar-mobile-menu lg:hidden fixed top-14 left-0 right-0 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain glass-panel rounded-none border-x-0 border-t-0 p-3 space-y-3 z-40 shadow-2xl animate-in slide-in-from-top duration-200">
+          <div className="app-navbar-mobile-links space-y-1">
             <Link
               href="/"
               onClick={() => setIsMobileMenuOpen(false)}

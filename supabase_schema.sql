@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   status TEXT NOT NULL DEFAULT 'Activo',
   avatar_url TEXT NULL,
   organization_id TEXT NULL,
-  is_banned BOOLEAN NOT NULL DEFAULT FALSE,
+  is_banned INT NOT NULL DEFAULT 0,
   ban_reason TEXT NULL,
   last_login_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS teams (
   banner_url TEXT NULL,
   status TEXT DEFAULT 'Activo',
   club_id_ea TEXT NULL,
-  is_banned BOOLEAN NOT NULL DEFAULT FALSE,
+  is_banned INT NOT NULL DEFAULT 0,
   ban_reason TEXT NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -338,7 +338,7 @@ CREATE TABLE IF NOT EXISTS match_player_stats (
   yellow_cards INT NOT NULL DEFAULT 0,
   red_cards INT NOT NULL DEFAULT 0,
   rating DECIMAL(3,1) NOT NULL DEFAULT 6.0,
-  is_mvp BOOLEAN NOT NULL DEFAULT FALSE,
+  is_mvp INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -364,7 +364,7 @@ CREATE TABLE IF NOT EXISTS transfer_applications (
   pitch_message TEXT NULL,
   application_type TEXT NOT NULL DEFAULT 'POSTULACION_JUGADOR' CHECK (application_type IN ('POSTULACION_JUGADOR', 'OFERTA_CLUB')),
   status TEXT NOT NULL DEFAULT 'PENDIENTE' CHECK (status IN ('PENDIENTE', 'ACEPTADO', 'RECHAZADO')),
-  is_extraordinary BOOLEAN NOT NULL DEFAULT FALSE,
+  is_extraordinary INT NOT NULL DEFAULT 0,
   organizer_approval_status TEXT NOT NULL DEFAULT 'NINGUNO' CHECK (organizer_approval_status IN ('NINGUNO', 'PENDIENTE_ORGANIZADOR', 'APROBADO_ORGANIZADOR', 'RECHAZADO_ORGANIZADOR')),
   processed_by TEXT NULL,
   processed_at TIMESTAMPTZ NULL,
@@ -407,7 +407,7 @@ CREATE TABLE IF NOT EXISTS messages (
   conversation_id TEXT NOT NULL,
   sender_id TEXT NOT NULL,
   text TEXT NOT NULL,
-  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  is_read INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   CONSTRAINT fk_msg_conv FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -448,7 +448,7 @@ CREATE TABLE IF NOT EXISTS transfer_offers (
   pitch_message TEXT NULL,
   offer_type TEXT NOT NULL DEFAULT 'OFERTA_CLUB' CHECK (offer_type IN ('OFERTA_CLUB', 'POSTULACION_JUGADOR')),
   status TEXT NOT NULL DEFAULT 'PENDIENTE' CHECK (status IN ('PENDIENTE', 'ACEPTADO', 'RECHAZADO', 'CANCELADO', 'EXPIRADO')),
-  is_extraordinary BOOLEAN NOT NULL DEFAULT FALSE,
+  is_extraordinary INT NOT NULL DEFAULT 0,
   organizer_approval_status TEXT NOT NULL DEFAULT 'NINGUNO' CHECK (organizer_approval_status IN ('NINGUNO', 'PENDIENTE_ORGANIZADOR', 'APROBADO_ORGANIZADOR', 'RECHAZADO_ORGANIZADOR')),
   rejection_reason TEXT NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -551,7 +551,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   sender_name TEXT NOT NULL,
   sender_role TEXT NOT NULL DEFAULT 'Jugador',
   message_text TEXT NOT NULL,
-  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  is_read INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   CONSTRAINT fk_cm_thread FOREIGN KEY (thread_id) REFERENCES chat_threads (id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -560,42 +560,110 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 CREATE INDEX idx_cm_thread ON chat_messages (thread_id);
 CREATE INDEX idx_cm_sender ON chat_messages (sender_id);
 
--- =============================================================================
--- INSERCIÓN DE DATOS INICIALES REALES
--- =============================================================================
 
-INSERT INTO games (slug, name, category, team_size, max_roster_members, max_squad_cap, max_transfers_per_window, post_expiration_days, positions_json, brand_color) VALUES
-('eafc26', 'EA SPORTS FC 26', 'Deportes', 11, 45, 20, 3, 7, '["POR", "DFC", "LD", "LI", "MCD", "MC", "MCO", "EI", "ED", "DC"]', '#00F0FF'),
-('valorant', 'VALORANT', 'FPS Tactical', 5, 7, 7, 3, 7, '["Duelista", "Controlador", "Iniciador", "Centinela"]', '#FF4655'),
-('csgo', 'Counter-Strike 2', 'FPS Tactical', 5, 7, 7, 3, 7, '["AWPer", "Entry Fragger", "IGL", "Support", "Lurker"]', '#F59E0B'),
-('lol', 'League of Legends', 'MOBA', 5, 7, 7, 3, 7, '["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"]', '#C084FC'),
-('rocketleague', 'Rocket League', 'Vehicular', 3, 4, 7, 3, 7, '["Delantero", "Defensa", "Rotador Global"]', '#38BDF8'),
-('fortnite', 'Fortnite', 'Battle Royale', 4, 6, 7, 3, 7, '["IGL", "Fragger", "Support", "Anchor"]', '#FACC15')
-ON CONFLICT (slug) DO UPDATE SET 
-  name = EXCLUDED.name,
-  category = EXCLUDED.category,
-  max_squad_cap = EXCLUDED.max_squad_cap,
-  max_transfers_per_window = EXCLUDED.max_transfers_per_window,
-  post_expiration_days = EXCLUDED.post_expiration_days,
-  positions_json = EXCLUDED.positions_json,
-  brand_color = EXCLUDED.brand_color;
 
--- 🔑 USUARIOS INICIALES (Clave: 123456 - bcrypt hash: $2a$12$...)
-INSERT INTO users (id, email, password_hash, name, gamertag, role, primary_game_slug, position, rating, status, organization_id) VALUES
-('usr-admin', 'admin@tournamentspro.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.PZvO.S', 'Administrador Principal', 'Admin_Pro', 'Administrador', 'eafc26', 'ADMIN', 10.0, 'Organizador', NULL),
-('usr-organizer', 'organizador@tournamentspro.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.PZvO.S', 'Organizador Oficial', 'Organizador_Pro', 'Organizador', 'eafc26', 'ORGANIZADOR', 10.0, 'Organizador', NULL)
-ON CONFLICT (id) DO UPDATE SET 
-  password_hash = EXCLUDED.password_hash,
-  name = EXCLUDED.name,
-  role = EXCLUDED.role;
+-- -----------------------------------------------------------------------------
+-- 23. TABLA: security_rate_limits (Rate Limiting)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS security_rate_limits (
+  rate_key TEXT NOT NULL,
+  action_name TEXT NOT NULL,
+  request_count INT NOT NULL DEFAULT 1,
+  window_started_at TIMESTAMPTZ NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (rate_key, action_name)
+);
+CREATE INDEX idx_security_rate_limits_expires ON security_rate_limits (expires_at);
 
--- Organización inicial
-INSERT INTO organizations (id, name, tag, owner_id, country, allowed_games) VALUES
-('org-main', 'TournamentsPro Official', 'TPRO', 'usr-organizer', 'Venezuela', '["eafc26", "valorant", "csgo", "lol", "rocketleague", "fortnite"]')
-ON CONFLICT (id) DO UPDATE SET 
-  name = EXCLUDED.name,
-  owner_id = EXCLUDED.owner_id,
-  allowed_games = EXCLUDED.allowed_games;
+-- -----------------------------------------------------------------------------
+-- 24. TABLA: auth_sessions (Control de Sesiones de Usuarios)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  session_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ NULL,
+  ip_hash TEXT NULL,
+  user_agent_hash TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (session_id)
+);
+CREATE INDEX idx_auth_sessions_user_active ON auth_sessions (user_id, revoked_at, expires_at);
+CREATE INDEX idx_auth_sessions_expires ON auth_sessions (expires_at);
 
--- Actualizar usuarios con organization_id
-UPDATE users SET organization_id = 'org-main' WHERE id IN ('usr-admin', 'usr-organizer');
+-- -----------------------------------------------------------------------------
+-- 25. TABLA: security_audit_log (Registro de Auditoría de Seguridad)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS security_audit_log (
+  id TEXT NOT NULL,
+  request_id TEXT NULL,
+  actor_user_id TEXT NOT NULL,
+  actor_role TEXT NOT NULL,
+  action_name TEXT NOT NULL,
+  resource_type TEXT NOT NULL,
+  resource_id TEXT NULL,
+  organization_id TEXT NULL,
+  outcome TEXT NOT NULL DEFAULT 'SUCCESS' CHECK (outcome IN ('SUCCESS', 'DENIED', 'FAILED')),
+  metadata_json JSONB NULL,
+  ip_hash TEXT NULL,
+  user_agent_hash TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_security_audit_actor ON security_audit_log (actor_user_id, created_at);
+CREATE INDEX idx_security_audit_resource ON security_audit_log (resource_type, resource_id, created_at);
+CREATE INDEX idx_security_audit_org ON security_audit_log (organization_id, created_at);
+
+-- -----------------------------------------------------------------------------
+-- 26. COLUMNAS ADICIONALES (MIGRACIONES)
+-- -----------------------------------------------------------------------------
+ALTER TABLE games ADD COLUMN IF NOT EXISTS stats_schema JSONB NULL;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS ui_config JSONB NULL;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS foto TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_url TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS biografia TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS instagram TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS facebook TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS twitch TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS youtube TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tiktok TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS discord TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS twitter TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS website TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp TEXT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS game_profiles JSONB NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TIMESTAMPTZ NULL;
+
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS founded_year TEXT NULL;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS rating DECIMAL(3,2) NOT NULL DEFAULT 4.95;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS website TEXT NULL;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS redes_sociales JSONB NULL;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Activo';
+
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS redes_sociales JSONB NULL;
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS encargados_json JSONB NULL;
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS banned_at TIMESTAMPTZ NULL;
+
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS format TEXT NULL;
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS match_mode TEXT NOT NULL DEFAULT 'PartidoUnico';
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS group_count INT NULL;
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS qualifiers_per_group INT NULL;
+
+ALTER TABLE team_members ADD COLUMN IF NOT EXISTS organization_name TEXT NULL;
+ALTER TABLE team_members DROP CONSTRAINT IF EXISTS team_members_role_in_team_check;
+
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS round INT NULL;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS home_team_tag TEXT NULL;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS away_team_tag TEXT NULL;
+
+
+ALTER TABLE competitions DROP CONSTRAINT IF EXISTS competitions_status_check;
+
+ALTER TABLE matches ALTER COLUMN scheduled_time TYPE TIME;

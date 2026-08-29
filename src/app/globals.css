@@ -2363,3 +2363,199 @@
   .org-profile-secondary-action,
   .ui-sub-tab { transition: none; }
 }
+
+/* Public information page */
+.public-info-page {
+  min-height: calc(100dvh - 3.5rem);
+  padding: 1rem;
+  background: radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent-violet) 10%, transparent), transparent 30rem), var(--bg-main);
+  color: var(--text-primary);
+}
+
+.public-info-hero,
+.public-info-content { width: 100%; max-width: 90rem; margin-inline: auto; }
+
+.public-info-hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--border-card);
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--bg-card) 97%, transparent), color-mix(in srgb, var(--accent-cyan) 6%, var(--bg-card)));
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+.public-info-hero-glow { position: absolute; z-index: -1; top: -10rem; right: -7rem; width: 25rem; height: 25rem; border-radius: 999px; background: conic-gradient(from 90deg, color-mix(in srgb, var(--accent-cyan) 20%, transparent), color-mix(in srgb, var(--accent-violet) 18%, transparent), color-mix(in srgb, var(--accent-emerald) 16%, transparent)); filter: blur(4.5rem); }
+.public-info-badge { display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid color-mix(in srgb, var(--accent-cyan) 35%, var(--border-card)); border-radius: 999px; background: var(--accent-cyan-bg); padding: 0.45rem 0.7rem; color: var(--accent-cyan); font: 850 0.65rem/1 var(--font-mono), monospace; text-transform: uppercase; }
+.public-info-copy h1 { max-width: 17ch; margin-top: 0.85rem; color: var(--text-heading); font-size: clamp(1.9rem, 7vw, 4.4rem); font-weight: 950; line-height: 0.98; letter-spacing: -0.05em; text-wrap: balance; }
+.public-info-copy > p { max-width: 45rem; margin-top: 0.85rem; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.7; }
+.public-info-actions { display: grid; gap: 0.6rem; margin-top: 1.25rem; }
+.public-info-actions a { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; gap: 0.45rem; border-radius: 0.8rem; padding: 0.7rem 1rem; font-size: 0.72rem; font-weight: 900; }
+.public-info-primary { background: var(--accent-cyan); color: var(--accent-contrast); box-shadow: 0 0.75rem 2rem color-mix(in srgb, var(--accent-cyan) 20%, transparent); }
+.public-info-secondary { border: 1px solid var(--border-card); background: var(--bg-subtle); color: var(--text-heading); }
+.public-info-summary { display: grid; overflow: hidden; border: 1px solid var(--border-card); border-radius: 1rem; background: color-mix(in srgb, var(--bg-main) 54%, transparent); }
+.public-info-summary > div { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.15rem 0.7rem; padding: 0.9rem; border-bottom: 1px solid var(--border-card); }
+.public-info-summary > div:last-child { border-bottom: 0; }
+.public-info-summary svg { grid-row: 1 / 3; align-self: center; color: var(--accent-cyan); }
+.public-info-summary strong { color: var(--text-heading); font-size: 0.8rem; }
+.public-info-summary span { color: var(--text-muted); font-size: 0.64rem; }
+.public-info-content { display: grid; gap: 1rem; padding-block: 2.5rem 3rem; }
+.public-info-section-heading { display: flex; flex-direction: column; gap: 0.7rem; }
+.public-info-section-heading p { color: var(--accent-cyan); font: 900 0.62rem/1.2 var(--font-mono), monospace; letter-spacing: 0.13em; text-transform: uppercase; }
+.public-info-section-heading h2 { margin-top: 0.25rem; color: var(--text-heading); font-size: clamp(1.25rem, 4vw, 2rem); font-weight: 950; letter-spacing: -0.025em; }
+.public-info-section-heading > span { width: max-content; max-width: 100%; border: 1px solid var(--border-card); border-radius: 999px; background: var(--bg-card); padding: 0.45rem 0.7rem; color: var(--text-muted); font-size: 0.62rem; font-weight: 800; }
+.public-info-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.85rem; }
+.public-info-card { min-width: 0; border-color: var(--border-card); background: var(--bg-card); box-shadow: var(--shadow-soft); }
+.public-info-card-icon { display: grid; width: 2.8rem; height: 2.8rem; margin-bottom: 0.65rem; place-items: center; border: 1px solid; border-radius: 0.85rem; }
+.public-info-card-icon.is-cyan { border-color: color-mix(in srgb, var(--accent-cyan) 35%, var(--border-card)); background: var(--accent-cyan-bg); color: var(--accent-cyan); }
+.public-info-card-icon.is-emerald { border-color: color-mix(in srgb, var(--accent-emerald) 35%, var(--border-card)); background: var(--accent-emerald-bg); color: var(--accent-emerald); }
+.public-info-card-icon.is-violet { border-color: color-mix(in srgb, var(--accent-violet) 35%, var(--border-card)); background: var(--accent-violet-bg); color: var(--accent-violet); }
+
+@media (min-width: 640px) {
+  .public-info-page { padding: 1.5rem; }
+  .public-info-hero { padding: 2rem; }
+  .public-info-actions { display: flex; }
+  .public-info-section-heading { flex-direction: row; align-items: end; justify-content: space-between; }
+  .public-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem; }
+}
+
+@media (min-width: 1024px) {
+  .public-info-page { padding: 2rem; }
+  .public-info-hero { grid-template-columns: minmax(0, 1fr) minmax(18rem, 25rem); align-items: end; padding: 2.5rem; }
+  .public-info-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Mobile-first polish shared by public routes with and without a game slug. */
+@media (max-width: 767px) {
+  .app-navbar-mobile-menu {
+    border-bottom: 1px solid var(--border-card);
+    background: color-mix(in srgb, var(--bg-nav) 97%, transparent);
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    backdrop-filter: blur(22px) saturate(145%);
+  }
+
+  .app-navbar-mobile-links > a {
+    min-height: 3rem;
+    border: 1px solid transparent;
+    padding-inline: 0.8rem;
+  }
+
+  .app-navbar-mobile-links > a:hover,
+  .app-navbar-mobile-links > a:focus-visible {
+    border-color: var(--border-card);
+    background: var(--bg-card-hover);
+  }
+
+  .game-portal-mobile-nav { box-shadow: 0 0.7rem 1.8rem color-mix(in srgb, var(--shadow-color) 13%, transparent); }
+  .game-portal-mobile-links {
+    gap: 0.45rem;
+    padding-inline: 0.65rem;
+    scroll-padding-inline: 0.65rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    mask-image: linear-gradient(90deg, transparent 0, #000 0.65rem, #000 calc(100% - 0.65rem), transparent 100%);
+  }
+  .game-portal-mobile-links::-webkit-scrollbar { display: none; }
+  .game-portal-mobile-links > a { min-height: 2.65rem; scroll-snap-align: start; border-radius: 0.75rem; padding-inline: 0.78rem; font-size: 0.68rem; }
+  .game-portal-mobile-segments button { min-height: 2.4rem; }
+
+  .public-directory-page,
+  .public-info-page,
+  .public-team-page { padding: 0.55rem; }
+
+  .public-directory-hero,
+  .public-info-hero,
+  .public-team-hero,
+  .public-home-hero { border-radius: 1.1rem; }
+
+  .public-directory-hero,
+  .public-info-hero { padding: 1rem; }
+
+  .public-directory-hero-copy { flex-direction: column; gap: 0.7rem; }
+  .public-directory-icon { width: 2.65rem; height: 2.65rem; border-radius: 0.8rem; }
+  .public-directory-hero h1 { font-size: clamp(1.65rem, 8vw, 2.35rem); }
+  .public-directory-description { font-size: 0.76rem; line-height: 1.58; }
+  .public-directory-metrics div { padding: 0.75rem 0.35rem; }
+  .public-directory-metrics strong { font-size: 1.05rem; }
+  .public-directory-metrics span { letter-spacing: 0.035em; }
+  .public-directory-content { gap: 1rem; padding-block: 1.35rem 2.5rem; }
+  .public-directory-section-heading > span,
+  .public-info-section-heading > span { width: 100%; justify-content: center; text-align: center; }
+
+  .public-home-hero,
+  .public-home-section { width: calc(100% - 1.1rem); }
+  .public-home-hero { margin-top: 0.55rem; padding: 1rem; }
+  .public-home-hero h1 { font-size: clamp(2.1rem, 11vw, 3.15rem); }
+  .public-home-description { font-size: 0.79rem; line-height: 1.62; }
+  .public-home-section { margin-top: 2rem; }
+  .public-live-strip { gap: 0.55rem; padding: 0.5rem 0.55rem; }
+  .public-live-match { padding: 0.35rem 0.55rem; }
+  .public-home-directory-card { padding: 0.85rem; }
+
+  .game-portal .standard-page-wrapper { padding-inline: 0.55rem; }
+  .game-portal .game-section-hero { padding: 0.9rem !important; }
+  .game-portal .game-section-hero h1 { font-size: clamp(1.55rem, 8vw, 2.15rem); overflow-wrap: anywhere; }
+  .game-portal .game-section-hero p { font-size: 0.72rem; line-height: 1.55; }
+  .game-home { padding-top: 0.55rem !important; }
+  .game-home-hero { padding: 1rem !important; }
+  .game-home-statusbar { gap: 0.55rem; margin-bottom: 1.25rem; }
+  .game-home-statusbar > div { min-width: 0; }
+  .game-home-statusbar span { padding-inline: 0.65rem !important; font-size: 0.58rem !important; letter-spacing: 0.05em !important; }
+  .game-home-copy > div { gap: 0.8rem; margin-bottom: 0.8rem; }
+  .game-home-logo { width: 3.75rem; height: 3.75rem; border-radius: 0.9rem; }
+  .game-home-title { font-size: clamp(2.1rem, 12vw, 3rem) !important; }
+  .game-home-copy h1 + p { margin-top: 0.45rem; padding-left: 0.65rem; font-size: 0.72rem; letter-spacing: 0.08em; }
+  .game-home-description { padding: 0.8rem !important; font-size: 0.72rem; line-height: 1.55; }
+  .game-home-actions { display: grid; grid-template-columns: 1fr; gap: 0.55rem; padding-top: 0.8rem; }
+  .game-home-actions > * { width: 100%; min-width: 0; min-height: 2.75rem; }
+  .game-home-metric { min-height: 8.25rem; padding: 0.9rem !important; }
+  .game-home-metric [class*='text-4xl'] { font-size: 2rem; }
+  .game-home-match { padding: 0.9rem !important; border-radius: 1rem !important; }
+  .game-home-match [class*='grid-cols-'] { gap: 0.45rem; }
+  .game-home-match [class*='w-16'] { width: 3.25rem; height: 3.25rem; border-radius: 0.8rem; font-size: 1.15rem; }
+  .game-home-match [class*='text-3xl'] { font-size: 1.65rem; }
+  .game-home-module { padding: 1rem !important; border-radius: 1rem !important; }
+
+  .ui-filter-bar { gap: 0.65rem !important; padding: 0.65rem !important; }
+  .ui-filter-bar .game-search-control .ui-control { min-height: 2.75rem; padding-right: 2.75rem; }
+  .ui-filter-bar output { width: 100%; justify-content: space-between; min-height: 2.5rem; }
+  .ui-filter-bar select { min-height: 2.75rem; }
+  .management-toolbar { padding: 0.55rem; }
+
+  .game-directory-explorer { margin-block: 0.85rem 1.25rem; }
+  :is(.classification-filter-card, .game-filter-card) { gap: 0.7rem; padding: 0.7rem; border-radius: 1rem !important; }
+  :is(.classification-filter-section, .game-filter-section) { padding: 0.65rem; }
+  .game-segmented-filter { padding-bottom: 0.15rem; }
+  .game-calendar-heading > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .game-calendar-heading .ui-badge { flex: 0 0 auto; }
+  .game-calendar-track { margin-inline: -0.25rem; padding-inline: 0.25rem; }
+  .game-data-surface { overflow-x: auto; overscroll-behavior-inline: contain; }
+  .game-data-surface table { min-width: 40rem; }
+
+  .esports-entity-card { border-radius: 1rem; }
+  .esports-entity-card-banner { height: 8.4rem; }
+  .esports-entity-card-body { gap: 0.65rem; padding: 0 0.85rem 0.85rem; }
+  .esports-entity-card-logo { width: 3.65rem; height: 3.65rem; border-radius: 0.85rem; }
+  .esports-entity-card-heading h3 { font-size: 0.9rem; }
+  .esports-entity-card-description { -webkit-line-clamp: 2; }
+  .esports-entity-card-footer { grid-template-columns: minmax(0, 1fr) auto; }
+  .esports-entity-card-action { display: inline-flex; }
+
+  .public-team-hero-content { padding: 6.5rem 0.85rem 1rem; }
+  .public-team-identity { align-items: flex-start; }
+  .public-team-title-row { align-items: flex-start; flex-wrap: wrap; }
+  .public-team-title-row h1 { width: 100%; white-space: normal; }
+  .public-team-panel { padding: 0.75rem; }
+}
+
+@media (max-width: 389px) {
+  .public-directory-metrics { grid-template-columns: repeat(3, minmax(4.5rem, 1fr)); overflow-x: auto; }
+  .public-home-eyebrow,
+  .public-directory-eyebrow { letter-spacing: 0.08em; }
+  .game-home-metrics { grid-template-columns: minmax(0, 1fr); }
+  .esports-entity-card-stats { grid-template-columns: minmax(0, 1fr); }
+  .org-profile-actions { grid-template-columns: 1fr; }
+}

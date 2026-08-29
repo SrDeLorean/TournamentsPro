@@ -20,7 +20,7 @@ interface MobileResponsiveSubnavbarProps {
   onSelectSection?: (section: GameSection) => void;
 }
 
-export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileResponsiveSubnavbarProps) {
+export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection }: MobileResponsiveSubnavbarProps) {
   const pathname = usePathname();
   const { currentUser, userTeams, isAuthenticated } = useAuth();
   const [activeSegment, setActiveSegment] = useState<MobileSubnavSegment>('game');
@@ -76,6 +76,7 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
     { id: 'matchday', label: 'Matchday', href: `/${game.slug}/matchday`, icon: <Award className="w-3.5 h-3.5" /> },
     { id: 'ajustes', label: 'Ajustes', href: `/${game.slug}/ajustes`, icon: <Settings className="w-3.5 h-3.5" /> },
   ];
+  const showSegmentSwitcher = isAuthenticated && !isAdminOrOrganizer;
 
   return (
     <div
@@ -84,10 +85,13 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
     >
       
       {/* 1. Top Mobile Segmented Controller (1 Row) */}
-      <div className="game-portal-mobile-segments flex items-center justify-around border-b border-[var(--border-card)] p-1 text-xs font-black">
+      {showSegmentSwitcher ? <div className="game-portal-mobile-segments flex items-center justify-around border-b border-[var(--border-card)] p-1 text-xs font-black" role="tablist" aria-label="Cambiar contexto de navegación">
         
         {/* Segment 1: JUEGO */}
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeSegment === 'game'}
           onClick={() => setActiveSegment('game')}
           className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeSegment === 'game'
@@ -102,6 +106,9 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
         {/* Segment 2: ATLETA (Users) */}
         {!isAdminOrOrganizer && isAuthenticated && (
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeSegment === 'athlete'}
             onClick={() => setActiveSegment('athlete')}
             className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               activeSegment === 'athlete'
@@ -117,6 +124,9 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
         {/* Segment 3: CLUB (Captains) */}
         {!isAdminOrOrganizer && isAuthenticated && myTeam && (
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeSegment === 'club'}
             onClick={() => setActiveSegment('club')}
             className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               activeSegment === 'club'
@@ -128,16 +138,15 @@ export function MobileResponsiveSubnavbar({ game, onSelectSection }: MobileRespo
             <span>Club</span>
           </button>
         )}
-
-      </div>
+      </div> : null}
 
       {/* 2. Active Segment Scrollable Options Bar */}
-      <div className="mobile-scroll-row py-2 px-3 flex items-center gap-1.5 overflow-x-auto touch-pan-x" aria-label="Secciones del portal">
+      <div className="game-portal-mobile-links mobile-scroll-row py-2 px-3 flex items-center gap-1.5 overflow-x-auto touch-pan-x" aria-label="Secciones del portal">
         
         {/* Render JUEGO Options */}
-        {activeSegment === 'game' &&
+        {(activeSegment === 'game' || !showSegmentSwitcher) &&
           gameSections.map((sec) => {
-            const isActive = pathname === sec.href || (sec.id === 'home' && pathname === `/${game.slug}`);
+            const isActive = activeSection === sec.id || pathname === sec.href || (sec.id === 'home' && pathname === `/${game.slug}`);
             return (
               <Link
                 key={sec.id}

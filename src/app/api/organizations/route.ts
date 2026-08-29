@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db/provider';
+import { dbProvider } from '@/lib/db/provider';
 
 interface PublicOrganizationRow {
   id: string;
@@ -32,31 +32,12 @@ function parseJsonValue<T>(value: string | T | null, fallback: T): T {
 
 export async function GET() {
   try {
-    const rows = await queryDB<PublicOrganizationRow>(`
-      SELECT
-        o.id,
-        o.name,
-        o.tag,
-        o.logo_url,
-        o.banner_url,
-        o.description,
-        o.country,
-        o.allowed_games,
-        o.founded_year,
-        o.rating,
-        o.website,
-        o.redes_sociales,
-        o.status,
-        (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id AND u.role = 'Organizador') AS organizers_count,
-        (SELECT COUNT(*) FROM teams t WHERE t.organization_id = o.id) AS teams_count
-      FROM organizations o
-      ORDER BY o.name ASC
-    `);
+    const rows = await dbProvider.organizations.getOrganizationsWithStats();
 
     const organizations = rows.map((organization) => ({
       ...organization,
-      allowedGames: parseJsonValue<string[]>(organization.allowed_games, []),
-      socialMedia: parseJsonValue<Record<string, string>>(organization.redes_sociales, {}),
+      allowedGames: parseJsonValue<string[]>(organization.allowed_games || organization.allowedGames, []),
+      socialMedia: parseJsonValue<Record<string, string>>(organization.redes_sociales || organization.socialMedia, {}),
     }));
 
     return NextResponse.json({ success: true, organizations });
