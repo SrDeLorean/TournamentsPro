@@ -14,7 +14,7 @@ function toSnakeCase(obj: Record<string, any>): Record<string, any> {
   for (const [key, value] of Object.entries(obj)) {
     if (value === undefined) continue;
     const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-    result[snakeKey] = value;
+    result[snakeKey] = typeof value === "boolean" ? (value ? 1 : 0) : value;
   }
   return result;
 }
@@ -64,7 +64,7 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
   protected mapRow(row: any): Organization {
     return {
       id: row.id, name: row.name, tag: row.tag, ownerId: row.owner_id, logoUrl: row.logo_url,
-      bannerUrl: row.banner_url, description: row.description, country: row.country,
+      bannerUrl: row.banner_url, description: row.description, country: row.country, status: row.status, isBanned: Boolean(row.is_banned), banReason: row.ban_reason,
       allowedGames: row.allowed_games ? (typeof row.allowed_games === 'string' ? JSON.parse(row.allowed_games) : row.allowed_games) : [],
       createdAt: row.created_at
     };
@@ -105,7 +105,7 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
       captainId: row.captain_id, captainName: row.captain_name, platform: row.platform, membersCount: row.members_count,
       maxMembers: row.max_members, color: row.color, logoText: row.logo_text, description: row.description,
       vacantPositions: row.vacant_positions ? (typeof row.vacant_positions === 'string' ? JSON.parse(row.vacant_positions) : row.vacant_positions) : [],
-      logoUrl: row.logo_url, bannerUrl: row.banner_url, status: row.status, clubIdEa: row.club_id_ea,
+      logoUrl: row.logo_url, bannerUrl: row.banner_url, status: row.status, clubIdEa: row.club_id_ea, isBanned: Boolean(row.is_banned), banReason: row.ban_reason,
       createdAt: row.created_at, updatedAt: row.updated_at
     };
   }
