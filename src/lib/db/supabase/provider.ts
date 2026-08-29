@@ -14,6 +14,8 @@ export class SupabaseDatabaseProvider implements IDatabaseProvider {
   teams = new SupabaseTeamRepository();
   competitions = new SupabaseCompetitionRepository();
   seasons = new SupabaseSeasonRepository();
+  matches = new SupabaseMatchRepository();
+  games = new SupabaseGameRepository();
 
   async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
     throw new Error('Las consultas SQL directas (queryDB) no están soportadas en Supabase REST. Debes usar los repositorios de dbProvider.');

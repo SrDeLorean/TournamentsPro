@@ -76,11 +76,19 @@ export async function POST(request: Request) {
     const newId = `usr-${Date.now()}`;
 
     // ── Insert user ─────────────────────────────────────────────────────
-    await queryDB(
-      `INSERT INTO users (id, email, password_hash, name, gamertag, role, primary_game_slug, platform, position, rank_badge, status, is_banned)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-      [newId, userEmail, hashedPassword, userName, userGamertag, userRole, gameSlug, userPlatform, defaultPosition, 'División 1', 'Activo']
-    );
+    const newUser = {
+      id: userId,
+      email: body.email,
+      passwordHash: hashed,
+      name: body.name,
+      gamertag: body.gamertag,
+      role: 'Jugador',
+      primaryGameSlug: 'eafc26',
+      status: 'Activo',
+      createdAt: now,
+      updatedAt: now,
+    };
+    await import('@/lib/db/provider').then(m => m.dbProvider.users.create(newUser));
 
     // ── Generate JWT ────────────────────────────────────────────────────
     const session = await createAuthSession(newId, request);

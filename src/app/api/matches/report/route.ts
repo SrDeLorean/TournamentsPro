@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB, executeCommand } from '@/lib/db/provider';
+import { dbProvider } from '@/lib/db/provider';
 import { getServerUserSession } from '@/lib/auth-server';
 import { randomUUID } from 'crypto';
 
@@ -15,15 +15,14 @@ export async function POST(request: Request) {
 
     if (!matchId) return NextResponse.json({ error: 'Match ID requerido' }, { status: 400 });
 
-    const matches = await queryDB('SELECT * FROM matches WHERE id = ?', [matchId]);
-    if (!matches.length) return NextResponse.json({ error: 'Partido no encontrado' }, { status: 404 });
-    const match = matches[0] as any;
+    const match = await dbProvider.matches.findById(matchId);
+    if (!match) return NextResponse.json({ error: 'Partido no encontrado' }, { status: 404 });
 
-    await executeCommand(`
-      UPDATE matches 
-      SET reported_score_home = ?, reported_score_away = ?, status = 'POR_REVISAR'
-      WHERE id = ?
-    `, [homeScore, awayScore, matchId]);
+    await dbProvider.matches.update(matchId, {
+      reportedScoreHome: homeScore,
+      reportedScoreAway: awayScore,
+      status: 'POR_REVISAR'
+    });
 
     // Insertar TODAS las stats de los participantes si provienen de Riot API
     if (participantsStats && Array.isArray(participantsStats)) {
@@ -32,27 +31,29 @@ export async function POST(request: Request) {
         const cleanGamertag = p.riotId.split('#')[0]; // Simplify lookup
         
         // Find user by gamertag or create a temporary association
-        const users = await queryDB('SELECT id FROM users WHERE gamertag = ? OR name = ? LIMIT 1', [cleanGamertag, cleanGamertag]);
-        const playerId = users.length > 0 ? (users[0] as any).id : `temp-${cleanGamertag}`;
+        let user = await dbProvider.users.findByGamertag(cleanGamertag);
+        if (!user) {
+          const users = await dbProvider.users.findAll({ where: { name: cleanGamertag } });
+          if (users.length > 0) user = users[0];
+        }
+        const playerId = user ? user.id : `temp-${cleanGamertag}`;
         
         const statsId = `st-${randomUUID().substring(0, 8)}`;
-        await executeCommand(`
-          INSERT INTO match_player_stats (id, match_id, player_id, game_slug, stats_json)
-          VALUES (?, ?, ?, ?, ?)
-        `, [statsId, matchId, playerId, gameSlug || match.game_slug, JSON.stringify(p.stats)]);
+        await dbProvider.matches.addPlayerStat(statsId, matchId, playerId, gameSlug || match.gameSlug || '', JSON.stringify(p.stats));
       }
     } 
     // Fallback: Si solo reportaron el MVP manual
     else if (mvpName && dynamicStats) {
       const cleanGamertag = mvpName.replace('@', '').trim();
-      const users = await queryDB('SELECT id FROM users WHERE gamertag = ? OR name = ? LIMIT 1', [cleanGamertag, cleanGamertag]);
-      const mvpId = users.length > 0 ? (users[0] as any).id : `temp-${cleanGamertag}`;
+      let user = await dbProvider.users.findByGamertag(cleanGamertag);
+      if (!user) {
+        const users = await dbProvider.users.findAll({ where: { name: cleanGamertag } });
+        if (users.length > 0) user = users[0];
+      }
+      const mvpId = user ? user.id : `temp-${cleanGamertag}`;
 
       const statsId = `st-${randomUUID().substring(0, 8)}`;
-      await executeCommand(`
-        INSERT INTO match_player_stats (id, match_id, player_id, game_slug, stats_json)
-        VALUES (?, ?, ?, ?, ?)
-      `, [statsId, matchId, mvpId, gameSlug || match.game_slug, JSON.stringify(dynamicStats)]);
+      await dbProvider.matches.addPlayerStat(statsId, matchId, mvpId, gameSlug || match.gameSlug || '', JSON.stringify(dynamicStats));
     }
 
     return NextResponse.json({ success: true, message: 'Reporte enviado a revisión' });

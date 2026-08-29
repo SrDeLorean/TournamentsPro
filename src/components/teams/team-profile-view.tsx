@@ -114,7 +114,7 @@ export function TeamProfileView({
 
   const vacantPositions = team.vacantPositions || [];
 
-  const teamBanner = team?.bannerUrl || '/images/hero.jpg';
+  const teamBanner = team?.bannerUrl || '/images/default/banner-default.jpg';
   const teamLogo = team?.logoUrl || (team as LegacyTeamData).logo;
   const teamLogoText = team?.logoText || team?.tag || team?.name?.substring(0, 3)?.toUpperCase() || 'TP';
   const teamName = team?.name || 'Escuadra eSports';

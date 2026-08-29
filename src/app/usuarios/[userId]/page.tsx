@@ -17,8 +17,9 @@ export default function GlobalUserProfilePage({ params }: { params: Promise<{ us
 
   React.useEffect(() => {
     let active = true;
-    fetch(`/api/users?id=${encodeURIComponent(userId)}`).then((response) => response.json()).then((payload: { success?: boolean; user?: PublicUser }) => {
-      if (active && payload.success && payload.user) setUser(payload.user);
+    fetch(`/api/users?id=${encodeURIComponent(userId)}`).then((response) => response.json()).then((payload: { success?: boolean; user?: PublicUser; data?: { user?: PublicUser } }) => {
+      const u = payload.data?.user ?? payload.user;
+      if (active && payload.success && u) setUser(u);
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [userId]);

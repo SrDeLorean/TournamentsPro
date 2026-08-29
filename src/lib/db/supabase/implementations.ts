@@ -130,6 +130,14 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
       await supabase.from(this.tableName).update({ members_count: count }).eq('id', teamId);
     }
   }
+
+  async getManagers(teamId: string): Promise<{ userId: string }[]> {
+    const { data } = await supabase.from('team_members')
+      .select('user_id')
+      .eq('team_id', teamId)
+      .in('role_in_team', ['Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán']);
+    return (data || []).map(r => ({ userId: r.user_id }));
+  }
 }
 
 export class SupabaseCompetitionRepository extends SupabaseBaseRepository<Competition> implements ICompetitionRepository {
@@ -204,5 +212,63 @@ export class SupabaseSeasonRepository extends SupabaseBaseRepository<Season> imp
   async findByOrganization(orgId: string): Promise<Season[]> {
     const { data } = await supabase.from(this.tableName).select('*').or(`organization_id.eq.${orgId},organization_id.is.null`).order('created_at', { ascending: false });
     return (data || []).map(row => this.mapRow(row));
+  }
+}
+
+export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> implements IMatchRepository {
+  protected tableName = 'matches';
+
+  protected mapRow(row: any): Match {
+    return {
+      id: row.id,
+      tournamentId: row.tournament_id,
+      competitionId: row.competition_id,
+      round: row.round,
+      matchday: row.matchday,
+      roundName: row.round_name,
+      groupName: row.group_name,
+      teamHomeId: row.team_home_id,
+      homeTeamId: row.home_team_id,
+      teamAwayId: row.team_away_id,
+      awayTeamId: row.away_team_id,
+      homeTeamName: row.home_team_name,
+      homeTeamTag: row.home_team_tag,
+      awayTeamName: row.away_team_name,
+      awayTeamTag: row.away_team_tag,
+      scoreHome: row.score_home,
+      scoreAway: row.score_away,
+      reportedScoreHome: row.reported_score_home,
+      reportedScoreAway: row.reported_score_away,
+      winnerTeamId: row.winner_team_id,
+      proofUrl: row.proof_url,
+      reportedByUserId: row.reported_by_user_id,
+      nextMatchId: row.next_match_id,
+      nextMatchSlot: row.next_match_slot,
+      scheduledAt: row.scheduled_at,
+      scheduledTime: row.scheduled_time,
+      status: row.status
+    };
+  }
+
+  protected mapToDb(entity: Partial<Match>): any {
+    return toSnakeCase(entity);
+  }
+
+  async findByCompetition(competitionId: string): Promise<Match[]> {
+    const { data } = await supabase.from(this.tableName)
+      .select('*')
+      .or(`competition_id.eq.${competitionId},tournament_id.eq.${competitionId}`)
+      .order('scheduled_at', { ascending: true });
+    return (data || []).map(row => this.mapRow(row));
+  }
+
+  async addPlayerStat(statsId: string, matchId: string, playerId: string, gameSlug: string, statsJson: string): Promise<void> {
+    await supabase.from('match_player_stats').insert({
+      id: statsId,
+      match_id: matchId,
+      player_id: playerId,
+      game_slug: gameSlug,
+      stats_json: statsJson
+    });
   }
 }

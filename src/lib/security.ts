@@ -178,16 +178,16 @@ const mysqlRateLimitStore: RateLimitStore = {
       await supabase.from('security_audit_log').insert({
         id: auditId,
         request_id: requestId,
-        actor_user_id: event.actor.userId,
-        actor_role: event.actor.role,
-        action_name: event.action,
-        resource_type: event.resourceType,
-        resource_id: event.resourceId || null,
-        organization_id: event.organizationId ?? event.actor.organizationId,
-        outcome: event.outcome || 'SUCCESS',
+        actor_user_id: event?.actor.userId,
+        actor_role: event?.actor.role,
+        action_name: event?.action,
+        resource_type: event?.resourceType,
+        resource_id: event?.resourceId || null,
+        organization_id: event?.organizationId ?? event?.actor.organizationId,
+        outcome: event?.outcome || 'SUCCESS',
         metadata_json: metadata,
-        ip_hash: event.request ? getRequestFingerprint(event.request) : null,
-        user_agent_hash: event.request?.headers.get('user-agent') ? hashSecurityValue(event.request.headers.get('user-agent') || '') : null
+        ip_hash: event?.request ? getRequestFingerprint(event?.request) : null,
+        user_agent_hash: event?.request?.headers.get('user-agent') ? hashSecurityValue(event?.request.headers.get('user-agent') || '') : null
       });
       return;
     }
@@ -433,7 +433,7 @@ export function sanitizeAuditMetadata(value: unknown): unknown {
 
 export async function writeSecurityAudit(event: SecurityAuditEvent): Promise<void> {
   const auditId = randomUUID();
-  const requestId = event.request ? getRequestId(event.request) : null;
+  const requestId = event?.request ? getRequestId(event?.request) : null;
   const metadata = sanitizeAuditMetadata(event.metadata || {});
   try {
     await queryDB(
@@ -444,17 +444,17 @@ export async function writeSecurityAudit(event: SecurityAuditEvent): Promise<voi
       [
         auditId,
         requestId,
-        event.actor.userId,
-        event.actor.role,
-        event.action,
-        event.resourceType,
-        event.resourceId || null,
-        event.organizationId ?? event.actor.organizationId,
-        event.outcome || 'SUCCESS',
+        event?.actor.userId,
+        event?.actor.role,
+        event?.action,
+        event?.resourceType,
+        event?.resourceId || null,
+        event?.organizationId ?? event?.actor.organizationId,
+        event?.outcome || 'SUCCESS',
         JSON.stringify(metadata),
-        event.request ? getRequestFingerprint(event.request) : null,
-        event.request?.headers.get('user-agent')
-          ? hashSecurityValue(event.request.headers.get('user-agent') || '')
+        event?.request ? getRequestFingerprint(event?.request) : null,
+        event?.request?.headers.get('user-agent')
+          ? hashSecurityValue(event?.request.headers.get('user-agent') || '')
           : null,
       ],
     );
@@ -462,13 +462,13 @@ export async function writeSecurityAudit(event: SecurityAuditEvent): Promise<voi
     logger.error('security.audit.persistence_failed', {
       id: auditId,
       requestId,
-      actorUserId: event.actor.userId,
-      actorRole: event.actor.role,
-      action: event.action,
-      resourceType: event.resourceType,
-      resourceId: event.resourceId || null,
-      organizationId: event.organizationId ?? event.actor.organizationId,
-      outcome: event.outcome || 'SUCCESS',
+      actorUserId: event?.actor.userId,
+      actorRole: event?.actor.role,
+      action: event?.action,
+      resourceType: event?.resourceType,
+      resourceId: event?.resourceId || null,
+      organizationId: event?.organizationId ?? event?.actor.organizationId,
+      outcome: event?.outcome || 'SUCCESS',
       metadata,
       error: error instanceof Error ? error.message : 'audit persistence failed',
     });

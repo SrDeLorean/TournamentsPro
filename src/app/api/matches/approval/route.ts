@@ -1,24 +1,9 @@
 import { NextResponse } from 'next/server';
-import { executeCas, queryDB, withTransaction } from '@/lib/db/provider';
+import { dbProvider } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canApproveMatch, canReportMatch } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
 import { matchApprovalBodySchema } from '@/lib/api-schemas';
-
-interface MatchRow extends Record<string, unknown> {
-  id: string;
-  competition_id: string | null;
-  team_home_id: string | null;
-  home_team_id: string | null;
-  team_away_id: string | null;
-  away_team_id: string | null;
-  home_team_name: string | null;
-  away_team_name: string | null;
-  reported_score_home: number | null;
-  reported_score_away: number | null;
-  next_match_id: string | null;
-  next_match_slot: string | null;
-}
 
 // POST /api/matches/approval - Report score (Captain) or Approve Visto Bueno (Organizer/Admin)
 export async function POST(request: Request) {
@@ -35,47 +20,56 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ID de partido requerido' }, { status: 400 });
     }
 
-    const matches = await queryDB<MatchRow>('SELECT * FROM matches WHERE id = ?', [matchId]);
-    if (!matches || matches.length === 0) {
+    const match = await dbProvider.matches.findById(matchId);
+    if (!match) {
       return NextResponse.json({ error: 'Partido no encontrado' }, { status: 404 });
     }
 
-    const match = matches[0];
-    const competitionId = match.competition_id;
+    const competitionId = match.competitionId;
 
-    let competitions = await queryDB<{ organization_id: string | null; organizer_id: string | null }>(
-      'SELECT organization_id, organizer_id FROM competitions WHERE id = ? LIMIT 1',
-      [competitionId],
-    );
-    const competition = competitions[0] || { organization_id: null, organizer_id: null };
+    let competition = { organizationId: null as string | null, organizerId: null as string | null };
+    if (competitionId) {
+      const compObj = await dbProvider.competitions.findById(competitionId);
+      if (compObj) {
+        competition = { organizationId: compObj.organizationId, organizerId: compObj.organizerId };
+      }
+    }
 
     // ACTION: REPORT_SCORE (Captains) -> Status: POR_REVISAR
     if (action === 'REPORT_SCORE') {
-      const homeTeamId = match.team_home_id || match.home_team_id;
-      const awayTeamId = match.team_away_id || match.away_team_id;
-      const participants = await queryDB<{ user_id: string }>(
-        `SELECT captain_id AS user_id FROM teams WHERE id IN (?, ?)
-         UNION
-         SELECT user_id FROM team_members
-          WHERE team_id IN (?, ?)
-            AND role_in_team IN ('Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán')`,
-        [homeTeamId, awayTeamId, homeTeamId, awayTeamId],
-      );
-      if (!canReportMatch(actor, participants.map((participant) => participant.user_id))) {
+      const homeTeamId = match.teamHomeId || match.homeTeamId;
+      const awayTeamId = match.teamAwayId || match.awayTeamId;
+      
+      const managersHome = homeTeamId ? await dbProvider.teams.getManagers(homeTeamId) : [];
+      const managersAway = awayTeamId ? await dbProvider.teams.getManagers(awayTeamId) : [];
+      const teamHomeObj = homeTeamId ? await dbProvider.teams.findById(homeTeamId) : null;
+      const teamAwayObj = awayTeamId ? await dbProvider.teams.findById(awayTeamId) : null;
+      
+      const participantIds = [
+        ...managersHome.map(m => m.userId),
+        ...managersAway.map(m => m.userId),
+        teamHomeObj?.captainId,
+        teamAwayObj?.captainId
+      ].filter(Boolean) as string[];
+
+      if (!canReportMatch(actor, participantIds)) {
         return NextResponse.json({ error: 'No tienes permisos para reportar este partido' }, { status: 403 });
       }
 
-      await withTransaction(async (transaction) => {
-        await transaction.queryRows('SELECT id FROM matches WHERE id = ? FOR UPDATE', [matchId]);
-        await executeCas(
-          transaction,
-          `UPDATE matches
-              SET reported_score_home = ?, reported_score_away = ?, proof_url = COALESCE(?, proof_url),
-                  reported_by_user_id = ?, status = 'POR_REVISAR'
-            WHERE id = ? AND status IN ('PENDIENTE', 'EN_CURSO', 'DISPUTADO')`,
-          [scoreHome, scoreAway, proofUrl || null, actor.userId, matchId],
-          'El partido ya fue reportado o finalizado.',
-        );
+      await dbProvider.withTransaction(async (transaction) => {
+        const lockedMatch = await transaction.matches.findById(matchId);
+        if (!lockedMatch) throw new Error('Partido no encontrado');
+        if (!['PENDIENTE', 'EN_CURSO', 'DISPUTADO'].includes(lockedMatch.status)) {
+          throw new Error('El partido ya fue reportado o finalizado.');
+        }
+
+        await transaction.matches.update(matchId, {
+          reportedScoreHome: scoreHome,
+          reportedScoreAway: scoreAway,
+          proofUrl: proofUrl || lockedMatch.proofUrl,
+          reportedByUserId: actor.userId,
+          status: 'POR_REVISAR'
+        });
       });
 
       return NextResponse.json({
@@ -87,54 +81,60 @@ export async function POST(request: Request) {
     // ACTION: APPROVE (Organizer / Admin Visto Bueno) -> Status: TERMINADO
     if (action === 'APPROVE') {
       if (!canApproveMatch(actor, {
-        organizationId: competition.organization_id,
-        organizerId: competition.organizer_id,
+        organizationId: competition.organizationId,
+        organizerId: competition.organizerId,
       })) {
         return NextResponse.json({ error: 'Solo Organizadores y Administradores pueden otorgar el Visto Bueno' }, { status: 403 });
       }
 
-      const finalHome = scoreHome !== undefined ? scoreHome : match.reported_score_home;
-      const finalAway = scoreAway !== undefined ? scoreAway : match.reported_score_away;
+      const finalHome = scoreHome !== undefined ? scoreHome : match.reportedScoreHome;
+      const finalAway = scoreAway !== undefined ? scoreAway : match.reportedScoreAway;
       if (finalHome === null || finalAway === null) {
         return NextResponse.json({ error: 'El partido no tiene un marcador reportado válido' }, { status: 400 });
       }
 
       let winnerId = null;
-      if (finalHome > finalAway) winnerId = match.team_home_id;
-      else if (finalAway > finalHome) winnerId = match.team_away_id;
+      if (finalHome > finalAway) winnerId = match.teamHomeId || match.homeTeamId;
+      else if (finalAway > finalHome) winnerId = match.teamAwayId || match.awayTeamId;
 
-      await withTransaction(async (transaction) => {
-        const lockedRows = await transaction.queryRows<MatchRow>('SELECT * FROM matches WHERE id = ? FOR UPDATE', [matchId]);
-        if (lockedRows.length === 0) throw new Error('Partido no encontrado');
-        const lockedMatch = lockedRows[0];
-        if (lockedMatch.next_match_id) {
-          await transaction.queryRows('SELECT id FROM matches WHERE id = ? FOR UPDATE', [lockedMatch.next_match_id]);
+      await dbProvider.withTransaction(async (transaction) => {
+        const lockedMatch = await transaction.matches.findById(matchId);
+        if (!lockedMatch) throw new Error('Partido no encontrado');
+        
+        if (lockedMatch.status !== 'POR_REVISAR') {
+          throw new Error('El partido no está pendiente de aprobación o ya fue aprobado.');
         }
 
-        await executeCas(
-          transaction,
-          `UPDATE matches SET score_home = ?, score_away = ?, winner_team_id = ?, status = 'TERMINADO'
-            WHERE id = ? AND status = 'POR_REVISAR'`,
-          [finalHome, finalAway, winnerId, matchId],
-          'El partido no está pendiente de aprobación o ya fue aprobado.',
-        );
+        await transaction.matches.update(matchId, {
+          scoreHome: finalHome,
+          scoreAway: finalAway,
+          winnerTeamId: winnerId,
+          status: 'TERMINADO'
+        });
 
-        if (lockedMatch.next_match_id && winnerId) {
-          const teamRow = await transaction.queryRows<{ id: string; name: string }>(
-            'SELECT id, name FROM teams WHERE id = ?',
-            [winnerId],
-          );
-          const winnerName = teamRow[0]?.name
-            || (winnerId === lockedMatch.team_home_id || winnerId === lockedMatch.home_team_id
-              ? lockedMatch.home_team_name
-              : lockedMatch.away_team_name);
-          const isAwaySlot = lockedMatch.next_match_slot === 'AWAY';
-          await transaction.executeCommand(
-            isAwaySlot
-              ? 'UPDATE matches SET team_away_id = ?, away_team_id = ?, away_team_name = ? WHERE id = ?'
-              : 'UPDATE matches SET team_home_id = ?, home_team_id = ?, home_team_name = ? WHERE id = ?',
-            [winnerId, winnerId, winnerName, lockedMatch.next_match_id],
-          );
+        if (lockedMatch.nextMatchId && winnerId) {
+          const teamObj = await transaction.teams.findById(winnerId);
+          let winnerName = teamObj?.name;
+          if (!winnerName) {
+            winnerName = (winnerId === lockedMatch.teamHomeId || winnerId === lockedMatch.homeTeamId)
+              ? lockedMatch.homeTeamName || ''
+              : lockedMatch.awayTeamName || '';
+          }
+          const isAwaySlot = lockedMatch.nextMatchSlot === 'AWAY';
+          
+          if (isAwaySlot) {
+            await transaction.matches.update(lockedMatch.nextMatchId, {
+              teamAwayId: winnerId,
+              awayTeamId: winnerId,
+              awayTeamName: winnerName
+            });
+          } else {
+            await transaction.matches.update(lockedMatch.nextMatchId, {
+              teamHomeId: winnerId,
+              homeTeamId: winnerId,
+              homeTeamName: winnerName
+            });
+          }
         }
       });
 
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
         action: 'MATCH_RESULT_APPROVED',
         resourceType: 'match',
         resourceId: matchId,
-        organizationId: competition.organization_id,
+        organizationId: competition.organizationId,
         metadata: { competitionId, scoreHome: finalHome, scoreAway: finalAway, winnerId },
       });
 

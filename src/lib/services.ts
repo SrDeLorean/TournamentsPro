@@ -335,7 +335,7 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
     }
 
     const teamId = validation.data.id || randomUUID();
-    await transaction.execute(
+    await (transaction as any).query(
       `INSERT INTO teams
         (id, name, tag, game_slug, organization_id, captain_id, captain_name, platform, members_count,
          max_members, color, logo_text, description, vacant_positions, status, club_id_ea, logo_url, banner_url)
@@ -349,19 +349,19 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
       ],
     );
     for (const managerId of managerIds) {
-      await transaction.execute(
+      await (transaction as any).query(
         `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
          VALUES (?, ?, ?, 'ENCARGADO', 'Encargado')`,
         [randomUUID(), teamId, managerId],
       );
     }
-    await transaction.execute(
+    await (transaction as any).query(
       `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
        VALUES (?, ?, ?, ?, 'Capitan')`,
       [randomUUID(), teamId, captainId, validation.data.position || 'DFC'],
     );
     if (validation.data.organizationId) {
-      await transaction.execute(
+      await (transaction as any).query(
         `UPDATE users SET organization_id = ? WHERE id = ? AND (organization_id IS NULL OR organization_id = '')`,
         [validation.data.organizationId, captainId],
       );
@@ -409,7 +409,7 @@ export async function createManagedOrganizationService(data: ManagedOrganization
     if (duplicates.length > 0) return { success: false, error: 'Ya existe una organización con ese nombre o tag.' };
 
     const organizationId = randomUUID();
-    await transaction.execute(
+    await (transaction as any).query(
       `INSERT INTO organizations
         (id, name, tag, owner_id, allowed_games, logo_url, banner_url, country, founded_year, rating, website, redes_sociales, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -421,7 +421,7 @@ export async function createManagedOrganizationService(data: ManagedOrganization
       ],
     );
     for (const organizerId of organizerIds) {
-      await transaction.execute('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
+      await (transaction as any).query('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
     }
     return { success: true, organizationId };
   });
@@ -450,7 +450,7 @@ export async function updateManagedOrganizationService(
       if (owners.length === 0) return { success: false, error: 'Propietario no encontrado.' };
     }
 
-    await transaction.execute(
+    await (transaction as any).query(
       `UPDATE organizations SET
         name = COALESCE(?, name), tag = COALESCE(?, tag), owner_id = COALESCE(?, owner_id),
         allowed_games = COALESCE(?, allowed_games), logo_url = COALESCE(?, logo_url), banner_url = COALESCE(?, banner_url),
@@ -469,12 +469,12 @@ export async function updateManagedOrganizationService(
         "SELECT id FROM users WHERE organization_id = ? AND role = 'Organizador' FOR UPDATE",
         [organizationId],
       );
-      await transaction.execute(
+      await (transaction as any).query(
         "UPDATE users SET organization_id = NULL WHERE organization_id = ? AND role = 'Organizador'",
         [organizationId],
       );
       for (const organizerId of organizerIds) {
-        await transaction.execute('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
+        await (transaction as any).query('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
       }
     }
     return { success: true };
@@ -510,20 +510,20 @@ export async function archiveManagedOrganizationService(organizationId: string) 
     const teamIds = teamRows.map((team) => team.id);
     if (teamIds.length > 0) {
       const placeholders = teamIds.map(() => '?').join(', ');
-      await transaction.execute(
+      await (transaction as any).query(
         `UPDATE team_vacancies SET status = 'CERRADA' WHERE team_id IN (${placeholders}) AND status = 'ABIERTA'`,
         teamIds,
       );
-      await transaction.execute(
+      await (transaction as any).query(
         `UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE team_id IN (${placeholders}) AND status = 'ACTIVO'`,
         teamIds,
       );
-      await transaction.execute(
+      await (transaction as any).query(
         `UPDATE teams SET status = 'Archivado', updated_at = NOW() WHERE id IN (${placeholders})`,
         teamIds,
       );
     }
-    await transaction.execute(
+    await (transaction as any).query(
       "UPDATE organizations SET status = 'Archivada', updated_at = NOW() WHERE id = ?",
       [organizationId],
     );
@@ -564,7 +564,7 @@ export async function updateManagedTeamService(teamId: string, data: ManagedTeam
       const organizations = await transaction.organizations.findById(data.organizationId).then(r => r ? [{ id: r.id }] : []);
       if (organizations.length === 0) return { success: false, error: 'Organización no encontrada.' };
     }
-    await transaction.execute(
+    await (transaction as any).query(
       `UPDATE teams SET name = COALESCE(?, name), tag = COALESCE(?, tag), game_slug = COALESCE(?, game_slug),
         organization_id = COALESCE(?, organization_id), captain_id = ?, captain_name = COALESCE(?, captain_name),
         platform = COALESCE(?, platform), color = COALESCE(?, color), logo_text = COALESCE(?, logo_text),
@@ -581,17 +581,17 @@ export async function updateManagedTeamService(teamId: string, data: ManagedTeam
         "SELECT id FROM team_members WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado') FOR UPDATE",
         [teamId],
       );
-      await transaction.execute(
+      await (transaction as any).query(
         "DELETE FROM team_members WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado')",
         [teamId],
       );
-      await transaction.execute(
+      await (transaction as any).query(
         `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, 'CAPITAN', 'Capitán')`,
         [randomUUID(), teamId, captainId],
       );
       for (const managerId of data.managerIds || []) {
         if (managerId === captainId) continue;
-        await transaction.execute(
+        await (transaction as any).query(
           `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, 'ENCARGADO', 'Encargado')`,
           [randomUUID(), teamId, managerId],
         );
@@ -616,19 +616,19 @@ export async function archiveManagedTeamService(teamId: string) {
     if (activeCompetitions.length > 0) {
       return { success: false, error: 'No se puede archivar un equipo inscrito en una competencia activa.' };
     }
-    await transaction.execute(
+    await (transaction as any).query(
       "UPDATE team_vacancies SET status = 'CERRADA' WHERE team_id = ? AND status = 'ABIERTA'",
       [teamId],
     );
-    await transaction.execute(
+    await (transaction as any).query(
       "UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE team_id = ? AND status = 'ACTIVO'",
       [teamId],
     );
-    await transaction.execute(
+    await (transaction as any).query(
       "UPDATE transfer_offers SET status = 'CANCELADO' WHERE team_id = ? AND status = 'PENDIENTE'",
       [teamId],
     );
-    await transaction.execute("UPDATE teams SET status = 'Archivado', updated_at = NOW() WHERE id = ?", [teamId]);
+    await (transaction as any).query("UPDATE teams SET status = 'Archivado', updated_at = NOW() WHERE id = ?", [teamId]);
     return { success: true };
   });
 }
@@ -832,20 +832,20 @@ export async function addPlayerToSquadService(
     const positionToUse = tacticalPosition || users[0].position || 'DEL';
 
     const memberId = `tm-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    await transaction.execute(
+    await (transaction as any).query(
       `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
        VALUES (?, ?, ?, ?, ?)`,
       [memberId, teamId, userId, positionToUse, roleInTeam],
     );
 
     if (teams[0].organization_id) {
-      await transaction.execute(
+      await (transaction as any).query(
         `UPDATE users SET organization_id = ? WHERE id = ? AND (organization_id IS NULL OR organization_id = '')`,
         [teams[0].organization_id, userId],
       );
     }
 
-    await transaction.execute(
+    await (transaction as any).query(
       'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
       [teamId, teamId],
     );
@@ -915,25 +915,25 @@ export async function removePlayerFromSquadService(teamId: string, userId: strin
     }
 
     if (orgName) {
-      await transaction.execute(
+      await (transaction as any).query(
         'DELETE FROM team_members WHERE team_id = ? AND user_id = ? AND LOWER(organization_name) = LOWER(?)',
         [teamId, userId, orgName],
       );
-      await transaction.execute(
+      await (transaction as any).query(
         `UPDATE transfer_offers SET status = 'CONCLUIDO'
           WHERE team_id = ? AND player_user_id = ? AND status = 'ACEPTADO'
             AND LOWER(pitch_message) LIKE LOWER(?)`,
         [teamId, userId, `%[organización: ${orgName}]%`],
       );
     } else {
-      await transaction.execute('DELETE FROM team_members WHERE team_id = ? AND user_id = ?', [teamId, userId]);
-      await transaction.execute(
+      await (transaction as any).query('DELETE FROM team_members WHERE team_id = ? AND user_id = ?', [teamId, userId]);
+      await (transaction as any).query(
         "UPDATE transfer_offers SET status = 'CONCLUIDO' WHERE team_id = ? AND player_user_id = ? AND status = 'ACEPTADO'",
         [teamId, userId],
       );
     }
 
-    await transaction.execute(
+    await (transaction as any).query(
       'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
       [teamId, teamId],
     );
@@ -1027,7 +1027,7 @@ export async function sendClubContractOfferService(data: {
         const prefix = `[Organización: ${orgNameOrId}]`;
         if (pending.some((offer) => offer.pitch_message?.startsWith(prefix))) continue;
         const pitchText = `${prefix} ${data.pitchMessage || 'Oferta formal de contrato para unirse a la plantilla de la escuadra.'}`;
-        await transaction.execute(
+        await (transaction as any).query(
           `INSERT INTO transfer_offers (id, game_slug, team_id, player_user_id, offered_by_user_id, position, pitch_message, offer_type, status)
            VALUES (?, ?, ?, ?, ?, ?, ?, 'OFERTA_CLUB', 'PENDIENTE')`,
           [randomUUID(), data.gameSlug || 'eafc26', data.teamId, data.playerUserId, data.offeredByUserId, data.position || 'DC', pitchText],
@@ -1137,7 +1137,7 @@ export async function generateFixtureService(
     }
 
     const teams = enrolledTeams.map((team) => ({ id: team.team_id, name: team.team_name, tag: team.team_tag }));
-    await transaction.execute(
+    await (transaction as any).query(
       'DELETE FROM matches WHERE competition_id = ?',
       [competitionId],
     );
@@ -1156,7 +1156,7 @@ export async function generateFixtureService(
       qualifiersPerGroup,
     );
 
-    await transaction.execute(
+    await (transaction as any).query(
       `UPDATE competitions
           SET status = 'Activo', format = ?, match_mode = ?, group_count = ?, qualifiers_per_group = ?
         WHERE id = ?`,
@@ -1168,7 +1168,7 @@ export async function generateFixtureService(
 }
 
 async function generateMatchesForFormat(
-  transaction: DatabaseExecutor,
+  transaction: IDatabaseProvider,
   competitionId: string,
   teams: { id: string; name: string; tag: string | null }[],
   format: 'Liga' | 'Playoff' | 'Hibrido',
@@ -1205,7 +1205,7 @@ async function generateMatchesForFormat(
       }
       const timing = getScheduledDateTime(matchdayNumber);
       
-      await transaction.execute(
+      await (transaction as any).query(
         `INSERT INTO matches 
          (id, tournament_id, competition_id, matchday_number, matchday, stage, round_name, next_match_id, next_match_slot, 
           home_team_id, away_team_id, team_home_id, team_away_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
@@ -1254,7 +1254,7 @@ async function generateMatchesForFormat(
             if (home.id !== 'BYE' && away.id !== 'BYE') {
               const matchId = `m-${compClean}-g${groupIndex + 1}-j${matchdayNumber}-m${matchIndex + 1}`;
 
-              await transaction.execute(
+              await (transaction as any).query(
                 `INSERT INTO matches 
                  (id, tournament_id, competition_id, matchday_number, matchday, stage, group_name, 
                   team_home_id, team_away_id, home_team_id, away_team_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
@@ -1286,7 +1286,7 @@ async function generateMatchesForFormat(
       const matchdayNumber = maxGroupMatchday + playoffRoundOffset;
       const timing = getScheduledDateTime(matchdayNumber);
 
-      await transaction.execute(
+      await (transaction as any).query(
         `INSERT INTO matches 
          (id, tournament_id, competition_id, matchday_number, matchday, stage, round_name, next_match_id, next_match_slot, 
           home_team_id, away_team_id, team_home_id, team_away_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
@@ -1330,7 +1330,7 @@ async function generateMatchesForFormat(
           if (home.id !== 'BYE' && away.id !== 'BYE') {
             const matchId = `m-${compClean}-j${matchdayNumber}-m${matchIndex + 1}`;
 
-            await transaction.execute(
+            await (transaction as any).query(
               `INSERT INTO matches 
                (id, tournament_id, competition_id, matchday_number, matchday, stage, 
                 team_home_id, team_away_id, home_team_id, away_team_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
@@ -1432,7 +1432,7 @@ export async function createTransferApplicationService(data: {
 
     const appId = randomUUID();
     const isExtraordinary = marketMode === 'CERRADO' || isCompetitionActive;
-    await transaction.execute(
+    await (transaction as any).query(
       `INSERT INTO transfer_applications (id, team_id, applicant_user_id, game_slug, position, pitch_message, application_type, status, is_extraordinary, organizer_approval_status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?)`,
       [appId, teamId, userId, gameSlug, position, pitchMessage || null, type, isExtraordinary ? 1 : 0, isExtraordinary ? 'PENDIENTE_ORGANIZADOR' : 'NINGUNO'],
@@ -1489,12 +1489,12 @@ export async function respondOrdinaryTransferApplicationService(
       [processedByUserId, applicationId],
       'La solicitud ya fue procesada.',
     );
-    await transaction.execute('DELETE FROM team_members WHERE user_id = ?', [application.applicant_user_id]);
-    await transaction.execute(
+    await (transaction as any).query('DELETE FROM team_members WHERE user_id = ?', [application.applicant_user_id]);
+    await (transaction as any).query(
       `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, ?, 'Jugador')`,
       [randomUUID(), application.team_id, application.applicant_user_id, application.position],
     );
-    await transaction.execute(
+    await (transaction as any).query(
       `INSERT INTO transfer_history_logs
         (id, game_slug, player_user_id, from_team_id, from_team_name, to_team_id, to_team_name, approved_by_user_id, transfer_type)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'TRASPASO_DIRECTO')`,
@@ -1504,16 +1504,16 @@ export async function respondOrdinaryTransferApplicationService(
       ],
     );
     for (const previousTeam of previousTeams) {
-      await transaction.execute(
+      await (transaction as any).query(
         'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
         [previousTeam.id, previousTeam.id],
       );
     }
-    await transaction.execute(
+    await (transaction as any).query(
       'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
       [application.team_id, application.team_id],
     );
-    await transaction.execute(
+    await (transaction as any).query(
       "UPDATE transfer_market_posts SET status = 'COMPLETADO' WHERE user_id = ? AND status = 'ACTIVO'",
       [application.applicant_user_id],
     );
@@ -1581,22 +1581,22 @@ export async function approveExtraordinaryTransferService(applicationId: string,
       'La solicitud ya fue procesada por otro usuario.',
     );
 
-    await transaction.execute(
+    await (transaction as any).query(
       `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
        VALUES (?, ?, ?, ?, 'Jugador')
        ON DUPLICATE KEY UPDATE tactical_position = VALUES(tactical_position)`,
       [randomUUID(), app.team_id, app.applicant_user_id, app.position],
     );
-    await transaction.execute(
+    await (transaction as any).query(
       `INSERT INTO transfer_history_logs (id, game_slug, player_user_id, from_team_id, from_team_name, to_team_id, to_team_name, approved_by_user_id, transfer_type)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'EXTRAORDINARIO')`,
       [randomUUID(), app.game_slug, app.applicant_user_id, fromTeamId, fromTeamName, app.team_id, newTeams[0].name, organizerUserId],
     );
-    await transaction.execute(
+    await (transaction as any).query(
       "UPDATE transfer_market_posts SET status = 'COMPLETADO' WHERE user_id = ? AND type = 'JUGADOR_BUSCA_CLUB'",
       [app.applicant_user_id],
     );
-    await transaction.execute(
+    await (transaction as any).query(
       'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
       [app.team_id, app.team_id],
     );
@@ -1690,13 +1690,13 @@ export async function createTransferPostService(data: CreateTransferPostData): P
         type === 'JUGADOR_BUSCA_CLUB' ? [userId, gameSlug] : [teamId, gameSlug, position],
       );
       if (activePosts.length > 0) {
-        await transaction.execute(
+        await (transaction as any).query(
           `UPDATE transfer_market_posts SET status = 'CADUCADO'
             WHERE id IN (${activePosts.map(() => '?').join(', ')}) AND status = 'ACTIVO'`,
           activePosts.map((post) => post.id),
         );
       }
-      await transaction.execute(
+      await (transaction as any).query(
         `INSERT INTO transfer_market_posts
           (id, game_slug, type, user_id, user_name, user_gamertag, team_id, team_name, position, platform, status, message, expires_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?, DATE_ADD(NOW(), INTERVAL 7 DAY))`,
@@ -1845,7 +1845,7 @@ export async function submitMatchReportService(data: {
     );
     if (matches.length === 0) return { success: false, error: 'Partido no encontrado', code: 'NOT_FOUND' };
 
-    await transaction.execute(
+    await (transaction as any).query(
       `INSERT INTO match_reports (id, match_id, reported_by_user_id, score_home, score_away, proof_url, status)
        VALUES (?, ?, ?, ?, ?, ?, 'PENDIENTE')
        ON DUPLICATE KEY UPDATE reported_by_user_id = VALUES(reported_by_user_id), score_home = VALUES(score_home),
@@ -1861,7 +1861,7 @@ export async function submitMatchReportService(data: {
     );
 
     for (const stat of playerStats || []) {
-      await transaction.execute(
+      await (transaction as any).query(
         `INSERT INTO match_player_stats
            (id, match_id, team_id, user_id, goals, assists, yellow_cards, red_cards, rating, is_mvp)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -2120,26 +2120,26 @@ export async function respondPlayerContractOfferService(
         [offerId, userId],
         'La oferta ya fue procesada por otro usuario.',
       );
-      await transaction.execute(
+      await (transaction as any).query(
         'DELETE FROM team_members WHERE user_id = ? AND LOWER(organization_name) = LOWER(?)',
         [userId, orgName],
       );
-      await transaction.execute(
+      await (transaction as any).query(
         `INSERT INTO team_members (id, team_id, user_id, organization_name, tactical_position, role_in_team)
          VALUES (?, ?, ?, ?, ?, 'Jugador')
          ON DUPLICATE KEY UPDATE tactical_position = VALUES(tactical_position)`,
         [randomUUID(), offer.team_id, userId, orgName, offer.position || 'DFC'],
       );
-      await transaction.execute(
+      await (transaction as any).query(
         `INSERT INTO transfer_history_logs (id, game_slug, player_user_id, from_team_id, from_team_name, to_team_id, to_team_name, approved_by_user_id, transfer_type)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'LIBRE')`,
         [randomUUID(), offer.game_slug, userId, fromTeamId, fromTeamName, offer.team_id, targetTeam[0].name, userId],
       );
-      await transaction.execute(
+      await (transaction as any).query(
         "UPDATE transfer_market_posts SET status = 'COMPLETADO' WHERE user_id = ? AND type = 'JUGADOR_BUSCA_CLUB'",
         [userId],
       );
-      await transaction.execute(
+      await (transaction as any).query(
         'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
         [offer.team_id, offer.team_id],
       );

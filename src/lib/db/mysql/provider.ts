@@ -4,7 +4,8 @@ import {
   OrganizationRepository, 
   TeamRepository, 
   CompetitionRepository, 
-  SeasonRepository 
+  SeasonRepository,
+  MatchRepository 
 } from '@/lib/repositories';
 import type { IDatabaseProvider } from '../interfaces';
 import type { DatabaseExecutor } from '@/lib/db';
@@ -15,6 +16,7 @@ export class MysqlDatabaseProvider implements IDatabaseProvider {
   teams = new TeamRepository();
   competitions = new CompetitionRepository();
   seasons = new SeasonRepository();
+  matches = new MatchRepository();
 
   constructor(private executor?: DatabaseExecutor) {}
 
@@ -33,7 +35,6 @@ export class MysqlDatabaseProvider implements IDatabaseProvider {
   }
 
   async withTransaction<T>(operation: (tx: IDatabaseProvider) => Promise<T>): Promise<T> {
-    // Si ya estamos en una transacción, reusamos
     if (this.executor) {
       return operation(this);
     }

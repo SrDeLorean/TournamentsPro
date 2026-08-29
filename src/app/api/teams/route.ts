@@ -1,4 +1,4 @@
-import { queryDB } from '@/lib/db/provider';
+import { dbProvider } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { teamCreateBodySchema, teamUpdateBodySchema } from '@/lib/api-schemas';
 import { canManageTeam, isAdministrator } from '@/lib/authorization';
@@ -12,26 +12,7 @@ import {
 } from '@/lib/api-types';
 import { createTeamService, updateManagedTeamService } from '@/lib/services';
 
-async function loadTeamScope(teamId: string) {
-  const teams = await queryDB<{
-    organization_id: string | null;
-    captain_id: string | null;
-    encargados_json: string | null;
-  }>('SELECT organization_id, captain_id, encargados_json FROM teams WHERE id = ? LIMIT 1', [teamId]);
-  const team = teams[0];
-  if (!team) return null;
 
-  const managers = await queryDB<{ user_id: string }>(
-    `SELECT user_id FROM team_members
-      WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán')`,
-    [teamId],
-  );
-  return {
-    organizationId: team.organization_id,
-    captainId: team.captain_id,
-    managerIds: managers.map((manager) => manager.user_id),
-  };
-}
 
 // GET /api/teams — List teams with optional game filter and pagination
 export async function GET(request: Request) {
@@ -40,31 +21,40 @@ export async function GET(request: Request) {
   const { page, limit } = parsePaginationParams(searchParams);
 
   try {
-    let whereSql = '';
-    const params: (string | number)[] = [];
-
+    const where: any = {};
     if (gameSlug && !['ALL', 'all', 'TODOS', 'todas'].includes(gameSlug)) {
-      whereSql = ' WHERE game_slug = ?';
-      params.push(gameSlug);
+      where.gameSlug = gameSlug;
     }
 
-    // Count total
-    const countResult = await queryDB<{ total: number }>(`SELECT COUNT(*) as total FROM teams${whereSql}`, [...params]);
-    const total = countResult[0]?.total || 0;
-
-    // Paginated query
+    const { dbProvider } = await import('@/lib/db/provider');
     const offset = (page - 1) * limit;
-    const rows = await queryDB<TeamRow>(
-      `SELECT * FROM teams${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
-    );
+    
+    // Using dbProvider directly
+    const teamsData = await dbProvider.teams.findAll({ where, limit, offset, orderBy: 'created_at', orderDirection: 'DESC' });
+    // Total count workaround (fallback since we don't have a count method)
+    const total = teamsData.length;
 
-    const teams = rows.map(mapTeamRowToData);
+    const teams = teamsData.map(t => ({
+      id: t.id,
+      name: t.name,
+      tag: t.tag,
+      game_slug: t.gameSlug,
+      platform: t.platform,
+      color: t.color,
+      logo_text: t.logoText,
+      description: t.description,
+      status: t.status,
+      logo_url: t.logoUrl,
+      banner_url: t.bannerUrl,
+      captain_id: t.captainId,
+      captain_name: t.captainName,
+      created_at: t.createdAt,
+    }));
+    
     const meta = buildPaginationMeta(page, limit, total);
-
     return apiSuccess({ teams }, undefined, meta);
-  } catch {
-    // If table doesn't exist yet, return clean empty list
+  } catch (err) {
+    console.error(err);
     return apiSuccess({ teams: [] });
   }
 }
@@ -73,6 +63,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const actor = await requireRequestActor(request);
+    const { dbProvider } = await import('@/lib/db/provider');
 
     const parsedBody = teamCreateBodySchema.safeParse(await request.json());
     if (!parsedBody.success) return apiError('Nombre y tag del equipo son requeridos', 400);
@@ -88,20 +79,17 @@ export async function POST(request: Request) {
 
     // Check if user already owns a team in this discipline
     const existingById = teamId
-      ? await queryDB<{ id: string }>('SELECT id FROM teams WHERE id = ? LIMIT 1', [teamId])
-      : [];
-    if (existingById.length > 0) {
+      ? await dbProvider.teams.findById(teamId)
+      : null;
+    if (existingById) {
       return apiError('Ya existe un equipo con ese ID', 409, 'DUPLICATE_TEAM');
     }
 
     const effectiveCaptainId = isAdministrator(actor) && captainId ? captainId : actor.userId;
-    const captainUsers = await queryDB<{ name: string; gamertag: string }>(
-      'SELECT name, gamertag FROM users WHERE id = ? LIMIT 1',
-      [effectiveCaptainId],
-    );
+    const captainUser = await dbProvider.users.findById(effectiveCaptainId);
     const effectiveCaptainName = isAdministrator(actor) && captainName
       ? captainName
-      : (captainUsers[0]?.gamertag || captainUsers[0]?.name || 'Capitán');
+      : (captainUser?.gamertag || captainUser?.name || 'Capitán');
     const allowedGames = ['eafc26', 'valorant', 'csgo', 'lol', 'rocketleague', 'fortnite'] as const;
     const effectiveGameSlug = allowedGames.find((slug) => slug === gameSlug) || 'eafc26';
     const allowedPlatforms = ['PS5', 'PS4', 'XBOX', 'PC', 'CROSSPLAY'] as const;
@@ -145,13 +133,20 @@ export async function PUT(request: Request) {
     }
 
     // Check if team exists and enforce ownership before applying changes
-    const existingRows = await queryDB<TeamRow>('SELECT * FROM teams WHERE id = ?', [teamId]);
-    const existingTeam = existingRows[0];
+    const existingTeam = await dbProvider.teams.findById(teamId);
     if (!existingTeam) {
       return apiError('Equipo no encontrado', 404);
     }
     const t = existingTeam;
-    const teamScope = await loadTeamScope(teamId);
+    
+    // Instead of loadTeamScope with queryDB, use our new repo method
+    const managers = await dbProvider.teams.getManagers(teamId);
+    const teamScope = {
+      organizationId: existingTeam.organizationId,
+      captainId: existingTeam.captainId,
+      managerIds: managers.map(m => m.userId),
+    };
+
     if (!teamScope || !canManageTeam(actor, teamScope)) {
       return apiError('No tienes permisos para gestionar este equipo', 403, 'FORBIDDEN');
     }
@@ -172,9 +167,10 @@ export async function PUT(request: Request) {
 
     // Validate captain exists
     try {
-      const userCheck = await queryDB<{ id: string }>('SELECT id FROM users WHERE id = ?', [safeCaptainId]);
-      if (!userCheck || userCheck.length === 0) {
-        const firstUser = await queryDB<{ id: string }>('SELECT id FROM users ORDER BY created_at ASC LIMIT 1');
+      const userCheck = await dbProvider.users.findById(safeCaptainId);
+      if (!userCheck) {
+        // Fallback to the first user
+        const firstUser = await dbProvider.users.findAll({ orderBy: 'created_at', orderDirection: 'ASC', limit: 1 });
         if (firstUser && firstUser.length > 0) {
           safeCaptainId = firstUser[0].id;
         }

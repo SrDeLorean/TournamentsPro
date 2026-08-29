@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db/provider';
+import { dbProvider } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canManageCompetition } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
@@ -25,29 +25,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Falta ID del torneo' }, { status: 400 });
     }
 
-    let resources = await queryDB<{ organization_id: string | null; organizer_id: string | null }>(
-      'SELECT organization_id, organizer_id FROM competitions WHERE id = ? LIMIT 1',
-      [tournamentId],
-    );
-    const resource = resources[0];
+    const resource = await dbProvider.competitions.findById(tournamentId);
     if (!resource) {
       return NextResponse.json({ error: 'Torneo no encontrado' }, { status: 404 });
     }
     if (!canManageCompetition(actor, {
-      organizationId: resource.organization_id,
-      organizerId: resource.organizer_id,
+      organizationId: resource.organizationId,
+      organizerId: resource.organizerId,
     })) {
       return NextResponse.json({ error: 'No tienes permisos para generar este fixture' }, { status: 403 });
     }
 
     // 1. Fetch Enrolled Teams with real names and tags
-    const enrolledTeams = await queryDB<FixtureTeam>(
-      `SELECT t.id, COALESCE(t.name, t.team_name, 'Equipo BD') as name, COALESCE(t.tag, UPPER(LEFT(COALESCE(t.name, 'EQU'), 3))) as tag
-       FROM tournament_teams tt
-       JOIN teams t ON (tt.team_id = t.id OR tt.teamId = t.id)
-       WHERE (tt.tournament_id = ? OR tt.tournamentId = ?)`,
-      [tournamentId, tournamentId]
-    );
+    const enrolledTeamsData = await dbProvider.competitions.getEnrolledTeams(tournamentId);
+    const enrolledTeams: FixtureTeam[] = enrolledTeamsData.map(t => ({
+      id: t.team_id || t.teamId,
+      name: t.team_name || t.teamName || 'Equipo BD',
+      tag: t.team_tag || t.teamTag || (t.team_name || t.teamName || 'EQU').substring(0, 3).toUpperCase()
+    }));
 
     if (enrolledTeams.length < 2) {
       return NextResponse.json({ error: 'Se necesitan al menos 2 equipos inscritos para generar fixture' }, { status: 400 });
@@ -57,13 +52,16 @@ export async function POST(request: Request) {
     enrolledTeams.forEach((team) => teamMap.set(team.id, team));
 
     // 2. Clear existing matches for this tournament/competition
-    await queryDB('DELETE FROM matches WHERE competition_id = ?', [tournamentId]);
+    const existingMatches = await dbProvider.matches.findByCompetition(tournamentId);
+    for (const match of existingMatches) {
+      await dbProvider.matches.delete(match.id);
+    }
 
     const teamIds = enrolledTeams.map((team) => team.id);
     const fmt = (format || 'LIGA').toUpperCase();
     
     // Update the actual competition format in the database so it matches the generated fixture
-    await queryDB('UPDATE competitions SET format = ? WHERE id = ?', [fmt, tournamentId]);
+    await dbProvider.competitions.update(tournamentId, { format: fmt });
 
     const baseDate = startDate ? new Date(startDate) : new Date();
     const [hours, minutes] = (matchdayTime || '20:00').split(':');
@@ -90,20 +88,26 @@ export async function POST(request: Request) {
       const homeTeam = teamMap.get(m.homeId) || { name: 'Equipo Local', tag: 'LOC' };
       const awayTeam = teamMap.get(m.awayId) || { name: 'Equipo Visitante', tag: 'VIS' };
 
-      await queryDB(
-        `INSERT INTO matches (
-          id, tournament_id, competition_id, round, matchday, round_name, group_name,
-          team_home_id, team_away_id, home_team_id, away_team_id,
-          home_team_name, home_team_tag, away_team_name, away_team_tag,
-          scheduled_at, scheduled_time, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PROGRAMADO')`,
-        [
-          m.id, tournamentId, tournamentId, m.round, m.matchday, m.roundName, m.groupName,
-          m.homeId, m.awayId, m.homeId, m.awayId,
-          homeTeam.name, homeTeam.tag, awayTeam.name, awayTeam.tag,
-          m.scheduledAt, m.scheduledTime
-        ]
-      );
+      await dbProvider.matches.create({
+        id: m.id,
+        tournamentId: tournamentId,
+        competitionId: tournamentId,
+        round: m.round,
+        matchday: m.matchday,
+        roundName: m.roundName,
+        groupName: m.groupName,
+        teamHomeId: m.homeId,
+        homeTeamId: m.homeId,
+        teamAwayId: m.awayId,
+        awayTeamId: m.awayId,
+        homeTeamName: homeTeam.name,
+        homeTeamTag: homeTeam.tag,
+        awayTeamName: awayTeam.name,
+        awayTeamTag: awayTeam.tag,
+        scheduledAt: m.scheduledAt,
+        scheduledTime: m.scheduledTime,
+        status: 'PROGRAMADO'
+      });
     };
 
     if (fmt.includes('PLAYOFF') || fmt.includes('ELIMINATORIA')) {
@@ -236,7 +240,11 @@ export async function POST(request: Request) {
 
     // 3. Update status and format
     try {
-      await queryDB('UPDATE competitions SET status = "En_Juego", format = ?, mode_format = ? WHERE id = ?', [fmt, fmt, tournamentId]);
+      await dbProvider.competitions.update(tournamentId, {
+        status: 'En_Juego',
+        format: fmt,
+        modeFormat: fmt
+      });
     } catch {}
 
     await writeSecurityAudit({
@@ -245,7 +253,7 @@ export async function POST(request: Request) {
       action: 'FIXTURE_GENERATED',
       resourceType: 'competition',
       resourceId: tournamentId,
-      organizationId: resource.organization_id,
+      organizationId: resource.organizationId,
       metadata: { format: fmt, enrolledTeams: enrolledTeams.length },
     });
 

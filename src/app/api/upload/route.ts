@@ -6,7 +6,7 @@ import { validateUpload, sanitizeUploadPath } from '@/lib/auth';
 import { apiError } from '@/lib/api-types';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canManageTeam } from '@/lib/authorization';
-import { queryDB } from '@/lib/db/provider';
+
 import { consumeSecurityRateLimit } from '@/lib/security';
 import { uploadRequestBodySchema } from '@/lib/api-schemas';
 
@@ -37,20 +37,15 @@ export async function POST(request: Request) {
     const buffer = validation.buffer;
     let mayReplaceExistingFile = false;
 
+    const { dbProvider } = await import('@/lib/db/provider');
     if (body.teamId && body.teamId !== actor.userId) {
-      const teams = await queryDB<{ captain_id: string | null; organization_id: string | null }>(
-        'SELECT captain_id, organization_id FROM teams WHERE id = ? LIMIT 1',
-        [body.teamId],
-      );
-      const managers = await queryDB<{ user_id: string }>(
-        `SELECT user_id FROM team_members
-          WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado', 'DT / Analyst')`,
-        [body.teamId],
-      );
-      if (!teams[0] || !canManageTeam(actor, {
-        captainId: teams[0].captain_id,
-        organizationId: teams[0].organization_id,
-        managerIds: managers.map((manager) => manager.user_id),
+      const team = await dbProvider.teams.findById(body.teamId);
+      const managers = await dbProvider.teams.getManagers(body.teamId);
+      
+      if (!team || !canManageTeam(actor, {
+        captainId: team.captainId,
+        organizationId: team.organizationId,
+        managerIds: managers.map(m => m.userId),
       })) {
         return apiError('No puedes modificar los archivos de este equipo', 403, 'FORBIDDEN');
       }

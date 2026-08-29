@@ -104,6 +104,17 @@ export interface Season {
   createdAt: string;
 }
 
+export interface Game {
+  slug: string;
+  name: string;
+  category: string;
+  teamSize: number;
+  positionsJson: any | null;
+  brandColor: string;
+  statsSchema: any | null;
+  createdAt: string;
+}
+
 export interface IUserRepository extends IRepository<User> {
   findByEmail(email: string): Promise<User | null>;
   findByGamertag(gamertag: string): Promise<User | null>;
@@ -137,13 +148,50 @@ export interface ISeasonRepository extends IRepository<Season> {
   findByOrganization(orgId: string): Promise<Season[]>;
 }
 
-// Interfaz para sentencias directas que aún no tengan repositorio propio.
+export interface Match {
+  id: string;
+  tournamentId: string | null;
+  competitionId: string | null;
+  round: number | null;
+  matchday: number | null;
+  roundName: string | null;
+  groupName: string | null;
+  teamHomeId: string | null;
+  homeTeamId: string | null;
+  teamAwayId: string | null;
+  awayTeamId: string | null;
+  homeTeamName: string | null;
+  homeTeamTag: string | null;
+  awayTeamName: string | null;
+  awayTeamTag: string | null;
+  scoreHome: number | null;
+  scoreAway: number | null;
+  reportedScoreHome: number | null;
+  reportedScoreAway: number | null;
+  winnerTeamId: string | null;
+  proofUrl: string | null;
+  reportedByUserId: string | null;
+  nextMatchId: string | null;
+  nextMatchSlot: string | null;
+  scheduledAt: string | null;
+  scheduledTime: string | null;
+  status: string;
+}
+
+export interface IMatchRepository extends IRepository<Match> {
+  findByCompetition(competitionId: string): Promise<Match[]>;
+  addPlayerStat(statsId: string, matchId: string, playerId: string, gameSlug: string, statsJson: string): Promise<void>;
+}
+
+export interface IGameRepository extends IRepository<Game> {}
+
 export interface IDatabaseProvider {
   users: IUserRepository;
   organizations: IOrganizationRepository;
   teams: ITeamRepository;
   competitions: ICompetitionRepository;
   seasons: ISeasonRepository;
+  matches: IMatchRepository;
 
   query<T = any>(sql: string, params?: any[]): Promise<T[]>;
   execute(sql: string, params?: any[]): Promise<any>;

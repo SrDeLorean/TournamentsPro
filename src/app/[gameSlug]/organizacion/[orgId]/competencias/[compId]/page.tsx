@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { queryDB } from '@/lib/db';
+import { dbProvider } from '@/lib/db/provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { Trophy } from 'lucide-react';
 
@@ -21,23 +21,21 @@ export default async function PublicCompetitionDetailPage({
   const { gameSlug, orgId, compId } = await params;
   const gameConfig = GAMES_CATALOG[gameSlug] || GAMES_CATALOG['eafc26'];
 
-  // Clean compId matching (supports exact compId or prefix matching)
-  const compRows = await queryDB<CompetitionDetail>(
-    `SELECT c.*, 
-            COALESCE(o.name, u_org.name, 'Organización Oficial') as org_name, 
-            COALESCE(o.logo_url, u_org.logo_url, '/images/default/logo-default.png') as org_logo, 
-            COALESCE(o.banner_url, u_org.banner_url, '/images/default/banner-default.jpg') as org_banner 
-     FROM competitions c 
-     LEFT JOIN users u ON c.organizer_id = u.id
-     LEFT JOIN organizations o ON c.organization_id = o.id 
-     LEFT JOIN organizations u_org ON u.organization_id = u_org.id
-     WHERE (c.id = ? OR c.id LIKE ?) 
-       AND (c.organization_id = ? OR u.organization_id = ? OR ? = 'all')
-       AND c.game_slug = ?`,
-    [compId, `${compId}%`, orgId, orgId, orgId, gameSlug]
-  );
+  const orgUsers = await dbProvider.users.findAll({ where: { organization_id: orgId } });
+  const userIds = orgUsers.map(u => u.id);
+  
+  let allComps = [];
+  if (orgId === 'all') {
+    allComps = await dbProvider.competitions.findByGameSlug(gameSlug);
+  } else {
+    const compsByOrg = await dbProvider.competitions.findByOrganization(orgId);
+    const compsByUsers = userIds.length > 0 ? await dbProvider.competitions.findAll({ where: { organizer_id: userIds } }) : [];
+    allComps = [...compsByOrg, ...compsByUsers].filter(c => c.gameSlug === gameSlug);
+  }
+  
+  const compRaw = allComps.find(c => c.id === compId || c.id.startsWith(compId));
 
-  if (!compRows || compRows.length === 0) {
+  if (!compRaw) {
     return (
       <div
         className="min-h-screen pb-20 relative transition-all duration-500 text-[var(--text-primary)] bg-[var(--bg-main)]"
@@ -59,33 +57,73 @@ export default async function PublicCompetitionDetailPage({
     );
   }
 
-  const competition = compRows[0];
+  const orgRaw = await dbProvider.organizations.findById(compRaw.organizationId || orgId);
+  
+  const competition: CompetitionDetail = {
+    id: compRaw.id, name: compRaw.name, game_slug: compRaw.gameSlug,
+    organizer_id: compRaw.organizerId, organizer_name: compRaw.organizerName,
+    organization_id: compRaw.organizationId, season_id: compRaw.seasonId,
+    prize_pool: compRaw.prizePool, transfer_market_mode: compRaw.transferMarketMode as any,
+    mode_format: compRaw.modeFormat, status: compRaw.status as any,
+    fecha_limite_inscripcion: compRaw.fechaLimiteInscripcion,
+    fecha_inicio: compRaw.fechaInicio, fecha_termino: compRaw.fechaTermino,
+    description: compRaw.description, created_at: compRaw.createdAt,
+    org_name: orgRaw?.name || 'Organización Oficial',
+    org_logo: orgRaw?.logoUrl || '/images/default/logo-default.png',
+    org_banner: orgRaw?.bannerUrl || '/images/default/banner-default.jpg'
+  };
+
   const actualCompId = competition.id;
 
-  const [teamRows, matchRows] = await Promise.all([
-    queryDB<ConfirmedTeam>(
-      `SELECT ct.*, t.logo_url as team_logo, t.captain_name 
-       FROM competition_teams ct 
-       LEFT JOIN teams t ON ct.team_id = t.id 
-       WHERE ct.competition_id = ? AND ct.status = 'CONFIRMADO'`,
-      [actualCompId]
-    ),
-    queryDB<CompetitionMatch>(
-      `SELECT m.*, 
-              th.name as home_team_name, 
-              th.tag as home_team_tag, 
-              th.logo_url as home_logo, 
-              ta.name as away_team_name, 
-              ta.tag as away_team_tag, 
-              ta.logo_url as away_logo 
-       FROM matches m 
-       LEFT JOIN teams th ON (m.team_home_id = th.id OR m.home_team_id = th.id) 
-       LEFT JOIN teams ta ON (m.team_away_id = ta.id OR m.away_team_id = ta.id) 
-       WHERE m.competition_id = ?
-       ORDER BY COALESCE(m.matchday_number, m.matchday, 1) ASC, m.created_at ASC`,
-      [actualCompId]
-    ),
+  const [enrolledTeamsRaw, matchesRaw] = await Promise.all([
+    dbProvider.competitions.getEnrolledTeams(actualCompId),
+    dbProvider.matches.findByCompetition(actualCompId)
   ]);
+
+  const allTeamIds = Array.from(new Set([
+    ...enrolledTeamsRaw.map(t => t.team_id || t.teamId),
+    ...matchesRaw.flatMap(m => [m.homeTeamId, m.teamHomeId, m.awayTeamId, m.teamAwayId])
+  ].filter(Boolean))) as string[];
+  
+  const matchTeamsRaw = allTeamIds.length > 0 ? await dbProvider.teams.findAll({ where: { id: allTeamIds } }) : [];
+  const teamMap = new Map(matchTeamsRaw.map(t => [t.id, t]));
+
+  const teamRows: ConfirmedTeam[] = enrolledTeamsRaw.map(ct => {
+    const t = teamMap.get(ct.team_id || ct.teamId || '');
+    return {
+      id: ct.id, competition_id: ct.competition_id || ct.competitionId,
+      team_id: ct.team_id || ct.teamId, team_name: ct.team_name || ct.teamName,
+      team_tag: ct.team_tag || ct.teamTag, status: ct.status,
+      enrolled_at: ct.enrolled_at || ct.enrolledAt, updated_at: ct.updated_at || ct.updatedAt,
+      team_logo: t?.logoUrl, captain_name: t?.captainName
+    };
+  });
+
+  matchesRaw.sort((a, b) => {
+    const aMatchday = a.matchday ?? 1;
+    const bMatchday = b.matchday ?? 1;
+    if (aMatchday !== bMatchday) return aMatchday - bMatchday;
+    return new Date(a.createdAt || '2000').getTime() - new Date(b.createdAt || '2000').getTime();
+  });
+
+  const matchRows: CompetitionMatch[] = matchesRaw.map(m => {
+    const homeTeam = teamMap.get(m.teamHomeId || m.homeTeamId || '');
+    const awayTeam = teamMap.get(m.teamAwayId || m.awayTeamId || '');
+    return {
+      id: m.id, status: m.status,
+      home_team_id: m.homeTeamId, team_home_id: m.teamHomeId,
+      away_team_id: m.awayTeamId, team_away_id: m.teamAwayId,
+      home_team_name: homeTeam?.name || m.homeTeamName,
+      home_team_tag: homeTeam?.tag || m.homeTeamTag,
+      home_logo: homeTeam?.logoUrl,
+      away_team_name: awayTeam?.name || m.awayTeamName,
+      away_team_tag: awayTeam?.tag || m.awayTeamTag,
+      away_logo: awayTeam?.logoUrl,
+      reported_score_home: m.reportedScoreHome, reported_score_away: m.reportedScoreAway,
+      score_home: m.scoreHome, score_away: m.scoreAway,
+      matchday_number: m.matchday, matchday: m.matchday,
+    };
+  });
 
   return (
     <div className="min-h-screen pb-20 relative text-[var(--text-primary)]">

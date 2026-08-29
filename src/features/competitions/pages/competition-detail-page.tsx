@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { queryDB } from '@/lib/db';
+import { dbProvider } from '@/lib/db/provider';
 import { CompetitionData, CompetitionTeamData } from '@/app/actions/competitions';
 import {
   CompetitionTabs,
@@ -10,6 +10,7 @@ import {
 } from '@/app/dashboard/competencias/[id]/competition-tabs';
 import { GAME_MODE_OPTIONS } from '@/lib/games-data';
 import { requireCompetitionManager } from '@/lib/auth-server';
+import type { Competition } from '@/lib/db/interfaces';
 
 export const revalidate = 0; // Dynamic RSC rendering
 
@@ -25,31 +26,83 @@ function isIndividualFormat(gameSlug: string, modeFormat: string): boolean {
   return lowerMode.includes('1v1') || lowerMode.includes('2v2') || lowerMode.includes('solo') || lowerMode.includes('duos');
 }
 
+function mapCompToData(c: Competition): CompetitionData {
+  return {
+    id: c.id,
+    name: c.name,
+    game_slug: c.gameSlug,
+    organizer_id: c.organizerId,
+    organizer_name: c.organizerName,
+    organization_id: c.organizationId,
+    season_id: c.seasonId,
+    prize_pool: c.prizePool,
+    transfer_market_mode: c.transferMarketMode as any,
+    mode_format: c.modeFormat,
+    status: c.status as any,
+    fecha_limite_inscripcion: c.fechaLimiteInscripcion,
+    fecha_inicio: c.fechaInicio,
+    fecha_termino: c.fechaTermino,
+    description: c.description,
+    created_at: c.createdAt,
+  };
+}
+
 async function getCompetitionDetails(id: string) {
   try {
-    const compRows = await queryDB<CompetitionData>(`SELECT * FROM competitions WHERE id = ?`, [id]);
+    const compRecord = await dbProvider.competitions.findById(id);
 
-    if (!compRows || compRows.length === 0) {
+    if (!compRecord) {
       return null;
     }
 
-    const competition = compRows[0];
+    const competition = mapCompToData(compRecord);
     const isIndividual = isIndividualFormat(competition.game_slug, competition.mode_format);
 
     // RSC Parallel Database Queries (Vercel Best Practice async-parallel)
-    const [teamRows, availableRows, availableUsers, matchRows] = await Promise.all([
-      queryDB<CompetitionTeamData>(`SELECT * FROM competition_teams WHERE competition_id = ? ORDER BY enrolled_at ASC`, [id]),
-      queryDB<AvailableTeam>(
-        `SELECT id, name, tag, platform, game_slug FROM teams WHERE is_banned = 0 AND game_slug = ? ORDER BY name ASC`,
-        [competition.game_slug]
-      ),
+    const [teamRowsRaw, availableRowsRaw, availableUsersRaw, matchRowsRaw] = await Promise.all([
+      dbProvider.competitions.getEnrolledTeams(id),
+      dbProvider.teams.findByGameSlug(competition.game_slug),
       isIndividual
-        ? queryDB<AvailableUser>(
-            `SELECT id, name, gamertag, position, rating, primary_game_slug FROM users WHERE (is_banned IS NULL OR is_banned = 0) ORDER BY gamertag ASC`
-          )
+        ? dbProvider.users.findAll({ where: { is_banned: 0 }, orderBy: 'gamertag', orderDirection: 'ASC' })
         : Promise.resolve([]),
-      queryDB<CompetitionMatch>(`SELECT * FROM matches WHERE competition_id = ? ORDER BY COALESCE(matchday_number, matchday, 1) ASC, created_at ASC`, [id]),
+      dbProvider.matches.findByCompetition(id),
     ]);
+
+    const teamRows = teamRowsRaw as CompetitionTeamData[];
+    
+    const availableRows: AvailableTeam[] = availableRowsRaw.map(t => ({
+      id: t.id,
+      name: t.name,
+      tag: t.tag,
+      platform: t.platform,
+      game_slug: t.gameSlug
+    }));
+    
+    const availableUsers: AvailableUser[] = availableUsersRaw.map(u => ({
+      id: u.id,
+      name: u.name,
+      gamertag: u.gamertag,
+      position: u.position,
+      rating: u.rating,
+      primary_game_slug: u.primaryGameSlug
+    }));
+
+    const matchRows: CompetitionMatch[] = matchRowsRaw.map(m => ({
+      id: m.id,
+      status: m.status,
+      home_team_id: m.homeTeamId,
+      team_home_id: m.teamHomeId,
+      away_team_id: m.awayTeamId,
+      team_away_id: m.teamAwayId,
+      home_team_name: m.homeTeamName,
+      away_team_name: m.awayTeamName,
+      reported_score_home: m.reportedScoreHome,
+      reported_score_away: m.reportedScoreAway,
+      score_home: m.scoreHome,
+      score_away: m.scoreAway,
+      matchday_number: m.matchday,
+      matchday: m.matchday,
+    }));
 
     return {
       competition,

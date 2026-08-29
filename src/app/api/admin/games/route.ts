@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB, executeCommand } from '@/lib/db/provider';
+import { dbProvider } from '@/lib/db/provider';
 import { getServerUserSession } from '@/lib/auth-server';
 
 export async function GET() {
@@ -9,8 +9,18 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const games = await queryDB('SELECT * FROM games ORDER BY created_at DESC');
-    return NextResponse.json({ games });
+    const games = await dbProvider.games.findAll({ orderBy: 'createdAt', orderDirection: 'DESC' });
+    const formattedGames = games.map(g => ({
+      slug: g.slug,
+      name: g.name,
+      category: g.category,
+      team_size: g.teamSize,
+      positions_json: g.positionsJson,
+      brand_color: g.brandColor,
+      stats_schema: g.statsSchema,
+      created_at: g.createdAt,
+    }));
+    return NextResponse.json({ games: formattedGames });
   } catch (error) {
     console.error('GET /api/admin/games error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -31,23 +41,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Slug y nombre son obligatorios' }, { status: 400 });
     }
 
-    await executeCommand(`
-      INSERT INTO games (slug, name, category, team_size, positions_json, brand_color, stats_schema)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE 
-        name = VALUES(name),
-        category = VALUES(category),
-        brand_color = VALUES(brand_color),
-        stats_schema = VALUES(stats_schema)
-    `, [
-      slug, 
+    const existing = await dbProvider.games.findById(slug);
+    const params = {
       name, 
-      category || 'eSports', 
-      team_size || 5, 
-      positions_json ? JSON.stringify(positions_json) : null, 
-      brand_color || '#FFFFFF',
-      stats_schema ? JSON.stringify(stats_schema) : null
-    ]);
+      category: category || 'eSports', 
+      teamSize: team_size || 5, 
+      positionsJson: positions_json ? (typeof positions_json === 'string' ? positions_json : JSON.stringify(positions_json)) : null, 
+      brandColor: brand_color || '#FFFFFF',
+      statsSchema: stats_schema ? (typeof stats_schema === 'string' ? stats_schema : JSON.stringify(stats_schema)) : null
+    };
+
+    if (existing) {
+      await dbProvider.games.update(slug, params);
+    } else {
+      await dbProvider.games.create({ slug, ...params });
+    }
 
     return NextResponse.json({ success: true, message: 'Juego guardado exitosamente' });
   } catch (error: any) {
@@ -70,7 +78,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Slug es requerido' }, { status: 400 });
     }
 
-    await executeCommand('DELETE FROM games WHERE slug = ?', [slug]);
+    await dbProvider.games.delete(slug);
     return NextResponse.json({ success: true, message: 'Juego eliminado' });
   } catch (error: any) {
     console.error('DELETE /api/admin/games error:', error);
@@ -80,4 +88,3 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Error al eliminar. Asegúrese de que no tenga datos dependientes.' }, { status: 500 });
   }
 }
-

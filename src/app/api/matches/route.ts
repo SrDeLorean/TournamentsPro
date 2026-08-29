@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db/provider';
+
 
 export async function GET(request: Request) {
   try {
@@ -13,86 +13,137 @@ export async function GET(request: Request) {
     const tournamentId = searchParams.get('tournamentId');
     const date = searchParams.get('date');
 
-    let query = `
-      SELECT m.*,
-             COALESCE(th.name, m.home_team_name, 'Equipo Local') as home_team_name,
-             COALESCE(th.tag, UPPER(LEFT(COALESCE(th.name, m.home_team_name, 'LOC'), 3))) as home_team_tag,
-             th.logo_url as home_team_logo_url,
-             COALESCE(ta.name, m.away_team_name, 'Equipo Visitante') as away_team_name,
-             COALESCE(ta.tag, UPPER(LEFT(COALESCE(ta.name, m.away_team_name, 'VIS'), 3))) as away_team_tag,
-             ta.logo_url as away_team_logo_url,
-             COALESCE(c.name, m.competition_id, 'Competencia BD') as tournament_name,
-             COALESCE(c.game_slug, 'eafc26') as game_slug,
-             COALESCE(o.name, u_org.name, o2.name, o3.name, 'Organización Oficial') as organization_name,
-             COALESCE(o.tag, u_org.tag, o2.tag, o3.tag, 'ORG') as organization_tag
-      FROM matches m
-      LEFT JOIN competitions c ON m.competition_id = c.id
-      LEFT JOIN teams th ON (m.team_home_id = th.id OR m.home_team_id = th.id)
-      LEFT JOIN teams ta ON (m.team_away_id = ta.id OR m.away_team_id = ta.id)
-      LEFT JOIN users u ON (c.organizer_id = u.id)
-      LEFT JOIN organizations o ON (c.organization_id = o.id)
-      LEFT JOIN organizations u_org ON (u.organization_id = u_org.id)
-      LEFT JOIN organizations o2 ON (th.organization_id = o2.id OR ta.organization_id = o2.id)
-      LEFT JOIN organizations o3 ON (o3.owner_id = u.id)
-      WHERE 1=1
-    `;
-    const params: string[] = [];
+    const { dbProvider } = await import('@/lib/db/provider');
+    const matchesData = await dbProvider.matches.findAll({ orderBy: 'scheduled_at', orderDirection: 'DESC' });
+    
+    // We need to fetch related data to mimic the JOINs
+    const competitions = await dbProvider.competitions.findAll();
+    const teams = await dbProvider.teams.findAll();
+    const users = await dbProvider.users.findAll();
+    const organizations = await dbProvider.organizations.findAll();
+    
+    let allMatches = matchesData.map((m: any) => {
+      const comp = competitions.find(c => c.id === m.competitionId);
+      const th = teams.find(t => t.id === m.teamHomeId || t.id === m.homeTeamId);
+      const ta = teams.find(t => t.id === m.teamAwayId || t.id === m.awayTeamId);
+      const u = comp ? users.find(user => user.id === comp.organizerId) : null;
+      const o = comp ? organizations.find(org => org.id === comp.organizationId) : null;
+      const u_org = u ? organizations.find(org => org.id === u.organizationId) : null;
+      const o2 = th || ta ? organizations.find(org => org.id === th?.organizationId || org.id === ta?.organizationId) : null;
+      const o3 = u ? organizations.find(org => org.ownerId === u.id) : null;
 
+      const c_name = comp?.name || m.competitionId || 'Competencia BD';
+      const c_game_slug = comp?.gameSlug || 'eafc26';
+      
+      const home_team_name = th?.name || m.homeTeamName || 'Equipo Local';
+      const home_team_tag = th?.tag || (home_team_name.substring(0, 3).toUpperCase());
+      const home_team_logo_url = th?.logoUrl || null;
+
+      const away_team_name = ta?.name || m.awayTeamName || 'Equipo Visitante';
+      const away_team_tag = ta?.tag || (away_team_name.substring(0, 3).toUpperCase());
+      const away_team_logo_url = ta?.logoUrl || null;
+      
+      const org_name = o?.name || u_org?.name || o2?.name || o3?.name || 'Organización Oficial';
+      const org_tag = o?.tag || u_org?.tag || o2?.tag || o3?.tag || 'ORG';
+
+      return {
+        ...m,
+        id: m.id,
+        status: m.status,
+        scheduled_at: m.scheduledAt,
+        home_team_name,
+        home_team_tag,
+        home_team_logo_url,
+        away_team_name,
+        away_team_tag,
+        away_team_logo_url,
+        tournament_name: c_name,
+        game_slug: c_game_slug,
+        organization_name: org_name,
+        organization_tag: org_tag,
+        // include refs for filtering
+        _c_game_slug: c_game_slug,
+        _o_id: o?.id || o2?.id || o3?.id,
+        _o_name: o?.name,
+        _o2_name: o2?.name,
+        _o3_name: o3?.name,
+        _o_tag: o?.tag,
+        _o2_tag: o2?.tag,
+        _o3_tag: o3?.tag,
+        _c_name: comp?.name,
+        _th_name: th?.name,
+        _ta_name: ta?.name
+      };
+    });
+
+    // Apply filters
     if (gameSlug && gameSlug !== 'ALL' && gameSlug !== 'TODOS') {
-      query += ` AND (c.game_slug = ? OR c.game_slug IS NULL)`;
-      params.push(gameSlug);
+      allMatches = allMatches.filter(m => m._c_game_slug === gameSlug || !m._c_game_slug);
     }
 
     if (status && status !== 'TODOS') {
       const dbStatus = status === 'PROXIMOS' ? 'PENDIENTE' : status === 'FINALIZADOS' ? 'FINALIZADO' : status;
-      query += ` AND (m.status = ? OR m.status = ?)`;
-      params.push(status, dbStatus);
+      allMatches = allMatches.filter(m => m.status === status || m.status === dbStatus);
     }
 
     if (organizationId && organizationId !== 'TODAS') {
-      query += ` AND (o.id = ? OR o2.id = ? OR o3.id = ?)`;
-      params.push(organizationId, organizationId, organizationId);
+      allMatches = allMatches.filter(m => m._o_id === organizationId);
     }
 
     if (organizationName && organizationName !== 'TODAS') {
-      query += ` AND (o.name LIKE ? OR o2.name LIKE ? OR o3.name LIKE ? OR o.tag LIKE ? OR o2.tag LIKE ? OR o3.tag LIKE ?)`;
-      const orgLike = `%${organizationName}%`;
-      params.push(orgLike, orgLike, orgLike, orgLike, orgLike, orgLike);
+      const orgLike = organizationName.toLowerCase();
+      allMatches = allMatches.filter(m => 
+        (m._o_name?.toLowerCase().includes(orgLike)) ||
+        (m._o2_name?.toLowerCase().includes(orgLike)) ||
+        (m._o3_name?.toLowerCase().includes(orgLike)) ||
+        (m._o_tag?.toLowerCase().includes(orgLike)) ||
+        (m._o2_tag?.toLowerCase().includes(orgLike)) ||
+        (m._o3_tag?.toLowerCase().includes(orgLike))
+      );
     }
 
     if (tournamentId && tournamentId !== 'TODAS') {
-      query += ` AND m.competition_id = ?`;
-      params.push(tournamentId);
+      allMatches = allMatches.filter(m => m.competitionId === tournamentId);
     }
 
     if (tournamentName && tournamentName !== 'TODAS') {
-      query += ` AND c.name LIKE ?`;
-      const tLike = `%${tournamentName}%`;
-      params.push(tLike);
+      const tLike = tournamentName.toLowerCase();
+      allMatches = allMatches.filter(m => m._c_name?.toLowerCase().includes(tLike));
     }
 
     if (date) {
-      query += ` AND DATE(m.scheduled_at) = DATE(?)`;
-      params.push(date);
+      allMatches = allMatches.filter(m => {
+        if (!m.scheduled_at) return false;
+        return m.scheduled_at.startsWith(date);
+      });
     }
 
     if (search) {
-      query += ` AND (
-        COALESCE(th.name, m.home_team_name) LIKE ? OR
-        COALESCE(ta.name, m.away_team_name) LIKE ? OR
-        c.name LIKE ? OR
-        o.name LIKE ? OR
-        m.id LIKE ?
-      )`;
-      const searchLike = `%${search}%`;
-      params.push(searchLike, searchLike, searchLike, searchLike, searchLike);
+      const searchLike = search.toLowerCase();
+      allMatches = allMatches.filter(m => 
+        (m.home_team_name?.toLowerCase().includes(searchLike)) ||
+        (m.away_team_name?.toLowerCase().includes(searchLike)) ||
+        (m._c_name?.toLowerCase().includes(searchLike)) ||
+        (m._o_name?.toLowerCase().includes(searchLike)) ||
+        (m.id.toLowerCase().includes(searchLike))
+      );
     }
 
-    query += ` ORDER BY m.scheduled_at DESC, m.matchday ASC`;
+    // Clean up internal fields
+    allMatches.forEach(m => {
+      delete m._c_game_slug; delete m._o_id; delete m._o_name; delete m._o2_name; delete m._o3_name;
+      delete m._o_tag; delete m._o2_tag; delete m._o3_tag; delete m._c_name; delete m._th_name; delete m._ta_name;
+    });
 
-    const matches = await queryDB<Record<string, unknown>>(query, params);
+    // In JS we need to sort it manually if we changed the structure
+    allMatches.sort((a, b) => {
+      const dateA = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
+      const dateB = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
+      if (dateB !== dateA) return dateB - dateA; // DESC
+      return (a.matchday || 0) - (b.matchday || 0); // ASC
+    });
 
-    return NextResponse.json({ success: true, matches: matches || [] });
+    return NextResponse.json({ success: true, matches: allMatches });
   } catch (error: unknown) {
     return NextResponse.json({ success: false, matches: [], error: error instanceof Error ? error.message : 'Error consultando partidos de BD' }, { status: 500 });
   }

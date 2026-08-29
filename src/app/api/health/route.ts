@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryRows } from '@/lib/db/provider';
+import { dbProvider } from '@/lib/db/provider';
 import { getRequestId, logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const startedAt = performance.now();
 
   try {
-    await queryRows<{ ok: number }>('SELECT 1 AS ok');
+    await dbProvider.query<{ ok: number }>('SELECT 1 AS ok');
     const response = NextResponse.json({ status: 'ok', database: 'ok' });
     response.headers.set('x-request-id', requestId);
     logger.info('health.ready', { requestId, durationMs: Math.round(performance.now() - startedAt) });

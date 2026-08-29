@@ -1564,6 +1564,45 @@
 
 .game-portal-navbar > div { max-width: 96rem; }
 
+.game-switcher-trigger { display: flex; min-width: 0; align-items: center; gap: .5rem; border: 1px solid color-mix(in srgb, var(--game-brand) 32%, var(--border-card)); border-radius: .75rem; background: color-mix(in srgb, var(--game-brand) 8%, var(--bg-card)); padding: .35rem .55rem; color: var(--text-heading); box-shadow: 0 .35rem 1rem color-mix(in srgb, var(--game-brand) 8%, transparent); transition: border-color 160ms ease, background 160ms ease, transform 160ms ease; }
+.game-switcher-trigger:hover { border-color: color-mix(in srgb, var(--game-brand) 65%, var(--border-card)); background: color-mix(in srgb, var(--game-brand) 14%, var(--bg-card)); }
+.game-switcher-copy { display: grid; min-width: 0; text-align: left; line-height: 1.05; }
+.game-switcher-copy small { color: var(--text-muted); font: 800 .5rem/1.1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.game-switcher-copy strong { max-width: 8rem; overflow: hidden; color: var(--game-brand); font-size: .7rem; font-weight: 950; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.game-switcher-menu { position: absolute; z-index: 80; top: calc(100% + .5rem); left: 0; width: min(24rem, calc(100vw - 1rem)); overflow: hidden; border: 1px solid var(--border-card); border-radius: 1rem; background: color-mix(in srgb, var(--bg-card) 96%, transparent); padding: .65rem; box-shadow: 0 1.25rem 3rem #0006; backdrop-filter: blur(24px); }
+.game-switcher-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .25rem .35rem .65rem; }
+.game-switcher-heading span { display: inline-flex; align-items: center; gap: .4rem; color: var(--text-heading); font-size: .7rem; font-weight: 900; text-transform: uppercase; }
+.game-switcher-heading svg { color: var(--game-brand); }
+.game-switcher-heading small { color: var(--text-muted); font: 800 .55rem/1 var(--font-mono); text-transform: uppercase; }
+.game-switcher-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+.game-switcher-grid > a { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem; min-width: 0; border: 1px solid var(--border-card); border-radius: .75rem; background: var(--bg-subtle); padding: .55rem; transition: background 150ms ease, border-color 150ms ease, transform 150ms ease; }
+.game-switcher-grid > a:hover, .game-switcher-grid > a.is-active { border-color: color-mix(in srgb, var(--switcher-color) 55%, var(--border-card)); background: color-mix(in srgb, var(--switcher-color) 10%, var(--bg-card)); }
+.game-switcher-grid > a span { display: grid; min-width: 0; line-height: 1.1; }
+.game-switcher-grid > a strong { overflow: hidden; color: var(--text-heading); font-size: .68rem; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.game-switcher-grid > a small { overflow: hidden; color: var(--text-muted); font-size: .55rem; text-overflow: ellipsis; white-space: nowrap; }
+.game-switcher-grid > a > svg { color: var(--switcher-color); }
+.game-portal-mobile-game-row { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .75rem; border-bottom: 1px solid var(--border-card); padding: .45rem .65rem; }
+.game-portal-mobile-game-row > span { color: var(--text-muted); font: 800 .55rem/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.mobile-games-panel { border: 1px solid var(--border-card); border-radius: 1rem; background: var(--bg-subtle); padding: .65rem; }
+.mobile-games-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .1rem .15rem .6rem; }
+.mobile-games-heading > div { display: flex; align-items: center; gap: .4rem; color: var(--text-heading); font-size: .72rem; font-weight: 900; text-transform: uppercase; }
+.mobile-games-heading svg { color: var(--accent-violet); }
+.mobile-games-heading small { color: var(--text-muted); font: 800 .55rem/1 var(--font-mono); }
+.mobile-games-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+.mobile-games-grid > a { display: flex; min-width: 0; align-items: center; gap: .5rem; border: 1px solid var(--border-card); border-radius: .75rem; background: var(--bg-card); padding: .55rem; }
+.mobile-games-grid > a:hover { border-color: color-mix(in srgb, var(--mobile-game-color) 60%, var(--border-card)); background: color-mix(in srgb, var(--mobile-game-color) 9%, var(--bg-card)); }
+.mobile-games-grid > a span { display: grid; min-width: 0; line-height: 1.1; }
+.mobile-games-grid > a strong, .mobile-games-grid > a small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-games-grid > a strong { color: var(--text-heading); font-size: .65rem; font-weight: 900; }
+.mobile-games-grid > a small { color: var(--text-muted); font-size: .52rem; }
+
+@media (max-width: 639px) {
+  .game-switcher { min-width: 0; }
+  .game-switcher-trigger { max-width: 12rem; }
+  .game-switcher-copy strong { max-width: 7rem; }
+  .game-switcher-menu { position: fixed; top: 6.65rem; right: .5rem; left: .5rem; width: auto; max-height: calc(100dvh - 7.25rem); overflow-y: auto; }
+}
+
 .game-portal .game-section-hero {
   min-height: 0;
   gap: 1rem;

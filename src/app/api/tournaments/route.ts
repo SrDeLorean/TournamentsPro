@@ -24,42 +24,70 @@ export async function GET(request: Request) {
   const organizationName = searchParams.get('organizationName');
 
   try {
-    // Single query directly from unified 'competitions' table
-    const comps = await queryDB<TournamentListRow>(`
-      SELECT c.id, c.name, c.game_slug, c.organizer_id, c.mode_format as format, 
-             c.format as format_type, c.status, c.created_at, NULL as max_teams, NULL as registered_teams_count,
-             COALESCE(c.organization_id, u.organization_id, o.id) as organization_id,
-             COALESCE(o.name, u_org.name, 'Organización Oficial') as organization_name,
-             COALESCE(o.tag, u_org.tag, 'ORG') as organization_tag
-      FROM competitions c
-      LEFT JOIN users u ON c.organizer_id = u.id
-      LEFT JOIN organizations o ON c.organization_id = o.id
-      LEFT JOIN organizations u_org ON u.organization_id = u_org.id
-      ORDER BY c.created_at DESC
-    `);
+    const { dbProvider } = await import('@/lib/db/provider');
+    const comps = await dbProvider.competitions.findAll({ orderBy: 'created_at', orderDirection: 'DESC' });
+    
+    // We need to fetch users and organizations to replicate the JOIN behavior
+    // Doing it sequentially here for simplicity, although it could be optimized
+    const allTournaments = await Promise.all(comps.map(async (c) => {
+      let orgId = c.organizationId;
+      let orgName = 'Organización Oficial';
+      let orgTag = 'ORG';
 
-    let allTournaments = comps;
+      if (c.organizerId) {
+        const user = await dbProvider.users.findById(c.organizerId);
+        if (user && user.organizationId && !orgId) {
+          orgId = user.organizationId;
+        }
+      }
+
+      if (orgId) {
+        const org = await dbProvider.organizations.findById(orgId);
+        if (org) {
+          orgName = org.name;
+          orgTag = org.tag;
+        }
+      }
+
+      return {
+        id: c.id,
+        name: c.name,
+        game_slug: c.gameSlug,
+        organizer_id: c.organizerId,
+        format: c.modeFormat,
+        format_type: (c as any).format || null,
+        status: c.status,
+        created_at: c.createdAt,
+        max_teams: null,
+        registered_teams_count: null,
+        organization_id: orgId || null,
+        organization_name: orgName,
+        organization_tag: orgTag
+      };
+    }));
+
+    let filteredTournaments = allTournaments;
 
     // Filter by game_slug
     if (gameSlug && gameSlug !== 'ALL' && gameSlug !== 'TODOS') {
-      allTournaments = allTournaments.filter((t) => t.game_slug === gameSlug);
+      filteredTournaments = filteredTournaments.filter((t) => t.game_slug === gameSlug);
     }
 
     // Filter by organizationId or organizationName
     if (organizationId && organizationId !== 'TODAS') {
-      allTournaments = allTournaments.filter((t) => t.organization_id === organizationId);
+      filteredTournaments = filteredTournaments.filter((t) => t.organization_id === organizationId);
     }
 
     if (organizationName && organizationName !== 'TODAS') {
       const orgLower = organizationName.toLowerCase();
-      allTournaments = allTournaments.filter(
+      filteredTournaments = filteredTournaments.filter(
         (t) =>
           (t.organization_name && t.organization_name.toLowerCase().includes(orgLower)) ||
           (t.organization_tag && t.organization_tag.toLowerCase().includes(orgLower))
       );
     }
 
-    return NextResponse.json({ success: true, tournaments: allTournaments });
+    return NextResponse.json({ success: true, tournaments: filteredTournaments });
   } catch (error: unknown) {
     return NextResponse.json(
       { success: false, tournaments: [], error: error instanceof Error ? error.message : 'Error consultando competencias de BD' },

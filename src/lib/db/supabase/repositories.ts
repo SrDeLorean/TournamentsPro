@@ -1,7 +1,7 @@
 import type { IRepository, FindOptions } from '../interfaces';
 import { supabase } from './client';
 
-export abstract class SupabaseBaseRepository<T extends { id: string }> implements IRepository<T> {
+export abstract class SupabaseBaseRepository<T> implements IRepository<T> {
   protected abstract tableName: string;
   protected abstract primaryKey: string;
   protected abstract mapRow(row: any): T;

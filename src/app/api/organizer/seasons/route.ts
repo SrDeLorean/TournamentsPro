@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db/provider';
+import { dbProvider } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canManageOrganization, isAdministrator } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
@@ -21,26 +21,20 @@ export async function GET(request: Request) {
     const requestedOrgId = searchParams.get('organizationId');
     const orgId = isAdministrator(actor) ? requestedOrgId : actor.organizationId;
 
-    let sql = `SELECT * FROM seasons WHERE 1=1`;
-    const params: (string | number | null)[] = [];
-
+    const seasonsOptions: any = {};
     if (orgId) {
-      sql += ` AND organization_id = ?`;
-      params.push(orgId);
+      seasonsOptions.where = { organizationId: orgId };
     }
+    
+    const seasonsRaw = await dbProvider.seasons.findAll(seasonsOptions);
+    // Para mantener compatibilidad con las propiedades snake_case si el cliente las esperaba
+    const seasons = seasonsRaw.map(s => ({ ...s, organization_id: s.organizationId, start_date: s.startDate, end_date: s.endDate, created_at: s.createdAt }));
 
-    sql += ` ORDER BY created_at DESC`;
-
-    const seasons = await queryDB<SeasonRow>(sql, params);
-    const tournaments = isAdministrator(actor)
-      ? await queryDB<TournamentRow>(`SELECT * FROM competitions ORDER BY created_at DESC`)
-      : await queryDB<TournamentRow>(
-          `SELECT t.* FROM competitions t
-             JOIN seasons s ON s.id = t.season_id
-            WHERE s.organization_id = ?
-            ORDER BY t.created_at DESC`,
-          [actor.organizationId],
-        );
+    const tournamentsRaw = isAdministrator(actor)
+      ? await dbProvider.competitions.findAll()
+      : await dbProvider.competitions.findByOrganization(actor.organizationId!);
+    
+    const tournaments = tournamentsRaw.map(t => ({ ...t, season_id: t.seasonId, organization_id: t.organizationId, created_at: t.createdAt }));
 
     // Attach tournaments to their season
     const seasonsWithTournaments = seasons.map((s) => ({
@@ -69,6 +63,7 @@ export async function POST(request: Request) {
 
     if (!name) {
       return NextResponse.json({ error: 'Nombre de la temporada requerido' }, { status: 400 });
+      return NextResponse.json({ error: 'Nombre de la temporada requerido' }, { status: 400 });
     }
 
     const targetOrganizationId = isAdministrator(actor) ? (organizationId || null) : actor.organizationId;
@@ -76,13 +71,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No tienes permisos para crear temporadas en esta Organización' }, { status: 403 });
     }
 
-    const seasonId = `season-${Date.now()}`;
-
-    await queryDB(
-      `INSERT INTO seasons (id, name, organization_id, start_date, end_date, status)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [seasonId, name, targetOrganizationId, startDate || null, endDate || null, status || 'Activa']
-    );
+    const season = await dbProvider.seasons.create({
+      name,
+      organizationId: targetOrganizationId,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      status: status || 'Activa'
+    });
+    
+    const seasonId = season.id;
 
     await writeSecurityAudit({
       actor,

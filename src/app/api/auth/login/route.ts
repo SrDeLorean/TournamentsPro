@@ -37,18 +37,22 @@ export async function POST(request: Request) {
     }
 
     // Query user in MySQL database
-    const users = await queryDB<UserRow>(
-      `SELECT * FROM users 
-       WHERE LOWER(email) = LOWER(?) OR LOWER(gamertag) = LOWER(?) 
-       LIMIT 1`,
-      [term, term]
-    );
+    const userByEmail = await import('@/lib/db/provider').then(m => m.dbProvider.users.findByEmail(term));
+    const usersByGamer = await import('@/lib/db/provider').then(m => m.dbProvider.users.findAll({ where: { gamertag: term }, limit: 1 }));
+    const user = userByEmail || usersByGamer[0];
 
-    if (!users || users.length === 0) {
-      return apiError('Credenciales inválidas. Verifica tu email/gamertag y contraseña.', 401);
+    if (!user) {
+      return apiError('Credenciales invǭlidas. Verifica tu email/gamertag y contrasea.', 401);
     }
 
-    const row = users[0];
+    const row = {
+      id: user.id, email: user.email, name: user.name, gamertag: user.gamertag, role: user.role,
+      primary_game_slug: user.primaryGameSlug, platform: user.platform, position: user.position,
+      secondary_position: user.secondaryPosition, rank_badge: user.rankBadge, rating: user.rating,
+      status: user.status, avatar_url: user.avatarUrl, organization_id: user.organizationId,
+      is_banned: user.isBanned ? 1 : 0, ban_reason: user.banReason, last_login_at: user.lastLoginAt,
+      created_at: user.createdAt, updated_at: user.updatedAt, password_hash: user.passwordHash, google_id: user.googleId
+    };
 
     // System ban / suspension check
     if (row.status === 'Baneado' || row.status === 'Suspendido') {
