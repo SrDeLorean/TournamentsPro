@@ -208,7 +208,11 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
               const game = GAMES_CATALOG[slug] || GAMES_CATALOG.eafc26;
               const isOrganization = kind === 'organizations';
               const isUser = kind === 'users';
-              const href = isOrganization ? `/${slug}/organizacion/${record.id}` : isUser ? `/${slug}/jugadores/${record.id}` : `/${slug}/equipos/${record.id}`;
+              const href = isOrganization
+                ? `/organizaciones/${record.id}`
+                : isUser
+                  ? `/usuarios/${record.id}`
+                  : `/equipos/${record.id}`;
               const logoUrl = isUser
                 ? record.avatarUrl || record.avatar_url || record.foto
                 : record.logoUrl || record.logo_url || record.logo;

@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GameConfig } from '@/lib/games-data';
-import { GameLogo } from '@/components/ui/game-logo';
+import { GameSwitcher } from '@/components/layout/game-switcher';
 import { useAuth } from '@/components/providers/auth-provider';
 import { UserAthleteSubnavbar } from '@/components/layout/user-athlete-subnavbar';
 import { TeamClubSubnavbar } from '@/components/layout/team-club-subnavbar';
@@ -60,7 +60,12 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
   const currentSection = activeSection || (() => {
     const segments = pathname.split('/').filter(Boolean);
     if (segments.length >= 2) {
-      const sectionSegment = segments[1] as GameSection;
+      const aliases: Partial<Record<string, GameSection>> = {
+        organizacion: 'organizaciones',
+        usuarios: 'jugadores',
+        usuario: 'jugadores',
+      };
+      const sectionSegment = aliases[segments[1]] || segments[1] as GameSection;
       if (sections.some((s) => s.id === sectionSegment)) {
         return sectionSegment;
       }
@@ -78,8 +83,13 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
 
   useEffect(() => {
     checkScroll();
+    const observer = new ResizeObserver(checkScroll);
+    if (navRef.current) observer.observe(navRef.current);
     window.addEventListener('resize', checkScroll);
-    return () => window.removeEventListener('resize', checkScroll);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', checkScroll);
+    };
   }, []);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -102,14 +112,8 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
         >
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-11 flex items-center justify-between gap-2 relative">
             {/* Game Identifier Badge on Left */}
-            <div className="flex items-center gap-1.5 flex-shrink-0 z-10 bg-inherit pr-1">
-              <GameLogo game={game} size="sm" />
-              <span
-                className="font-display font-black text-xs uppercase tracking-wider hidden md:inline-block"
-                style={{ color: game.brandColor }}
-              >
-                {game.name} PORTAL
-              </span>
+            <div className="flex items-center gap-1.5 flex-shrink-0 z-20 bg-inherit pr-1">
+              <GameSwitcher game={game} compact />
               <div
                 className="w-px h-4 mx-1 hidden md:block"
                 style={{ backgroundColor: `${game.brandColor}40` }}

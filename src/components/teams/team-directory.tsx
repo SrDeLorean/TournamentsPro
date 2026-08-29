@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { GAMES_CATALOG, GameConfig } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { TeamProfileView } from './team-profile-view';
 import { TeamData, UserProfile } from '@/lib/data-store';
 import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
 import { Pagination } from '@/components/ui/pagination';
@@ -63,7 +62,6 @@ export function TeamDirectory({
 }: TeamDirectoryProps) {
   const { currentUser } = useAuth();
   const [teamsList, setTeamsList] = useState<DirectoryTeam[]>([]);
-  const [selectedTeam, setSelectedTeam] = useState<DirectoryTeam | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<string>('TODOS');
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('ALL');
@@ -125,19 +123,6 @@ export function TeamDirectory({
     setSelectedDiscipline(value);
     setCurrentPage(1);
   };
-
-  // If a team is selected in-page, show the Team Profile View
-  if (selectedTeam) {
-    const tGameConfig = GAMES_CATALOG[selectedTeam.gameSlug || selectedTeam.game_slug || 'eafc26'];
-    const tBrandColor = tGameConfig?.brandColor || activeBrandColor;
-    return (
-      <TeamProfileView
-        team={selectedTeam}
-        brandColor={tBrandColor}
-        onBack={() => setSelectedTeam(null)}
-      />
-    );
-  }
 
   const filteredTeams = teamsList.filter((team) => {
     if (myTeamsOnly && currentUser) {
@@ -278,7 +263,7 @@ export function TeamDirectory({
                     <EsportsCard
                       key={team.id}
                       entityType="team"
-                      onClick={() => setSelectedTeam(team)}
+                      href={`/${tGameSlug}/equipos/${team.id}`}
                       title={team.name}
                       subtitle={`🎮 ${tGameConfig?.name || 'FC 26'} | 🖥️ ${team.platform || 'CROSSPLAY'}`}
                       description={team.description || 'Escuadra oficial compitiendo en el circuito eSports profesional.'}

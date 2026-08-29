@@ -3,9 +3,7 @@ import Link from 'next/link';
 import { queryDB } from '@/lib/db';
 import { Building2 } from 'lucide-react';
 
-import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { GamePortalBackdrop, getGamePortalStyle } from '@/components/game/game-portal-backdrop';
 import {
   OrganizationProfileView,
   type AffiliatedTeam,
@@ -57,7 +55,6 @@ export default async function OrganizacionPage({ params }: { params: Promise<{ g
           '--game-accent': gameConfig.accentColor,
         } as React.CSSProperties}
       >
-        <GameSubNavbar game={gameConfig} activeSection="organizaciones" />
         <div className="p-8 flex items-center justify-center">
           <div className="text-center space-y-4">
             <Building2 className="w-16 h-16 mx-auto text-[var(--text-muted)] opacity-50" />
@@ -144,26 +141,17 @@ export default async function OrganizacionPage({ params }: { params: Promise<{ g
   );
 
   return (
-    <div
-      className="game-portal min-h-screen pb-20 relative transition-all duration-500 text-[var(--text-primary)] bg-[var(--bg-main)]"
-      data-game={gameConfig.slug}
-      style={getGamePortalStyle(gameConfig)}
-    >
-      <GameSubNavbar game={gameConfig} activeSection="organizaciones" />
-
-      <div className="game-portal-stage relative w-full min-h-screen">
-        <GamePortalBackdrop game={gameConfig} />
-        <div className="standard-page-wrapper pt-0">
-          <OrganizationProfileView
-            gameSlug={gameSlug}
-            gameConfig={gameConfig}
-            org={org}
-            competitions={competitions}
-            organizers={organizers}
-            teams={teams}
-            matches={matches}
-          />
-        </div>
+    <div className="min-h-screen pb-20 relative text-[var(--text-primary)]">
+      <div className="standard-page-wrapper pt-0">
+        <OrganizationProfileView
+          gameSlug={gameSlug}
+          gameConfig={gameConfig}
+          org={org}
+          competitions={competitions}
+          organizers={organizers}
+          teams={teams}
+          matches={matches}
+        />
       </div>
     </div>
   );

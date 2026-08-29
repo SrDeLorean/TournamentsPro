@@ -1,13 +1,11 @@
 'use client';
 
 import React from 'react';
-import { GameConfig } from '@/lib/games-data';
-import { Badge } from '@/components/ui/badge';
+import { CalendarDays, CheckCircle2, Clock3, Edit3, Globe2, Radio, Trophy } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { CountryFlag } from '@/components/ui/country-flag';
-import { Shield, Globe2, Edit3 } from 'lucide-react';
-import { FixtureMatchItem } from './fixture-schedule-view';
+import type { GameConfig } from '@/lib/games-data';
+import type { FixtureMatchItem } from '@/features/competitions/fixture/fixture-model';
 
 interface MatchCardProps {
   match: FixtureMatchItem;
@@ -18,6 +16,11 @@ interface MatchCardProps {
   onOpenTimezoneModal: (timeStr: string) => void;
 }
 
+function isPlaceholder(name: string): boolean {
+  const normalized = name.toLowerCase();
+  return normalized.includes('definir') || normalized === 'tbd';
+}
+
 export function MatchCard({
   match,
   game,
@@ -26,127 +29,63 @@ export function MatchCard({
   onOpenReportModal,
   onOpenTimezoneModal,
 }: MatchCardProps) {
-  const brandColor = game?.brandColor || '#FF4654';
+  const brandColor = game?.brandColor || 'var(--game-brand)';
   const isLive = match.status === 'EN_VIVO';
   const isFinished = match.status === 'FINALIZADO';
+  const canReport = isAdminOrOrganizer || isCaptainOrCoach;
+  const homeWon = isFinished && match.homeScore !== null && match.awayScore !== null && match.homeScore > match.awayScore;
+  const awayWon = isFinished && match.homeScore !== null && match.awayScore !== null && match.awayScore > match.homeScore;
 
   return (
-    <div
+    <article
       data-status={match.status}
-      className={`game-match-card p-4 sm:p-5 rounded-2xl backdrop-blur-md border transition-all duration-300 relative overflow-hidden group flex flex-col justify-between ${
-        isLive
-          ? 'bg-gradient-to-b from-rose-950/40 via-[var(--bg-card)] to-[var(--bg-card)] border-rose-500/60 shadow-rose-500/20 ring-1 ring-rose-500/40'
-          : 'bg-[var(--bg-card)] border-[var(--border-card)] hover:border-cyan-500/40 hover:bg-[var(--bg-card-hover)]'
-      }`}
+      className="fixture-match-card"
+      style={{ '--match-brand': brandColor } as React.CSSProperties}
     >
-      {/* Top Ambient Glow */}
-      <div
-        className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity"
-        style={{ backgroundColor: brandColor }}
-      />
+      <header className="fixture-match-card-header">
+        <div className="fixture-match-card-competition">
+          <Trophy className="size-4" />
+          <span>{match.competitionName}</span>
+        </div>
+        <span className={`fixture-match-status is-${match.status.toLowerCase()}`}>
+          {isLive ? <Radio className="size-3" /> : isFinished ? <CheckCircle2 className="size-3" /> : <Clock3 className="size-3" />}
+          {isLive ? 'En vivo' : isFinished ? 'Finalizado' : 'Programado'}
+        </span>
+      </header>
 
-      <div className="space-y-4 font-mono relative z-10">
-        {/* 1. Header: Circuit / Group + Status Badge */}
-        <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-2 text-[10px] uppercase font-bold text-[var(--text-muted)]">
-          <div className="flex items-center gap-1.5 truncate max-w-[180px]">
-            <Shield className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-            <span className="truncate">{match.circuitName || match.groupJornada || 'FASE REGULAR'}</span>
-          </div>
+      <div className="fixture-match-schedule">
+        <span><CalendarDays className="size-3.5" /> {match.dayLabel}</span>
+        <button type="button" onClick={() => onOpenTimezoneModal(match.transmissionTime)} aria-label={`Ver zonas horarias para las ${match.transmissionTime}`}>
+          <Globe2 className="size-3.5" /> {match.transmissionTime} CLT
+        </button>
+      </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {isLive && (
-              <Badge variant="rose" className="text-[9px] py-0.5 px-2 font-black animate-pulse flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                EN VIVO
-              </Badge>
-            )}
-            {isFinished && (
-              <Badge variant="emerald" className="text-[9px] py-0.5 px-2 font-bold">
-                FINALIZADO
-              </Badge>
-            )}
-            {!isLive && !isFinished && (
-              <Badge variant="cyan" className="text-[9px] py-0.5 px-2 font-bold">
-                {match.transmissionTime || '22:00'} HRS
-              </Badge>
-            )}
-          </div>
+      <div className="fixture-match-versus">
+        <div className={`fixture-match-team is-home ${homeWon ? 'is-winner' : ''} ${isPlaceholder(match.homeTeam) ? 'is-placeholder' : ''}`}>
+          <Avatar src={match.homeLogoUrl} alt={`Logo de ${match.homeTeam}`} fallback={isPlaceholder(match.homeTeam) ? '?' : match.homeTag} size="lg" />
+          <span><strong>{match.homeTeam}</strong><small>{isPlaceholder(match.homeTeam) ? 'Clasificación pendiente' : match.homeTag}</small></span>
         </div>
 
-        {/* 2. Teams & Score Display */}
-        <div className="space-y-2.5 my-2">
-          {/* HOME TEAM */}
-          <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] group-hover:border-cyan-500/30 transition-colors">
-            <div className="flex items-center gap-3 truncate">
-              <Avatar fallback={match.homeTag} size="sm" className="ring-1 ring-[var(--border-card)] shrink-0" />
-              <div className="flex items-center gap-2 truncate">
-                <span className="font-extrabold text-sm text-[var(--text-heading)] group-hover:text-cyan-400 transition-colors truncate">
-                  {match.homeTeam}
-                </span>
-                <CountryFlag code="cl" name="Chile" size="sm" />
-              </div>
-            </div>
-            <span
-              className={`text-lg font-black shrink-0 ml-3 ${
-                match.homeScore !== null && match.awayScore !== null && match.homeScore > match.awayScore
-                  ? 'text-amber-400 font-extrabold'
-                  : 'text-[var(--text-primary)]'
-              }`}
-            >
-              {match.homeScore !== null ? match.homeScore : '-'}
-            </span>
-          </div>
+        <div className="fixture-match-score" aria-label={`Marcador ${match.homeScore ?? 0} a ${match.awayScore ?? 0}`}>
+          <strong className={homeWon ? 'is-winner' : ''}>{match.homeScore ?? '-'}</strong>
+          <span>{isLive || isFinished ? ':' : 'VS'}</span>
+          <strong className={awayWon ? 'is-winner' : ''}>{match.awayScore ?? '-'}</strong>
+        </div>
 
-          {/* VS SEPARATOR */}
-          <div className="text-center text-[10px] font-black text-[var(--text-muted)] tracking-widest my-0.5">VS</div>
-
-          {/* AWAY TEAM */}
-          <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] group-hover:border-cyan-500/30 transition-colors">
-            <div className="flex items-center gap-3 truncate">
-              <Avatar fallback={match.awayTag} size="sm" className="ring-1 ring-[var(--border-card)] shrink-0" />
-              <div className="flex items-center gap-2 truncate">
-                <span className="font-extrabold text-sm text-[var(--text-heading)] group-hover:text-cyan-400 transition-colors truncate">
-                  {match.awayTeam}
-                </span>
-                <CountryFlag code="cl" name="Chile" size="sm" />
-              </div>
-            </div>
-            <span
-              className={`text-lg font-black shrink-0 ml-3 ${
-                match.homeScore !== null && match.awayScore !== null && match.awayScore > match.homeScore
-                  ? 'text-amber-400 font-extrabold'
-                  : 'text-[var(--text-primary)]'
-              }`}
-            >
-              {match.awayScore !== null ? match.awayScore : '-'}
-            </span>
-          </div>
+        <div className={`fixture-match-team is-away ${awayWon ? 'is-winner' : ''} ${isPlaceholder(match.awayTeam) ? 'is-placeholder' : ''}`}>
+          <Avatar src={match.awayLogoUrl} alt={`Logo de ${match.awayTeam}`} fallback={isPlaceholder(match.awayTeam) ? '?' : match.awayTag} size="lg" />
+          <span><strong>{match.awayTeam}</strong><small>{isPlaceholder(match.awayTeam) ? 'Clasificación pendiente' : match.awayTag}</small></span>
         </div>
       </div>
 
-      {/* 3. Footer Actions */}
-      <div className="pt-3 mt-3 border-t border-[var(--border-card)] flex items-center justify-between gap-2 font-mono relative z-10">
-        <button
-          onClick={() => onOpenTimezoneModal(match.transmissionTime)}
-          className="text-[10px] font-bold text-[var(--text-muted)] hover:text-cyan-400 transition-colors flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--bg-main)] border border-[var(--border-card)]"
-          title="Ver conversión en zonas horarias de Latinoamérica"
-        >
-          <Globe2 className="w-3.5 h-3.5 text-cyan-400" />
-          <span>{match.transmissionTime || '22:00'} CLT</span>
-        </button>
-
-        {(isAdminOrOrganizer || isCaptainOrCoach) && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenReportModal(match)}
-            className="text-[10px] font-bold py-1 px-3 rounded-xl border-cyan-500/40 text-cyan-300 hover:bg-cyan-950/80 hover:border-cyan-400 flex items-center gap-1.5 shadow-sm"
-          >
-            <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-            <span>REPORTAR</span>
+      <footer className="fixture-match-card-footer">
+        <span className="fixture-match-round">{match.groupJornada}</span>
+        {canReport && (
+          <Button variant="outline" size="sm" onClick={() => onOpenReportModal(match)} className="fixture-match-report">
+            <Edit3 className="size-3.5" /> <span>Reportar resultado</span>
           </Button>
         )}
-      </div>
-    </div>
+      </footer>
+    </article>
   );
 }

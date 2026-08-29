@@ -63,6 +63,7 @@ export interface FixtureApiMatch {
   home_team_name?: string;
   home_team_tag?: string;
   home_team_logo?: string;
+  home_team_logo_url?: string;
   home_logo_url?: string;
   homeLogoUrl?: string;
   home_logo?: string;
@@ -70,6 +71,7 @@ export interface FixtureApiMatch {
   away_team_name?: string;
   away_team_tag?: string;
   away_team_logo?: string;
+  away_team_logo_url?: string;
   away_logo_url?: string;
   awayLogoUrl?: string;
   away_logo?: string;

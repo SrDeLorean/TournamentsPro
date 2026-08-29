@@ -2,14 +2,13 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import {
-  User, Shield, Trophy, Star, ArrowRightLeft, BarChart3, MessageSquare, Sparkles, Send, Globe, Share2, Video, Tv, Phone
+  User, Shield, Trophy, Star, ArrowRightLeft, BarChart3, MessageSquare, Sparkles, Send, Globe, Share2, Video, Tv, Phone, ArrowLeft, Gamepad2, Monitor, CheckCircle2
 } from 'lucide-react';
 
 export interface PlayerData {
@@ -52,9 +51,11 @@ interface PlayerProfileViewProps {
   player: PlayerData;
   onBack?: () => void;
   brandColor?: string;
+  context?: 'global' | 'game';
+  backHref?: string;
 }
 
-export function PlayerProfileView({ player, onBack, brandColor = '#00F0FF' }: PlayerProfileViewProps) {
+export function PlayerProfileView({ player, onBack, brandColor = '#00F0FF', context = 'game', backHref }: PlayerProfileViewProps) {
   const [activeTab, setActiveTab] = useState<'ficha' | 'stats' | 'palmares' | 'ofertas'>('ficha');
 
   const activeColor = brandColor || '#00F0FF';
@@ -66,6 +67,7 @@ export function PlayerProfileView({ player, onBack, brandColor = '#00F0FF' }: Pl
   const playerNacionalidad = player.nacionalidad || 'Chile';
   const playerTeam = player.teamName || 'Agencia Libre';
   const playerRating = player.rating || 88;
+  const directoryHref = backHref || (context === 'global' ? '/usuarios' : `/${player.gameSlug}/usuarios`);
 
   const stats = player.stats || {
     matches: 34,
@@ -76,59 +78,44 @@ export function PlayerProfileView({ player, onBack, brandColor = '#00F0FF' }: Pl
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300 -mt-px">
-      <PageHeader
-        badgeText={`★ ${playerRating} OVR | ${playerPos}`}
-        badgeIcon={<Sparkles className="w-3.5 h-3.5" style={{ color: activeColor }} />}
-        title={playerName}
-        highlightTitle={playerTeam}
-        description={`@${playerTag} • ID: ${playerGameId} • ${player.platform || 'CROSSPLAY'} • ${player.status || 'Atleta Activo'} • ${playerNacionalidad}`}
-        brandColor={activeColor}
-      >
-        <div className="flex flex-col items-start lg:items-end gap-3">
-          <div
-            className="w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl bg-[var(--bg-card)] border-2 sm:border-4 flex items-center justify-center font-black text-lg sm:text-3xl shadow-2xl flex-shrink-0 overflow-hidden relative"
-            style={{ borderColor: activeColor, boxShadow: `0 0 25px ${activeColor}44` }}
-          >
-            {player.avatarUrl ? (
-              <Image
-                src={player.avatarUrl}
-                alt={playerName}
-                fill
-                sizes="96px"
-                unoptimized={shouldBypassImageOptimization(player.avatarUrl)}
-                onError={(e) => {
-                  e.currentTarget.src = '/images/default/logo-default.png';
-                }}
-                className="object-cover"
-              />
-            ) : (
-              <Avatar fallback={playerName} size="lg" status="online" />
-            )}
+    <div className="public-player-profile animate-in fade-in duration-300" style={{ '--profile-accent': activeColor } as React.CSSProperties}>
+      <div className="public-team-breadcrumb">
+        <Link href={directoryHref}><ArrowLeft className="size-4" />Todos los usuarios</Link>
+        <span>/</span><span>{player.gameSlug.toUpperCase()}</span>
+      </div>
+
+      <section className="public-team-hero public-player-hero">
+        <div className="public-team-banner">
+          <Image src={player.bannerUrl || '/images/default/banner-default.jpg'} alt={playerName} fill sizes="100vw" priority unoptimized={shouldBypassImageOptimization(player.bannerUrl || '')} className="object-cover" />
+          <div className="public-team-banner-overlay" />
+        </div>
+        <div className="public-team-hero-content">
+          <div className="public-team-identity">
+            <div className="public-team-logo public-player-avatar" style={{ borderColor: activeColor }}>
+              {player.avatarUrl ? <Image src={player.avatarUrl} alt={playerName} fill sizes="112px" unoptimized={shouldBypassImageOptimization(player.avatarUrl)} className="object-cover" /> : playerName.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="public-team-copy">
+              <p className="public-team-eyebrow"><Sparkles className="size-3.5" />Ficha competitiva verificada</p>
+              <div className="public-team-title-row"><h1>{playerName}</h1><span style={{ borderColor: activeColor }}>{playerPos}</span></div>
+              <p className="public-team-description">{player.bio || `Atleta oficial de ${playerTeam}.`}</p>
+              <div className="public-team-facts">
+                <span><Gamepad2 className="size-3.5" />@{playerTag}</span><span><Monitor className="size-3.5" />{player.platform || 'CROSSPLAY'}</span><span className="is-active"><CheckCircle2 className="size-3.5" />{player.status || 'Activo'}</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            {onBack && (
-              <Button
-                onClick={onBack}
-                variant="outline"
-                className="text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-xl"
-              >
-                ← Volver
-              </Button>
-            )}
-            <Button
-              className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-1.5"
-            >
-              <Send className="w-3.5 h-3.5" />
-              Proponer Fichaje
-            </Button>
+          <div className="public-team-actions">
+            {onBack ? <Button onClick={onBack} variant="outline"><ArrowLeft className="size-4" />Volver</Button> : null}
+            <Button className="public-team-primary-action"><Send className="size-4" />Proponer fichaje</Button>
           </div>
         </div>
-      </PageHeader>
+        <div className="public-team-metrics">
+          <div><strong>{playerRating}</strong><span>rating</span></div><div><strong>{stats.matches}</strong><span>partidos</span></div><div><strong>{stats.goals}</strong><span>goles / kills</span></div><div><strong>{stats.winrate}</strong><span>victorias</span></div>
+        </div>
+      </section>
 
       {/* 2. Sub-Sub-Menu Navigation Tabs & Content Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3 overflow-x-auto scrollbar-none">
+      <div className="public-player-content space-y-6">
+        <div className="public-team-tabs">
           <button
             onClick={() => setActiveTab('ficha')}
             className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${

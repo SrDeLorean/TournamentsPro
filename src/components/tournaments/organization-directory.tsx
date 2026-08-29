@@ -15,6 +15,7 @@ import { GameExplorerPanel } from '@/components/ui/game-explorer-panel';
 interface OrganizationDirectoryProps {
   gameSlug: string;
   gameConfig: GameConfig;
+  mode?: 'organizations' | 'competitions';
 }
 
 type OrganizationDisplayData = OrgWithStats & {
@@ -32,7 +33,7 @@ type OrganizationDisplayData = OrgWithStats & {
   website?: string;
 };
 
-export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDirectoryProps) {
+export function OrganizationDirectory({ gameSlug, gameConfig, mode = 'organizations' }: OrganizationDirectoryProps) {
   const [orgs, setOrgs] = useState<OrgWithStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,16 +69,20 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
   const visiblePage = Math.min(currentPage, Math.max(totalPages, 1));
   const startIndex = (visiblePage - 1) * itemsPerPage;
   const currentOrgs = filteredOrgs.slice(startIndex, startIndex + itemsPerPage);
+  const isCompetitionDirectory = mode === 'competitions';
+  const totalCompetitions = orgs.reduce((total, org) => total + Number(org.comp_count || 0), 0);
 
   return (
     <div className="animate-in fade-in duration-300">
       <div className="pt-4 sm:pt-6">
         <PageHeader
-          badgeText="DIRECTORIO DE TORNEOS"
+          badgeText={isCompetitionDirectory ? 'CIRCUITO COMPETITIVO OFICIAL' : 'DIRECTORIO DE TORNEOS'}
           badgeIcon={<Trophy className="w-3.5 h-3.5" style={{ color: gameConfig.brandColor, fill: gameConfig.brandColor }} />}
-          title="ORGANIZACIONES &"
-          highlightTitle="TORNEOS"
-          description={`Explora las comunidades oficiales, ligas verificadas y organizadores que administran el ecosistema competitivo de ${gameConfig.name}.`}
+          title={isCompetitionDirectory ? 'COMPETENCIAS POR' : 'ORGANIZACIONES &'}
+          highlightTitle={isCompetitionDirectory ? 'ORGANIZACIÓN' : 'TORNEOS'}
+          description={isCompetitionDirectory
+            ? `Explora todas las organizaciones activas en ${gameConfig.name} y accede a sus ligas, copas, playoffs y calendarios oficiales.`
+            : `Explora las comunidades oficiales, ligas verificadas y organizadores que administran el ecosistema competitivo de ${gameConfig.name}.`}
           brandColor={gameConfig.brandColor}
         />
       </div>
@@ -90,8 +95,10 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
         <>
           {/* ── TACTICAL FILTER BAR ────────────────────────────── */}
           <GameExplorerPanel
-            title="Explorar organizaciones"
-            description="Busca comunidades, ligas y organizadores oficiales por nombre o tag."
+            title={isCompetitionDirectory ? 'Explorar circuitos y organizaciones' : 'Explorar organizaciones'}
+            description={isCompetitionDirectory
+              ? `${totalCompetitions} competencias publicadas por ${orgs.length} organizaciones del portal.`
+              : 'Busca comunidades, ligas y organizadores oficiales por nombre o tag.'}
             brandColor={gameConfig.brandColor}
             icon={<Trophy className="size-4" />}
             onReset={() => {
@@ -101,7 +108,7 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
             resetDisabled={!searchTerm}
           >
             <FilterBar
-              searchPlaceholder="Buscar organizaciones o comunidades por nombre o tag..."
+              searchPlaceholder={isCompetitionDirectory ? 'Buscar organización, liga o comunidad...' : 'Buscar organizaciones o comunidades por nombre o tag...'}
               searchValue={searchTerm}
               onSearchChange={(value) => {
                 setSearchTerm(value);
@@ -128,8 +135,10 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
                   entityType="organization"
                   href={`/${gameSlug}/organizacion/${org.id}`}
                   title={org.name}
-                  subtitle={org.tag ? `[${org.tag}] Comunidad eSports` : 'Comunidad eSports'}
-                  description={org.description || 'Comunidad oficial eSports y administradora de torneos comunitarios.'}
+                  subtitle={org.tag ? `[${org.tag}] · ${org.comp_count || 0} competencias` : `${org.comp_count || 0} competencias publicadas`}
+                  description={org.description || (isCompetitionDirectory
+                    ? `Organización oficial con ligas y torneos de ${gameConfig.name}.`
+                    : 'Comunidad oficial eSports y administradora de torneos comunitarios.')}
                   bannerUrl={bannerImg}
                   logoUrl={logoImg}
                   tag={org.tag}
@@ -157,7 +166,7 @@ export function OrganizationDirectory({ gameSlug, gameConfig }: OrganizationDire
                       <span>Oficial TP</span>
                     </span>
                   }
-                  actionText="VER PERFIL"
+                  actionText={isCompetitionDirectory ? 'EXPLORAR TORNEOS' : 'VER PERFIL'}
                   brandColor={gameConfig.brandColor}
                   animationDelay={index * 50}
                 />

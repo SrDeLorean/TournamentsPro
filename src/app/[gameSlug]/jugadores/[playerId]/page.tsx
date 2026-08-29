@@ -3,11 +3,9 @@
 import React, { use } from 'react';
 import Link from 'next/link';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { PlayerProfileView, PlayerData } from '@/components/players/player-profile-view';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
-import { GamePortalBackdrop, getGamePortalStyle } from '@/components/game/game-portal-backdrop';
 import type { UserProfile } from '@/lib/data-store';
 
 interface PlayerPageProps {
@@ -121,21 +119,8 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
   }
 
   return (
-    <div
-      className="game-portal min-h-screen pb-20 relative transition-all duration-500 bg-[var(--bg-main)] text-[var(--text-primary)]"
-      data-game={game.slug}
-      style={getGamePortalStyle(game)}
-    >
-      {/* Game Sub Navbar with 'jugadores' active section */}
-      <GameSubNavbar game={game} activeSection="jugadores" />
-
-      {/* Main Full Bleed Player Profile Banner Attached Directly to Sub-Navbar with Margin 0 / Padding 0 */}
-      <div className="game-portal-stage w-full min-h-screen pt-0 pb-6 relative">
-        <GamePortalBackdrop game={game} />
-        <div className="relative z-10">
-          <PlayerProfileView player={player} brandColor={game.brandColor} />
-        </div>
-      </div>
+    <div className="w-full min-h-screen pt-0 pb-6 relative">
+      <PlayerProfileView player={player} brandColor={game.brandColor} context="game" />
     </div>
   );
 }

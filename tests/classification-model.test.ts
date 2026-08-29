@@ -30,4 +30,19 @@ describe('calculateStandings', () => {
     expect(standings).toHaveLength(2);
     expect(standings.every((team) => team.pts === 0 && team.pj === 0)).toBe(true);
   });
+
+  it('preserves club logos and keeps the tag available as fallback', () => {
+    const standings = calculateStandings([
+      match({ home_team_logo_url: '/uploads/alpha.svg', away_team_logo_url: null }),
+    ]);
+
+    expect(standings.find((team) => team.name === 'Alpha')).toMatchObject({
+      tag: 'ALP',
+      logoUrl: '/uploads/alpha.svg',
+    });
+    expect(standings.find((team) => team.name === 'Beta')).toMatchObject({
+      tag: 'BET',
+      logoUrl: null,
+    });
+  });
 });

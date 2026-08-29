@@ -107,6 +107,7 @@ interface OrganizationProfileViewProps {
   organizers: OrganizerUser[];
   teams: AffiliatedTeam[];
   matches: OrgMatch[];
+  context?: 'global' | 'game';
 }
 
 function normalizeExternalHref(value: string, platform = 'website') {
@@ -159,6 +160,7 @@ export function OrganizationProfileView({
   organizers = [],
   teams = [],
   matches = [],
+  context = 'game',
 }: OrganizationProfileViewProps) {
   const [activeTab, setActiveTab] = useState<OrgTab>('competencias');
   const brandColor = gameConfig?.brandColor || '#077D7E';
@@ -181,6 +183,9 @@ export function OrganizationProfileView({
   const activeCompetitions = competitions.filter((competition) => ['activo', 'en curso', 'active'].includes(competition.status.toLowerCase())).length;
   const liveMatches = matches.filter((match) => ['en_vivo', 'live'].includes((match.status || '').toLowerCase())).length;
   const socialEntries = Object.entries(org.socialMedia || {}).filter((entry): entry is [string, string] => Boolean(entry[1]?.trim()));
+  const directoryHref = context === 'global' ? '/organizaciones' : `/${gameSlug}/organizaciones`;
+  const organizationBaseHref = context === 'global' ? `/organizaciones/${org.id}` : `/${gameSlug}/organizacion/${org.id}`;
+  const teamBaseHref = context === 'global' ? '/equipos' : `/${gameSlug}/equipos`;
 
   return (
     <div
@@ -207,7 +212,7 @@ export function OrganizationProfileView({
           />
           <div className="org-profile-banner-shade" />
           <div className="org-profile-banner-topline">
-            <Link href={`/${gameSlug}/organizaciones`} className="org-profile-back-link">
+            <Link href={directoryHref} className="org-profile-back-link">
               <ArrowLeft className="size-4" /> Directorio
             </Link>
             <span className="org-profile-portal-label"><Radio className="size-3.5" /> Portal oficial {gameConfig.name}</span>
@@ -259,7 +264,7 @@ export function OrganizationProfileView({
                 <Globe className="size-4" /> Sitio oficial <ExternalLink className="size-3.5" />
               </a>
             )}
-            <Link href={`/${gameSlug}/organizaciones`} className="org-profile-secondary-action">
+            <Link href={directoryHref} className="org-profile-secondary-action">
               <ArrowLeft className="size-4" /> Volver
             </Link>
           </div>
@@ -309,7 +314,7 @@ export function OrganizationProfileView({
                 return (
                   <EsportsCard
                     key={comp.id}
-                    href={`/${gameSlug}/organizacion/${org.id}/competencias/${comp.id}`}
+                    href={`${organizationBaseHref}/competencias/${comp.id}`}
                     title={comp.name}
                     subtitle={comp.mode_format || '11v11'}
                     bannerUrl={compBanner}
@@ -418,7 +423,7 @@ export function OrganizationProfileView({
               {teams.map((team, index) => (
                 <EsportsCard
                   key={team.id}
-                  href={`/${gameSlug}/equipos/${team.id}`}
+                  href={`${teamBaseHref}/${team.id}`}
                   entityType="team"
                   title={team.name}
                   subtitle={`${gameConfig.name} · ${team.platform || 'CROSSPLAY'}`}

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { getSectionMetadata } from '@/lib/section-config';
-import { GameSubNavbar, GameSection } from '@/components/layout/game-sub-navbar';
+import type { GameSection } from '@/components/layout/game-sub-navbar';
 import { PageHeader } from '@/components/ui/page-header';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { GameExplorerPanel } from '@/components/ui/game-explorer-panel';
@@ -20,7 +20,6 @@ import { NewUserMyTeamsView as UserMyTeamsView } from '@/components/user/new-use
 
 // ── Extracted Components ────────────────────────────────────────────────────
 import { GameHomeHero } from '@/components/game/game-home-hero';
-import { GamePortalBackdrop, getGamePortalStyle } from '@/components/game/game-portal-backdrop';
 import { PlayerCardGrid } from '@/components/game/player-card-grid';
 import {
   PlayerStatsSection,
@@ -50,7 +49,6 @@ function PortalChunkLoading() {
 const UserProfileSettingsView = dynamic(() => import('@/components/user/user-profile-settings-view').then(m => ({ default: m.UserProfileSettingsView })), { loading: () => <PortalChunkLoading /> });
 const ClubSettingsView = dynamic(() => import('@/components/club/club-settings-view').then(m => ({ default: m.ClubSettingsView })), { loading: () => <PortalChunkLoading /> });
 const TransferMarket = dynamic(() => import('@/components/transfers/transfer-market').then(m => ({ default: m.TransferMarket })), { loading: () => <PortalChunkLoading /> });
-const TournamentHubView = dynamic(() => import('@/components/tournaments/tournament-hub-view').then(m => ({ default: m.TournamentHubView })), { loading: () => <PortalChunkLoading /> });
 const FixtureScheduleView = dynamic(() => import('@/components/tournaments/fixture-schedule-view').then(m => ({ default: m.FixtureScheduleView })), { loading: () => <PortalChunkLoading /> });
 const ClassificationView = dynamic(() => import('@/components/tournaments/classification-view').then(m => ({ default: m.ClassificationView })), { loading: () => <PortalChunkLoading /> });
 const EsportsAnalyticsView = dynamic(() => import('@/components/stats/esports-analytics-view').then(m => ({ default: m.EsportsAnalyticsView })), { loading: () => <PortalChunkLoading /> });
@@ -122,17 +120,8 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
   };
 
   return (
-    <div
-      className="game-portal min-h-screen pb-20 relative transition-all duration-500 text-[var(--text-primary)] bg-[var(--bg-main)]"
-      data-game={game.slug}
-      style={getGamePortalStyle(game)}
-    >
-      <GameSubNavbar game={game} activeSection={activeSection} onSelectSection={handleSectionChange} />
-
-      <div className="game-portal-stage relative w-full min-h-screen">
-        <GamePortalBackdrop game={game} />
-
-        <div className="standard-page-wrapper pt-0 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-forwards" key={activeSection}>
+    <div className="min-h-screen pb-20 relative text-[var(--text-primary)]">
+        <div className="standard-page-wrapper pt-0">
           {/* Section Header (excluded for sections that have their own PageHeader) */}
           {activeSection !== 'home' &&
             !['dashboard', 'club-dashboard', 'ficha', 'atleta-ajustes', 'partidos', 'clasificacion', 'organizaciones', 'competencias', 'datos', 'infografia', 'traspasos'].includes(activeSection as string) &&
@@ -164,7 +153,7 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
           {/* ── COMPETENCIAS ──────────────────────────────────────────── */}
           {activeSection === 'competencias' && (
             <div className="pt-3 sm:pt-4">
-              <TournamentHubView game={game} initialSection="competencias" />
+              <OrganizationDirectory gameSlug={game.slug} gameConfig={game} mode="competitions" />
             </div>
           )}
 
@@ -344,7 +333,6 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
               <ClubSettingsView team={myTeamInActiveDiscipline} activeGameSlug={game.slug} refetchTeams={refetchTeams} />
             </div>
           )}
-        </div>
       </div>
     </div>
   );

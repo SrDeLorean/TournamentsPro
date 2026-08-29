@@ -587,22 +587,26 @@ export function ClassificationView({
                   const teamList = standings.filter(t => 
                     t.competitionName.toLowerCase() === compName.toLowerCase()
                   );
+                  const competitionTeamCount = new Set(
+                    compMatches.flatMap((match) => [match.home_team_name, match.away_team_name])
+                      .filter((name) => name && !name.toLowerCase().includes('definir')),
+                  ).size;
 
                   return (
-                    <div key={compName} className="space-y-3">
+                    <div key={compName} className="classification-competition space-y-3">
                     
                     {/* Header de Competencia */}
-                    <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl shadow-sm mb-2">
-                      <div className="flex items-center gap-3">
+                    <div className="classification-competition-heading flex items-center justify-between px-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl shadow-sm mb-2">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
                           <Trophy className="w-4 h-4" />
                         </div>
-                        <span className="font-black uppercase text-[var(--text-heading)] tracking-wider text-sm">
+                        <span className="font-black uppercase text-[var(--text-heading)] tracking-wider text-sm truncate">
                           {compName}
                         </span>
                       </div>
                       <Badge variant="cyan" className="text-[10px] px-2.5 py-0.5 opacity-80">
-                        {teamList.length} EQUIPOS
+                        {Math.max(teamList.length, competitionTeamCount)} EQUIPOS
                       </Badge>
                     </div>
 
@@ -626,7 +630,7 @@ export function ClassificationView({
 
                     {/* RENDERIZADO CONDICIONAL */}
                     {formatType === 'PLAYOFF' || (formatType === 'HIBRIDO' && activeTabs[compName] === 'PLAYOFF') ? (
-                      <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl p-4 shadow-xl">
+                      <div className="classification-bracket-shell bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl p-4 shadow-xl">
                         <PlayoffBracket matches={compMatches} brandColor={brandColor} />
                       </div>
                     ) : (
@@ -648,17 +652,17 @@ export function ClassificationView({
                                   {gName}
                                 </div>
                               )}
-                              <table className="w-full text-left border-collapse min-w-[720px]">
+                              <table className="classification-table w-full text-left border-collapse min-w-[720px]">
                                 <thead>
                                   <tr className="bg-[var(--bg-card)] border-b border-[var(--border-card)] text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider">
-                                    <th className="p-3.5 w-16 text-center">Pos</th>
-                                    <th className="p-3.5 text-left text-[var(--accent-cyan)]">Club / Equipo</th>
+                                    <th className="classification-position-cell p-3.5 w-16 text-center">Pos</th>
+                                    <th className="classification-team-cell p-3.5 text-left text-[var(--accent-cyan)]">Club / Equipo</th>
                                     <th className="p-3.5 w-12 text-center" title="Partidos Jugados">PJ</th>
                                     <th className="p-3.5 w-12 text-center text-emerald-400" title="Ganados">G</th>
                                     <th className="p-3.5 w-12 text-center text-amber-400" title="Empatados">E</th>
                                     <th className="p-3.5 w-12 text-center text-rose-400" title="Perdidos">P</th>
-                                    <th className="p-3.5 w-12 text-center" title="Goles a Favor">GF</th>
-                                    <th className="p-3.5 w-12 text-center" title="Goles en Contra">GC</th>
+                                    <th className="classification-stat-secondary p-3.5 w-12 text-center" title="Goles a Favor">GF</th>
+                                    <th className="classification-stat-secondary p-3.5 w-12 text-center" title="Goles en Contra">GC</th>
                                     <th className="p-3.5 w-12 text-center" title="Diferencia de Goles">DIF</th>
                                     <th className="p-3.5 w-16 text-center text-[var(--accent-cyan)] text-xs">PTS</th>
                                   </tr>
@@ -675,17 +679,18 @@ export function ClassificationView({
 
                                     return (
                                       <tr key={team.name} className={`hover:bg-[var(--bg-card-hover)] transition-colors group ${isBottom ? 'opacity-80' : ''}`}>
-                                        <td className="p-3.5 text-center">
+                                        <td className="classification-position-cell p-3.5 text-center">
                                           <span className={posStyles}>{position}</span>
                                         </td>
-                                        <td className="p-3.5">
+                                        <td className="classification-team-cell p-3.5">
                                           <div className="flex items-center gap-3">
-                                            <Avatar fallback={team.tag} size="sm" className="ring-1 ring-[var(--border-card)] shrink-0" />
-                                            <span
-                                              className={`font-extrabold font-display text-sm truncate max-w-[200px] transition-colors group-hover:text-[var(--team-hover)] ${position <= 3 ? 'text-[var(--text-primary)]' : 'text-[var(--text-heading)]'}`}
-                                              style={{ '--team-hover': brandColor } as React.CSSProperties & Record<'--team-hover', string>}
-                                            >
-                                              {team.name}
+                                            <Avatar src={team.logoUrl || undefined} alt={`Logo de ${team.name}`} fallback={team.tag} size="sm" className="ring-1 ring-[var(--border-card)] shrink-0" />
+                                            <span className="min-w-0">
+                                              <strong
+                                                className={`block font-extrabold font-display text-sm truncate max-w-[200px] transition-colors group-hover:text-[var(--team-hover)] ${position <= 3 ? 'text-[var(--text-primary)]' : 'text-[var(--text-heading)]'}`}
+                                                style={{ '--team-hover': brandColor } as React.CSSProperties & Record<'--team-hover', string>}
+                                              >{team.name}</strong>
+                                              <small className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--text-muted)]">{team.tag}</small>
                                             </span>
                                           </div>
                                         </td>
@@ -693,8 +698,8 @@ export function ClassificationView({
                                         <td className="p-3.5 text-center font-black text-emerald-400/80">{team.g}</td>
                                         <td className="p-3.5 text-center font-bold text-amber-400/80">{team.e}</td>
                                         <td className="p-3.5 text-center font-bold text-rose-400/80">{team.p}</td>
-                                        <td className="p-3.5 text-center font-semibold text-[var(--text-muted)]">{team.gf}</td>
-                                        <td className="p-3.5 text-center font-semibold text-[var(--text-muted)]">{team.gc}</td>
+                                        <td className="classification-stat-secondary p-3.5 text-center font-semibold text-[var(--text-muted)]">{team.gf}</td>
+                                        <td className="classification-stat-secondary p-3.5 text-center font-semibold text-[var(--text-muted)]">{team.gc}</td>
                                         <td className="p-3.5 text-center font-black">
                                           <span className={team.dif > 0 ? 'text-emerald-400' : team.dif < 0 ? 'text-rose-400' : 'text-[var(--text-muted)]'}>
                                             {team.dif > 0 ? `+${team.dif}` : team.dif}

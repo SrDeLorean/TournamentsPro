@@ -4,8 +4,6 @@ import { queryDB } from '@/lib/db';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { Trophy } from 'lucide-react';
 
-import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
-import { GamePortalBackdrop, getGamePortalStyle } from '@/components/game/game-portal-backdrop';
 import {
   PublicCompetitionDetailView,
   type CompetitionDetail,
@@ -48,7 +46,6 @@ export default async function PublicCompetitionDetailPage({
           '--game-accent': gameConfig.accentColor,
         } as React.CSSProperties}
       >
-        <GameSubNavbar game={gameConfig} activeSection="organizaciones" />
         <div className="p-8 flex items-center justify-center">
           <div className="text-center space-y-4">
             <Trophy className="w-16 h-16 mx-auto text-[var(--text-muted)] opacity-50" />
@@ -91,25 +88,16 @@ export default async function PublicCompetitionDetailPage({
   ]);
 
   return (
-    <div
-      className="game-portal min-h-screen pb-20 relative transition-all duration-500 text-[var(--text-primary)] bg-[var(--bg-main)]"
-      data-game={gameConfig.slug}
-      style={getGamePortalStyle(gameConfig)}
-    >
-      <GameSubNavbar game={gameConfig} activeSection="organizaciones" />
-
-      <div className="game-portal-stage relative w-full min-h-screen">
-        <GamePortalBackdrop game={gameConfig} />
-        <div className="standard-page-wrapper pt-0">
-          <PublicCompetitionDetailView
-            gameSlug={gameSlug}
-            orgId={orgId}
-            gameConfig={gameConfig}
-            competition={competition}
-            teams={teamRows}
-            matches={matchRows}
-          />
-        </div>
+    <div className="min-h-screen pb-20 relative text-[var(--text-primary)]">
+      <div className="standard-page-wrapper pt-0">
+        <PublicCompetitionDetailView
+          gameSlug={gameSlug}
+          orgId={orgId}
+          gameConfig={gameConfig}
+          competition={competition}
+          teams={teamRows}
+          matches={matchRows}
+        />
       </div>
     </div>
   );

@@ -92,7 +92,7 @@ function PlayerCard({ player, gameSlug, brandColor }: { player: PlayerCardData; 
   return (
     <EsportsCard
       entityType="user"
-      href={`/${gameSlug}/jugadores/${player.id}`}
+      href={`/${gameSlug}/usuarios/${player.id}`}
       title={player.name}
       subtitle={`🎮 ID: ${player.gameId}`}
       description={`Atleta eSports compitiendo para ${player.team}.`}

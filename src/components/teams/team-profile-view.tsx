@@ -25,6 +25,9 @@ interface TeamProfileViewProps {
   team: TeamData;
   onBack?: () => void;
   brandColor?: string;
+  context?: 'global' | 'game';
+  backHref?: string;
+  backLabel?: string;
 }
 
 interface TeamProfileSquadMember {
@@ -51,7 +54,13 @@ type LegacyTeamData = TeamData & { captain?: string; logo?: string };
 
 export type ProfileTab = 'plantilla' | 'posiciones' | 'calendario' | 'traspasos' | 'estadisticas' | 'historico';
 
-export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileViewProps) {
+export function TeamProfileView({
+  team,
+  brandColor = '#00F0FF',
+  context = 'game',
+  backHref,
+  backLabel = 'Todos los equipos',
+}: TeamProfileViewProps) {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('plantilla');
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
@@ -77,6 +86,7 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
   }, [team.id]);
 
   const game = GAMES_CATALOG[team.gameSlug || 'eafc26'];
+  const directoryHref = backHref || (context === 'global' ? '/equipos' : `/${team.gameSlug || 'eafc26'}/equipos`);
 
   // Dynamic theme color for team profile matching the active game
   const activeColor = brandColor || team.color || '#00F0FF';
@@ -123,7 +133,7 @@ export function TeamProfileView({ team, brandColor = '#00F0FF' }: TeamProfileVie
   return (
     <div className="public-team-profile animate-in fade-in duration-300">
       <div className="public-team-breadcrumb">
-        <Link href="/equipos"><ArrowLeft className="size-4" />Todos los equipos</Link>
+        <Link href={directoryHref}><ArrowLeft className="size-4" />{backLabel}</Link>
         <span>/</span><span>{game?.name || team.gameSlug}</span>
       </div>
 

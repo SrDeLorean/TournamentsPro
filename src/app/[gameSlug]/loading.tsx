@@ -1,14 +1,6 @@
 export default function GamePortalLoading() {
   return (
     <div className="min-h-screen bg-[var(--bg-main)] page-transition" role="status" aria-label="Cargando portal del juego">
-      <div className="w-full h-11 border-b border-[var(--border-card)] bg-[var(--bg-nav)] overflow-hidden">
-        <div className="max-w-[96rem] mx-auto px-3 sm:px-6 h-full flex items-center gap-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="skeleton h-7 w-20 rounded-lg flex-shrink-0" />
-          ))}
-        </div>
-      </div>
-
       <div className="max-w-[96rem] mx-auto px-3 sm:px-6 py-5 space-y-5 pb-20">
         <div className="rounded-2xl border border-[var(--border-card)] bg-[var(--bg-card)] p-4 sm:p-6 space-y-3 shadow-[var(--shadow-soft)]">
           <div className="skeleton h-6 w-40 max-w-full rounded-full" />

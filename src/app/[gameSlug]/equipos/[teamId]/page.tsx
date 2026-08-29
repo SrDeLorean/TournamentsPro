@@ -7,7 +7,6 @@ import { TeamProfileView } from '@/components/teams/team-profile-view';
 import { initialTeams, type TeamData } from '@/lib/data-store';
 import { Button } from '@/components/ui/button';
 import { LoaderCircle, SearchX } from 'lucide-react';
-import { GamePortalBackdrop, getGamePortalStyle } from '@/components/game/game-portal-backdrop';
 
 interface TeamPageProps {
   params: Promise<{ gameSlug: string; teamId: string }>;
@@ -96,18 +95,13 @@ export default function DedicatedTeamProfilePage({ params }: TeamPageProps) {
 
   return (
     <main
-      className="game-portal game-portal-stage public-team-page"
-      data-game={game.slug}
+      className="public-team-page"
       style={{
-        ...getGamePortalStyle(game),
         '--profile-accent': game.brandColor,
         '--profile-accent-secondary': game.accentColor,
       } as React.CSSProperties}
     >
-      <GamePortalBackdrop game={game} />
-      <div className="relative z-10">
-        <TeamProfileView team={team} brandColor={game.brandColor} />
-      </div>
+      <TeamProfileView team={team} brandColor={game.brandColor} />
     </main>
   );
 }

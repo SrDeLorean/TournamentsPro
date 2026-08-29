@@ -8,6 +8,7 @@ import { GameConfig } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
 import { PUBLIC_GAME_NAV_ITEMS } from '@/lib/section-config';
+import { GameSwitcher } from '@/components/layout/game-switcher';
 import {
   Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, UserCheck, Calendar, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard
 } from 'lucide-react';
@@ -83,6 +84,10 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
       className="game-portal-mobile-nav block md:hidden w-full border-b border-[var(--border-card)] shadow-lg"
       style={{ '--game-brand': game.brandColor } as React.CSSProperties}
     >
+      <div className="game-portal-mobile-game-row">
+        <GameSwitcher game={game} />
+        <span>Portal competitivo</span>
+      </div>
       
       {/* 1. Top Mobile Segmented Controller (1 Row) */}
       {showSegmentSwitcher ? <div className="game-portal-mobile-segments flex items-center justify-around border-b border-[var(--border-card)] p-1 text-xs font-black" role="tablist" aria-label="Cambiar contexto de navegación">

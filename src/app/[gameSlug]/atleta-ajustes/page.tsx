@@ -4,7 +4,6 @@ import React, { use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { UserProfileSettingsView } from '@/components/user/user-profile-settings-view';
 import { Button } from '@/components/ui/button';
 
@@ -41,8 +40,6 @@ export default function DedicatedAtletaAjustesPage({ params }: AtletaAjustesPage
         '--game-accent': game.accentColor,
       } as React.CSSProperties}
     >
-      <GameSubNavbar game={game} />
-
       <div className="w-full pt-0 pb-6 relative">
         <UserProfileSettingsView
           brandColor={game.brandColor}

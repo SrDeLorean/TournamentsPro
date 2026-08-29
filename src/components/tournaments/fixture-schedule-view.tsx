@@ -32,6 +32,7 @@ import {
 import { MatchReportModal } from '@/components/matches/match-report-modal';
 import { CountryFlag } from '@/components/ui/country-flag';
 import { TacticalLoadingSkeleton } from './tactical-loading-skeleton';
+import { MatchCard } from './match-card';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import {
   getLocalDateString,
@@ -267,10 +268,10 @@ export function FixtureScheduleView({
             id: m.id || `M-${idx + 1}`,
             homeTeam: m.home_team_name || 'Equipo Local',
             homeTag: m.home_team_tag || upperTag(m.home_team_name),
-            homeLogoUrl: m.home_team_logo || m.home_logo_url || m.homeLogoUrl || m.home_logo || m.homeLogo,
+            homeLogoUrl: m.home_team_logo_url || m.home_team_logo || m.home_logo_url || m.homeLogoUrl || m.home_logo || m.homeLogo,
             awayTeam: m.away_team_name || 'Equipo Visitante',
             awayTag: m.away_team_tag || upperTag(m.away_team_name),
-            awayLogoUrl: m.away_team_logo || m.away_logo_url || m.awayLogoUrl || m.away_logo || m.awayLogo,
+            awayLogoUrl: m.away_team_logo_url || m.away_team_logo || m.away_logo_url || m.awayLogoUrl || m.away_logo || m.awayLogo,
             homeScore: m.score_home !== undefined && m.score_home !== null ? Number(m.score_home) : null,
             awayScore: m.score_away !== undefined && m.score_away !== null ? Number(m.score_away) : null,
             status: m.status === 'EN_VIVO' ? 'EN_VIVO' : m.status === 'FINALIZADO' ? 'FINALIZADO' : 'PROGRAMADO',
@@ -1187,12 +1188,12 @@ export function FixtureScheduleView({
             const totalCircuitMatches = Object.values(comps).reduce((sum, arr) => sum + arr.length, 0);
 
             return (
-              <div key={circuitName} className="space-y-6">
+              <section key={circuitName} className="fixture-organization-block space-y-6">
                 {/* Header de la Organización desde BD Local */}
-                <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
-                  <div className="flex items-center gap-3">
+                <div className="fixture-organization-heading flex items-center justify-between border-b border-[var(--border-card)] pb-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <Building2 className="w-6 h-6" style={{ color: brandColor }} />
-                    <h2 className="text-xl sm:text-2xl font-extrabold font-display text-[var(--text-heading)] tracking-wider uppercase">
+                    <h2 className="text-xl sm:text-2xl font-extrabold font-display text-[var(--text-heading)] tracking-wider uppercase truncate">
                       {circuitName}
                     </h2>
                   </div>
@@ -1203,14 +1204,14 @@ export function FixtureScheduleView({
 
                 {/* Sub-grupos por Competencia desde BD Local */}
                 {Object.entries(comps).map(([compName, matchesList]) => (
-                  <div key={compName} className="space-y-3">
+                  <div key={compName} className="fixture-competition-block space-y-3">
                     {/* Header de Competencia */}
-                    <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl shadow-sm mb-2">
-                      <div className="flex items-center gap-3">
+                    <div className="fixture-competition-heading flex items-center justify-between px-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl shadow-sm mb-2">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
                           <Trophy className="w-4 h-4" />
                         </div>
-                        <span className="font-black uppercase text-[var(--text-heading)] tracking-wider text-sm">
+                        <span className="font-black uppercase text-[var(--text-heading)] tracking-wider text-sm truncate">
                           {compName}
                         </span>
                       </div>
@@ -1219,8 +1220,34 @@ export function FixtureScheduleView({
                       </Badge>
                     </div>
 
+                    <div className="fixture-match-grid">
+                      {matchesList.map((match) => {
+                        const isUserTeamInMatch = !!currentUser?.teamName && (
+                          match.homeTeam.toLowerCase() === currentUser.teamName.toLowerCase() ||
+                          match.awayTeam.toLowerCase() === currentUser.teamName.toLowerCase()
+                        );
+                        return (
+                          <MatchCard
+                            key={match.id}
+                            match={match}
+                            game={game}
+                            isAdminOrOrganizer={isAdminOrOrganizer}
+                            isCaptainOrCoach={isCaptainOrCoach && isUserTeamInMatch}
+                            onOpenReportModal={(selectedMatch) => {
+                              setSelectedMatchForReport(selectedMatch);
+                              setIsReportModalOpen(true);
+                            }}
+                            onOpenTimezoneModal={(time) => {
+                              setSelectedMatchForTimezone(time);
+                              setIsTimezoneModalOpen(true);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+
                     {/* TABLA HIGH-TECH ORDENADA POR HORA DE 00:01 A 23:59 */}
-                    <div className="game-data-surface w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl font-mono">
+                    <div className="fixture-match-table game-data-surface w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl font-mono">
                       <table className="w-full text-left border-collapse min-w-[720px]">
                         <thead>
                           <tr className="bg-[var(--bg-card)] border-b border-[var(--border-card)] text-[10px] font-black uppercase tracking-wider" style={{ color: brandColor }}>
@@ -1409,7 +1436,7 @@ export function FixtureScheduleView({
                     </div>
                   </div>
                 ))}
-              </div>
+              </section>
             );
           })
         )}

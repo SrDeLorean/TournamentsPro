@@ -18,6 +18,7 @@ export interface TournamentItem {
 export interface TeamStanding {
   name: string;
   tag: string;
+  logoUrl?: string | null;
   pj: number;
   g: number;
   e: number;
@@ -37,6 +38,8 @@ export interface ClassificationMatch {
   home_team_tag: string;
   away_team_name: string;
   away_team_tag: string;
+  home_team_logo_url?: string | null;
+  away_team_logo_url?: string | null;
   score_home: number | null;
   score_away: number | null;
   status: string;
@@ -71,8 +74,15 @@ export interface OrganizationApiItem {
 
 const PLAYOFF_ROUNDS = ['octavos', 'cuartos', 'semifinal', 'tercer', 'final', 'dieciseisavos'];
 
-function emptyStanding(name: string, tag: string, circuitName: string, competitionName: string, groupName: string): TeamStanding {
-  return { name, tag, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, dif: 0, pts: 0, circuitName, competitionName, groupName };
+function emptyStanding(
+  name: string,
+  tag: string,
+  circuitName: string,
+  competitionName: string,
+  groupName: string,
+  logoUrl?: string | null,
+): TeamStanding {
+  return { name, tag, logoUrl, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, dif: 0, pts: 0, circuitName, competitionName, groupName };
 }
 
 export function calculateStandings(matches: readonly ClassificationMatch[]): TeamStanding[] {
@@ -90,15 +100,20 @@ export function calculateStandings(matches: readonly ClassificationMatch[]): Tea
     const homeKey = `${circuitName}_${competitionName}_${groupName}_${homeName}`;
     const awayKey = `${circuitName}_${competitionName}_${groupName}_${awayName}`;
 
-    if (!standings.has(homeKey)) standings.set(homeKey, emptyStanding(homeName, match.home_team_tag || 'LOC', circuitName, competitionName, groupName));
-    if (!standings.has(awayKey)) standings.set(awayKey, emptyStanding(awayName, match.away_team_tag || 'VIS', circuitName, competitionName, groupName));
+    if (!standings.has(homeKey)) standings.set(homeKey, emptyStanding(homeName, match.home_team_tag || 'LOC', circuitName, competitionName, groupName, match.home_team_logo_url));
+    if (!standings.has(awayKey)) standings.set(awayKey, emptyStanding(awayName, match.away_team_tag || 'VIS', circuitName, competitionName, groupName, match.away_team_logo_url));
+
+    const homeStanding = standings.get(homeKey)!;
+    const awayStanding = standings.get(awayKey)!;
+    if (!homeStanding.logoUrl && match.home_team_logo_url) homeStanding.logoUrl = match.home_team_logo_url;
+    if (!awayStanding.logoUrl && match.away_team_logo_url) awayStanding.logoUrl = match.away_team_logo_url;
 
     const homeScore = match.score_home == null ? null : Number(match.score_home);
     const awayScore = match.score_away == null ? null : Number(match.score_away);
     if (match.status !== 'FINALIZADO' || homeScore === null || awayScore === null) continue;
 
-    const home = standings.get(homeKey)!;
-    const away = standings.get(awayKey)!;
+    const home = homeStanding;
+    const away = awayStanding;
     home.pj += 1;
     home.gf += homeScore;
     home.gc += awayScore;

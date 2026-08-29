@@ -274,7 +274,7 @@ export class OrganizationRepository extends BaseRepository<Organization> {
     const isAll = !gameSlug || ['ALL', 'all', 'TODOS', 'todas'].includes(gameSlug);
     const query = isAll
       ? `
-        SELECT o.*, COUNT(c.id) as comp_count
+        SELECT o.*, COUNT(DISTINCT c.id) as comp_count
         FROM organizations o
         LEFT JOIN users u ON u.organization_id = o.id
         LEFT JOIN competitions c ON (c.organization_id = o.id OR c.organizer_id = u.id) 
@@ -283,7 +283,7 @@ export class OrganizationRepository extends BaseRepository<Organization> {
         ORDER BY comp_count DESC, o.name ASC
       `
       : `
-        SELECT o.*, COUNT(c.id) as comp_count
+        SELECT o.*, COUNT(DISTINCT c.id) as comp_count
         FROM organizations o
         LEFT JOIN users u ON u.organization_id = o.id
         LEFT JOIN competitions c ON (c.organization_id = o.id OR c.organizer_id = u.id) 

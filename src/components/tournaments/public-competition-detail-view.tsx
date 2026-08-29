@@ -75,6 +75,7 @@ interface PublicCompetitionDetailViewProps {
   competition: CompetitionDetail;
   teams: ConfirmedTeam[];
   matches: CompetitionMatch[];
+  context?: 'global' | 'game';
 }
 
 export function PublicCompetitionDetailView({
@@ -84,6 +85,7 @@ export function PublicCompetitionDetailView({
   competition,
   teams = [],
   matches = [],
+  context = 'game',
 }: PublicCompetitionDetailViewProps) {
   const [activeTab, setActiveTab] = useState<CompTab>('equipos');
   const brandColor = gameConfig?.brandColor || '#077D7E';
@@ -105,6 +107,7 @@ export function PublicCompetitionDetailView({
   const compBanner = competition.org_banner || gameConfig.bannerUrl || '/images/default/banner-default.jpg';
   const orgLogo = competition.org_logo || '/images/default/logo-default.png';
   const orgName = competition.org_name || 'Organización Oficial';
+  const organizationHref = context === 'global' ? `/organizaciones/${orgId}` : `/${gameSlug}/organizacion/${orgId}`;
   const playoffMatches = matches.map((match) => ({
     id: match.id,
     home_team_name: match.home_team_name || 'Por definir',
@@ -120,14 +123,14 @@ export function PublicCompetitionDetailView({
 
   return (
     <div
-      className="space-y-6 sm:space-y-8 animate-in fade-in duration-300 -mt-px text-[var(--text-primary)]"
+      className="public-competition-profile space-y-6 sm:space-y-8 animate-in fade-in duration-300 text-[var(--text-primary)]"
       style={{
         '--game-brand': brandColor,
         '--game-accent': gameConfig.accentColor || '#00F0FF',
       } as React.CSSProperties}
     >
       {/* ── 1. FULL-WIDTH HERO HEADER BANNER ────────────────────────────── */}
-      <div className="relative w-full left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-slate-950 border-b border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[260px] sm:min-h-[360px] flex flex-col justify-end">
+      <div className="relative w-full rounded-[1.5rem] bg-slate-950 border border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[260px] sm:min-h-[360px] flex flex-col justify-end">
         {/* Full-bleed background graphic */}
         <div className="absolute inset-0 z-0">
           <Image
@@ -150,7 +153,7 @@ export function PublicCompetitionDetailView({
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
             {/* Org Logo Crest */}
-            <Link href={`/${gameSlug}/organizacion/${orgId}`}>
+            <Link href={organizationHref}>
               <div
                 className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl bg-slate-950/90 border-2 sm:border-4 flex items-center justify-center shadow-2xl flex-shrink-0 overflow-hidden relative group backdrop-blur-xl hover:scale-105 transition-all"
                 style={{ borderColor: brandColor, boxShadow: `0 0 30px ${brandColor}40` }}
@@ -203,7 +206,7 @@ export function PublicCompetitionDetailView({
 
               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-300 font-mono pt-1">
                 <Link
-                  href={`/${gameSlug}/organizacion/${orgId}`}
+                  href={organizationHref}
                   className="flex items-center gap-1.5 bg-black/50 px-3 py-1 rounded-xl backdrop-blur-md border border-white/10 shadow-inner hover:border-cyan-400 transition-colors"
                 >
                   <Building2 className="w-3.5 h-3.5" style={{ color: brandColor }} />
@@ -215,7 +218,7 @@ export function PublicCompetitionDetailView({
 
           {/* Action Button */}
           <div className="flex items-center gap-3 shrink-0">
-            <Link href={`/${gameSlug}/organizacion/${orgId}`}>
+            <Link href={organizationHref}>
               <button className="px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all duration-300 bg-slate-900/90 hover:bg-slate-800 border border-white/20 text-white backdrop-blur-md flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95">
                 <ArrowLeft className="w-4 h-4" /> Volver a la Organización
               </button>

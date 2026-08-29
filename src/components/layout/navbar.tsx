@@ -10,6 +10,8 @@ import { useAuth } from '@/components/providers/auth-provider';
 
 import { AdminNavbar } from '@/components/layout/admin-navbar';
 import { NavLinks } from '@/components/layout/nav-links';
+import { GAMES_CATALOG } from '@/lib/games-data';
+import { GameLogo } from '@/components/ui/game-logo';
 
 export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
   const { currentUser, isAuthenticated } = useAuth();
@@ -139,6 +141,21 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
         <div id="public-mobile-navigation" className="app-navbar-mobile-menu lg:hidden fixed top-14 left-0 right-0 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain glass-panel rounded-none border-x-0 border-t-0 p-3 space-y-3 z-40 shadow-2xl animate-in slide-in-from-top duration-200">
+          <section className="mobile-games-panel" aria-labelledby="mobile-games-title">
+            <div className="mobile-games-heading">
+              <div><Gamepad2 className="size-4" /><span id="mobile-games-title">Cambiar juego</span></div>
+              <small>{Object.keys(GAMES_CATALOG).length} disciplinas</small>
+            </div>
+            <div className="mobile-games-grid">
+              {Object.values(GAMES_CATALOG).map((game) => (
+                <Link key={game.id} href={`/${game.slug}`} onClick={() => setIsMobileMenuOpen(false)} style={{ '--mobile-game-color': game.brandColor } as React.CSSProperties}>
+                  <GameLogo game={game} size="sm" />
+                  <span><strong>{game.name}</strong><small>{game.category}</small></span>
+                </Link>
+              ))}
+            </div>
+          </section>
+
           <div className="app-navbar-mobile-links space-y-1">
             <Link
               href="/"
@@ -181,7 +198,7 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
               Información & Reglamento
             </Link>
 
-            <div className="pt-2 border-t border-[var(--border-card)] grid grid-cols-2 gap-2">
+            {!isAuthenticated ? <div className="pt-2 border-t border-[var(--border-card)] grid grid-cols-2 gap-2">
               <Link
                 href="/login"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -198,7 +215,7 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
                 <UserPlus className="w-3.5 h-3.5" />
                 Registro
               </Link>
-            </div>
+            </div> : <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs font-black bg-[var(--accent-cyan)] text-slate-950"><User className="size-4" />Ir a mi panel</Link>}
           </div>
         </div>
       )}
