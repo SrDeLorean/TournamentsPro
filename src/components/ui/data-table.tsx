@@ -133,12 +133,15 @@ export function DataTable<T extends { id: string | number }>({
   };
 
   return (
-    <div className="ui-data-table min-w-0 space-y-3">
+    <div
+      className="ui-data-table min-w-0 space-y-3"
+      style={{ '--data-table-accent': brandColor } as React.CSSProperties}
+    >
       {/* Search & Advanced Dropdown Filters Toolbar */}
-      <div className="ui-data-table-toolbar p-3 sm:p-4 rounded-xl bg-[var(--bg-card)]/40 backdrop-blur-xl border border-[var(--border-card)] space-y-3 shadow-sm transition-all duration-300">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="ui-data-table-toolbar space-y-3">
+        <div className="flex min-w-0 flex-col justify-between gap-3 xl:flex-row xl:items-center">
           {/* Search Bar */}
-          <div className="relative w-full max-w-md group">
+          <div className="ui-data-table-search group relative w-full min-w-0 xl:max-w-xl xl:flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] group-focus-within:text-[var(--text-primary)] transition-colors" />
             <input
               type="text"
@@ -159,9 +162,9 @@ export function DataTable<T extends { id: string | number }>({
           </div>
 
           {/* Dynamic Dropdown Filters */}
-          <div className="flex w-full md:w-auto items-center gap-2 flex-wrap">
+          <div className="ui-data-table-filters grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:w-auto xl:grid-cols-none xl:auto-cols-max xl:grid-flow-col xl:items-center">
             {filterOptions.map((f) => (
-              <div key={f.key} className="flex min-w-0 flex-1 sm:flex-none items-center gap-1.5">
+              <div key={f.key} className="flex min-w-0 items-center gap-1.5">
                 <select
                   value={activeFilters[f.key] || 'ALL'}
                   onChange={(e) => {
@@ -184,7 +187,7 @@ export function DataTable<T extends { id: string | number }>({
             ))}
 
             {/* Page Size Selector */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex min-w-0 items-center justify-between gap-1.5 rounded-lg border border-[var(--border-card)] bg-[var(--bg-subtle)] px-2 sm:justify-start xl:border-0 xl:bg-transparent xl:px-0">
               <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Filas:</span>
               <select
                 value={pageSize}
@@ -202,14 +205,14 @@ export function DataTable<T extends { id: string | number }>({
               </select>
             </div>
             {hasActiveControls && (
-              <Button type="button" size="sm" variant="ghost" onClick={resetControls} className="h-9 gap-1.5 text-xs text-[var(--text-secondary)]">
+              <Button type="button" size="sm" variant="ghost" onClick={resetControls} className="h-9 w-full gap-1.5 text-xs text-[var(--text-secondary)] xl:w-auto">
                 <RotateCcw className="size-3.5" /> Restablecer
               </Button>
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-card)] pt-3 text-[11px] text-[var(--text-muted)]">
-          <span><strong className="text-[var(--text-heading)]">{sortedData.length}</strong> de {data.length} registros</span>
+        <div className="ui-data-table-summary flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-card)] pt-3 text-[11px] text-[var(--text-muted)]">
+          <span><strong className="text-[var(--text-heading)]">{sortedData.length}</strong> de {data.length} registros disponibles</span>
           {hasActiveControls && <span className="rounded-full bg-[var(--accent-cyan-bg)] px-2.5 py-1 font-mono font-bold text-[var(--accent-cyan)]">Filtros activos</span>}
         </div>
       </div>
@@ -217,8 +220,11 @@ export function DataTable<T extends { id: string | number }>({
       {/* Standardized Table Container */}
       <div
         className="ui-data-table-shell table-container-theme font-mono"
-        style={{ borderColor: `color-mix(in srgb, ${brandColor} 30%, var(--border-card))` }}
       >
+        <div className="ui-data-table-heading" aria-hidden="true">
+          <span>Directorio</span>
+          <span>{sortedData.length} registros</span>
+        </div>
         <div className="mobile-scroll-row overflow-x-auto" role="region" aria-label={ariaLabel} tabIndex={0}>
           <table className="ui-table ui-data-table-responsive">
             <thead>
@@ -265,8 +271,12 @@ export function DataTable<T extends { id: string | number }>({
                   </td>
                 </tr>
               ) : (
-                paginatedData.map((row) => (
-                  <tr key={row.id} className="hover:bg-[var(--bg-card-hover)] transition-colors duration-200">
+                paginatedData.map((row, rowIndex) => (
+                  <tr
+                    key={row.id}
+                    className="transition-colors duration-200"
+                    data-row-number={(safeCurrentPage - 1) * pageSize + rowIndex + 1}
+                  >
                     {columns.map((col, idx) => (
                       <td key={idx} data-label={col.header} className={`px-4 py-3 align-middle ${col.className || ''}`}>
                         {col.cell ? col.cell(row) : col.accessorKey ? String(row[col.accessorKey] || '') : null}
@@ -281,7 +291,7 @@ export function DataTable<T extends { id: string | number }>({
         </div>
 
         {/* Pagination Controls */}
-        <div className="p-4 border-t border-[var(--border-card)]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
+        <div className="ui-data-table-pagination flex flex-col justify-between gap-3 border-t border-[var(--border-card)]/50 p-3 text-sm sm:flex-row sm:items-center sm:p-4">
           <span className="text-[12px] text-[var(--text-muted)] font-medium">
             Mostrando <strong>{sortedData.length ? (safeCurrentPage - 1) * pageSize + 1 : 0}</strong> a{' '}
             <strong>{Math.min(safeCurrentPage * pageSize, sortedData.length)}</strong> de{' '}

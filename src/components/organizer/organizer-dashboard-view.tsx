@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -26,10 +25,12 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import {
   ManagementPage,
   ManagementMetrics,
+  ManagementSection,
   ManagementTabs,
   MetricCard,
   type ManagementTab,
@@ -146,7 +147,8 @@ export function OrganizerDashboardView() {
 
   // Approval Modal State
   const [selectedMatchForApproval, setSelectedMatchForApproval] = useState<OrganizerMatch | null>(null);
-  const [actionMsg, setActionMsg] = useState<string>('');
+  const [isFixtureConfirmOpen, setIsFixtureConfirmOpen] = useState(false);
+  const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
   const fetchSeasonsAndTournaments = useCallback(async () => {
     try {
@@ -215,6 +217,7 @@ export function OrganizerDashboardView() {
   // Generate Fixture with Simultaneous Matchday Hours
   const handleGenerateFixture = async () => {
     if (!selectedTournamentId) return;
+    startOperation(`Generación de fixture · ${activeGame.name}`);
     setIsGeneratingFixture(true);
     try {
       const res = await fetch('/api/organizer/fixture', {
@@ -230,12 +233,15 @@ export function OrganizerDashboardView() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setActionMsg(`¡Fixture de ${activeGame.name} (${activeGameMode.name}) generado exitosamente!`);
-        fetchFixtureData();
-        setTimeout(() => setActionMsg(''), 4000);
+        endSuccess(`Fixture de ${activeGame.name} (${activeGameMode.name}) generado correctamente.`);
+        setIsFixtureConfirmOpen(false);
+        await fetchFixtureData();
+      } else {
+        endError(data.error || 'No fue posible generar el fixture.');
       }
     } catch (e) {
       console.error('Error generando fixture:', e);
+      endError(e instanceof Error ? e.message : 'No fue posible generar el fixture.');
     } finally {
       setIsGeneratingFixture(false);
     }
@@ -244,6 +250,7 @@ export function OrganizerDashboardView() {
   // Grant Approval (Visto Bueno)
   const handleConfirmApproval = async () => {
     if (!selectedMatchForApproval) return;
+    startOperation(`Homologación · ${selectedMatchForApproval.home_team_name} vs ${selectedMatchForApproval.away_team_name}`);
     try {
       const res = await fetch('/api/matches/approval', {
         method: 'POST',
@@ -256,14 +263,17 @@ export function OrganizerDashboardView() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setActionMsg('¡Visto bueno otorgado! El resultado fue homologado a TERMINADO y la tabla actualizada.');
+        endSuccess('Resultado homologado y tabla competitiva actualizada.');
         setSelectedMatchForApproval(null);
-        fetchFixtureData();
-        setTimeout(() => setActionMsg(''), 4000);
+        await fetchFixtureData();
+      } else {
+        endError(data.error || 'No fue posible homologar el resultado.');
       }
     } catch (e) {
       console.error('Error aprobando partido:', e);
+      endError(e instanceof Error ? e.message : 'No fue posible homologar el resultado.');
     }
   };
 
@@ -278,6 +288,7 @@ export function OrganizerDashboardView() {
 
   return (
     <ManagementPage>
+      <CrudAlertBanner state={crudState} onClose={resetAlert} />
       {/* Header Banner with Organization Identity & Game / Mode Selectors */}
       <section className="overflow-hidden rounded-[var(--ui-radius-panel)] border border-[var(--border-card)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
         {/* Banner Image */}
@@ -429,28 +440,19 @@ export function OrganizerDashboardView() {
         <MetricCard label="Modalidad activa" value={activeGameMode.name} hint={activeGameMode.format} icon={Calendar} tone="violet" />
       </ManagementMetrics>
 
-      {actionMsg && (
-        <div role="status" className="flex items-center gap-2 rounded-xl border border-[var(--accent-emerald)]/30 bg-[var(--accent-emerald-bg)] p-4 text-xs font-bold text-[var(--accent-emerald)]">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>{actionMsg}</span>
-        </div>
-      )}
-
       <ManagementTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} label="Módulos de operación del organizador" />
 
       {/* TAB 1: VISTO BUENO */}
       {activeTab === 'approvals' && (
-        <Card className="space-y-4 border border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-5">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-[var(--text-heading)]">
-              <FileCheck className="w-4 h-4 text-[var(--accent-gold)]" />
-              Módulo de Visto Bueno: Partidos Reportados por Capitanes
-            </h3>
-            <Badge variant="gold" className="w-fit font-mono text-[10px]">
+        <ManagementSection
+          title="Partidos reportados por capitanes"
+          description="Revisa comprobantes y homologa resultados antes de actualizar la clasificación."
+          icon={FileCheck}
+          tone="gold"
+          action={<Badge variant="gold" className="w-fit font-mono text-[10px]">
               {pendingApprovals.length} En Espera de Homologación
-            </Badge>
-          </div>
-
+            </Badge>}
+        >
           {pendingApprovals.length === 0 ? (
             <div className="space-y-2 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-8 text-center">
               <CheckCircle2 className="mx-auto w-8 h-8 text-[var(--accent-emerald)]" />
@@ -507,31 +509,26 @@ export function OrganizerDashboardView() {
               )}
             />
           )}
-        </Card>
+        </ManagementSection>
       )}
 
       {/* TAB 2: FIXTURES */}
       {activeTab === 'fixture' && (
-        <Card className="space-y-4 border border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-[var(--text-heading)]">
-                <Clock className="w-4 h-4 text-[var(--accent-cyan)]" />
-                Generación de Fixtures simultáneos ({activeGame.name} • {activeGameMode.name})
-              </h3>
-            </div>
-
-            <Button
-              onClick={handleGenerateFixture}
+        <ManagementSection
+          title={`Fixtures simultáneos · ${activeGame.name}`}
+          description={`Calendario operativo para ${activeGameMode.name} (${activeGameMode.format}).`}
+          icon={Clock}
+          tone="cyan"
+          action={<Button
+              onClick={() => setIsFixtureConfirmOpen(true)}
               disabled={isGeneratingFixture}
               className="font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
               style={{ backgroundColor: activeGame.brandColor, color: '#020617' }}
             >
               <Sparkles className="w-4 h-4" />
               <span>{isGeneratingFixture ? 'Generando...' : `Generar Fixture (${activeGameMode.format})`}</span>
-            </Button>
-          </div>
-
+            </Button>}
+        >
           <DataTable
             columns={[
               { header: 'Jornada', cell: (r) => <span className="font-mono font-bold text-[var(--accent-cyan)]">Jornada #{r.matchday}</span> },
@@ -566,17 +563,17 @@ export function OrganizerDashboardView() {
             searchPlaceholder="Buscar por equipo en fixture..."
             brandColor={activeGame.brandColor}
           />
-        </Card>
+        </ManagementSection>
       )}
 
       {/* TAB 3: EQUIPOS INSCRITOS POR JUEGO */}
       {activeTab === 'enrolled' && (
-        <Card className="space-y-4 border border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-5">
-          <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-[var(--text-heading)]">
-            <Shield className="w-4 h-4 text-[var(--accent-emerald)]" />
-            Nómina de Escuadras Inscritas en {activeGame.name} ({activeGameMode.name})
-          </h3>
-
+        <ManagementSection
+          title={`Escuadras inscritas · ${activeGame.name}`}
+          description={`Nómina habilitada para ${activeGameMode.name} (${activeGameMode.format}).`}
+          icon={Shield}
+          tone="emerald"
+        >
           <DataTable
             columns={[
               { header: 'Nombre del Club', cell: (r) => <span className="font-black text-[var(--text-heading)]">{r.name} [{r.tag}]</span> },
@@ -588,17 +585,17 @@ export function OrganizerDashboardView() {
             searchPlaceholder="Buscar club inscrito..."
             brandColor="#00FF87"
           />
-        </Card>
+        </ManagementSection>
       )}
 
       {/* TAB 4: TEMPORADAS & COMPETENCIAS */}
       {activeTab === 'seasons' && (
-        <Card className="space-y-4 border border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-5">
-          <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-[var(--text-heading)]">
-            <Calendar className="w-4 h-4 text-[var(--accent-violet)]" />
-            Torneos y Competencias en Modalidad {activeGameMode.name} ({activeGameMode.format})
-          </h3>
-
+        <ManagementSection
+          title={`Competencias · ${activeGameMode.name}`}
+          description={`Torneos asociados al formato ${activeGameMode.format}.`}
+          icon={Calendar}
+          tone="violet"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredTournaments.map((t) => (
               <div key={t.id} className="space-y-2 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-4">
@@ -612,7 +609,7 @@ export function OrganizerDashboardView() {
               </div>
             ))}
           </div>
-        </Card>
+        </ManagementSection>
       )}
 
       {/* CONFIRMATION MODAL FOR VISTO BUENO */}
@@ -627,6 +624,19 @@ export function OrganizerDashboardView() {
           variant="success"
         />
       )}
+      <ConfirmModal
+        isOpen={isFixtureConfirmOpen}
+        onClose={() => setIsFixtureConfirmOpen(false)}
+        onConfirm={handleGenerateFixture}
+        title="Generar fixture competitivo"
+        description={`Se generará el calendario de ${activeGame.name} para la modalidad ${activeGameMode.name}.`}
+        confirmText="Generar fixture"
+        variant="warning"
+        consequences={[
+          'Se crearán jornadas y horarios para todos los participantes inscritos.',
+          'Si ya existe un fixture, la operación puede reemplazar su estructura actual.',
+        ]}
+      />
     </ManagementPage>
   );
 }

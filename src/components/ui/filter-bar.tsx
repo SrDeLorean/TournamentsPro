@@ -44,11 +44,11 @@ export function FilterBar({
 
   return (
     <div
-      className="ui-filter-bar game-filter-panel p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 text-[var(--text-primary)]"
+      className="ui-filter-bar game-filter-panel flex min-w-0 flex-col gap-3 p-3 text-[var(--text-primary)] sm:gap-4 sm:p-4 xl:flex-row xl:flex-wrap xl:items-center"
       style={{ '--filter-brand': brandColor } as React.CSSProperties}
     >
       {/* 1. SEARCH INPUT WITH CLEAR BUTTON */}
-      <div className="game-search-control relative w-full min-w-0 flex-1 lg:min-w-[220px] group">
+      <div className="game-search-control group relative w-full min-w-0 flex-1 xl:min-w-[16rem] xl:basis-[20rem]">
         <Search
           className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-300"
           style={{ color: brandColor }}
@@ -78,7 +78,7 @@ export function FilterBar({
       {/* 2. FILTER OPTIONS (PILLS OR DROPDOWN SELECT) */}
       {options.length > 0 && onFilterChange && (
         renderAsSelect ? (
-          <div className="relative flex w-full lg:w-auto items-center shrink-0 min-w-0 lg:min-w-[210px] group/sel">
+          <div className="group/sel relative flex w-full min-w-0 shrink-0 items-center sm:max-w-full xl:w-auto xl:min-w-[13rem]">
             {/* Selected Game PNG Logo or Icon */}
             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10 flex items-center justify-center">
               {activeGame?.logoUrl ? (
@@ -120,7 +120,7 @@ export function FilterBar({
             </div>
           </div>
         ) : (
-          <div className="game-filter-options mobile-scroll-row flex w-full lg:w-auto items-center gap-2 overflow-x-auto pb-1 lg:pb-0 touch-pan-x flex-shrink-0">
+          <div className="game-filter-options mobile-scroll-row flex w-full flex-shrink-0 touch-pan-x items-center gap-2 overflow-x-auto pb-1 xl:w-auto xl:pb-0">
             {options.map((opt) => {
               const isActive = activeFilter === opt.id;
               return (
@@ -156,7 +156,7 @@ export function FilterBar({
 
       {/* 3. OPTIONAL RESULTS COUNT BADGE */}
       {typeof count === 'number' && (
-        <output aria-live="polite" className="text-[10px] font-mono font-bold text-[var(--text-muted)] uppercase tracking-widest px-3.5 py-2 bg-[var(--bg-subtle)] rounded-[var(--ui-radius-control)] border border-[var(--border-card)] shrink-0 flex items-center gap-1.5 self-start lg:self-auto shadow-sm">
+        <output aria-live="polite" className="flex min-h-10 w-full shrink-0 items-center justify-between gap-1.5 self-start rounded-[var(--ui-radius-control)] border border-[var(--border-card)] bg-[var(--bg-subtle)] px-3.5 py-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] shadow-sm sm:w-auto xl:self-auto">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--filter-brand)] animate-pulse" />
           <span>
             {count} {countLabel}
@@ -165,7 +165,7 @@ export function FilterBar({
       )}
 
       {/* 4. ADDITIONAL CHILDREN SLOT */}
-      {children && <div className="flex w-full min-w-0 flex-shrink-0 items-center gap-2 lg:w-auto">{children}</div>}
+      {children && <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 xl:w-auto">{children}</div>}
     </div>
   );
 }

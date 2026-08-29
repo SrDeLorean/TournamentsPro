@@ -14,8 +14,11 @@ import {
 } from '@/lib/authenticated-navigation';
 import {
   Award,
+  Activity,
   BarChart2,
+  BriefcaseBusiness,
   FileText,
+  History,
   LayoutDashboard,
   MessageSquare,
   Settings,
@@ -28,15 +31,22 @@ import {
 type Context = 'athlete' | 'club';
 
 const iconById: Record<AuthenticatedNavItemId, React.ReactNode> = {
+  'athlete-dashboard': <LayoutDashboard className="h-3.5 w-3.5" />,
   profile: <User className="h-3.5 w-3.5" />,
   stats: <BarChart2 className="h-3.5 w-3.5" />,
   offers: <FileText className="h-3.5 w-3.5" />,
+  teams: <BriefcaseBusiness className="h-3.5 w-3.5" />,
+  'athlete-history': <History className="h-3.5 w-3.5" />,
   messages: <MessageSquare className="h-3.5 w-3.5" />,
   'athlete-settings': <Settings className="h-3.5 w-3.5" />,
   'club-dashboard': <LayoutDashboard className="h-3.5 w-3.5" />,
+  'club-profile': <Shield className="h-3.5 w-3.5" />,
   roster: <Users className="h-3.5 w-3.5" />,
   recruitment: <Sparkles className="h-3.5 w-3.5" />,
   matchday: <Award className="h-3.5 w-3.5" />,
+  'club-stats': <Activity className="h-3.5 w-3.5" />,
+  'club-history': <History className="h-3.5 w-3.5" />,
+  'club-messages': <MessageSquare className="h-3.5 w-3.5" />,
   'club-settings': <Settings className="h-3.5 w-3.5" />,
 };
 
@@ -46,7 +56,13 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
   const teamsPool = userTeams?.length ? userTeams : initialTeams;
   const myTeam = findManagedTeamForUser(teamsPool, currentUser, gameSlug);
 
-  const [context, setContext] = useState<Context>(() => (myTeam ? 'club' : 'athlete'));
+  const [preferredContext, setPreferredContext] = useState<Context>(() => (myTeam ? 'club' : 'athlete'));
+  const routeContext: Context | null = pathname.startsWith(`/${gameSlug}/club`)
+    ? 'club'
+    : pathname.startsWith(`/${gameSlug}/atleta`)
+      ? 'athlete'
+      : null;
+  const context = routeContext ?? preferredContext;
 
   if (!currentUser) return null;
 
@@ -62,7 +78,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
             type="button"
             role="tab"
             aria-selected={context === 'athlete'}
-            onClick={() => setContext('athlete')}
+            onClick={() => setPreferredContext('athlete')}
             className={`authenticated-context-tab ${context === 'athlete' ? 'authenticated-context-tab-active' : ''}`}
           >
             <User className="h-3.5 w-3.5" />
@@ -73,7 +89,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
               type="button"
               role="tab"
               aria-selected={context === 'club'}
-              onClick={() => setContext('club')}
+              onClick={() => setPreferredContext('club')}
               className={`authenticated-context-tab ${context === 'club' ? 'authenticated-context-tab-active authenticated-context-tab-club' : ''}`}
             >
               <Shield className="h-3.5 w-3.5" />

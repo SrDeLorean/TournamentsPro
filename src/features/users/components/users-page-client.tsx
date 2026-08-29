@@ -586,7 +586,7 @@ export default function UsersModulePage() {
       {/* TAB 2: GESTIÓN DE ROLES Y PERFILES */}
       {activeTab === 'management' && canManage && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-sm font-black uppercase text-purple-300 tracking-wider flex items-center gap-2">
               <UserCheck className="w-4 h-4 text-purple-400" />
               Tabla General de Usuarios & Gestión de Cuentas
@@ -594,7 +594,7 @@ export default function UsersModulePage() {
 
             <Button
               onClick={openCreateModal}
-              className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-black text-white shadow-lg hover:bg-purple-500 sm:w-auto"
             >
               <Plus className="w-4 h-4" />
               <span>Crear Usuario</span>
@@ -699,6 +699,7 @@ export default function UsersModulePage() {
         onSubmit={handleCreateUser}
         isSubmitting={isSubmitting}
         brandColor="#A855F7"
+        size="xl"
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-900 border border-white/10">
@@ -782,6 +783,7 @@ export default function UsersModulePage() {
           onSubmit={handleEditUser}
           isSubmitting={isSubmitting}
           brandColor="#00F0FF"
+          size="xl"
         >
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-900 border border-white/10">

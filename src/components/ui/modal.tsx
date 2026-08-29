@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const descriptionId = useId();
+  useBodyScrollLock(isOpen, 'modal');
 
   useEffect(() => {
     // Portals are mounted only after hydration because document.body is browser-only.
@@ -63,8 +65,6 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
 
     if (isOpen) {
       previousFocusRef.current = document.activeElement as HTMLElement | null;
-      const previousOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
       const frame = window.requestAnimationFrame(() => {
         const preferred = dialogRef.current?.querySelector<HTMLElement>('[data-autofocus]');
@@ -73,7 +73,6 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
       });
       return () => {
         window.cancelAnimationFrame(frame);
-        document.body.style.overflow = previousOverflow;
         window.removeEventListener('keydown', handleKeyDown);
         previousFocusRef.current?.focus();
       };
@@ -133,7 +132,7 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
               </div>
             )}
 
-            <div>{children}</div>
+            <div className="ui-modal-content min-h-0">{children}</div>
           </motion.div>
         </div>
       )}

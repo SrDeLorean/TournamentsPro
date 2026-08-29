@@ -77,9 +77,9 @@
     "semantic_hash": ""
   },
   "src/app/[gameSlug]/atleta/ajustes/page.tsx": {
-    "mtime": 1788042255.6331036,
-    "seen": 1788042716.8074374,
-    "ast_hash": "bfc388cfdd8bbf0cc7bc5c61cd4d6e78",
+    "mtime": 1787969569.446683,
+    "seen": 1788041651.1185668,
+    "ast_hash": "301c59439e917b9c331baffd59d8bf29",
     "semantic_hash": ""
   },
   "src/app/[gameSlug]/equipos/[teamId]/page.tsx": {
@@ -443,9 +443,9 @@
     "semantic_hash": ""
   },
   "src/components/layout/mobile-responsive-subnavbar.tsx": {
-    "mtime": 1788041843.2961912,
-    "seen": 1788042716.8291209,
-    "ast_hash": "20338e6b79bbb96b7208dbf06638001a",
+    "mtime": 1788036768.0719738,
+    "seen": 1788041651.1257641,
+    "ast_hash": "7d7c7b8ce322f37d6b8226ef63dfa533",
     "semantic_hash": ""
   },
   "src/components/layout/navbar.tsx": {
@@ -1547,9 +1547,9 @@
     "semantic_hash": ""
   },
   "src/proxy.ts": {
-    "mtime": 1788041845.1121137,
-    "seen": 1788042716.8536239,
-    "ast_hash": "205662f007c029189f2dd83eb606e541",
+    "mtime": 1788037154.5687747,
+    "seen": 1788041651.136678,
+    "ast_hash": "bf41de3ec7d318351e8ced72fab5bdd4",
     "semantic_hash": ""
   },
   "tailwind.config.ts": {
@@ -2663,9 +2663,9 @@
     "semantic_hash": ""
   },
   "src/components/layout/authenticated-context-subnavbar.tsx": {
-    "mtime": 1788041840.9581413,
-    "seen": 1788042716.8284037,
-    "ast_hash": "13eb8307eaab6a5842c4b37934d104d5",
+    "mtime": 1788036766.275256,
+    "seen": 1788041651.125754,
+    "ast_hash": "489ac9ae71638459cfc360d171a93baf",
     "semantic_hash": ""
   },
   "src/components/layout/game-switcher.tsx": {
@@ -2711,9 +2711,9 @@
     "semantic_hash": ""
   },
   "src/lib/authenticated-navigation.ts": {
-    "mtime": 1788041852.974244,
-    "seen": 1788042716.8470185,
-    "ast_hash": "f529ac6959f0043d0d8568359dbfdeca",
+    "mtime": 1788036764.4111402,
+    "seen": 1788041651.133386,
+    "ast_hash": "f00a64b7d9fec83c2e2e89766b138bdc",
     "semantic_hash": ""
   },
   "src/lib/db/index.ts": {
@@ -2819,9 +2819,9 @@
     "semantic_hash": ""
   },
   "tests/authenticated-navigation.test.ts": {
-    "mtime": 1788042411.524124,
-    "seen": 1788042716.854688,
-    "ast_hash": "c90a5ea3da4c36779da47d59fec78b61",
+    "mtime": 1788037652.229874,
+    "seen": 1788041651.1373878,
+    "ast_hash": "48e4f9b91f4334f5609ff6a72947a05d",
     "semantic_hash": ""
   },
   "tests/standalone-assets.test.ts": {
@@ -2864,42 +2864,6 @@
     "mtime": 1787879778.9722886,
     "seen": 1788041651.1587415,
     "ast_hash": "fb21f750899a6f4d100cad981784463a",
-    "semantic_hash": ""
-  },
-  "src/app/[gameSlug]/atleta/[section]/page.tsx": {
-    "mtime": 1788042234.7091205,
-    "seen": 1788042716.8074343,
-    "ast_hash": "4a42f95a95f9eef4c7be568760708b5d",
-    "semantic_hash": ""
-  },
-  "src/app/[gameSlug]/atleta/page.tsx": {
-    "mtime": 1788042230.9436936,
-    "seen": 1788042716.8074396,
-    "ast_hash": "45290b94c1252619f3301cf6745141f4",
-    "semantic_hash": ""
-  },
-  "src/app/[gameSlug]/club/[section]/page.tsx": {
-    "mtime": 1788042242.2729192,
-    "seen": 1788042716.8074412,
-    "ast_hash": "6065e52a4c64d16175aac1c104271a34",
-    "semantic_hash": ""
-  },
-  "src/app/[gameSlug]/club/page.tsx": {
-    "mtime": 1788042238.2540483,
-    "seen": 1788042716.8074424,
-    "ast_hash": "22a4169fd279c60e6a1f7e7f5e8f0d0e",
-    "semantic_hash": ""
-  },
-  "src/components/workspaces/athlete-workspace-view.tsx": {
-    "mtime": 1788042615.2956808,
-    "seen": 1788042716.842726,
-    "ast_hash": "af845ce419549cf00c007638559c0730",
-    "semantic_hash": ""
-  },
-  "src/components/workspaces/club-workspace-view.tsx": {
-    "mtime": 1788042554.1830566,
-    "seen": 1788042716.842728,
-    "ast_hash": "3774f1279118e0a4826a23745e88bd4a",
     "semantic_hash": ""
   }
 }

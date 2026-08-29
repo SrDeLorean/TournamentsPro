@@ -422,7 +422,7 @@ export default function TeamsModulePage() {
       {/* TAB 2: GESTIÓN DE ESCUADRAS (ADMIN & ORGANIZADOR) */}
       {activeTab === 'crud' && isAdminOrOrganizer && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-sm font-black uppercase text-purple-300 tracking-wider flex items-center gap-2">
               <Shield className="w-4 h-4 text-purple-400" />
               Tabla General de Escuadras eSports ({teams.length})
@@ -430,7 +430,7 @@ export default function TeamsModulePage() {
 
             <Button
               onClick={openCreateModal}
-              className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-black text-white shadow-lg hover:bg-purple-500 sm:w-auto"
             >
               <Plus className="w-4 h-4" />
               <span>Registrar Nueva Escuadra</span>
@@ -513,6 +513,7 @@ export default function TeamsModulePage() {
         onSubmit={handleCreateTeam}
         isSubmitting={isSubmitting}
         brandColor="#A855F7"
+        size="xl"
       >
         <div className="space-y-4 font-mono">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
@@ -595,7 +596,7 @@ export default function TeamsModulePage() {
               Selecciona sub-capitanes, administradores o encargados con permisos de gestión para esta escuadra.
             </p>
 
-            <div className="flex gap-2">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
               <Select
                 value={createCandidateEncargadoId}
                 onChange={(e) => setCreateCandidateEncargadoId(e.target.value)}
@@ -621,7 +622,7 @@ export default function TeamsModulePage() {
                     setCreateCandidateEncargadoId('');
                   }
                 }}
-                className="text-xs font-bold font-mono bg-purple-600 hover:bg-purple-500 text-white shrink-0 flex items-center gap-1"
+                className="flex w-full shrink-0 items-center justify-center gap-1 bg-purple-600 text-xs font-bold text-white hover:bg-purple-500 sm:w-auto"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Añadir Encargado
@@ -666,6 +667,7 @@ export default function TeamsModulePage() {
           onSubmit={handleEditTeam}
           isSubmitting={isSubmitting}
           brandColor="#00F0FF"
+          size="xl"
         >
           <div className="space-y-4 font-mono">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
@@ -748,7 +750,7 @@ export default function TeamsModulePage() {
                 Modifica los sub-capitanes o encargados secundarios con permisos sobre la escuadra.
               </p>
 
-              <div className="flex gap-2">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
                 <Select
                   value={editCandidateEncargadoId}
                   onChange={(e) => setEditCandidateEncargadoId(e.target.value)}
@@ -774,7 +776,7 @@ export default function TeamsModulePage() {
                       setEditCandidateEncargadoId('');
                     }
                   }}
-                  className="text-xs font-bold font-mono bg-cyan-600 hover:bg-cyan-500 text-slate-950 shrink-0 flex items-center gap-1"
+                  className="flex w-full shrink-0 items-center justify-center gap-1 bg-cyan-600 text-xs font-bold text-slate-950 hover:bg-cyan-500 sm:w-auto"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Añadir Encargado

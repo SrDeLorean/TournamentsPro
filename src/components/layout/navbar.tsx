@@ -13,6 +13,7 @@ import { AdminNavbar } from '@/components/layout/admin-navbar';
 import { NavLinks } from '@/components/layout/nav-links';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { GameLogo } from '@/components/ui/game-logo';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
   const pathname = usePathname();
@@ -20,6 +21,7 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  useBodyScrollLock(isMobileMenuOpen, 'public-navigation');
 
   const settingsRef = useRef<HTMLDivElement>(null);
   const routeGameSlug = pathname.split('/').filter(Boolean)[0];
@@ -32,8 +34,24 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
         setIsSettingsOpen(false);
       }
     }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsSettingsOpen(false);
+        setIsMobileMenuOpen(false);
+      }
+    }
+    const desktopViewport = window.matchMedia('(min-width: 1024px)');
+    const closeAtDesktopBreakpoint = (event: MediaQueryListEvent) => {
+      if (event.matches) setIsMobileMenuOpen(false);
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    desktopViewport.addEventListener('change', closeAtDesktopBreakpoint);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+      desktopViewport.removeEventListener('change', closeAtDesktopBreakpoint);
+    };
   }, []);
 
   // Keep hook ordering stable across authentication changes.
@@ -70,7 +88,7 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
           {/* Settings Gear Menu */}
           <div className="relative" ref={settingsRef}>
             <button
-              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            onClick={() => setIsSettingsOpen((open) => !open)}
               title="Configuración de Plataforma (Tema e Idioma)"
               className="p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all shadow-sm flex items-center justify-center"
             >
@@ -130,7 +148,10 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
 
           {/* Mobile Hamburger Toggle */}
           <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onClick={() => {
+              setIsSettingsOpen(false);
+              setIsMobileMenuOpen((open) => !open);
+            }}
             className="app-navbar-mobile-toggle lg:hidden p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] transition-colors"
             type="button"
             aria-label={isMobileMenuOpen ? 'Cerrar menú principal' : 'Abrir menú principal'}
@@ -144,7 +165,14 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div id="public-mobile-navigation" className="app-navbar-mobile-menu lg:hidden fixed top-14 left-0 right-0 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain glass-panel rounded-none border-x-0 border-t-0 p-3 space-y-3 z-40 shadow-2xl animate-in slide-in-from-top duration-200">
+        <>
+        <button
+          type="button"
+          aria-label="Cerrar menú principal"
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 top-14 z-30 bg-black/55 backdrop-blur-sm lg:hidden"
+        />
+        <div id="public-mobile-navigation" className="app-navbar-mobile-menu fixed bottom-0 left-0 right-0 top-14 z-40 space-y-3 overflow-y-auto overscroll-contain rounded-none border-x-0 border-t-0 p-3 shadow-2xl glass-panel touch-pan-y lg:hidden">
           <section
             className="mobile-games-panel"
             aria-labelledby="mobile-games-title"
@@ -242,6 +270,7 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
             </div> : <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs font-black bg-[var(--accent-cyan)] text-slate-950"><User className="size-4" />Ir a mi panel</Link>}
           </div>
         </div>
+        </>
       )}
     </header>
   );

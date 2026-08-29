@@ -9,6 +9,7 @@ import {
   Shield, Users, LayoutDashboard, Calendar, Award, ArrowRightLeft, CheckCircle2, Gamepad2, Swords, Globe, Home, Star, PieChart, Database, Target, Building2, MessageSquare
 } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 interface AdminOrganizerSidebarProps {
   isDocked: boolean;
@@ -29,26 +30,24 @@ export function AdminOrganizerSidebar({ isDocked, isMobileOpen, onMobileOpenChan
   const roleStr = (currentUser?.role || '').toLowerCase();
   const isAdmin = roleStr === 'administrador' || roleStr === 'admin';
   const isOrganizer = roleStr === 'organizador';
+  useBodyScrollLock(isMobileOpen, 'management-navigation');
 
   React.useEffect(() => {
     if (!isMobileOpen) return;
 
-    const previousOverflow = document.body.style.overflow;
     const mobileViewport = window.matchMedia('(max-width: 1023px)');
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onMobileOpenChange(false);
     };
-    const syncScrollLock = () => {
-      document.body.style.overflow = !isDocked || mobileViewport.matches ? 'hidden' : previousOverflow;
+    const closeAtDesktopBreakpoint = (event: MediaQueryListEvent) => {
+      if (isDocked && !event.matches) onMobileOpenChange(false);
     };
 
-    syncScrollLock();
     document.addEventListener('keydown', closeOnEscape);
-    mobileViewport.addEventListener('change', syncScrollLock);
+    mobileViewport.addEventListener('change', closeAtDesktopBreakpoint);
     return () => {
-      document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', closeOnEscape);
-      mobileViewport.removeEventListener('change', syncScrollLock);
+      mobileViewport.removeEventListener('change', closeAtDesktopBreakpoint);
     };
   }, [isDocked, isMobileOpen, onMobileOpenChange]);
 

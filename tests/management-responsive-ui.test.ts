@@ -65,7 +65,26 @@ describe('management workspace UI', () => {
 
     expect(table).toContain('ui-data-table-responsive');
     expect(table).toContain('data-label={col.header}');
+    expect(table).toContain('data-row-number=');
+    expect(table).toContain("'--data-table-accent': brandColor");
     expect(styles).toContain('.ui-data-table-responsive tbody td::before');
+    expect(styles).toContain('.ui-data-table-responsive tbody tr::before');
+    expect(styles).toContain('.ui-data-table-heading');
+  });
+
+  it('keeps a compact responsive footer inside public and management content columns', async () => {
+    const [layout, footer, styles] = await Promise.all([
+      readFile('src/components/layout/app-layout-wrapper.tsx', 'utf8'),
+      readFile('src/components/layout/footer.tsx', 'utf8'),
+      readFile('src/app/globals.css', 'utf8'),
+    ]);
+
+    expect(layout).toContain('<Footer compact={showRoleAwareChrome} />');
+    expect(layout).not.toContain("['/dashboard', '/admin']");
+    expect(footer).toContain("compact && 'app-footer-management'");
+    expect(footer).toContain('aria-label="Navegación del pie de página"');
+    expect(styles).toContain('.app-footer-inner');
+    expect(styles).toContain('.app-footer-management');
   });
 
   it('integrates moderation with the shared workspace and real server actions', async () => {
@@ -78,10 +97,22 @@ describe('management workspace UI', () => {
     expect(moderation).toContain('<ManagementPage>');
     expect(moderation).toContain('getUsersByRoleAction');
     expect(moderation).toContain('banUserFromChatAction');
+    expect(moderation).toContain('<CrudAlertBanner');
+    expect(moderation).toContain('<ConfirmModal');
     expect(moderation).not.toContain('Dummy data');
     expect(proxy).toContain('"/dashboard"');
     expect(chat).toContain('isMobileConversationOpen');
     expect(chat).toContain('Volver a conversaciones');
+  });
+
+  it('routes organizer mutations through shared confirmation and notification UI', async () => {
+    const organizer = await readFile('src/components/organizer/organizer-dashboard-view.tsx', 'utf8');
+
+    expect(organizer).toContain('<CrudAlertBanner');
+    expect(organizer).toContain('<ConfirmModal');
+    expect(organizer).toContain('<ManagementSection');
+    expect(organizer).not.toContain('actionMsg');
+    expect(organizer).not.toMatch(/\b(?:window\.)?(?:alert|confirm|prompt)\s*\(/);
   });
 
   it('uses the shared management shell in every global management module', async () => {
@@ -248,5 +279,57 @@ describe('management workspace UI', () => {
       expect(source).toContain('<Modal');
       expect(source).not.toMatch(/<div className="fixed inset-0 z-50/);
     }
+  });
+
+  it('keeps long CRUD forms scrollable and user/team controls responsive', async () => {
+    const [modal, modalForm, filterBar, dataTable, users, teams, styles] = await Promise.all([
+      readFile('src/components/ui/modal.tsx', 'utf8'),
+      readFile('src/components/ui/modal-form.tsx', 'utf8'),
+      readFile('src/components/ui/filter-bar.tsx', 'utf8'),
+      readFile('src/components/ui/data-table.tsx', 'utf8'),
+      readFile('src/features/users/components/users-page-client.tsx', 'utf8'),
+      readFile('src/features/teams/components/teams-page-client.tsx', 'utf8'),
+      readFile('src/app/globals.css', 'utf8'),
+    ]);
+
+    expect(modal).toContain('ui-modal-content min-h-0');
+    expect(modalForm).toContain('ui-modal-form-content');
+    expect(styles).toContain('.ui-modal-form > .ui-modal-content');
+    expect(styles).toContain('touch-action: pan-y');
+    expect(styles).toContain('-webkit-overflow-scrolling: touch');
+    expect(filterBar).toContain('xl:flex-wrap');
+    expect(dataTable).toContain('sm:grid-cols-2');
+    expect(dataTable).toContain('xl:flex-row');
+
+    for (const source of [users, teams]) {
+      expect(source).toContain('size="xl"');
+      expect(source).toContain('flex flex-col gap-3 sm:flex-row');
+    }
+  });
+
+  it('closes mobile navigation deterministically without leaking body scroll locks', async () => {
+    const [layout, navbar, sidebar, modal, scrollLock] = await Promise.all([
+      readFile('src/components/layout/app-layout-wrapper.tsx', 'utf8'),
+      readFile('src/components/layout/navbar.tsx', 'utf8'),
+      readFile('src/components/layout/admin-organizer-sidebar.tsx', 'utf8'),
+      readFile('src/components/ui/modal.tsx', 'utf8'),
+      readFile('src/hooks/use-body-scroll-lock.ts', 'utf8'),
+    ]);
+
+    expect(scrollLock).toContain('const activeOwners = new Set<string>()');
+    expect(scrollLock).toContain('acquireBodyScrollLock(owner)');
+    expect(scrollLock).toContain('releaseBodyScrollLock(owner)');
+    expect(scrollLock).toContain("delete document.body.dataset.scrollLocked");
+    expect(modal).toContain("useBodyScrollLock(isOpen, 'modal')");
+
+    expect(layout).toContain('managementMenuState.pathname === pathname');
+    expect(layout).toContain('<Navbar key={pathname} />');
+    expect(navbar).toContain("useBodyScrollLock(isMobileMenuOpen, 'public-navigation')");
+    expect(navbar).toContain('closeAtDesktopBreakpoint');
+    expect(navbar).toContain("event.key === 'Escape'");
+    expect(navbar).toContain('aria-label="Cerrar menú principal"');
+    expect(sidebar).toContain("useBodyScrollLock(isMobileOpen, 'management-navigation')");
+    expect(sidebar).toContain('closeAtDesktopBreakpoint');
+    expect(sidebar).not.toContain('document.body.style.overflow');
   });
 });

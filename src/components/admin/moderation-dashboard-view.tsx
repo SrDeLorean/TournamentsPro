@@ -17,12 +17,13 @@ import {
   MetricCard,
   type ManagementTab,
 } from '@/components/dashboard/management-ui';
-import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { GAMES_CATALOG } from '@/lib/games-data';
 
 interface ModeratedUser {
@@ -36,8 +37,6 @@ interface ModeratedUser {
 }
 
 type ModerationTab = 'bans' | 'chat';
-type ActionMessage = { type: 'success' | 'danger'; text: string } | null;
-
 const MODERATED_ROLES = ['Administrador', 'Organizador', 'Capitan', 'Jugador'] as const;
 
 export function ModerationDashboard() {
@@ -48,8 +47,9 @@ export function ModerationDashboard() {
   const [isBanModalOpen, setIsBanModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUserToRestore, setSelectedUserToRestore] = useState<ModeratedUser | null>(null);
   const [banReason, setBanReason] = useState('Infracción disciplinaria del reglamento eSports.');
-  const [actionMessage, setActionMessage] = useState<ActionMessage>(null);
+  const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
   const loadUsers = useCallback(async (refresh = false) => {
     if (refresh) setIsRefreshing(true);
@@ -64,12 +64,12 @@ export function ModerationDashboard() {
       setUsers([...userMap.values()].sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error: unknown) {
       console.error('Error cargando usuarios para moderación:', error);
-      setActionMessage({ type: 'danger', text: 'No fue posible cargar el directorio de moderación.' });
+      endError('No fue posible cargar el directorio de moderación.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [endError]);
 
   useEffect(() => {
     void Promise.resolve().then(() => loadUsers());
@@ -93,27 +93,31 @@ export function ModerationDashboard() {
   const handleBan = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedUserId || !banReason.trim()) return;
+    const selectedUser = availableUsers.find((user) => user.id === selectedUserId);
+    startOperation(`Aplicar sanción · @${selectedUser?.gamertag || selectedUserId}`);
     setIsSubmitting(true);
     const result = await banUserFromChatAction(selectedUserId, banReason.trim());
     setIsSubmitting(false);
     if (!result.success) {
-      setActionMessage({ type: 'danger', text: result.error || 'No fue posible aplicar la sanción.' });
+      endError(result.error || 'No fue posible aplicar la sanción.');
       return;
     }
     setIsBanModalOpen(false);
-    setActionMessage({ type: 'success', text: result.message || 'Sanción aplicada correctamente.' });
+    endSuccess(result.message || 'Sanción aplicada correctamente.');
     await loadUsers(true);
   };
 
   const handleUnban = async (user: ModeratedUser) => {
+    startOperation(`Restaurar acceso · @${user.gamertag}`);
     setIsSubmitting(true);
     const result = await unbanUserFromChatAction(user.id);
     setIsSubmitting(false);
     if (!result.success) {
-      setActionMessage({ type: 'danger', text: result.error || 'No fue posible levantar la sanción.' });
+      endError(result.error || 'No fue posible levantar la sanción.');
       return;
     }
-    setActionMessage({ type: 'success', text: `Se restauró el acceso de @${user.gamertag}.` });
+    setSelectedUserToRestore(null);
+    endSuccess(`Se restauró el acceso de @${user.gamertag}.`);
     await loadUsers(true);
   };
 
@@ -121,6 +125,7 @@ export function ModerationDashboard() {
 
   return (
     <ManagementPage>
+      <CrudAlertBanner state={crudState} onClose={resetAlert} />
       <ManagementHero
         eyebrow="Seguridad y convivencia"
         title="Centro de moderación"
@@ -141,12 +146,6 @@ export function ModerationDashboard() {
         <MetricCard label="Disciplinas" value={gamesUnderModeration} hint="Juegos con usuarios" icon={Gamepad2} tone="violet" />
         <MetricCard label="Estado operativo" value="En línea" hint="Acciones auditadas" icon={CheckCircle2} tone="emerald" />
       </ManagementMetrics>
-
-      {actionMessage ? (
-        <Alert variant={actionMessage.type} title={actionMessage.type === 'success' ? 'Operación completada' : 'No se pudo completar'}>
-          {actionMessage.text}
-        </Alert>
-      ) : null}
 
       <ManagementTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} label="Módulos de moderación" />
 
@@ -184,7 +183,7 @@ export function ModerationDashboard() {
               { header: 'Estado', cell: () => <Badge variant="rose">Baneado</Badge> },
             ]}
             actions={(user) => (
-              <Button size="sm" variant="outline" disabled={isSubmitting} onClick={() => void handleUnban(user)} className="text-[var(--accent-emerald)]">
+              <Button size="sm" variant="outline" disabled={isSubmitting} onClick={() => setSelectedUserToRestore(user)} className="text-[var(--accent-emerald)]">
                 <CheckCircle2 className="size-3.5" />Restaurar
               </Button>
             )}
@@ -224,6 +223,16 @@ export function ModerationDashboard() {
           <textarea value={banReason} onChange={(event) => setBanReason(event.target.value)} required minLength={8} rows={4} className="ui-control w-full resize-y p-3" />
         </label>
       </ModalForm>
+      <ConfirmModal
+        isOpen={Boolean(selectedUserToRestore)}
+        onClose={() => setSelectedUserToRestore(null)}
+        onConfirm={() => selectedUserToRestore ? handleUnban(selectedUserToRestore) : Promise.resolve()}
+        title="Restaurar acceso al chat"
+        description={`Se levantará la sanción de @${selectedUserToRestore?.gamertag || 'este usuario'}.`}
+        confirmText="Restaurar acceso"
+        variant="success"
+        consequences={['El usuario podrá volver a participar en los canales habilitados.', 'La restauración quedará registrada en la auditoría.']}
+      />
     </ManagementPage>
   );
 }

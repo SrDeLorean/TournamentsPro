@@ -5,21 +5,28 @@ import { findManagedTeamForUser, getAthleteNavigation, getClubNavigation } from 
 describe('authenticated player and captain navigation', () => {
   it('builds athlete shortcuts only from routes that exist', () => {
     expect(getAthleteNavigation('eafc26', 'player-7').map((item) => item.href)).toEqual([
-      '/eafc26/jugadores/player-7',
-      '/atleta/stats',
-      '/atleta/ofertas',
-      '/mensajes',
-      '/eafc26/atleta-ajustes',
+      '/eafc26/atleta',
+      '/eafc26/atleta/ficha',
+      '/eafc26/atleta/estadisticas',
+      '/eafc26/atleta/ofertas',
+      '/eafc26/atleta/equipos',
+      '/eafc26/atleta/historial',
+      '/eafc26/atleta/mensajes',
+      '/eafc26/atleta/ajustes',
     ]);
   });
 
   it('builds captain shortcuts from the current club routes', () => {
     expect(getClubNavigation('eafc26', 'team-9').map((item) => item.href)).toEqual([
-      '/eafc26/equipos/team-9',
-      '/club/plantilla',
-      '/club/reclutamiento',
-      '/club/matchday',
-      '/club/ajustes',
+      '/eafc26/club',
+      '/eafc26/club/ficha',
+      '/eafc26/club/plantilla',
+      '/eafc26/club/fichajes',
+      '/eafc26/club/matchday',
+      '/eafc26/club/estadisticas',
+      '/eafc26/club/historial',
+      '/eafc26/club/mensajes',
+      '/eafc26/club/ajustes',
     ]);
   });
 
@@ -49,10 +56,26 @@ describe('authenticated player and captain navigation', () => {
     expect(gameNav).not.toContain('<TeamClubSubnavbar');
     expect(contextNav).toContain('getAthleteNavigation');
     expect(contextNav).toContain('getClubNavigation');
+    expect(contextNav).toContain("pathname.startsWith(`/${gameSlug}/club`)");
     expect(mobileNav).toContain('getAthleteNavigation');
     expect(mobileNav).toContain('getClubNavigation');
+    expect(mobileNav).toContain("pathname.startsWith(`/${game.slug}/club`)");
     expect(topNav).toContain('authenticated-explore-menu');
     expect(topNav).not.toContain('<NavLinks');
+  });
+
+  it('keeps every private tab under the game layout and protects it with the proxy', async () => {
+    const [athletePage, clubPage, proxy] = await Promise.all([
+      readFile('src/app/[gameSlug]/atleta/[section]/page.tsx', 'utf8'),
+      readFile('src/app/[gameSlug]/club/[section]/page.tsx', 'utf8'),
+      readFile('src/proxy.ts', 'utf8'),
+    ]);
+
+    expect(athletePage).toContain('ATHLETE_SECTIONS.includes');
+    expect(clubPage).toContain('CLUB_SECTIONS.includes');
+    expect(proxy).toContain('PRIVATE_GAME_CONTEXT');
+    expect(proxy).toContain('"/:gameSlug/atleta/:path*"');
+    expect(proxy).toContain('"/:gameSlug/club/:path*"');
   });
 
   it('keeps the player team, preferences and account menus theme-aware', async () => {

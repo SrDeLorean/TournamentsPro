@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/mensajes", "/atleta", "/club", "/cuenta"];
+const PRIVATE_GAME_CONTEXT = /^\/[^/]+\/(?:atleta|club)(?:\/|$)/;
 
 export function proxy(request: NextRequest) {
-  const needsSession = PROTECTED_PREFIXES.some((prefix) =>
+  const needsSession = PRIVATE_GAME_CONTEXT.test(request.nextUrl.pathname) || PROTECTED_PREFIXES.some((prefix) =>
     request.nextUrl.pathname.startsWith(prefix),
   );
 
@@ -27,5 +28,7 @@ export const config = {
     "/atleta/:path*",
     "/club/:path*",
     "/cuenta/:path*",
+    "/:gameSlug/atleta/:path*",
+    "/:gameSlug/club/:path*",
   ],
 };

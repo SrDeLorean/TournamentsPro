@@ -16,7 +16,7 @@ import {
   type AuthenticatedNavItemId,
 } from '@/lib/authenticated-navigation';
 import {
-  Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, UserCheck, Calendar, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard, MessageSquare
+  Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, UserCheck, Calendar, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard, MessageSquare, History, BriefcaseBusiness, Activity
 } from 'lucide-react';
 
 export type MobileSubnavSegment = 'game' | 'athlete' | 'club';
@@ -30,7 +30,13 @@ interface MobileResponsiveSubnavbarProps {
 export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection }: MobileResponsiveSubnavbarProps) {
   const pathname = usePathname();
   const { currentUser, userTeams, isAuthenticated } = useAuth();
-  const [activeSegment, setActiveSegment] = useState<MobileSubnavSegment>('game');
+  const [preferredSegment, setPreferredSegment] = useState<MobileSubnavSegment>('game');
+  const routeSegment: MobileSubnavSegment | null = pathname.startsWith(`/${game.slug}/atleta`)
+    ? 'athlete'
+    : pathname.startsWith(`/${game.slug}/club`)
+      ? 'club'
+      : null;
+  const activeSegment = routeSegment ?? preferredSegment;
   const linksRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,15 +74,22 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
   const userId = currentUser?.id || 'usr-1784762163316';
 
   const authenticatedIcons: Record<AuthenticatedNavItemId, React.ReactNode> = {
+    'athlete-dashboard': <LayoutDashboard className="w-3.5 h-3.5" />,
     profile: <User className="w-3.5 h-3.5" />,
     stats: <BarChart2 className="w-3.5 h-3.5" />,
     offers: <FileText className="w-3.5 h-3.5" />,
+    teams: <BriefcaseBusiness className="w-3.5 h-3.5" />,
+    'athlete-history': <History className="w-3.5 h-3.5" />,
     messages: <MessageSquare className="w-3.5 h-3.5" />,
     'athlete-settings': <Settings className="w-3.5 h-3.5" />,
     'club-dashboard': <LayoutDashboard className="w-3.5 h-3.5" />,
+    'club-profile': <Shield className="w-3.5 h-3.5" />,
     roster: <Users className="w-3.5 h-3.5" />,
     recruitment: <Sparkles className="w-3.5 h-3.5" />,
     matchday: <Award className="w-3.5 h-3.5" />,
+    'club-stats': <Activity className="w-3.5 h-3.5" />,
+    'club-history': <History className="w-3.5 h-3.5" />,
+    'club-messages': <MessageSquare className="w-3.5 h-3.5" />,
     'club-settings': <Settings className="w-3.5 h-3.5" />,
   };
   const athleteOptions = getAthleteNavigation(game.slug, userId);
@@ -96,7 +109,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
           type="button"
           role="tab"
           aria-selected={activeSegment === 'game'}
-          onClick={() => setActiveSegment('game')}
+          onClick={() => setPreferredSegment('game')}
           className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeSegment === 'game'
               ? 'game-portal-mobile-segment-active shadow-md font-black'
@@ -113,7 +126,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
             type="button"
             role="tab"
             aria-selected={activeSegment === 'athlete'}
-            onClick={() => setActiveSegment('athlete')}
+            onClick={() => setPreferredSegment('athlete')}
             className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               activeSegment === 'athlete'
                 ? 'game-portal-mobile-segment-active shadow-md font-black'
@@ -131,7 +144,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
             type="button"
             role="tab"
             aria-selected={activeSegment === 'club'}
-            onClick={() => setActiveSegment('club')}
+            onClick={() => setPreferredSegment('club')}
             className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               activeSegment === 'club'
                 ? 'game-portal-mobile-segment-active shadow-md font-black'
