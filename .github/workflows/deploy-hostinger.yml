@@ -63,7 +63,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: .next/standalone/
-          server-dir: ./ # Directorio destino en Hostinger (ej: ./public_html/ o ./domains/tusitio.com/app/)
+          server-dir: ./public_html/ # Ajustado a tu directorio principal
           dangerous-clean-slate: false
           exclude: |
             **/.git*
