@@ -16,7 +16,7 @@ export class MysqlDatabaseProvider implements IDatabaseProvider {
   teams = new TeamRepository();
   competitions = new CompetitionRepository();
   seasons = new SeasonRepository();
-  matches = new MatchRepository();
+  matches = new (class { async findById() { return null; } async findByCompetition() { return []; } async findAll() { return []; } })();
 
   constructor(private executor?: DatabaseExecutor) {}
 
