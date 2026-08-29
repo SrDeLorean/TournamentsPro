@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -25,6 +25,12 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
   const pathname = usePathname();
   const { currentUser, userTeams, isAuthenticated } = useAuth();
   const [activeSegment, setActiveSegment] = useState<MobileSubnavSegment>('game');
+  const linksRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const activeLink = linksRef.current?.querySelector<HTMLElement>('[data-active="true"]');
+    activeLink?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [activeSegment, pathname]);
 
   const roleStr = (currentUser?.role || '').toLowerCase();
   const isAdminOrOrganizer = roleStr === 'administrador' || roleStr === 'admin' || roleStr === 'organizador';
@@ -146,7 +152,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
       </div> : null}
 
       {/* 2. Active Segment Scrollable Options Bar */}
-      <div className="game-portal-mobile-links mobile-scroll-row py-2 px-3 flex items-center gap-1.5 overflow-x-auto touch-pan-x" aria-label="Secciones del portal">
+      <div ref={linksRef} className="game-portal-mobile-links mobile-scroll-row py-2 px-3 flex items-center gap-1.5 overflow-x-auto touch-pan-x" aria-label="Secciones del portal">
         
         {/* Render JUEGO Options */}
         {(activeSegment === 'game' || !showSegmentSwitcher) &&
@@ -156,6 +162,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
               <Link
                 key={sec.id}
                 href={sec.href}
+                data-active={isActive}
                 onClick={() => onSelectSection && onSelectSection(sec.id as GameSection)}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
@@ -177,6 +184,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
               <Link
                 key={opt.id}
                 href={opt.href}
+                data-active={isActive}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
                     ? 'game-portal-mobile-link-active shadow-md font-black'
@@ -197,6 +205,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
               <Link
                 key={opt.id}
                 href={opt.href}
+                data-active={isActive}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
                     ? 'game-portal-mobile-link-active shadow-md font-black'

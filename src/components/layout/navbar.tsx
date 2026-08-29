@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { Trophy, Shield, Users, User, Sparkles, Settings, Info, Home, Menu, X, Flag, LogIn, UserPlus } from 'lucide-react';
+import { Trophy, Shield, Users, User, Sparkles, Settings, Info, Home, Menu, X, Flag, LogIn, UserPlus, Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 

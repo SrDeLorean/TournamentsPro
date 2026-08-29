@@ -4,8 +4,7 @@ import {
   OrganizationRepository, 
   TeamRepository, 
   CompetitionRepository, 
-  SeasonRepository,
-  MatchRepository 
+  SeasonRepository 
 } from '@/lib/repositories';
 import type { IDatabaseProvider } from '../interfaces';
 import type { DatabaseExecutor } from '@/lib/db';
