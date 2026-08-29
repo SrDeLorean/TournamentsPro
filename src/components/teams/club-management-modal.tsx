@@ -8,6 +8,7 @@ import { TeamAdminSection } from '@/components/layout/team-admin-subnavbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
+import { Modal } from '@/components/ui/modal';
 import {
   Users, Plus, Trash2, CheckCircle2, Settings, Sparkles, X, Award, User, BarChart2, FileText, Check
 } from 'lucide-react';
@@ -139,8 +140,7 @@ export function ClubManagementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl glass-panel p-6 sm:p-8 rounded-3xl border border-[var(--border-card)] space-y-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel={`Gestión de ${currentTeam.name}`} size="xl" showCloseButton={false} className="glass-panel p-6 sm:p-8 space-y-6">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
@@ -528,7 +528,6 @@ export function ClubManagementModal({
             Guardar & Cerrar
           </Button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db/provider';
+
 import { signToken } from '@/lib/auth';
 import { apiError, mapUserRowToProfile, type UserRow } from '@/lib/api-types';
 import { authorizationErrorResponse, requireValidMutationOrigin } from '@/lib/auth-server';
@@ -49,23 +49,47 @@ export async function POST(request: Request) {
     const gamertag = cleanedName ? `${cleanedName.slice(0, 12)}_G` : `Google_${payload.sub.slice(-6)}`;
     const newUserId = `usr-google-${payload.sub}`.slice(0, 100);
 
-    await queryDB(
-      `INSERT INTO users
-        (id, email, google_id, name, gamertag, role, primary_game_slug, platform, position, rank_badge, status, avatar_url)
-       VALUES (?, ?, ?, ?, ?, 'Jugador', 'eafc26', 'CROSSPLAY', 'DFC', 'División 1', 'Activo', ?)
-       ON DUPLICATE KEY UPDATE
-         google_id = VALUES(google_id),
-         name = VALUES(name),
-         avatar_url = VALUES(avatar_url)`,
-      [newUserId, payload.email, payload.sub, finalName, gamertag, payload.picture || null],
-    );
+    const { dbProvider } = await import('@/lib/db/provider');
 
-    const users = await queryDB<UserRow>(
-      'SELECT * FROM users WHERE google_id = ? OR LOWER(email) = LOWER(?) LIMIT 1',
-      [payload.sub, payload.email],
-    );
-    const row = users[0];
-    if (!row) return apiError('No se pudo crear la sesión de Google', 500);
+    let user = await dbProvider.users.findByEmail(payload.email);
+    if (!user) {
+      user = await dbProvider.users.create({
+        id: newUserId,
+        email: payload.email,
+        googleId: payload.sub,
+        name: finalName,
+        gamertag: gamertag,
+        role: 'Jugador',
+        primaryGameSlug: 'eafc26',
+        platform: 'CROSSPLAY',
+        position: 'DFC',
+        rankBadge: 'División 1',
+        status: 'Activo',
+        avatarUrl: payload.picture || null,
+        isBanned: false
+      });
+    } else {
+      const updated = await dbProvider.users.update(user.id, {
+        googleId: payload.sub,
+        name: finalName,
+        avatarUrl: payload.picture || null
+      });
+      if (updated) user = updated;
+    }
+
+    if (!user) return apiError('No se pudo crear la sesión de Google', 500);
+
+    const row = {
+      id: user.id, email: user.email, name: user.name, gamertag: user.gamertag, role: user.role,
+      primary_game_slug: user.primaryGameSlug, platform: user.platform, position: user.position,
+      secondary_position: user.secondaryPosition, rank_badge: user.rankBadge, rating: user.rating,
+      status: user.status, avatar_url: user.avatarUrl, organization_id: user.organizationId,
+      is_banned: user.isBanned ? 1 : 0, ban_reason: user.banReason, last_login_at: user.lastLoginAt,
+      created_at: user.createdAt, updated_at: user.updatedAt, password_hash: user.passwordHash, google_id: user.googleId,
+      banner_url: user.bannerUrl || null, foto: user.foto || null,
+      biografia: user.biografia || null, twitter: user.twitter || null, instagram: user.instagram || null,
+      twitch: user.twitch || null, discord: user.discord || null, youtube: user.youtube || null, whatsapp: user.whatsapp || null
+    };
 
     const session = await createAuthSession(row.id, request);
     const token = signToken({ userId: row.id, role: row.role, gamertag: row.gamertag }, 'access', session.sessionId);

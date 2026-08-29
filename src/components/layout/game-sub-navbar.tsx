@@ -6,8 +6,7 @@ import { usePathname } from 'next/navigation';
 import { GameConfig } from '@/lib/games-data';
 import { GameSwitcher } from '@/components/layout/game-switcher';
 import { useAuth } from '@/components/providers/auth-provider';
-import { UserAthleteSubnavbar } from '@/components/layout/user-athlete-subnavbar';
-import { TeamClubSubnavbar } from '@/components/layout/team-club-subnavbar';
+import { AuthenticatedContextSubnavbar } from '@/components/layout/authenticated-context-subnavbar';
 import { MobileResponsiveSubnavbar } from '@/components/layout/mobile-responsive-subnavbar';
 import { PUBLIC_GAME_NAV_ITEMS } from '@/lib/section-config';
 import {
@@ -104,7 +103,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
       {/* 📱 MOBILE RESPONSIVE UNIFIED SUBNAVBAR (< md) */}
       <MobileResponsiveSubnavbar game={game} activeSection={currentSection} onSelectSection={onSelectSection} />
 
-      {/* 💻 DESKTOP 4-TIER SUBNAVBAR STACK (>= md) */}
+      {/* Desktop: competition navigation + one contextual workspace */}
       <div className="game-portal-navigation hidden md:block">
         {/* 🎮 SUB-NAVBAR NIVEL 2: SECCIONES DEL JUEGO */}
         <div
@@ -177,18 +176,11 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
           </div>
         </div>
 
-        {/* 👤 SUB-NAVBAR NIVEL 3: OPCIONES DEL USUARIO / ATLETA */}
+        {/* Only one user workspace is visible at a time (Atleta or Club). */}
         {(isAuthenticated || Boolean(currentUser)) && 
          currentUser?.role && 
          !['organizador', 'administrador', 'admin'].includes(currentUser.role.toLowerCase()) && (
-          <UserAthleteSubnavbar />
-        )}
-
-        {/* 🛡️ SUB-NAVBAR NIVEL 4: OPCIONES DEL EQUIPO / CLUB */}
-        {(isAuthenticated || Boolean(currentUser)) && 
-         currentUser?.role && 
-         !['organizador', 'administrador', 'admin'].includes(currentUser.role.toLowerCase()) && (
-          <TeamClubSubnavbar />
+          <AuthenticatedContextSubnavbar gameSlug={game.slug} />
         )}
       </div>
     </>

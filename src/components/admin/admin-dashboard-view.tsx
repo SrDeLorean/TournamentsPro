@@ -15,6 +15,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
+import { ModalForm } from '@/components/ui/modal-form';
 import { GAMES_CATALOG } from '@/lib/games-data';
 
 interface AdminUser {
@@ -51,6 +54,7 @@ interface AdminTeam {
 }
 
 type AdminTab = 'users' | 'banned' | 'organizations' | 'teams';
+type BanTarget = { kind: 'user' | 'team'; id: string; name: string; isBanned: boolean };
 
 export function AdminDashboardView() {
   const { currentUser } = useAuth();
@@ -61,6 +65,9 @@ export function AdminDashboardView() {
   const [userRoleFilter, setUserRoleFilter] = useState('');
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [banTarget, setBanTarget] = useState<BanTarget | null>(null);
+  const [createOrgError, setCreateOrgError] = useState('');
+  const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
   const fetchUsers = useCallback(async () => {
     const response = await fetch(`/api/admin/users${userRoleFilter ? `?role=${encodeURIComponent(userRoleFilter)}` : ''}`);
@@ -90,18 +97,23 @@ export function AdminDashboardView() {
       .catch((error: unknown) => console.error('Error cargando datos administrativos:', error));
   }, [fetchOrganizations, fetchTeams]);
 
-  const updateBan = async (kind: 'user' | 'team', id: string, isBanned: boolean) => {
-    const reason = isBanned ? '' : prompt(`Motivo de la sanción ${kind === 'user' ? 'del usuario' : 'del club'}:`) || 'Infracción grave';
-    if (!isBanned && !reason) return;
-
+  const updateBan = async (kind: 'user' | 'team', id: string, isBanned: boolean, reason?: string) => {
     setBusyId(id);
+    startOperation(`${isBanned ? 'Restauración' : 'Sanción'} de ${kind === 'user' ? 'usuario' : 'club'}`);
     try {
       const response = await fetch(kind === 'user' ? '/api/admin/users' : '/api/admin/teams', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action: isBanned ? 'UNBAN' : 'BAN', banReason: reason }),
+        body: JSON.stringify({ id, action: isBanned ? 'UNBAN' : 'BAN', banReason: reason?.trim() || null }),
       });
-      if (response.ok) await (kind === 'user' ? fetchUsers() : fetchTeams());
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(data.error || 'No se pudo actualizar la sanción.');
+      await (kind === 'user' ? fetchUsers() : fetchTeams());
+      endSuccess(isBanned ? 'El acceso fue restaurado correctamente.' : 'La sanción fue aplicada correctamente.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo actualizar la sanción.';
+      endError(message);
+      throw new Error(message);
     } finally {
       setBusyId(null);
     }
@@ -112,15 +124,24 @@ export function AdminDashboardView() {
     const form = event.currentTarget;
     const formData = new FormData(form);
     const allowedGames = Object.keys(GAMES_CATALOG).filter((slug) => formData.get(`game_${slug}`));
-    const response = await fetch('/api/admin/organizations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: formData.get('name'), tag: formData.get('tag'), ownerId: currentUser?.id, allowedGames }),
-    });
-    if (response.ok) {
+    setCreateOrgError('');
+    startOperation('Creación de organización');
+    try {
+      const response = await fetch('/api/admin/organizations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: formData.get('name'), tag: formData.get('tag'), ownerId: currentUser?.id, allowedGames }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(data.error || 'No se pudo crear la organización.');
       form.reset();
       setIsCreatingOrg(false);
       await fetchOrganizations();
+      endSuccess('La organización fue creada y ya está disponible en el directorio.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo crear la organización.';
+      setCreateOrgError(message);
+      endError(message);
     }
   };
 
@@ -137,6 +158,7 @@ export function AdminDashboardView() {
 
   return (
     <ManagementPage>
+      <CrudAlertBanner state={crudState} onClose={resetAlert} />
       <ManagementHero
         eyebrow="Administración del sistema"
         title="Centro de control global"
@@ -181,7 +203,7 @@ export function AdminDashboardView() {
               { header: 'Estado', cell: (user) => <Badge variant={user.is_banned ? 'rose' : 'emerald'}>{user.is_banned ? 'Baneado' : user.status}</Badge> },
             ]}
             actions={(user) => (
-              <Button size="sm" variant="ghost" disabled={busyId === user.id} onClick={() => void updateBan('user', user.id, user.is_banned === 1)} className={user.is_banned ? 'text-[var(--accent-emerald)]' : 'text-[var(--accent-crimson)]'}>
+              <Button size="sm" variant="ghost" disabled={busyId === user.id} onClick={() => setBanTarget({ kind: 'user', id: user.id, name: user.gamertag, isBanned: user.is_banned === 1 })} className={user.is_banned ? 'text-[var(--accent-emerald)]' : 'text-[var(--accent-crimson)]'}>
                 {user.is_banned ? <Unlock className="mr-1 size-3.5" /> : <Trash2 className="mr-1 size-3.5" />}{user.is_banned ? 'Restaurar' : 'Sancionar'}
               </Button>
             )}
@@ -201,7 +223,7 @@ export function AdminDashboardView() {
                 { header: 'Motivo', cell: (user) => <span className="text-[var(--text-secondary)]">{user.ban_reason || 'Sin motivo indicado'}</span> },
                 { header: 'Fecha', cell: (user) => <span className="font-mono text-[var(--text-muted)]">{user.banned_at ? new Date(user.banned_at).toLocaleDateString() : 'N/A'}</span> },
               ]}
-              actions={(user) => <Button size="sm" onClick={() => void updateBan('user', user.id, true)} disabled={busyId === user.id}><Unlock className="mr-1 size-3.5" />Restaurar</Button>}
+              actions={(user) => <Button size="sm" onClick={() => setBanTarget({ kind: 'user', id: user.id, name: user.gamertag, isBanned: true })} disabled={busyId === user.id}><Unlock className="mr-1 size-3.5" />Restaurar</Button>}
             />
           </ManagementSection>
 
@@ -215,7 +237,7 @@ export function AdminDashboardView() {
                 { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-mono uppercase text-[var(--accent-cyan)]' },
                 { header: 'Motivo', cell: (team) => <span className="text-[var(--text-secondary)]">{team.ban_reason || 'Infracción disciplinaria'}</span> },
               ]}
-              actions={(team) => <Button size="sm" onClick={() => void updateBan('team', team.id, true)} disabled={busyId === team.id}><Unlock className="mr-1 size-3.5" />Restaurar</Button>}
+              actions={(team) => <Button size="sm" onClick={() => setBanTarget({ kind: 'team', id: team.id, name: team.name, isBanned: true })} disabled={busyId === team.id}><Unlock className="mr-1 size-3.5" />Restaurar</Button>}
             />
           </ManagementSection>
         </div>
@@ -229,8 +251,17 @@ export function AdminDashboardView() {
           tone="violet"
           action={<Button onClick={() => setIsCreatingOrg((value) => !value)} className="w-full sm:w-auto"><Plus className="mr-1 size-4" />Nueva organización</Button>}
         >
-          {isCreatingOrg ? (
-            <form onSubmit={(event) => void handleCreateOrg(event)} className="mb-5 space-y-4 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-4 sm:p-5">
+          <ModalForm
+            isOpen={isCreatingOrg}
+            onClose={() => { setIsCreatingOrg(false); setCreateOrgError(''); }}
+            onSubmit={handleCreateOrg}
+            title="Nueva organización"
+            subtitle="Define su identidad y las disciplinas que podrá gestionar."
+            submitButtonText="Crear organización"
+            errorMessage={createOrgError}
+            size="xl"
+            brandColor="var(--accent-violet)"
+          >
               <div className="grid gap-3 sm:grid-cols-2">
                 <input name="name" required placeholder="Nombre de la organización" className="ui-control h-11" />
                 <input name="tag" required maxLength={5} placeholder="Tag (ej. TPRO)" className="ui-control h-11 uppercase" />
@@ -246,9 +277,7 @@ export function AdminDashboardView() {
                   ))}
                 </div>
               </fieldset>
-              <div className="flex justify-end"><Button type="submit">Guardar organización</Button></div>
-            </form>
-          ) : null}
+          </ModalForm>
 
           <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
             {organizations.map((organization) => (
@@ -273,9 +302,24 @@ export function AdminDashboardView() {
               { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-mono uppercase text-[var(--accent-cyan)]' },
               { header: 'Estado', cell: (team) => <Badge variant={team.is_banned ? 'rose' : 'emerald'}>{team.is_banned ? 'Baneado' : team.status || 'Activo'}</Badge> },
             ]}
-            actions={(team) => <Button size="sm" variant={team.is_banned ? 'primary' : 'ghost'} disabled={busyId === team.id} onClick={() => void updateBan('team', team.id, team.is_banned === 1)} className={team.is_banned ? '' : 'text-[var(--accent-crimson)]'}>{team.is_banned ? <Unlock className="mr-1 size-3.5" /> : <Trash2 className="mr-1 size-3.5" />}{team.is_banned ? 'Restaurar' : 'Sancionar'}</Button>}
+            actions={(team) => <Button size="sm" variant={team.is_banned ? 'primary' : 'ghost'} disabled={busyId === team.id} onClick={() => setBanTarget({ kind: 'team', id: team.id, name: team.name, isBanned: team.is_banned === 1 })} className={team.is_banned ? '' : 'text-[var(--accent-crimson)]'}>{team.is_banned ? <Unlock className="mr-1 size-3.5" /> : <Trash2 className="mr-1 size-3.5" />}{team.is_banned ? 'Restaurar' : 'Sancionar'}</Button>}
           />
         </ManagementSection>
+      ) : null}
+
+      {banTarget ? (
+        <ConfirmModal
+          isOpen
+          onClose={() => setBanTarget(null)}
+          onConfirm={(reason) => updateBan(banTarget.kind, banTarget.id, banTarget.isBanned, reason)}
+          title={banTarget.isBanned ? `Restaurar ${banTarget.name}` : `Sancionar ${banTarget.name}`}
+          description={banTarget.isBanned ? 'El usuario o club recuperará el acceso a las funciones competitivas.' : 'Esta medida restringirá su acceso. Registra un motivo claro para conservar la trazabilidad administrativa.'}
+          confirmText={banTarget.isBanned ? 'Restaurar acceso' : 'Aplicar sanción'}
+          variant={banTarget.isBanned ? 'success' : 'danger'}
+          requireReason={!banTarget.isBanned}
+          reasonPlaceholder="Describe la infracción y el fundamento de la medida..."
+          consequences={banTarget.isBanned ? ['Se reactivará el acceso inmediatamente.'] : ['El acceso competitivo quedará suspendido.', 'El motivo quedará visible en el historial administrativo.']}
+        />
       ) : null}
     </ManagementPage>
   );

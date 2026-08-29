@@ -437,28 +437,47 @@ export async function writeSecurityAudit(event: SecurityAuditEvent): Promise<voi
   const requestId = event?.request ? getRequestId(event?.request) : null;
   const metadata = sanitizeAuditMetadata(event.metadata || {});
   try {
-    await queryDB(
-      `INSERT INTO security_audit_log
-        (id, request_id, actor_user_id, actor_role, action_name, resource_type, resource_id,
-         organization_id, outcome, metadata_json, ip_hash, user_agent_hash)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        auditId,
-        requestId,
-        event?.actor.userId,
-        event?.actor.role,
-        event?.action,
-        event?.resourceType,
-        event?.resourceId || null,
-        event?.organizationId ?? event?.actor.organizationId,
-        event?.outcome || 'SUCCESS',
-        JSON.stringify(metadata),
-        event?.request ? getRequestFingerprint(event?.request) : null,
-        event?.request?.headers.get('user-agent')
+    if (process.env.DATABASE_PROVIDER === 'supabase' && supabase) {
+      await supabase.from('security_audit_log').insert({
+        id: auditId,
+        request_id: requestId,
+        actor_user_id: event?.actor.userId,
+        actor_role: event?.actor.role,
+        action_name: event?.action,
+        resource_type: event?.resourceType,
+        resource_id: event?.resourceId || null,
+        organization_id: event?.organizationId ?? event?.actor.organizationId,
+        outcome: event?.outcome || 'SUCCESS',
+        metadata_json: JSON.stringify(metadata),
+        ip_hash: event?.request ? getRequestFingerprint(event?.request) : null,
+        user_agent_hash: event?.request?.headers.get('user-agent')
           ? hashSecurityValue(event?.request.headers.get('user-agent') || '')
           : null,
-      ],
-    );
+      });
+    } else {
+      await queryDB(
+        `INSERT INTO security_audit_log
+          (id, request_id, actor_user_id, actor_role, action_name, resource_type, resource_id,
+           organization_id, outcome, metadata_json, ip_hash, user_agent_hash)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          auditId,
+          requestId,
+          event?.actor.userId,
+          event?.actor.role,
+          event?.action,
+          event?.resourceType,
+          event?.resourceId || null,
+          event?.organizationId ?? event?.actor.organizationId,
+          event?.outcome || 'SUCCESS',
+          JSON.stringify(metadata),
+          event?.request ? getRequestFingerprint(event?.request) : null,
+          event?.request?.headers.get('user-agent')
+            ? hashSecurityValue(event?.request.headers.get('user-agent') || '')
+            : null,
+        ],
+      );
+    }
   } catch (error) {
     logger.error('security.audit.persistence_failed', {
       id: auditId,

@@ -439,7 +439,7 @@ export function PlantillaManagementView({ game }: PlantillaManagementViewProps) 
     e.preventDefault();
     if (!targetPlayer || !teamId || !currentUser) return;
     if (selectedContractOrgNames.length === 0) {
-      alert('Debes seleccionar al menos una Organización para emitir la propuesta de contrato.');
+      endError('Debes seleccionar al menos una organización para emitir la propuesta de contrato.');
       return;
     }
     setIsSendingContract(true);

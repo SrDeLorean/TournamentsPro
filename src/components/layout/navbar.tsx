@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { Trophy, Shield, Users, User, Sparkles, Settings, Info, Home, Menu, X, Flag, LogIn, UserPlus, Gamepad2 } from 'lucide-react';
+import { Trophy, Shield, Users, User, Sparkles, Settings, Info, Home, Menu, X, Flag, LogIn, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 
@@ -14,12 +15,15 @@ import { GAMES_CATALOG } from '@/lib/games-data';
 import { GameLogo } from '@/components/ui/game-logo';
 
 export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
-  const { currentUser, isAuthenticated } = useAuth();
+  const pathname = usePathname();
+  const { currentUser, isAuthenticated, activeGameSlug } = useAuth();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const settingsRef = useRef<HTMLDivElement>(null);
+  const routeGameSlug = pathname.split('/').filter(Boolean)[0];
+  const currentGame = GAMES_CATALOG[routeGameSlug] || GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG.eafc26;
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -141,18 +145,38 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
         <div id="public-mobile-navigation" className="app-navbar-mobile-menu lg:hidden fixed top-14 left-0 right-0 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain glass-panel rounded-none border-x-0 border-t-0 p-3 space-y-3 z-40 shadow-2xl animate-in slide-in-from-top duration-200">
-          <section className="mobile-games-panel" aria-labelledby="mobile-games-title">
+          <section
+            className="mobile-games-panel"
+            aria-labelledby="mobile-games-title"
+            style={{ '--mobile-game-color': currentGame.brandColor } as React.CSSProperties}
+          >
             <div className="mobile-games-heading">
-              <div><Gamepad2 className="size-4" /><span id="mobile-games-title">Cambiar juego</span></div>
-              <small>{Object.keys(GAMES_CATALOG).length} disciplinas</small>
+              <div>
+                <GameLogo game={currentGame} size="sm" />
+                <span className="mobile-games-active-copy">
+                  <small id="mobile-games-title">Disciplina activa</small>
+                  <strong>{currentGame.name}</strong>
+                </span>
+              </div>
+              <small>Cambiar disciplina</small>
             </div>
             <div className="mobile-games-grid">
-              {Object.values(GAMES_CATALOG).map((game) => (
-                <Link key={game.id} href={`/${game.slug}`} onClick={() => setIsMobileMenuOpen(false)} style={{ '--mobile-game-color': game.brandColor } as React.CSSProperties}>
-                  <GameLogo game={game} size="sm" />
-                  <span><strong>{game.name}</strong><small>{game.category}</small></span>
-                </Link>
-              ))}
+              {Object.values(GAMES_CATALOG).map((game) => {
+                const isActive = game.slug === currentGame.slug;
+                return (
+                  <Link
+                    key={game.id}
+                    href={`/${game.slug}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={isActive ? 'is-active' : ''}
+                    aria-current={isActive ? 'page' : undefined}
+                    style={{ '--mobile-game-color': game.brandColor } as React.CSSProperties}
+                  >
+                    <GameLogo game={game} size="sm" />
+                    <span><strong>{game.name}</strong><small>{game.category}</small></span>
+                  </Link>
+                );
+              })}
             </div>
           </section>
 

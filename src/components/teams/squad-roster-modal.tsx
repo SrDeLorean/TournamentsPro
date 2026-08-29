@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
+import { Modal } from '@/components/ui/modal';
 import {
   getTeamSquadAction,
   getAvailablePlayersForSquadAction,
@@ -116,8 +117,7 @@ export function SquadRosterModal({ isOpen, onClose, team, onRosterUpdated }: Squ
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 dark:bg-black/80 backdrop-blur-md animate-in fade-in font-mono">
-      <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[var(--text-primary)]">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Gestión de plantilla" size="xl" showCloseButton={false} className="p-0 flex flex-col overflow-hidden font-mono">
         {/* HEADER DEL MODAL */}
         <div className="p-5 sm:p-6 border-b border-[var(--border-card)] flex items-center justify-between bg-[var(--bg-card)]">
           <div className="flex items-center gap-3">
@@ -350,7 +350,6 @@ export function SquadRosterModal({ isOpen, onClose, team, onRosterUpdated }: Squ
             Cerrar Ventana
           </Button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

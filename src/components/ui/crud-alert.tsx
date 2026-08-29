@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, XCircle, Loader2, Clock, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,7 +21,7 @@ export function useCrudNotifier() {
     actionName: '',
   });
 
-  const startOperation = (actionName: string) => {
+  const startOperation = useCallback((actionName: string) => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString();
     setCrudState({
@@ -29,9 +30,9 @@ export function useCrudNotifier() {
       startTime: timeStr,
       startEpoch: now.getTime(),
     });
-  };
+  }, []);
 
-  const endSuccess = (message: string) => {
+  const endSuccess = useCallback((message: string) => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString();
     setCrudState((prev) => ({
@@ -42,9 +43,9 @@ export function useCrudNotifier() {
       durationMs: prev.startEpoch ? now.getTime() - prev.startEpoch : undefined,
       message,
     }));
-  };
+  }, []);
 
-  const endError = (message: string) => {
+  const endError = useCallback((message: string) => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString();
     setCrudState((prev) => ({
@@ -55,11 +56,23 @@ export function useCrudNotifier() {
       durationMs: prev.startEpoch ? now.getTime() - prev.startEpoch : undefined,
       message,
     }));
-  };
+  }, []);
 
-  const resetAlert = () => {
+  const resetAlert = useCallback(() => {
     setCrudState({ status: 'IDLE', actionName: '' });
-  };
+  }, []);
+
+  const runOperation = useCallback(async <T,>(actionName: string, operation: () => Promise<T>, successMessage: string | ((result: T) => string)) => {
+    startOperation(actionName);
+    try {
+      const result = await operation();
+      endSuccess(typeof successMessage === 'function' ? successMessage(result) : successMessage);
+      return result;
+    } catch (error) {
+      endError(error instanceof Error ? error.message : 'No se pudo completar la operación.');
+      throw error;
+    }
+  }, [endError, endSuccess, startOperation]);
 
   return {
     crudState,
@@ -67,6 +80,7 @@ export function useCrudNotifier() {
     endSuccess,
     endError,
     resetAlert,
+    runOperation,
   };
 }
 
@@ -76,7 +90,11 @@ interface CrudAlertProps {
 }
 
 export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
+  const [mounted, setMounted] = useState(false);
   const autoDismissMs = 6000;
+  // Portals depend on document.body and therefore mount after hydration.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), []);
   useEffect(() => {
     if (state.status === 'SUCCESS') {
       const timer = setTimeout(() => {
@@ -90,7 +108,9 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
   const isError = state.status === 'ERROR';
   const isLoading = state.status === 'LOADING';
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {state.status !== 'IDLE' && (
         <motion.div
@@ -101,7 +121,7 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
           role={isError ? 'alert' : 'status'}
           aria-live={isError ? 'assertive' : 'polite'}
           aria-atomic="true"
-          className={`fixed inset-x-3 top-3 z-[99999] mx-auto w-auto max-w-md overflow-hidden rounded-2xl border p-4 backdrop-blur-xl shadow-2xl sm:inset-x-auto sm:right-5 sm:top-5 sm:w-full ${
+          className={`ui-crud-alert fixed inset-x-3 top-[max(.75rem,env(safe-area-inset-top))] mx-auto w-auto max-w-md overflow-hidden rounded-2xl border p-4 backdrop-blur-xl shadow-2xl sm:inset-x-auto sm:right-5 sm:top-5 sm:w-full ${
             isLoading
               ? 'bg-[var(--bg-card)]/95 border-[var(--accent-cyan)]/50 text-[var(--accent-cyan)] shadow-[0_4px_20px_color-mix(in_srgb,var(--accent-cyan)_20%,transparent)]'
               : isSuccess
@@ -170,6 +190,7 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
           )}
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
 import { AlertTriangle, ShieldAlert, X, Trash2 } from 'lucide-react';
 
 interface RegenerateWarningModalProps {
@@ -33,8 +34,7 @@ export function RegenerateWarningModal({
   };
 
   return (
-    <div className="fixed inset-0 modal-layer flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="glass-panel w-full max-w-lg rounded-2xl border-rose-500/50 p-6 space-y-6 shadow-2xl relative overflow-hidden">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Regenerar fixture" size="md" showCloseButton={false} closeDisabled={isSubmitting} className="glass-panel border-rose-500/50 p-6 space-y-6 relative overflow-hidden">
         {/* Header con icono de peligro */}
         <div className="flex items-start justify-between border-b border-rose-500/20 pb-4">
           <div className="flex items-center gap-3">
@@ -117,7 +117,6 @@ export function RegenerateWarningModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

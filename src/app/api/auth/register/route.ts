@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db/provider';
+
 import { hashPassword, signToken } from '@/lib/auth';
 import { UserRow, apiError } from '@/lib/api-types';
 import { authorizationErrorResponse, requireValidMutationOrigin } from '@/lib/auth-server';
@@ -52,12 +52,11 @@ export async function POST(request: Request) {
     }
 
     // ── Check if gamertag or email already exists ────────────────────────
-    const existing = await queryDB<UserRow>(
-      'SELECT id FROM users WHERE LOWER(gamertag) = LOWER(?) OR LOWER(email) = LOWER(?) LIMIT 1',
-      [userGamertag, userEmail]
-    );
+    const { dbProvider } = await import('@/lib/db/provider');
+    const existing = await dbProvider.users.findByEmailOrGamertag(userEmail);
+    const existingGt = await dbProvider.users.findByEmailOrGamertag(userGamertag);
 
-    if (existing && existing.length > 0) {
+    if (existing || existingGt) {
       return apiError('El gamertag o email ya está registrado. Intenta iniciar sesión.', 409, 'DUPLICATE_USER');
     }
 
@@ -78,18 +77,22 @@ export async function POST(request: Request) {
 
     // ── Insert user ─────────────────────────────────────────────────────
     const newUser = {
-      id: userId,
-      email: body.email,
-      passwordHash: hashed,
-      name: body.name,
-      gamertag: body.gamertag,
-      role: 'Jugador',
-      primaryGameSlug: 'eafc26',
-      status: 'Activo',
-      createdAt: now,
-      updatedAt: now,
+      id: newId,
+      email: userEmail,
+      passwordHash: hashedPassword,
+      name: userName,
+      gamertag: userGamertag,
+      role: userRole,
+      primaryGameSlug: gameSlug,
+      platform: userPlatform,
+      position: defaultPosition,
+      rating: 9.0,
+      status: 'Buscando Club',
+      avatarUrl: '/images/default/logo-default.png',
+      bannerUrl: '/images/default/banner-default.jpg',
+      isBanned: false,
     };
-    await import('@/lib/db/provider').then(m => m.dbProvider.users.create(newUser));
+    await dbProvider.users.create(newUser);
 
     // ── Generate JWT ────────────────────────────────────────────────────
     const session = await createAuthSession(newId, request);

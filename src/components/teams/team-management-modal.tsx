@@ -7,6 +7,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
+import { Modal } from '@/components/ui/modal';
 import {
   Users, Plus, Trash2, CheckCircle2, Settings, Sparkles, X, Award, Check
 } from 'lucide-react';
@@ -110,8 +111,7 @@ export function TeamManagementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl glass-panel p-6 sm:p-8 rounded-3xl border border-purple-500/40 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 my-8">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel={`Gestión de ${currentTeam.name}`} size="lg" showCloseButton={false} className="glass-panel p-6 sm:p-8 border-purple-500/40 space-y-6">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
@@ -372,7 +372,6 @@ export function TeamManagementModal({
             Guardar & Cerrar
           </Button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

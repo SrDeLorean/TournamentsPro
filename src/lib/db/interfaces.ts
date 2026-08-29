@@ -31,9 +31,19 @@ export interface User {
   rating: number;
   status: string;
   avatarUrl: string | null;
+  foto?: string | null;
+  bannerUrl?: string | null;
+  biografia?: string | null;
+  twitter?: string | null;
+  instagram?: string | null;
+  twitch?: string | null;
+  discord?: string | null;
+  youtube?: string | null;
+  whatsapp?: string | null;
   organizationId: string | null;
   isBanned: boolean;
   banReason: string | null;
+  bannedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string | null;
@@ -71,6 +81,8 @@ export interface Team {
   bannerUrl: string | null;
   status: string;
   clubIdEa: string | null;
+  isBanned?: boolean;
+  banReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -131,6 +143,7 @@ export interface ITeamRepository extends IRepository<Team> {
   findByOrganization(orgId: string): Promise<Team[]>;
   findByGameSlug(gameSlug: string): Promise<Team[]>;
   updateMembersCount(teamId: string): Promise<void>;
+  getManagers(teamId: string): Promise<string[]>;
 }
 
 export interface ICompetitionRepository extends IRepository<Competition> {

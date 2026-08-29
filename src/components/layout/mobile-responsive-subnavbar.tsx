@@ -8,9 +8,15 @@ import { GameConfig } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
 import { PUBLIC_GAME_NAV_ITEMS } from '@/lib/section-config';
-import { GameSwitcher } from '@/components/layout/game-switcher';
 import {
-  Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, UserCheck, Calendar, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard
+  findManagedTeamForUser,
+  getAthleteNavigation,
+  getClubNavigation,
+  isAuthenticatedNavItemActive,
+  type AuthenticatedNavItemId,
+} from '@/lib/authenticated-navigation';
+import {
+  Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, UserCheck, Calendar, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard, MessageSquare
 } from 'lucide-react';
 
 export type MobileSubnavSegment = 'game' | 'athlete' | 'club';
@@ -37,13 +43,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
 
   // Check if user has team in THIS active discipline
   const teamsPool = userTeams && userTeams.length > 0 ? userTeams : initialTeams;
-  const myTeam = teamsPool.find(
-    (t) =>
-      t.gameSlug === game.slug &&
-      (t.captainName?.toLowerCase() === currentUser?.name?.toLowerCase() ||
-        t.captainName?.toLowerCase() === currentUser?.gamertag?.toLowerCase() ||
-        t.id === currentUser?.teamId)
-  );
+  const myTeam = findManagedTeamForUser(teamsPool, currentUser, game.slug);
 
   // 1. Game Sections
   const gameSectionIcons: Record<(typeof PUBLIC_GAME_NAV_ITEMS)[number]['id'], React.ReactNode> = {
@@ -67,22 +67,20 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
 
   const userId = currentUser?.id || 'usr-1784762163316';
 
-  // 2. Athlete User Options
-  const athleteOptions = [
-    { id: 'dashboard', label: 'Dashboard', href: `/${game.slug}/jugadores/${userId}`, icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-    { id: 'stats', label: 'Mis Stats', href: `/${game.slug}/stats`, icon: <BarChart2 className="w-3.5 h-3.5" /> },
-    { id: 'ofertas', label: 'Mis Ofertas', href: `/${game.slug}/ofertas`, icon: <FileText className="w-3.5 h-3.5" /> },
-    { id: 'ajustes', label: 'Ajustes', href: `/${game.slug}/atleta-ajustes`, icon: <Settings className="w-3.5 h-3.5" /> },
-  ];
-
-  // 3. Club Captain Options
-  const clubOptions = [
-    { id: 'dashboard', label: 'Dashboard', href: myTeam ? `/${game.slug}/equipos/${myTeam.id}` : `/${game.slug}/ajustes`, icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-    { id: 'plantilla', label: 'Plantilla', href: `/${game.slug}/plantilla`, icon: <Users className="w-3.5 h-3.5" /> },
-    { id: 'reclutamiento', label: 'Vacantes', href: `/${game.slug}/reclutamiento`, icon: <Sparkles className="w-3.5 h-3.5" /> },
-    { id: 'matchday', label: 'Matchday', href: `/${game.slug}/matchday`, icon: <Award className="w-3.5 h-3.5" /> },
-    { id: 'ajustes', label: 'Ajustes', href: `/${game.slug}/ajustes`, icon: <Settings className="w-3.5 h-3.5" /> },
-  ];
+  const authenticatedIcons: Record<AuthenticatedNavItemId, React.ReactNode> = {
+    profile: <User className="w-3.5 h-3.5" />,
+    stats: <BarChart2 className="w-3.5 h-3.5" />,
+    offers: <FileText className="w-3.5 h-3.5" />,
+    messages: <MessageSquare className="w-3.5 h-3.5" />,
+    'athlete-settings': <Settings className="w-3.5 h-3.5" />,
+    'club-dashboard': <LayoutDashboard className="w-3.5 h-3.5" />,
+    roster: <Users className="w-3.5 h-3.5" />,
+    recruitment: <Sparkles className="w-3.5 h-3.5" />,
+    matchday: <Award className="w-3.5 h-3.5" />,
+    'club-settings': <Settings className="w-3.5 h-3.5" />,
+  };
+  const athleteOptions = getAthleteNavigation(game.slug, userId);
+  const clubOptions = myTeam ? getClubNavigation(game.slug, myTeam.id) : [];
   const showSegmentSwitcher = isAuthenticated && !isAdminOrOrganizer;
 
   return (
@@ -90,11 +88,6 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
       className="game-portal-mobile-nav block md:hidden w-full border-b border-[var(--border-card)] shadow-lg"
       style={{ '--game-brand': game.brandColor } as React.CSSProperties}
     >
-      <div className="game-portal-mobile-game-row">
-        <GameSwitcher game={game} />
-        <span>Portal competitivo</span>
-      </div>
-      
       {/* 1. Top Mobile Segmented Controller (1 Row) */}
       {showSegmentSwitcher ? <div className="game-portal-mobile-segments flex items-center justify-around border-b border-[var(--border-card)] p-1 text-xs font-black" role="tablist" aria-label="Cambiar contexto de navegación">
         
@@ -179,7 +172,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
         {/* Render ATLETA Options */}
         {activeSegment === 'athlete' &&
           athleteOptions.map((opt) => {
-            const isActive = pathname === opt.href;
+            const isActive = isAuthenticatedNavItemActive(pathname, opt);
             return (
               <Link
                 key={opt.id}
@@ -191,8 +184,8 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
                     : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:bg-[var(--bg-card-hover)]'
                 }`}
               >
-                {opt.icon}
-                <span>{opt.label}</span>
+                {authenticatedIcons[opt.id]}
+                <span>{opt.shortLabel}</span>
               </Link>
             );
           })}
@@ -200,7 +193,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
         {/* Render CLUB Options */}
         {activeSegment === 'club' &&
           clubOptions.map((opt) => {
-            const isActive = pathname === opt.href;
+            const isActive = isAuthenticatedNavItemActive(pathname, opt);
             return (
               <Link
                 key={opt.id}
@@ -212,8 +205,8 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
                     : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:bg-[var(--bg-card-hover)]'
                 }`}
               >
-                {opt.icon}
-                <span>{opt.label}</span>
+                {authenticatedIcons[opt.id]}
+                <span>{opt.shortLabel}</span>
               </Link>
             );
           })}

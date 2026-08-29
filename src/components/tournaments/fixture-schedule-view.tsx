@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { MatchReportModal } from '@/components/matches/match-report-modal';
 import { CountryFlag } from '@/components/ui/country-flag';
+import { Modal } from '@/components/ui/modal';
 import { TacticalLoadingSkeleton } from './tactical-loading-skeleton';
 import { MatchCard } from './match-card';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
@@ -1464,8 +1465,7 @@ export function FixtureScheduleView({
 
       {/* Modal de Equivalencia de Horarios por Región con Banderas de Países LATAM */}
       {isTimezoneModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
-          <div className="relative w-full max-w-md bg-[var(--bg-card)] border border-[var(--border-card)] rounded-3xl p-6 shadow-2xl space-y-5">
+        <Modal isOpen onClose={() => setIsTimezoneModalOpen(false)} ariaLabel="Horarios por país" size="sm" showCloseButton={false} className="p-6 space-y-5">
             
             <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
               <div className="flex items-center gap-2">
@@ -1525,8 +1525,7 @@ export function FixtureScheduleView({
                 Cerrar Ventana
               </Button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

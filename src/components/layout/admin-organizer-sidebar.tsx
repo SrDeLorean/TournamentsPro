@@ -6,21 +6,53 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Badge } from '@/components/ui/badge';
 import {
-  Shield, Users, LayoutDashboard, Calendar, Award, ArrowRightLeft, CheckCircle2, Menu, X, Gamepad2, Swords, Globe, Home, Star, PieChart, Database, Target, Building2, MessageSquare
+  Shield, Users, LayoutDashboard, Calendar, Award, ArrowRightLeft, CheckCircle2, Gamepad2, Swords, Globe, Home, Star, PieChart, Database, Target, Building2, MessageSquare
 } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 
-export function AdminOrganizerSidebar() {
+interface AdminOrganizerSidebarProps {
+  isDocked: boolean;
+  isMobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
+}
+
+function isNavigationItemActive(pathname: string, href: string) {
+  if (href === '/dashboard') return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function AdminOrganizerSidebar({ isDocked, isMobileOpen, onMobileOpenChange }: AdminOrganizerSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser, activeGameSlug, setActiveGameSlug } = useAuth();
-  const [isMobileOpen, setIsMobileOpen] = React.useState(false);
 
   const roleStr = (currentUser?.role || '').toLowerCase();
   const isAdmin = roleStr === 'administrador' || roleStr === 'admin';
   const isOrganizer = roleStr === 'organizador';
 
-  // Do not render sidebar for regular players/captains
+  React.useEffect(() => {
+    if (!isMobileOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const mobileViewport = window.matchMedia('(max-width: 1023px)');
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onMobileOpenChange(false);
+    };
+    const syncScrollLock = () => {
+      document.body.style.overflow = !isDocked || mobileViewport.matches ? 'hidden' : previousOverflow;
+    };
+
+    syncScrollLock();
+    document.addEventListener('keydown', closeOnEscape);
+    mobileViewport.addEventListener('change', syncScrollLock);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', closeOnEscape);
+      mobileViewport.removeEventListener('change', syncScrollLock);
+    };
+  }, [isDocked, isMobileOpen, onMobileOpenChange]);
+
+  // Do not render sidebar for regular players/captains.
   if (!isAdmin && !isOrganizer) {
     return null;
   }
@@ -97,10 +129,16 @@ export function AdminOrganizerSidebar() {
       badge: 'Home',
     },
     {
-      title: 'Torneos',
+      title: 'Organizaciones',
       href: `/${activeGameSlug}/organizaciones`,
       icon: <Target className="w-4 h-4 text-yellow-400" />,
-      badge: 'Ligas',
+      badge: 'Orgs.',
+    },
+    {
+      title: 'Torneos y competencias',
+      href: `/${activeGameSlug}/competencias`,
+      icon: <Swords className="w-4 h-4 text-purple-400" />,
+      badge: 'Torneos',
     },
     {
       title: `Clasificación`,
@@ -154,38 +192,19 @@ export function AdminOrganizerSidebar() {
 
   return (
     <>
-      {/* Mobile Toggle Bar */}
-      <div className="fixed inset-x-0 top-14 z-40 flex h-[3.25rem] items-center justify-between gap-2 border-b border-[var(--border-card)] bg-[var(--bg-nav)]/95 px-3 backdrop-blur-xl lg:hidden">
-        <div className="flex min-w-0 items-center gap-2">
-          <Badge variant={isAdmin ? 'cyan' : 'emerald'} className="text-[10px] uppercase font-bold">
-            {isAdmin ? '🛡️ PANEL ADMIN' : '🏆 PANEL ORGANIZADOR'}
-          </Badge>
-          <span className="text-xs text-white font-bold truncate">
-            @{currentUser?.gamertag || 'organizador'} • {currentGameObj.name}
-          </span>
-        </div>
-
-        <button
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          aria-expanded={isMobileOpen}
-          aria-label={isMobileOpen ? 'Cerrar menú administrativo' : 'Abrir menú administrativo'}
-          className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-2 text-[var(--text-primary)]"
-        >
-          {isMobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-        </button>
-      </div>
-
       {isMobileOpen && (
         <button
           type="button" aria-label="Cerrar menú administrativo"
-          onClick={() => setIsMobileOpen(false)}
-          className="fixed inset-0 top-[6.5rem] z-30 bg-black/55 backdrop-blur-sm lg:hidden"
+          onClick={() => onMobileOpenChange(false)}
+          className={`fixed inset-0 top-14 z-30 bg-black/60 backdrop-blur-sm ${isDocked ? 'lg:hidden' : ''}`}
         />
       )}
 
       {/* Desktop & Mobile Sidebar Container */}
       <aside
-        className={`fixed bottom-0 left-0 top-[6.5rem] z-40 flex w-[min(18rem,calc(100vw-1rem))] flex-col justify-between overflow-y-auto overscroll-contain border-r border-[var(--border-card)] bg-[var(--bg-nav)]/95 p-3 backdrop-blur-xl transition-transform duration-300 lg:top-14 lg:w-72 lg:translate-x-0 lg:p-4 ${
+        id="management-navigation"
+        aria-label={isAdmin ? 'Navegación administrativa' : 'Navegación del organizador'}
+        className={`management-sidebar fixed bottom-0 left-0 top-14 z-40 flex w-[min(18rem,calc(100vw-1rem))] flex-col justify-between overflow-y-auto overscroll-contain border-r border-[var(--border-card)] bg-[var(--bg-nav)]/97 p-3 shadow-2xl backdrop-blur-xl transition-transform duration-300 lg:w-72 lg:p-4 ${isDocked ? 'lg:translate-x-0 lg:shadow-none' : ''} ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -219,12 +238,12 @@ export function AdminOrganizerSidebar() {
 
             <nav className="space-y-1">
               {globalNavItems.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = isNavigationItemActive(pathname, item.href);
                 return (
                   <Link
                     key={item.title}
                     href={item.href}
-                    onClick={() => setIsMobileOpen(false)}
+                    onClick={() => onMobileOpenChange(false)}
                     className={`w-full p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between group ${
                       isActive
                         ? 'border-[var(--accent-cyan)]/30 bg-[var(--accent-cyan-bg)] text-[var(--accent-cyan)] shadow-sm font-black'
@@ -249,12 +268,12 @@ export function AdminOrganizerSidebar() {
             </nav>
           </div>
 
-          {/* 🏆 SECCIÓN 2: GESTIÓN POR DISCIPLINA */}
+          {/* Public shortcuts preserve the same pages an anonymous visitor sees. */}
           <div className="space-y-2 border-t border-[var(--border-card)] pt-3">
             <div className="space-y-1">
               <span className="text-[10px] font-black uppercase text-purple-300 tracking-wider px-2 block flex items-center gap-1">
                 <Gamepad2 className="w-3 h-3 text-purple-400" />
-                GESTIÓN POR DISCIPLINA:
+                ACCESOS PÚBLICOS POR DISCIPLINA
               </span>
 
               {/* Selector de Juego / Disciplina Activa */}
@@ -282,12 +301,12 @@ export function AdminOrganizerSidebar() {
             {/* Links de la Disciplina */}
             <nav className="space-y-1">
               {disciplineNavItems.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = isNavigationItemActive(pathname, item.href);
                 return (
                   <Link
                     key={item.title}
                     href={item.href}
-                    onClick={() => setIsMobileOpen(false)}
+                    onClick={() => onMobileOpenChange(false)}
                     className={`w-full p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between group ${
                       isActive
                         ? 'border-[var(--accent-violet)]/30 bg-[var(--accent-violet-bg)] text-[var(--accent-violet)] shadow-sm font-black'
@@ -316,10 +335,10 @@ export function AdminOrganizerSidebar() {
         {/* Bottom System Status */}
         <div className="space-y-1 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-3">
           <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span>Disciplina Activa:</span>
+            <span>Vista pública activa:</span>
             <span className="text-cyan-400 font-bold">{currentGameObj.name}</span>
           </div>
-          <p className="text-[9px] text-slate-400 font-mono">Filtro Exclusivo eSports</p>
+          <p className="text-[9px] text-slate-400 font-mono">El contenido se muestra sin herramientas de edición.</p>
         </div>
       </aside>
     </>

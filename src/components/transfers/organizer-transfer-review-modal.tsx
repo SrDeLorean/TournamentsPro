@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
 import { getAthleteTransferHistoryAction, approveExtraordinaryTransferAction, rejectExtraordinaryTransferAction } from '@/app/actions/transfers';
 import {
   Shield,
@@ -120,11 +121,7 @@ export function OrganizerTransferReviewModal({
   const isHighMobility = totalMoves >= 3;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div
-        className="w-full max-w-2xl bg-[var(--bg-card)] border border-[var(--border-card)] rounded-3xl overflow-hidden shadow-2xl space-y-0 text-[var(--text-primary)] relative backdrop-blur-xl max-h-[90vh] flex flex-col"
-        style={{ '--modal-brand': brandColor } as React.CSSProperties}
-      >
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Evaluación de traspaso extraordinario" size="lg" showCloseButton={false} closeDisabled={submitting} className="p-0 overflow-hidden space-y-0 relative flex flex-col" style={{ '--modal-brand': brandColor } as React.CSSProperties}>
         {/* Header Bar */}
         <div className="px-6 py-4 border-b border-[var(--border-card)] bg-[var(--bg-main)]/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -316,7 +313,6 @@ export function OrganizerTransferReviewModal({
             </>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

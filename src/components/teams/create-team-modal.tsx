@@ -9,6 +9,7 @@ import { getAuthHeaders } from '@/lib/fetch-utils';
 import { GameLogo } from '@/components/ui/game-logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Modal } from '@/components/ui/modal';
 import { Shield, Sparkles, AlertCircle, X } from 'lucide-react';
 
 import { compressImageToWebP } from '@/lib/image-compressor';
@@ -130,8 +131,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-3 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-xl bg-slate-950 border border-purple-500/40 rounded-3xl p-5 sm:p-7 space-y-6 shadow-[0_0_50px_rgba(168,85,247,0.2)] animate-in fade-in zoom-in-95 my-6 relative overflow-hidden">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Fundar nueva escuadra" size="lg" showCloseButton={false} closeDisabled={isSubmitting} className="bg-slate-950 border-purple-500/40 p-5 sm:p-7 space-y-6 shadow-[0_0_50px_rgba(168,85,247,0.2)] relative overflow-y-auto overflow-x-hidden">
         
         {/* Glowing Background Accent Circle */}
         <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-purple-600/20 blur-3xl pointer-events-none" />
@@ -459,7 +459,6 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -17,9 +17,21 @@ export interface ModalProps {
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
   closeDisabled?: boolean;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  showCloseButton?: boolean;
+  style?: React.CSSProperties;
 }
 
-export function Modal({ isOpen, onClose, title, description, ariaLabel, children, className, closeOnBackdrop = true, closeOnEscape = true, closeDisabled = false }: ModalProps) {
+const modalSizes: Record<NonNullable<ModalProps['size']>, string> = {
+  sm: 'max-w-md',
+  md: 'max-w-xl',
+  lg: 'max-w-3xl',
+  xl: 'max-w-5xl',
+  '2xl': 'max-w-7xl',
+  full: 'max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)]',
+};
+
+export function Modal({ isOpen, onClose, title, description, ariaLabel, children, className, closeOnBackdrop = true, closeOnEscape = true, closeDisabled = false, size = 'md', showCloseButton = true, style }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -34,7 +46,7 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && closeOnEscape) onClose();
+      if (e.key === 'Escape' && closeOnEscape && !closeDisabled) onClose();
       if (e.key !== 'Tab' || !dialogRef.current) return;
       const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'));
       if (focusable.length === 0) return;
@@ -66,14 +78,14 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
         previousFocusRef.current?.focus();
       };
     }
-  }, [closeOnEscape, isOpen, onClose]);
+  }, [closeDisabled, closeOnEscape, isOpen, onClose]);
 
   if (!mounted) return null;
 
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+        <div className="ui-modal-layer fixed inset-0 flex items-center justify-center p-2 sm:p-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -81,7 +93,7 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 bg-slate-950/60 dark:bg-black/80 backdrop-blur-md"
-            onClick={closeOnBackdrop ? onClose : undefined}
+            onClick={closeOnBackdrop && !closeDisabled ? onClose : undefined}
           />
 
           {/* Modal Dialog */}
@@ -96,12 +108,14 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
             aria-label={!title ? ariaLabel : undefined}
             aria-labelledby={title ? titleId : undefined}
             aria-describedby={description ? descriptionId : undefined}
+            style={style}
             className={cn(
-              "relative z-10 w-full max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[var(--ui-radius-card)] bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] p-4 sm:p-6 shadow-2xl text-[var(--text-primary)] font-sans",
+              "relative z-10 w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[var(--ui-radius-card)] bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] p-4 sm:p-6 shadow-2xl text-[var(--text-primary)] font-sans",
+              modalSizes[size],
               className
             )}
           >
-            <button
+            {showCloseButton ? <button
               type="button"
               onClick={onClose}
               disabled={closeDisabled}
@@ -110,7 +124,7 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
               title="Cerrar modal (Esc)"
             >
               <X className="w-4 h-4" />
-            </button>
+            </button> : null}
 
             {title && (
               <div className="mb-5 pr-8">

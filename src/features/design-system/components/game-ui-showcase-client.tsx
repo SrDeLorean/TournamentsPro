@@ -15,6 +15,7 @@ import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { DesignControls } from '@/components/ui/design-controls';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
 import {
   Flame,
   Shield,
@@ -46,6 +47,7 @@ export default function GameUIShowcaseClient({ gameSlug }: GameUIShowcaseClientP
   const [selectedTournName, setSelectedTournName] = useState('TODAS');
   const [selectedDate, setSelectedDate] = useState('2026-08-02');
   const [reportModalMatch, setReportModalMatch] = useState<FixtureMatchItem | null>(null);
+  const [timezoneReference, setTimezoneReference] = useState<string | null>(null);
 
   // Mock Calendar Days
   const mockCalendarDays: CalendarDayItem[] = useMemo(
@@ -352,7 +354,7 @@ export default function GameUIShowcaseClient({ gameSlug }: GameUIShowcaseClientP
                           isAdminOrOrganizer={simulatedRole === 'ADMIN'}
                           isCaptainOrCoach={simulatedRole === 'CAPTAIN'}
                           onOpenReportModal={(match) => setReportModalMatch(match)}
-                          onOpenTimezoneModal={(tStr) => alert(`Zonas Horarias para ${tStr} CLT`)}
+                          onOpenTimezoneModal={setTimezoneReference}
                         />
                       ))}
                     </div>
@@ -464,6 +466,17 @@ export default function GameUIShowcaseClient({ gameSlug }: GameUIShowcaseClientP
           onClose={() => setReportModalMatch(null)}
         />
       )}
+      <Modal
+        isOpen={Boolean(timezoneReference)}
+        onClose={() => setTimezoneReference(null)}
+        title="Referencia horaria"
+        description="Hora oficial mostrada en el calendario competitivo."
+        size="sm"
+      >
+        <p className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-4 font-mono text-sm text-[var(--text-primary)]">
+          {timezoneReference} CLT · America/Santiago
+        </p>
+      </Modal>
     </div>
   );
 }

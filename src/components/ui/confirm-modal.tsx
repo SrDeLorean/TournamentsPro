@@ -71,7 +71,7 @@ export function ConfirmModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} ariaLabel={title} closeOnBackdrop={!isSubmitting} closeOnEscape={!isSubmitting} closeDisabled={isSubmitting} className={`ui-confirm-modal max-w-md p-5 sm:p-7 bg-[var(--bg-card)] backdrop-blur-2xl border ${styles.border} shadow-2xl space-y-5 font-mono text-[var(--text-primary)]`}>
+    <Modal isOpen={isOpen} onClose={handleClose} ariaLabel={title} closeOnBackdrop={!isSubmitting} closeOnEscape={!isSubmitting} closeDisabled={isSubmitting} size="sm" className={`ui-confirm-modal p-5 sm:p-7 bg-[var(--bg-card)] backdrop-blur-2xl border ${styles.border} shadow-2xl space-y-5 font-mono text-[var(--text-primary)]`}>
       <div className="flex items-start gap-3 sm:gap-4">
         <div className={`p-2.5 sm:p-3 rounded-2xl border border-[var(--border-card)] shrink-0 ${styles.iconBg}`}>{styles.icon}</div>
         <div className="min-w-0 pt-0.5">
@@ -93,6 +93,7 @@ export function ConfirmModal({
         <div className="space-y-1.5 pt-2">
           <label className="text-xs font-extrabold text-[var(--text-heading)] uppercase block tracking-wider">Motivo / Razón de la Acción:</label>
           <textarea
+            data-autofocus={!confirmationText || undefined}
             rows={3}
             value={reason}
             onChange={(e) => setReason(e.target.value)}

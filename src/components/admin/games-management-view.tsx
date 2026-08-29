@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Gamepad2, Plus, Save, Server, Shield, Loader2, Trash2, Activity } from 'lucide-react';
+import { Gamepad2, Plus, Server, Shield, Loader2, Trash2, Activity } from 'lucide-react';
 import {
   ManagementGrid,
   ManagementHero,
@@ -14,6 +14,7 @@ import {
 } from '@/components/dashboard/management-ui';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
+import { ModalForm } from '@/components/ui/modal-form';
 
 interface StatSchemaField {
   key: string;
@@ -43,6 +44,7 @@ export function GamesManagementView() {
   const [newCategory, setNewCategory] = useState('');
   const [newBrandColor, setNewBrandColor] = useState('#00F0FF');
   const [statsSchema, setStatsSchema] = useState<StatSchemaField[]>([{ key: 'kills', label: 'Kills', type: 'number' }]);
+  const [formError, setFormError] = useState('');
 
   const fetchGames = async () => {
     try {
@@ -93,9 +95,15 @@ export function GamesManagementView() {
     }
   };
 
-  const handleSave = async () => {
-    if (!newSlug || !newName) return alert('Slug y Nombre son obligatorios');
+  const handleSave = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+    setFormError('');
+    if (!newSlug.trim() || !newName.trim()) {
+      setFormError('El slug y el nombre son obligatorios.');
+      return;
+    }
     setIsSaving(true);
+    startOperation(`${games.some((game) => game.slug === newSlug) ? 'Actualización' : 'Creación'} de disciplina: ${newName}`);
     try {
       const res = await fetch('/api/admin/games', {
         method: 'POST',
@@ -111,13 +119,15 @@ export function GamesManagementView() {
       const data = await res.json();
       if (res.ok) {
         setIsAdding(false);
-        fetchGames();
+        await fetchGames();
+        endSuccess(`La disciplina "${newName}" fue guardada correctamente.`);
       } else {
-        alert(data.error || 'Error al guardar');
+        throw new Error(data.error || 'No se pudo guardar la disciplina.');
       }
-    } catch (e) {
-      console.error(e);
-      alert('Error de red');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error de red al guardar la disciplina.';
+      setFormError(message);
+      endError(message);
     } finally {
       setIsSaving(false);
     }
@@ -148,8 +158,17 @@ export function GamesManagementView() {
 
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
 
-      {isAdding && (
-        <ManagementSection title="Nueva disciplina" description="Define la identidad del juego y el esquema que utilizarán sus reportes." icon={Plus} tone="cyan">
+      <ModalForm
+        isOpen={isAdding}
+        onClose={() => { setIsAdding(false); setFormError(''); }}
+        onSubmit={handleSave}
+        isSubmitting={isSaving}
+        title={games.some((game) => game.slug === newSlug) ? `Editar ${newName}` : 'Nueva disciplina'}
+        subtitle="Define la identidad del juego y el esquema que utilizarán sus reportes."
+        submitButtonText="Guardar disciplina"
+        errorMessage={formError}
+        size="xl"
+      >
           <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -184,16 +203,8 @@ export function GamesManagementView() {
             </Button>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="ghost" onClick={() => setIsAdding(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={isSaving} className="bg-cyan-600 hover:bg-cyan-500">
-              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Guardar Disciplina
-            </Button>
           </div>
-          </div>
-        </ManagementSection>
-      )}
+      </ModalForm>
 
       <ManagementSection title="Base de datos de juegos" description="Selecciona una disciplina para editar su identidad y estadísticas." icon={Gamepad2} tone="violet">
         {isLoading ? (
@@ -213,8 +224,8 @@ export function GamesManagementView() {
                     setNewCategory(g.category);
                     setNewBrandColor(g.brand_color);
                     setStatsSchema(Array.isArray(g.stats_schema) ? g.stats_schema : [{ key: 'kills', label: 'Kills', type: 'number' }]);
+                    setFormError('');
                     setIsAdding(true);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                 >
                   Editar

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db/provider';
 
 interface TournamentListRow {
   id: string;

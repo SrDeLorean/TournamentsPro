@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDB } from '@/lib/db/provider';
+
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import {
   canManageOrganization,
@@ -16,23 +16,15 @@ interface AdminTeamRow extends Record<string, unknown> {
 }
 
 async function loadTeamScope(teamId: string) {
-  const teams = await queryDB<{
-    id: string;
-    organization_id: string | null;
-    captain_id: string | null;
-    encargados_json: string | null;
-  }>('SELECT id, organization_id, captain_id, encargados_json FROM teams WHERE id = ? LIMIT 1', [teamId]);
-  const team = teams[0];
+  const { dbProvider } = await import('@/lib/db/provider');
+  const team = await dbProvider.teams.findById(teamId);
   if (!team) return null;
 
-  const members = await queryDB<{ user_id: string }>(
-    `SELECT user_id FROM team_members
-      WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán')`,
-    [teamId],
-  );
+  const members = await dbProvider.teams.getManagers(teamId);
   let configuredManagers: string[] = [];
   try {
-    const parsed: unknown = team.encargados_json ? JSON.parse(team.encargados_json) : [];
+    const encargadosJson = (team as any).encargados_json || '[]';
+    const parsed: unknown = typeof encargadosJson === 'string' ? JSON.parse(encargadosJson) : encargadosJson;
     if (Array.isArray(parsed)) {
       configuredManagers = parsed.flatMap((entry) => {
         if (typeof entry === 'string') return [entry];
@@ -45,9 +37,9 @@ async function loadTeamScope(teamId: string) {
   }
 
   return {
-    organizationId: team.organization_id,
-    captainId: team.captain_id,
-    managerIds: [...members.map((member) => member.user_id), ...configuredManagers],
+    organizationId: team.organizationId,
+    captainId: team.captainId,
+    managerIds: [...members, ...configuredManagers],
   };
 }
 
@@ -58,15 +50,19 @@ async function canAssignTeamStaff(
 ): Promise<boolean> {
   if (isAdministrator(actor) || userIds.length === 0) return true;
   if (!organizationId || organizationId !== actor.organizationId) return false;
+
+  const { dbProvider } = await import('@/lib/db/provider');
   const uniqueIds = [...new Set(userIds)];
-  const placeholders = uniqueIds.map(() => '?').join(', ');
-  const users = await queryDB<{ id: string; organization_id: string | null }>(
-    `SELECT id, organization_id FROM users WHERE id IN (${placeholders})`,
-    uniqueIds,
-  );
-  return users.length === uniqueIds.length && users.every(
-    (user) => user.organization_id === null || user.organization_id === organizationId,
-  );
+
+  let allValid = true;
+  for (const uid of uniqueIds) {
+    const user = await dbProvider.users.findById(uid);
+    if (!user || (user.organizationId !== null && user.organizationId !== organizationId)) {
+      allValid = false;
+      break;
+    }
+  }
+  return allValid;
 }
 
 // GET /api/admin/teams - List teams with status & ban filters
@@ -77,31 +73,34 @@ export async function GET(request: Request) {
     const gameSlug = searchParams.get('gameSlug');
     const isBanned = searchParams.get('isBanned');
 
-    let sql = `SELECT * FROM teams WHERE 1=1`;
-    const params: (string | number | null)[] = [];
+    const where: Record<string, unknown> = {};
 
     if (!isAdministrator(actor)) {
-      sql += ` AND organization_id = ?`;
-      params.push(actor.organizationId);
+      where.organizationId = actor.organizationId;
     }
 
     if (gameSlug) {
-      sql += ` AND game_slug = ?`;
-      params.push(gameSlug);
+      where.gameSlug = gameSlug;
     }
     if (isBanned !== null && isBanned !== undefined) {
-      sql += ` AND is_banned = ?`;
-      params.push(isBanned === 'true' || isBanned === '1' ? 1 : 0);
+      where.isBanned = isBanned === 'true' || isBanned === '1';
     }
 
-    sql += ` ORDER BY created_at DESC`;
-    const teams = await queryDB<AdminTeamRow>(sql, params);
+    const { dbProvider } = await import('@/lib/db/provider');
+    const teams = await dbProvider.teams.findAll({ where, orderBy: 'created_at', orderDirection: 'DESC' });
 
     // Parse socialMedia and encargados JSON for each team
     const parsedTeams = teams.map((t) => ({
-      ...t,
-      socialMedia: t.redes_sociales ? (typeof t.redes_sociales === 'string' ? JSON.parse(t.redes_sociales) : t.redes_sociales) : {},
-      encargados: t.encargados_json ? (typeof t.encargados_json === 'string' ? JSON.parse(t.encargados_json) : t.encargados_json) : [],
+      id: t.id,
+      name: t.name,
+      tag: t.tag,
+      game_slug: t.gameSlug,
+      status: t.status,
+      is_banned: t.isBanned ? 1 : 0,
+      ban_reason: t.banReason,
+      captain_name: t.captainName,
+      socialMedia: (t as any).redes_sociales ? (typeof (t as any).redes_sociales === 'string' ? JSON.parse((t as any).redes_sociales) : (t as any).redes_sociales) : {},
+      encargados: (t as any).encargados_json ? (typeof (t as any).encargados_json === 'string' ? JSON.parse((t as any).encargados_json) : (t as any).encargados_json) : [],
     }));
 
     return NextResponse.json({ success: true, teams: parsedTeams });
@@ -247,15 +246,16 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'No puedes asignar responsables externos a tu Organización' }, { status: 403 });
     }
 
+    const { dbProvider } = await import('@/lib/db/provider');
     if (action === 'UNBAN') {
-      await queryDB('UPDATE teams SET is_banned = 0, status = "Activo", ban_reason = NULL, banned_at = NULL WHERE id = ?', [teamId]);
+      await dbProvider.teams.update(teamId, { isBanned: false, status: "Activo", banReason: null, updatedAt: new Date().toISOString() });
       await writeSecurityAudit({ actor, request, action: 'ADMIN_TEAM_UNBANNED', resourceType: 'team', resourceId: teamId, organizationId: teamScope.organizationId });
       return NextResponse.json({ success: true, message: 'Equipo desbaneado con éxito' });
     }
 
     if (action === 'BAN' || isBanned === 1) {
       const reason = banReason || 'Violación de normas disciplinarias';
-      await queryDB('UPDATE teams SET is_banned = 1, status = "Baneado", ban_reason = ?, banned_at = NOW() WHERE id = ?', [reason, teamId]);
+      await dbProvider.teams.update(teamId, { isBanned: true, status: "Baneado", banReason: reason, updatedAt: new Date().toISOString() });
       await writeSecurityAudit({
         actor,
         request,

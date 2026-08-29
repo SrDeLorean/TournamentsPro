@@ -1,24 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useDeferredValue } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { CountryFlag } from '@/components/ui/country-flag';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { MatchReportModal } from '@/components/matches/match-report-modal';
+import { MatchdayMatchCard, type MatchdayReportItem } from '@/components/matches/matchday-match-card';
+import { Modal } from '@/components/ui/modal';
 import {
   Trophy,
-  Search,
   Gamepad2,
   RefreshCw,
   Building2,
-  Shield,
-  BarChart2,
   CheckCircle2,
-  Info,
   Globe2,
   X,
   FileCheck,
@@ -30,25 +26,7 @@ import {
   MetricCard,
 } from '@/components/dashboard/management-ui';
 
-export interface MatchdayReportItem {
-  id: string;
-  gameSlug: string;
-  gameName: string;
-  tournamentId: string;
-  tournamentName: string;
-  organizationName: string;
-  homeTeam: string;
-  homeTag: string;
-  awayTeam: string;
-  awayTag: string;
-  homeScore: number | null;
-  awayScore: number | null;
-  status: 'PROGRAMADO' | 'POR_REVISAR' | 'EN_VIVO' | 'FINALIZADO';
-  matchDate: string;
-  transmissionTime: string;
-  groupJornada: string;
-  proofUrl?: string | null;
-}
+export type { MatchdayReportItem } from '@/components/matches/matchday-match-card';
 
 interface TournamentApiItem {
   id: string;
@@ -90,6 +68,7 @@ export function MatchdayReportView() {
   const [selectedTournName, setSelectedTournName] = useState<string>('TODAS');
   const [clubSearch, setClubSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('TODOS');
+  const deferredClubSearch = useDeferredValue(clubSearch.trim());
 
   // Modal State
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -126,7 +105,7 @@ export function MatchdayReportView() {
       if (selectedGameSlug !== 'TODOS') params.append('gameSlug', selectedGameSlug);
       if (selectedTournName !== 'TODAS') params.append('tournamentName', selectedTournName);
       if (statusFilter !== 'TODOS') params.append('status', statusFilter);
-      if (clubSearch) params.append('search', clubSearch);
+      if (deferredClubSearch) params.append('search', deferredClubSearch);
 
       if (params.toString()) url += `?${params.toString()}`;
 
@@ -181,7 +160,7 @@ export function MatchdayReportView() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedGameSlug, selectedTournName, statusFilter, clubSearch]);
+  }, [selectedGameSlug, selectedTournName, statusFilter, deferredClubSearch]);
 
   useEffect(() => {
     // Synchronize filters with the tournament API when the management view mounts.
@@ -193,7 +172,7 @@ export function MatchdayReportView() {
     // Each filter change intentionally refreshes the server-backed match list.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMatches();
-  }, [selectedGameSlug, selectedTournName, statusFilter, clubSearch, fetchMatches]);
+  }, [fetchMatches]);
 
   // Handle Game Selection
   const handleGameSelect = (gSlug: string) => {
@@ -229,22 +208,20 @@ export function MatchdayReportView() {
     return Array.from(slugs);
   }, [tournaments, matches]);
 
-  // Format Day / Date Label: e.g. "Martes 11/08"
-  const formatDayDate = (dateStr: string) => {
-    if (!dateStr || dateStr.length < 10) return 'Martes 11/08';
-    const parts = dateStr.slice(0, 10).split('-');
-    if (parts.length === 3) {
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      const dateObj = new Date(year, month, day);
-      const daysFull = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-      const dayName = daysFull[dateObj.getDay()] || 'Martes';
-      const dayDD = String(day).padStart(2, '0');
-      const monthMM = String(month + 1).padStart(2, '0');
-      return `${dayName} ${dayDD}/${monthMM}`;
-    }
-    return 'Martes 11/08';
+  const gameFilterOptions = useMemo(() => [
+    { id: 'TODOS', label: 'Todas las disciplinas' },
+    ...Object.values(GAMES_CATALOG)
+      .filter((game) => availableGameSlugs.includes(game.slug))
+      .map((game) => ({ id: game.slug, label: game.name })),
+  ], [availableGameSlugs]);
+
+  const hasActiveFilters = selectedGameSlug !== 'TODOS' || selectedTournName !== 'TODAS' || statusFilter !== 'TODOS' || clubSearch.length > 0;
+
+  const resetFilters = () => {
+    setSelectedGameSlug('TODOS');
+    setSelectedTournName('TODAS');
+    setClubSearch('');
+    setStatusFilter('TODOS');
   };
 
   // Regional Times Calculator (Chile Base)
@@ -323,330 +300,93 @@ export function MatchdayReportView() {
         </div>
       )}
 
-      {/* ── 2. CONTROLES Y FILTROS SOBRE LA TABLA (JUEGO, COMPETENCIA, BUSCADOR CLUB) ── */}
-      <div className="management-toolbar !block space-y-4 font-mono">
-        
-        {/* Fila 1: Buscador por Nombre del Club & Restablecer */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--accent-cyan)]" />
-            <Input
-              type="text"
-              placeholder="Buscar por nombre del club (ej: Quantum, Obsidian, SQUAD)..."
-              value={clubSearch}
-              onChange={(e) => setClubSearch(e.target.value)}
-              className="pl-10 h-10 rounded-2xl input-theme text-xs font-mono"
-            />
-          </div>
+      {/* Unified search and filters */}
+      <FilterBar
+        searchPlaceholder="Buscar por club, tag o competencia..."
+        searchValue={clubSearch}
+        onSearchChange={setClubSearch}
+        options={gameFilterOptions}
+        activeFilter={selectedGameSlug}
+        onFilterChange={handleGameSelect}
+        renderAsSelect
+        brandColor="var(--accent-crimson)"
+        count={matches.length}
+        countLabel="ENCUENTROS"
+        searchHint="CLUB"
+      >
+        <div className="matchday-filter-extras">
+          <label className="matchday-filter-select">
+            <span>Competencia</span>
+            <select value={selectedTournName} onChange={(event) => setSelectedTournName(event.target.value)} aria-label="Filtrar por competencia">
+              <option value="TODAS">Todas las competencias</option>
+              {availableTournaments.map((name) => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </label>
+          <label className="matchday-filter-select">
+            <span>Estado</span>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filtrar por estado">
+              <option value="TODOS">Todos los estados</option>
+              <option value="PROGRAMADO">Programados</option>
+              <option value="EN_VIVO">En vivo</option>
+              <option value="POR_REVISAR">Por revisar</option>
+              <option value="FINALIZADO">Finalizados</option>
+            </select>
+          </label>
+          <Button variant="outline" size="sm" onClick={resetFilters} disabled={!hasActiveFilters} className="matchday-filter-reset">
+            <RefreshCw className="size-3.5" /> <span>Restablecer</span>
+          </Button>
+        </div>
+      </FilterBar>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedGameSlug('TODOS');
-                setSelectedTournName('TODAS');
-                setClubSearch('');
-                setStatusFilter('TODOS');
-              }}
-              className="text-xs font-mono gap-1.5 border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Restablecer Filtros
-            </Button>
+      {/* Reusable encounter cards */}
+      <section className="matchday-results" aria-labelledby="matchday-results-title">
+        <div className="matchday-results-heading">
+          <div>
+            <span>Operación de encuentros</span>
+            <h2 id="matchday-results-title">Partidos encontrados</h2>
           </div>
+          <button type="button" onClick={() => { setSelectedTimeForModal('22:00'); setIsTimezoneModalOpen(true); }}>
+            <Globe2 className="size-4" /> Horarios LATAM
+          </button>
         </div>
 
-        {/* Fila 2: Selector de Juego / Disciplina eSports */}
-        <div className="space-y-2 pt-1">
-          <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase">
-            <Gamepad2 className="w-3.5 h-3.5 text-purple-400" />
-            <span>DISCIPLINA / JUEGO ESPORTS:</span>
+        {isLoading ? (
+          <div className="matchday-match-grid" aria-label="Cargando encuentros">
+            {[0, 1, 2, 3].map((item) => <div key={item} className="matchday-match-skeleton" />)}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => handleGameSelect('TODOS')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                selectedGameSlug === 'TODOS'
-                  ? 'bg-purple-950 border-purple-500 text-purple-300 shadow-md ring-1 ring-purple-500/50 font-black'
-                  : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
-              }`}
-            >
-              🎮 TODOS LOS JUEGOS
-            </button>
+        ) : matches.length === 0 ? (
+          <div className="matchday-empty-state">
+            <Building2 className="size-10" />
+            <h3>Sin encuentros registrados</h3>
+            <p>No existen partidos que coincidan con la disciplina, competencia, estado o club buscado.</p>
+            {hasActiveFilters ? <Button variant="outline" size="sm" onClick={resetFilters}><RefreshCw className="size-3.5" /> Limpiar filtros</Button> : null}
+          </div>
+        ) : (
+          <div className="matchday-match-grid">
+            {matches.map((match) => {
+              const game = GAMES_CATALOG[match.gameSlug] || GAMES_CATALOG.eafc26;
+              const belongsToUserTeam = Boolean(currentUser?.teamName) && (
+                match.homeTeam.toLowerCase() === currentUser?.teamName?.toLowerCase() ||
+                match.awayTeam.toLowerCase() === currentUser?.teamName?.toLowerCase()
+              );
+              const canReport = isAdminOrOrganizer || (isCaptainOrCoach && belongsToUserTeam);
 
-            {Object.values(GAMES_CATALOG).filter(g => availableGameSlugs.includes(g.slug)).map((g) => {
-              const isActive = selectedGameSlug === g.slug;
               return (
-                <button
-                  key={g.slug}
-                  onClick={() => handleGameSelect(g.slug)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-[var(--bg-main)] border-[var(--border-card-hover)] shadow-md ring-1 font-black'
-                      : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
-                  }`}
-                  style={
-                    isActive
-                      ? {
-                          backgroundColor: `color-mix(in srgb, ${g.brandColor} 20%, transparent)`,
-                          borderColor: g.brandColor,
-                          color: g.brandColor,
-                        }
-                      : undefined
-                  }
-                >
-                  <span>{g.icon}</span>
-                  <span>{g.name}</span>
-                </button>
+                <MatchdayMatchCard
+                  key={match.id}
+                  match={match}
+                  game={game}
+                  canReport={canReport}
+                  canApprove={isAdminOrOrganizer}
+                  onOpenTimezone={(time) => { setSelectedTimeForModal(time); setIsTimezoneModalOpen(true); }}
+                  onReport={(selectedMatch) => { setSelectedMatchForReport(selectedMatch); setIsReportModalOpen(true); }}
+                  onApprove={(selectedMatch) => handleApproveMatch(selectedMatch.id, selectedMatch.homeScore || 0, selectedMatch.awayScore || 0)}
+                />
               );
             })}
           </div>
-        </div>
-
-        {/* Fila 3: Selector de Competencia / Torneo */}
-        <div className="space-y-2 pt-1 border-t border-[var(--border-card)]">
-          <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase">
-            <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            <span>COMPETENCIA / TORNEO:</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setSelectedTournName('TODAS')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                selectedTournName === 'TODAS'
-                  ? 'bg-amber-950/80 border-amber-500 text-amber-300 shadow-md font-black'
-                  : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
-              }`}
-            >
-              🏆 TODAS LAS COMPETENCIAS
-            </button>
-
-            {availableTournaments.map((tName) => {
-              const isActive = selectedTournName.toUpperCase() === tName.toUpperCase();
-              return (
-                <button
-                  key={tName}
-                  onClick={() => setSelectedTournName(tName)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                    isActive
-                      ? 'bg-amber-950/80 border-amber-500 text-amber-300 shadow-md font-black'
-                      : 'bg-[var(--bg-card)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
-                  }`}
-                >
-                  {tName}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* ── 3. TABLA DE PARTIDOS A REPORTAR (FORMATO TABLE UI ADAPTATIVO A TEMAS) ────── */}
-      <div className="table-container-theme font-mono">
-        <table className="ui-table ui-data-table-responsive min-w-[840px]">
-          <thead>
-            <tr>
-              <th className="p-4 w-44">
-                <div className="flex items-center gap-1.5">
-                  <span>Día / Hora</span>
-                  <button
-                    onClick={() => {
-                      setSelectedTimeForModal('22:00');
-                      setIsTimezoneModalOpen(true);
-                    }}
-                    className="text-[var(--accent-cyan)] hover:opacity-80 transition-colors"
-                    title="Ver horarios LATAM (ℹ️)"
-                  >
-                    <Info className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </th>
-              <th className="p-4 w-32">Disciplina</th>
-              <th className="p-4 text-center">Enfrentamiento (Club Local vs Visitante)</th>
-              <th className="p-4 text-center w-36">Competencia</th>
-              <th className="p-4 text-center w-32">Estado</th>
-              <th className="p-4 text-right w-48">Acción / Reporte</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border-card)] text-xs">
-            {isLoading ? (
-              <tr>
-                <td colSpan={6} className="p-12 text-center text-[var(--text-muted)]">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-cyan)] mb-2" />
-                  <p className="font-mono text-xs">Cargando encuentros de la Base de Datos...</p>
-                </td>
-              </tr>
-            ) : matches.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="p-12 text-center text-[var(--text-muted)]">
-                  <Building2 className="w-10 h-10 mx-auto text-[var(--text-muted)] opacity-60 mb-3" />
-                  <h4 className="text-sm font-bold text-[var(--text-heading)] mb-1">Sin encuentros registrados</h4>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    No existen partidos que coincidan con la disciplina, competencia o club buscado.
-                  </p>
-                </td>
-              </tr>
-            ) : (
-              matches.map((m) => {
-                const gameConfig = GAMES_CATALOG[m.gameSlug] || GAMES_CATALOG['eafc26'];
-                const isUserTeamInMatch = !!currentUser?.teamName && (
-                  m.homeTeam.toLowerCase() === currentUser.teamName.toLowerCase() ||
-                  m.awayTeam.toLowerCase() === currentUser.teamName.toLowerCase()
-                );
-                const canReport = isAdminOrOrganizer || (isCaptainOrCoach && isUserTeamInMatch);
-
-                return (
-                  <tr key={m.id} className="hover:bg-[var(--bg-card-hover)] transition-colors group">
-                    
-                    {/* 1. DÍA / HORA LIMPIOS + BANDERA REAL Y INFO */}
-                    <td data-label="Día / Hora" className="p-4 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-black tracking-tight" style={{ color: gameConfig.brandColor }}>
-                          {formatDayDate(m.matchDate)}
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-xs font-black text-amber-400">
-                            {m.transmissionTime}
-                          </span>
-                          <CountryFlag code="cl" name="Chile" size="sm" />
-                          <button
-                            onClick={() => {
-                              setSelectedTimeForModal(m.transmissionTime);
-                              setIsTimezoneModalOpen(true);
-                            }}
-                            className="transition-colors ml-0.5"
-                            style={{ color: gameConfig.brandColor }}
-                            title="Ver horario por país LATAM (ℹ️)"
-                          >
-                            <Info className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* 2. DISCIPLINA ESPORTS */}
-                    <td data-label="Disciplina" className="p-4 whitespace-nowrap">
-                      <Badge
-                        variant="cyan"
-                        className="text-[10px] font-bold py-1 px-2.5 flex items-center gap-1.5 shadow-sm"
-                        style={{ backgroundColor: `${gameConfig.brandColor}25`, borderColor: gameConfig.brandColor, color: gameConfig.brandColor }}
-                      >
-                        <span>{gameConfig.icon}</span>
-                        <span>{gameConfig.name}</span>
-                      </Badge>
-                    </td>
-
-                    {/* 3. ENFRENTAMIENTO CENTRAL */}
-                    <td data-label="Enfrentamiento" className="p-4">
-                      <div className="flex items-center justify-center gap-3 w-full">
-                        {/* Club Local */}
-                        <div className="flex items-center gap-2 flex-1 justify-end text-right">
-                          <span className="font-extrabold text-xs sm:text-sm text-[var(--text-heading)] transition-colors truncate max-w-[160px]">
-                            {m.homeTeam}
-                          </span>
-                          <Avatar fallback={m.homeTag} size="sm" className="ring-1 ring-[var(--border-card)] shrink-0" />
-                        </div>
-
-                        {/* Marcador Central */}
-                        <div className="px-3.5 py-1.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-center min-w-[64px] shrink-0 shadow-inner">
-                          <span className="font-black text-xs sm:text-sm text-[var(--text-primary)]">
-                            {m.homeScore !== null ? m.homeScore : '-'}
-                          </span>
-                          <span className="px-1.5 font-black text-xs" style={{ color: gameConfig.brandColor }}>VS</span>
-                          <span className="font-black text-xs sm:text-sm text-[var(--text-primary)]">
-                            {m.awayScore !== null ? m.awayScore : '-'}
-                          </span>
-                        </div>
-
-                        {/* Club Visitante */}
-                        <div className="flex items-center gap-2 flex-1 justify-start text-left">
-                          <Avatar fallback={m.awayTag} size="sm" className="ring-1 ring-[var(--border-card)] shrink-0" />
-                          <span className="font-extrabold text-xs sm:text-sm text-[var(--text-heading)] transition-colors truncate max-w-[160px]">
-                            {m.awayTeam}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* 4. COMPETENCIA & JORNADA */}
-                    <td data-label="Competencia" className="p-4 text-center whitespace-nowrap">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-xs font-extrabold text-[var(--text-heading)] truncate max-w-[140px]">
-                          {m.tournamentName}
-                        </span>
-                        <Badge variant="violet" className="text-[9px] font-bold border border-[var(--border-card)] text-[var(--text-secondary)] py-0.5 px-2">
-                          {m.groupJornada}
-                        </Badge>
-                      </div>
-                    </td>
-
-                    {/* 5. ESTADO */}
-                    <td data-label="Estado" className="p-4 text-center whitespace-nowrap">
-                      {m.status === 'POR_REVISAR' ? (
-                        <Badge variant="rose" className="animate-pulse text-[10px] font-bold py-1 px-2.5">
-                          ⏳ POR REVISAR
-                        </Badge>
-                      ) : m.status === 'FINALIZADO' ? (
-                        <Badge variant="emerald" className="text-[10px] font-bold py-1 px-2.5">
-                          ✓ FINALIZADO
-                        </Badge>
-                      ) : m.status === 'EN_VIVO' ? (
-                        <Badge variant="cyan" className="animate-pulse text-[10px] font-bold py-1 px-2.5">
-                          ● EN VIVO
-                        </Badge>
-                      ) : (
-                        <Badge variant="gold" className="text-[10px] font-bold py-1 px-2.5">
-                          PROGRAMADO
-                        </Badge>
-                      )}
-                    </td>
-
-                    {/* 6. ACCIONES (Reportar Ficha vs Visto Bueno vs Analizar) */}
-                    <td data-label="Acciones" className="p-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
-                        {m.status === 'POR_REVISAR' && isAdminOrOrganizer ? (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleApproveMatch(m.id, m.homeScore || 0, m.awayScore || 0)}
-                            className="text-xs font-mono font-bold py-1 px-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow"
-                          >
-                            <FileCheck className="w-3.5 h-3.5 mr-1" />
-                            <span>VISTO BUENO</span>
-                          </Button>
-                        ) : canReport ? (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedMatchForReport(m);
-                              setIsReportModalOpen(true);
-                            }}
-                            className="text-xs font-mono font-bold py-1 px-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow"
-                          >
-                            <Shield className="w-3.5 h-3.5 mr-1" />
-                            <span>REPORTAR FICHA</span>
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs font-mono font-bold py-1 px-3 border-cyan-500/30 text-cyan-300 hover:bg-cyan-950/40"
-                          >
-                            <BarChart2 className="w-3.5 h-3.5 mr-1 text-cyan-400" />
-                            <span>ANALIZAR</span>
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+        )}
+      </section>
 
       {/* Modal de Reporte de Partido */}
       {selectedMatchForReport && (
@@ -669,8 +409,7 @@ export function MatchdayReportView() {
 
       {/* Modal de Equivalencia de Horarios por Región con Banderas de Países LATAM */}
       {isTimezoneModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="relative w-full max-w-md bg-slate-950 border border-purple-500/40 rounded-3xl p-6 shadow-2xl space-y-5 font-mono">
+        <Modal isOpen onClose={() => setIsTimezoneModalOpen(false)} ariaLabel="Horarios por país" size="sm" showCloseButton={false} className="bg-slate-950 border-purple-500/40 p-6 space-y-5 font-mono">
             
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
@@ -730,8 +469,7 @@ export function MatchdayReportView() {
                 Cerrar Ventana
               </Button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </ManagementPage>
   );

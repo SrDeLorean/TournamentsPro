@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Modal } from '@/components/ui/modal';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   getChatThreadsAction,
@@ -338,7 +339,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
         setShowBanModal(false);
         loadThreads();
       } else {
-        alert(res.error || 'Error al banear usuario.');
+        setActionNotification(res.error || 'No se pudo banear al usuario del chat.');
       }
     } finally {
       setBanningUser(false);
@@ -776,8 +777,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
 
       {/* ── NEW CHAT MODAL ────────────────────────────────────────────── */}
       {showNewChatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-md bg-[var(--bg-card)] border border-[var(--border-card)] rounded-3xl p-6 shadow-2xl space-y-5 text-[var(--text-primary)] relative">
+        <Modal isOpen onClose={() => setShowNewChatModal(false)} ariaLabel="Nuevo chat directo" size="sm" showCloseButton={false} className="p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-[var(--accent-cyan)]" />
@@ -908,14 +908,12 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                 </Button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* ── BAN MODAL FOR ADMINS & ORGANIZERS ───────────────────────── */}
       {showBanModal && activeThread && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in font-mono">
-          <div className="w-full max-w-md bg-[var(--bg-card)] border border-rose-500/40 rounded-3xl p-6 shadow-2xl space-y-4 relative">
+        <Modal isOpen onClose={() => setShowBanModal(false)} ariaLabel="Sancionar usuario del chat" size="sm" showCloseButton={false} closeDisabled={banningUser} className="p-6 border-rose-500/40 space-y-4 font-mono">
             <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
               <div className="flex items-center gap-2 text-rose-400">
                 <ShieldAlert className="w-5 h-5" />
@@ -966,8 +964,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                 </Button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -56,7 +56,9 @@ describe('public directory routing', () => {
     expect(styles).toContain('.public-directory-hero');
     expect(styles).toContain('.public-directory-grid');
     expect(layout).toContain("pathname.startsWith('/dashboard')");
-    expect(layout).toContain('<Navbar forcePublic={isAdminOrOrganizer} />');
+    expect(layout).toContain('showRoleAwareChrome = isAdminOrOrganizer');
+    expect(layout).toContain('<AdminOrganizerHeader');
+    expect(layout).toContain(') : <Navbar />}');
   });
 
   it('keeps every global management destination under dashboard', async () => {
@@ -86,7 +88,11 @@ describe('public directory routing', () => {
     expect(styles).toContain('.public-directory-page');
     expect(styles).toContain('.public-info-page');
     expect(mobileGameNav).toContain('showSegmentSwitcher');
+    expect(mobileGameNav).not.toContain('Portal competitivo');
+    expect(mobileGameNav).not.toContain('<GameSwitcher');
     expect(publicNavbar).toContain('aria-controls="public-mobile-navigation"');
+    expect(publicNavbar).toContain('Disciplina activa');
+    expect(publicNavbar).toContain("className={isActive ? 'is-active' : ''}");
     expect(informationPage).toContain('public-info-page');
   });
 });

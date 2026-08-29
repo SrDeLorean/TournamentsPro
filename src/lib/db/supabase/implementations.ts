@@ -135,12 +135,12 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
     }
   }
 
-  async getManagers(teamId: string): Promise<{ userId: string }[]> {
+  async getManagers(teamId: string): Promise<string[]> {
     const { data } = await supabase.from('team_members')
       .select('user_id')
       .eq('team_id', teamId)
       .in('role_in_team', ['Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán']);
-    return (data || []).map(r => ({ userId: r.user_id }));
+    return (data || []).map(r => r.user_id);
   }
 }
 

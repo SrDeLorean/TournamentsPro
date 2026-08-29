@@ -17,6 +17,8 @@ export interface ModalFormProps {
   successMessage?: string;
   errorMessage?: string;
   infoMessage?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  submitDisabled?: boolean;
   children: React.ReactNode;
 }
 
@@ -32,12 +34,14 @@ export function ModalForm({
   successMessage,
   errorMessage,
   infoMessage,
+  size = 'lg',
+  submitDisabled = false,
   children,
 }: ModalFormProps) {
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} ariaLabel={title} closeOnBackdrop={!isSubmitting} closeOnEscape={!isSubmitting} closeDisabled={isSubmitting} className="ui-modal-form max-w-xl p-0 overflow-hidden bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] shadow-2xl font-mono text-[var(--text-primary)]">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel={title} closeOnBackdrop={!isSubmitting} closeOnEscape={!isSubmitting} closeDisabled={isSubmitting} size={size} className="ui-modal-form p-0 overflow-hidden bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] shadow-2xl font-mono text-[var(--text-primary)]">
       <div
         className="ui-modal-form-header p-4 sm:p-5 pr-12 border-b border-[var(--border-card)] flex items-center justify-between"
         style={{
@@ -50,7 +54,8 @@ export function ModalForm({
         </div>
       </div>
 
-      <form onSubmit={onSubmit} className="ui-modal-form-body p-4 sm:p-6 space-y-5">
+      <form onSubmit={onSubmit} className="ui-modal-form-content">
+        <div className="ui-modal-form-body p-4 sm:p-6 space-y-5">
         {/* BANNER ALERTA ÉXITO */}
         {successMessage && (
           <div className="p-3.5 rounded-xl bg-[var(--accent-emerald-bg)] border border-[var(--accent-emerald)]/50 text-[var(--accent-emerald)] text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
@@ -75,15 +80,16 @@ export function ModalForm({
           </div>
         )}
 
-        {children}
+          {children}
+        </div>
 
-        <div className="ui-modal-form-actions pt-5 border-t border-[var(--border-card)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 mt-4">
+        <div className="ui-modal-form-actions border-t border-[var(--border-card)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3">
           <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-4 py-2.5 rounded-xl">
             Cancelar
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || submitDisabled}
             className="w-full sm:w-auto font-black text-xs uppercase px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all hover:scale-[0.98]"
             style={{
               backgroundColor: brandColor,

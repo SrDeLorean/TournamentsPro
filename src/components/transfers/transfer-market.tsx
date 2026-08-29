@@ -9,6 +9,7 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { GameExplorerPanel } from '@/components/ui/game-explorer-panel';
 import { PageHeader } from '@/components/ui/page-header';
 import { EsportsCard } from '@/components/ui/esports-card';
+import { Modal } from '@/components/ui/modal';
 import {
   createTransferPostAction,
   getTransferPostsAction,
@@ -498,8 +499,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
 
       {/* ── CREATE LISTING MODAL WITH DYNAMIC BD POSITIONS & AUTH CHECK ────────────────────────── */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-lg bg-[var(--bg-card)] border border-[var(--border-card)] rounded-3xl p-6 shadow-2xl space-y-5 text-[var(--text-primary)] relative">
+        <Modal isOpen onClose={() => setShowCreateModal(false)} ariaLabel="Publicar en mercado de traspasos" size="md" showCloseButton={false} closeDisabled={submitting} className="p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
               <div className="flex items-center gap-2">
                 <ArrowRightLeft className="w-5 h-5" style={{ color: currentGameObj.brandColor }} />
@@ -673,8 +673,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
                 </div>
               </form>
             )}
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

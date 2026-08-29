@@ -392,6 +392,15 @@ export class TeamRepository extends BaseRepository<Team> {
     return rows.map(this.mapRow);
   }
 
+  async getManagers(teamId: string): Promise<string[]> {
+    const rows = await queryDB<{ user_id: string }>(
+      `SELECT user_id FROM team_members
+       WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán')`,
+      [teamId]
+    );
+    return rows.map(r => r.user_id);
+  }
+
   async create(data: Partial<Team>): Promise<Team> {
     const id = data.id || `team-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const vacantJson = data.vacantPositions ? JSON.stringify(data.vacantPositions) : '[]';

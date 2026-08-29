@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Modal } from '@/components/ui/modal';
 import {
   CheckCircle2, X, Upload, Camera, AlertCircle, UserCircle2
 } from 'lucide-react';
@@ -181,8 +182,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 dark:bg-black/80 backdrop-blur-md p-4 overflow-y-auto font-mono">
-      <div className="w-full max-w-xl bg-[var(--bg-card)] p-6 sm:p-8 rounded-3xl border border-[var(--border-card)] space-y-6 shadow-2xl animate-in fade-in zoom-in-95 my-8 text-[var(--text-primary)]">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Reportar resultado del partido" size="lg" showCloseButton={false} closeDisabled={isSubmitting} className="p-6 sm:p-8 space-y-6 font-mono">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
@@ -474,7 +474,6 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
           </div>
         </form>
 
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -10,13 +10,21 @@ import { NotificationCenter } from '@/components/notifications/notification-cent
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import {
-  Trophy, Settings, LogOut, ChevronDown, Sparkles
+  Trophy, Settings, LogOut, ChevronDown, Sparkles, Menu, X, LayoutDashboard, Globe2, UserRoundCog, Mail, Gamepad2
 } from 'lucide-react';
-import { NavLinks } from '@/components/layout/nav-links';
+import { GAMES_CATALOG } from '@/lib/games-data';
+import { GameLogo } from '@/components/ui/game-logo';
 
-export function AdminOrganizerHeader() {
+interface AdminOrganizerHeaderProps {
+  isManagementRoute: boolean;
+  isMenuOpen: boolean;
+  onMenuToggle: () => void;
+}
+
+export function AdminOrganizerHeader({ isManagementRoute, isMenuOpen, onMenuToggle }: AdminOrganizerHeaderProps) {
+  const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, activeGameSlug, logout } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -26,6 +34,21 @@ export function AdminOrganizerHeader() {
   const roleStr = (currentUser?.role || '').toLowerCase();
   const isAdmin = roleStr === 'administrador' || roleStr === 'admin';
   const isOrganizer = roleStr === 'organizador';
+  const currentGame = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG.eafc26;
+  const managementSection = pathname.split('/').filter(Boolean)[1] || 'inicio';
+  const managementSectionLabels: Record<string, string> = {
+    inicio: 'Centro de control',
+    organizaciones: 'Organizaciones',
+    disciplinas: 'Disciplinas',
+    competencias: 'Competencias',
+    usuarios: 'Usuarios y atletas',
+    equipos: 'Equipos y clubes',
+    matchday: 'Operación matchday',
+    moderacion: 'Moderación',
+  };
+  const managementSectionLabel = isManagementRoute
+    ? managementSectionLabels[managementSection] || 'Espacio de gestión'
+    : 'Vista pública';
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -36,23 +59,51 @@ export function AdminOrganizerHeader() {
         setIsSettingsOpen(false);
       }
     }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsUserMenuOpen(false);
+        setIsSettingsOpen(false);
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 h-14 w-full border-b border-[var(--border-card)] bg-[var(--bg-nav)]/95 shadow-[var(--shadow-soft)] backdrop-blur-xl transition-all duration-300">
-      <div className="w-full px-3 sm:px-6 h-full flex items-center justify-between gap-2 sm:gap-4">
+    <header className="management-header sticky top-0 z-50 h-14 w-full border-b border-[var(--border-card)] bg-[var(--bg-nav)]/95 shadow-[var(--shadow-soft)] backdrop-blur-xl transition-all duration-300">
+      <div className="flex h-full w-full items-center">
         
-        {/* Left Side: Brand Tag Connected to Sidebar */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <Link href="/" className="flex items-center gap-2 group">
+        {/* Left Side: exact desktop continuation of the 18rem sidebar rail. */}
+        <div className={`flex h-full min-w-0 flex-1 items-center gap-2 border-[var(--border-card)] px-3 lg:flex-none lg:px-4 ${isManagementRoute ? 'lg:w-72 lg:border-r' : 'lg:w-auto'}`}>
+          <button
+            type="button"
+            onClick={onMenuToggle}
+            aria-controls="management-navigation"
+            aria-expanded={isMenuOpen}
+            aria-label={isMenuOpen ? 'Cerrar menú administrativo' : 'Abrir menú administrativo'}
+            className={`management-menu-toggle inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm transition-colors hover:border-[var(--accent-cyan)] hover:text-[var(--accent-cyan)] ${isManagementRoute ? 'lg:hidden' : ''}`}
+          >
+            {isMenuOpen ? <X className="size-4" /> : <Menu className="size-4" />}
+          </button>
+
+          <Link
+            href="/dashboard"
+            onClick={() => {
+              if (isMenuOpen) onMenuToggle();
+            }}
+            className="flex items-center gap-2 group"
+            aria-label="Ir al centro de control"
+          >
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-600 to-amber-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform">
               <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-[var(--bg-main)]">
                 <Trophy className="w-4 h-4 text-[var(--accent-cyan)]" />
               </div>
             </div>
-            <div className="hidden lg:flex flex-col text-left">
+            <div className="hidden sm:flex flex-col text-left">
               <span className="text-sm sm:text-base font-black tracking-tight text-[var(--text-heading)] uppercase leading-none">
                 TOURNAMENTS<span className="text-cyan-400">PRO</span>
               </span>
@@ -62,58 +113,96 @@ export function AdminOrganizerHeader() {
             </div>
           </Link>
 
-          <Badge variant={isAdmin ? 'cyan' : 'emerald'} className="hidden xl:inline-flex text-[9px] font-mono uppercase font-bold">
+          <Badge variant={isAdmin ? 'cyan' : 'emerald'} className="ml-auto hidden text-[9px] font-mono uppercase font-bold xl:inline-flex">
             {isAdmin ? '🛡️ ADMIN GLOBAL' : '🏆 ORGANIZADOR'}
           </Badge>
         </div>
 
-        {/* 🌐 Center: Public Layout Navigation Views (Vistas Públicas Integradas) */}
-        <div className="hidden min-w-0 flex-1 justify-center 2xl:flex">
-          <NavLinks />
-        </div>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2 px-2 sm:px-4 lg:px-6">
+          {/* Persistent role context plus explicit management/public mode switch. */}
+          <div className="hidden min-w-0 flex-1 items-center gap-3 md:flex">
+            <div className="management-header-context min-w-0">
+              <small>{isManagementRoute ? 'Espacio de gestión' : 'Contenido público'}</small>
+              <strong>{managementSectionLabel}</strong>
+            </div>
+            <div className="management-active-game hidden min-w-0 items-center gap-2 xl:flex" style={{ '--management-game': currentGame.brandColor } as React.CSSProperties}>
+              <GameLogo game={currentGame} size="sm" />
+              <span><small>Disciplina activa</small><strong>{currentGame.name}</strong></span>
+            </div>
+          </div>
 
-        {/* Right Side Controls ONLY: 1. Bell, 2. Settings Gear, 3. User Info Dropdown */}
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
+          <nav className="management-mode-switch" aria-label="Cambiar entre gestión y vista pública">
+            <Link
+              href="/dashboard"
+              aria-current={isManagementRoute ? 'page' : undefined}
+              className={isManagementRoute ? 'is-active' : ''}
+              title="Abrir panel de gestión"
+            >
+              <LayoutDashboard className="size-3.5" />
+              <span>Gestión</span>
+            </Link>
+            <Link
+              href={`/${activeGameSlug}`}
+              aria-current={!isManagementRoute ? 'page' : undefined}
+              className={!isManagementRoute ? 'is-active' : ''}
+              title="Ver el portal como el público"
+            >
+              <Globe2 className="size-3.5" />
+              <span>Vista pública</span>
+            </Link>
+          </nav>
+
+          {/* Right Side Controls ONLY: 1. Bell, 2. Settings Gear, 3. User Info Dropdown */}
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2.5">
           
           {/* 🔔 1. Campana de Notificaciones eSports */}
-          <NotificationCenter />
+          <NotificationCenter onOpen={() => {
+            setIsSettingsOpen(false);
+            setIsUserMenuOpen(false);
+          }} />
 
           {/* ⚙️ 2. Configuración (Tema e Idioma Dropdown) */}
           <div className="relative" ref={settingsRef}>
             <button
-              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              type="button"
+              onClick={() => {
+                setIsUserMenuOpen(false);
+                setIsSettingsOpen((open) => !open);
+              }}
+              aria-label="Abrir ajustes de tema e idioma"
+              aria-expanded={isSettingsOpen}
               className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-2 text-[var(--text-secondary)] shadow-sm transition-all hover:text-[var(--accent-cyan)]"
               title="Configuración de Tema e Idioma"
             >
               <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-cyan-400' : ''}`} />
             </button>
             {isSettingsOpen && (
-              <div className="fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:w-80 max-h-[85vh] overflow-y-auto bg-slate-950/95 border border-cyan-500/40 rounded-2xl p-4 shadow-[0_10px_40px_rgba(0,0,0,0.8)] space-y-4 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95">
+              <div className="management-popover fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:w-80 max-h-[85vh] overflow-y-auto rounded-2xl p-4 space-y-4 z-50 animate-in fade-in zoom-in-95">
                 <div className="pb-2.5 border-b border-white/10 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-cyan-950 border border-cyan-500/40 text-cyan-400">
+                    <div className="p-1.5 rounded-lg bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/40 text-[var(--accent-cyan)]">
                       <Settings className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="text-xs font-black uppercase text-white tracking-wider block leading-none">Ajustes & Preferencias</span>
-                      <span className="text-[9px] font-mono text-cyan-400 font-bold">Personalización Visual</span>
+                      <span className="text-xs font-black uppercase text-[var(--text-heading)] tracking-wider block leading-none">Preferencias rápidas</span>
+                      <span className="text-[9px] font-mono text-[var(--accent-cyan)] font-bold">Apariencia e idioma</span>
                     </div>
                   </div>
                   <Sparkles className="w-4 h-4 text-amber-400" />
                 </div>
 
                 {/* Theme Switcher Box */}
-                <div className="p-3 rounded-xl bg-slate-900 border border-white/10 space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-300 block tracking-wider">
-                    🎨 Tema Visual eSports:
+                <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] space-y-2">
+                  <label className="text-[10px] font-black uppercase text-[var(--text-secondary)] block tracking-wider">
+                    Tema visual
                   </label>
                   <ThemeSwitcher />
                 </div>
 
                 {/* Language Switcher Box */}
-                <div className="p-3 rounded-xl bg-slate-900 border border-white/10 space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-300 block tracking-wider">
-                    🌐 Idioma de Interfaz:
+                <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] space-y-2">
+                  <label className="text-[10px] font-black uppercase text-[var(--text-secondary)] block tracking-wider">
+                    Idioma de interfaz
                   </label>
                   <LanguageSwitcher />
                 </div>
@@ -124,7 +213,13 @@ export function AdminOrganizerHeader() {
           {/* 👤 3. Información del Usuario & Dropdown Profile */}
           <div className="relative" ref={userMenuRef}>
             <button
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              type="button"
+              onClick={() => {
+                setIsSettingsOpen(false);
+                setIsUserMenuOpen((open) => !open);
+              }}
+              aria-label="Abrir menú de usuario"
+              aria-expanded={isUserMenuOpen}
               className="flex items-center gap-2.5 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-1.5 shadow-sm transition-all hover:border-[var(--border-card-hover)]"
             >
               <Avatar fallback={currentUser?.name || 'User'} status="online" size="sm" />
@@ -136,42 +231,60 @@ export function AdminOrganizerHeader() {
                   @{currentUser?.gamertag}
                 </span>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180 text-[var(--accent-cyan)]' : ''}`} />
             </button>
 
             {isUserMenuOpen && (
-              <div className="fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:w-64 max-h-[85vh] overflow-y-auto glass-panel border border-white/10 rounded-2xl shadow-2xl z-50 p-4 space-y-3 animate-in fade-in zoom-in-95">
+              <div className="management-popover fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:w-80 max-h-[85vh] overflow-y-auto rounded-2xl z-50 p-3 space-y-2 animate-in fade-in zoom-in-95">
                 
                 {/* User Header Details */}
-                <div className="p-3 rounded-xl bg-slate-900 border border-white/10 space-y-2">
+                <div className="management-profile-card p-3 rounded-xl space-y-3">
                   <div className="flex items-center gap-2.5">
                     <Avatar fallback={currentUser?.name || 'User'} status="online" size="md" />
                     <div className="min-w-0 flex-1">
-                      <span className="font-black text-xs text-white uppercase block truncate">
+                      <span className="font-black text-sm text-[var(--text-heading)] block truncate">
                         {currentUser?.name}
                       </span>
-                      <span className="text-xs text-cyan-400 font-mono font-bold block truncate">
+                      <span className="text-xs text-[var(--accent-cyan)] font-mono font-bold block truncate">
                         @{currentUser?.gamertag}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[10px] font-bold">
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--border-card)] text-[10px] font-bold">
                     <Badge variant={isAdmin ? 'cyan' : isOrganizer ? 'emerald' : 'violet'}>
                       {currentUser?.role}
                     </Badge>
-                    <span className="text-slate-400 font-mono">{currentUser?.email}</span>
+                    <span className="truncate text-right text-[var(--text-muted)] font-mono">{currentUser?.email}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <span className="flex items-center gap-1 text-[var(--text-muted)]"><Gamepad2 className="size-3" /> Disciplina</span>
+                    <strong className="truncate text-right text-[var(--text-secondary)]">{currentGame.name}</strong>
                   </div>
                 </div>
 
-                {/* Logout Button */}
+                <div className="space-y-1 text-xs font-bold">
+                  <Link href="/cuenta/ajustes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
+                    <UserRoundCog className="size-4 text-[var(--accent-cyan)]" />
+                    Configuración de la cuenta
+                  </Link>
+                  <Link href="/mensajes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
+                    <Mail className="size-4 text-[var(--accent-emerald)]" />
+                    Centro de mensajes
+                  </Link>
+                  <Link href="/dashboard" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
+                    <LayoutDashboard className="size-4 text-[var(--accent-violet)]" />
+                    Ir al panel de gestión
+                  </Link>
+                </div>
+
                 <button
                   onClick={() => {
                     setIsUserMenuOpen(false);
                     logout();
                     router.push('/login');
                   }}
-                  className="w-full text-left flex items-center gap-2.5 p-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors pt-2 border-t border-white/10 text-xs font-bold"
+                  className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors border-t border-[var(--border-card)] text-xs font-bold"
                 >
                   <LogOut className="w-4 h-4" />
                   Cerrar Sesión
@@ -180,6 +293,7 @@ export function AdminOrganizerHeader() {
             )}
           </div>
 
+          </div>
         </div>
 
       </div>
