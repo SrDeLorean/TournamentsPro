@@ -1,18 +1,12 @@
 import type { IDatabaseProvider } from './interfaces';
-import { mysqlProvider } from './mysql/provider';
-import { supabaseProvider } from './supabase/provider';
 
-// Obtenemos el proveedor configurado desde las variables de entorno.
-// Por defecto usaremos mysql para no romper el sistema existente.
-const providerType = process.env.DATABASE_PROVIDER || 'mysql';
+const providerType = (process.env.DATABASE_PROVIDER || 'mysql').toLowerCase();
 
-let activeProvider: IDatabaseProvider;
-
-if (providerType === 'supabase') {
-  activeProvider = supabaseProvider;
-} else {
-  activeProvider = mysqlProvider;
-}
+// Import only the configured adapter. A static Supabase import initializes its
+// client immediately and throws when a MySQL deployment has no Supabase keys.
+const activeProvider: IDatabaseProvider = providerType === 'supabase'
+  ? (await import('./supabase/provider')).supabaseProvider
+  : (await import('./mysql/provider')).mysqlProvider;
 
 export const dbProvider = activeProvider;
 

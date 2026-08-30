@@ -6,6 +6,23 @@ const appDirectory = path.join(process.cwd(), 'src', 'app');
 const maximumPageLines = 150;
 const maximumComponentLines = 300;
 const debtPath = path.join(process.cwd(), 'scripts', 'architecture-debt.json');
+const sourceDirectory = path.join(process.cwd(), 'src');
+
+async function findFiles(directory, predicate) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const target = path.join(directory, entry.name);
+    if (entry.isDirectory()) return findFiles(target, predicate);
+    return entry.isFile() && predicate(entry.name) ? [target] : [];
+  }));
+  return nested.flat();
+}
+
+const emittedJavaScript = await findFiles(sourceDirectory, (name) => name.endsWith('.js'));
+if (emittedJavaScript.length > 0) {
+  console.error(`No guarde JavaScript compilado dentro de src; puede resolver antes que TypeScript y romper producción:\n${emittedJavaScript.map((file) => path.relative(process.cwd(), file)).join('\n')}`);
+  process.exitCode = 1;
+}
 
 async function findPages(directory) {
   const entries = await readdir(directory, { withFileTypes: true });

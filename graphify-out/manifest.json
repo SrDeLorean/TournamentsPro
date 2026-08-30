@@ -797,10 +797,10 @@
     "semantic_hash": "a54a7b9b5e0f1812673072111fcbe148"
   },
   "tsconfig.json": {
-    "mtime": 1784676389.7921023,
-    "seen": 1787874359.9928794,
-    "ast_hash": "574e515ccc024757684970491f8bf730",
-    "semantic_hash": "574e515ccc024757684970491f8bf730"
+    "mtime": 1788062015.2723818,
+    "seen": 1788062299.927375,
+    "ast_hash": "32de13c09281bcdab90a47ac22c2165d",
+    "semantic_hash": ""
   },
   "check-teams.mjs": {
     "mtime": 1787856730.9985392,
@@ -965,9 +965,9 @@
     "semantic_hash": ""
   },
   "scripts/check-architecture.mjs": {
-    "mtime": 1787804418.5921967,
-    "seen": 1788041651.1180093,
-    "ast_hash": "6fddb9df556c985968bcf002ac3e7c89",
+    "mtime": 1788062131.0254612,
+    "seen": 1788062299.8682792,
+    "ast_hash": "e03e97c1edaf8236d5dd9cf7d046d9b1",
     "semantic_hash": ""
   },
   "scripts/migrate-games-catalog.ts": {
@@ -2704,12 +2704,6 @@
     "ast_hash": "9739623c315ac0ac1829db45a37e9a5f",
     "semantic_hash": ""
   },
-  "src/lib/auth-server.js": {
-    "mtime": 1787971333.133243,
-    "seen": 1788041651.1332104,
-    "ast_hash": "3a55e624eadf36f0079ec7d3c3ed7204",
-    "semantic_hash": ""
-  },
   "src/lib/authenticated-navigation.ts": {
     "mtime": 1788041852.974244,
     "seen": 1788042716.8470185,
@@ -2722,22 +2716,10 @@
     "ast_hash": "f15efdaed05a5c5b96c3fed1001fb239",
     "semantic_hash": ""
   },
-  "src/lib/db/interfaces.js": {
-    "mtime": 1787971331.1352715,
-    "seen": 1788041651.1337287,
-    "ast_hash": "8963201168a2449f79025884824955f2",
-    "semantic_hash": ""
-  },
   "src/lib/db/interfaces.ts": {
     "mtime": 1788059347.3196988,
     "seen": 1788059929.7053752,
     "ast_hash": "6df7764dbd82265d7b878dc633e632af",
-    "semantic_hash": ""
-  },
-  "src/lib/db/mysql/provider.js": {
-    "mtime": 1787971331.1512787,
-    "seen": 1788041651.1337326,
-    "ast_hash": "f0db9037833b37732622ba4187b2045a",
     "semantic_hash": ""
   },
   "src/lib/db/mysql/provider.ts": {
@@ -2746,22 +2728,10 @@
     "ast_hash": "80560b246ad72bfe408634fbcd700df2",
     "semantic_hash": ""
   },
-  "src/lib/db/provider.js": {
-    "mtime": 1787971331.196895,
-    "seen": 1788041651.1337357,
-    "ast_hash": "6e7f2e4615d0c048bed1bf20335dd5f0",
-    "semantic_hash": ""
-  },
   "src/lib/db/provider.ts": {
-    "mtime": 1788054075.7593043,
-    "seen": 1788059929.7057834,
-    "ast_hash": "d6f42915b0deeab23d8bb22b7c3f34aa",
-    "semantic_hash": ""
-  },
-  "src/lib/db/supabase/client.js": {
-    "mtime": 1787971333.1548288,
-    "seen": 1788041651.1337385,
-    "ast_hash": "8b8bff8b511936ca620dda1f38f94ebf",
+    "mtime": 1788062056.654181,
+    "seen": 1788062299.9157252,
+    "ast_hash": "0263666c247ae333cc4b40e8a771f8c9",
     "semantic_hash": ""
   },
   "src/lib/db/supabase/client.ts": {
@@ -2770,34 +2740,16 @@
     "ast_hash": "f3bf345386e9ee985b72882676b72ce7",
     "semantic_hash": ""
   },
-  "src/lib/db/supabase/implementations.js": {
-    "mtime": 1787971331.190804,
-    "seen": 1788041651.1337411,
-    "ast_hash": "64cc1e8165bea88b8a0f00076f04f4bd",
-    "semantic_hash": ""
-  },
   "src/lib/db/supabase/implementations.ts": {
     "mtime": 1788054075.7603042,
     "seen": 1788059929.7063923,
     "ast_hash": "d991548b7be55783b4fa70bdd5e800a8",
     "semantic_hash": ""
   },
-  "src/lib/db/supabase/provider.js": {
-    "mtime": 1787971331.1933608,
-    "seen": 1788041651.1337433,
-    "ast_hash": "b5ca82c97820c2f7f1b825a250ccee63",
-    "semantic_hash": ""
-  },
   "src/lib/db/supabase/provider.ts": {
     "mtime": 1788054075.7603042,
     "seen": 1788059929.7066028,
     "ast_hash": "0257db503b7ce60a171c275264723107",
-    "semantic_hash": ""
-  },
-  "src/lib/db/supabase/repositories.js": {
-    "mtime": 1787971331.166999,
-    "seen": 1788041651.1337457,
-    "ast_hash": "9f344eaf783a9fc004423518e94586f8",
     "semantic_hash": ""
   },
   "src/lib/db/supabase/repositories.ts": {
@@ -2978,6 +2930,12 @@
     "mtime": 1788060821.915,
     "seen": 1788061106.5352163,
     "ast_hash": "1f47c7b4f4cd4710ff5b1ab9bf3dd563",
+    "semantic_hash": ""
+  },
+  "tests/workspace-server-render.test.ts": {
+    "mtime": 1788062079.5630608,
+    "seen": 1788062299.9270353,
+    "ast_hash": "c3d6fcd4de065b98c538279d8f9f9c47",
     "semantic_hash": ""
   }
 }
