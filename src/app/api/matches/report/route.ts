@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { dbProvider } from '@/lib/db/provider';
 import { getServerUserSession } from '@/lib/auth-server';
@@ -12,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { matchId, homeScore, awayScore, mvpName, dynamicStats, participantsStats, gameSlug } = data;
+    const { matchId, homeScore, awayScore, mvpName, dynamicStats, participantsStats, competition_id } = data;
 
     if (!matchId) return NextResponse.json({ error: 'Match ID requerido' }, { status: 400 });
 
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
         const playerId = user ? user.id : `temp-${cleanGamertag}`;
         
         const statsId = `st-${randomUUID().substring(0, 8)}`;
-        await dbProvider.matches.addPlayerStat(statsId, matchId, playerId, gameSlug || match.gameSlug || '', JSON.stringify(p.stats));
+        await dbProvider.matches.addPlayerStat(statsId, matchId, playerId, competition_id || match.competition_id || '', JSON.stringify(p.stats));
       }
     } 
     // Fallback: Si solo reportaron el MVP manual
@@ -54,7 +53,7 @@ export async function POST(request: Request) {
       const mvpId = user ? user.id : `temp-${cleanGamertag}`;
 
       const statsId = `st-${randomUUID().substring(0, 8)}`;
-      await dbProvider.matches.addPlayerStat(statsId, matchId, mvpId, gameSlug || match.gameSlug || '', JSON.stringify(dynamicStats));
+      await dbProvider.matches.addPlayerStat(statsId, matchId, mvpId, competition_id || match.competition_id || '', JSON.stringify(dynamicStats));
     }
 
     return NextResponse.json({ success: true, message: 'Reporte enviado a revisión' });

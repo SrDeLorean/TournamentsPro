@@ -17,8 +17,7 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
-  output: "standalone",
-  typescript: {
+    typescript: {
     ignoreBuildErrors: false,
   },
   experimental: {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { IDatabaseProvider } from '../interfaces';
 import { 
   SupabaseUserRepository, 

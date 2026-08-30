@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { SupabaseBaseRepository } from './repositories';
 import { supabase } from './client';
 import type { 

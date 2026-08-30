@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { dbProvider } from '@/lib/db/provider';
 import { getServerUserSession } from '@/lib/auth-server';

@@ -50,6 +50,11 @@ export interface User {
 }
 
 export interface Organization {
+  isBanned?: boolean;
+  banReason?: string | null;
+  status?: string;
+  slug?: string;
+  foundedYear?: string | null;
   id: string;
   name: string;
   tag: string;
@@ -63,6 +68,10 @@ export interface Organization {
 }
 
 export interface Team {
+  isBanned?: boolean;
+  banReason?: string | null;
+  isBanned?: boolean;
+  banReason?: string | null;
   id: string;
   name: string;
   tag: string;
@@ -162,6 +171,7 @@ export interface ISeasonRepository extends IRepository<Season> {
 }
 
 export interface Match {
+  createdAt?: string;
   id: string;
   tournamentId: string | null;
   competitionId: string | null;

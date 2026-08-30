@@ -162,9 +162,9 @@ export async function PUT(request: Request) {
     const safeLogoUrl = (logoUrl && typeof logoUrl === 'string' && logoUrl.trim() !== '') ? logoUrl : (t?.logo_url || '');
     const safeBannerUrl = (bannerUrl && typeof bannerUrl === 'string' && bannerUrl.trim() !== '') ? bannerUrl : (t?.banner_url || '');
     const safeGameSlug = (gameSlug || t?.game_slug || 'eafc26').slice(0, 50);
-    let safeCaptainId = (isAdministrator(actor) ? captainId : null) ?? t.captain_id ?? actor.userId;
+    let safeCaptainId = (isAdministrator(actor) ? captainId : null) ?? t.captainId ?? actor.userId;
     safeCaptainId = safeCaptainId.slice(0, 36);
-    const safeCaptainName = ((isAdministrator(actor) ? captainName : null) ?? t.captain_name ?? actor.userId).slice(0, 100);
+    const safeCaptainName = ((isAdministrator(actor) ? captainName : null) ?? t.captainName ?? actor.userId).slice(0, 100);
 
     // Validate captain exists
     try {

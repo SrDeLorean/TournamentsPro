@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { verifyPassword, signToken } from '@/lib/auth';
 import { UserRow, mapUserRowToProfile, apiError } from '@/lib/api-types';

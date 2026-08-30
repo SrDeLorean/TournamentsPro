@@ -1,11 +1,12 @@
-// @ts-nocheck
 import { queryDB, executeCommand, withTransaction } from '@/lib/db';
 import { 
   UserRepository, 
   OrganizationRepository, 
   TeamRepository, 
   CompetitionRepository, 
-  SeasonRepository 
+  SeasonRepository,
+  MatchRepository,
+  GameRepository
 } from '@/lib/repositories';
 import type { IDatabaseProvider } from '../interfaces';
 import type { DatabaseExecutor } from '@/lib/db';
@@ -16,7 +17,8 @@ export class MysqlDatabaseProvider implements IDatabaseProvider {
   teams = new TeamRepository();
   competitions = new CompetitionRepository();
   seasons = new SeasonRepository();
-  matches = new (class { async findById() { return null; } async findByCompetition() { return []; } async findAll() { return []; } })();
+  matches = new MatchRepository();
+  games = new GameRepository();
 
   constructor(private executor?: DatabaseExecutor) {}
 

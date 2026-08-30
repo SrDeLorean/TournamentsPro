@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { apiError, apiSuccess, mapUserRowToProfile, type UserRow } from '@/lib/api-types';
 import { getRequestUserSession } from '@/lib/auth-server';
 import { dbProvider } from '@/lib/db/provider';
@@ -31,7 +30,7 @@ export async function GET(request: Request) {
       organization_id: user.organizationId,
       is_banned: user.isBanned ? 1 : 0,
       ban_reason: user.banReason,
-      last_login_at: user.lastLoginAt,
+      lastLoginAt: user.lastLoginAt,
       created_at: user.createdAt,
       updated_at: user.updatedAt,
       password_hash: user.passwordHash,
