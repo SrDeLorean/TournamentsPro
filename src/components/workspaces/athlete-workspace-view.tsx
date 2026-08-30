@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   Activity,
   ArrowRight,
@@ -34,17 +35,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
-import { ChatSystem } from '@/components/chat/chat-system';
-import { PlayerProfileView, type PlayerData } from '@/components/players/player-profile-view';
-import { UserProfileSettingsView } from '@/components/user/user-profile-settings-view';
+import type { PlayerData } from '@/components/players/player-profile-view';
 import {
   getAthleteTransferHistoryAction,
   getPlayerContractOffersAction,
   respondPlayerContractOfferAction,
 } from '@/app/actions/transfers';
+import type { AthleteWorkspaceSection } from '@/lib/workspace-sections';
 
-export const ATHLETE_SECTIONS = ['resumen', 'ficha', 'estadisticas', 'ofertas', 'equipos', 'historial', 'mensajes', 'ajustes'] as const;
-export type AthleteWorkspaceSection = (typeof ATHLETE_SECTIONS)[number];
+const ChatSystem = dynamic(() => import('@/components/chat/chat-system').then((module) => module.ChatSystem), {
+  loading: WorkspaceLoading,
+});
+const PlayerProfileView = dynamic(() => import('@/components/players/player-profile-view').then((module) => module.PlayerProfileView), {
+  loading: WorkspaceLoading,
+});
+const UserProfileSettingsView = dynamic(() => import('@/components/user/user-profile-settings-view').then((module) => module.UserProfileSettingsView), {
+  loading: WorkspaceLoading,
+});
 
 interface ContractOffer {
   id: string;
@@ -216,8 +223,8 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
       {section === 'ofertas' ? <AthleteOffers offers={offers} loading={isLoading} onDecision={(offer, accept) => setOfferDecision({ offer, accept })} /> : null}
       {section === 'equipos' ? <AthleteTeams player={player} gameSlug={game.slug} /> : null}
       {section === 'historial' ? <AthleteHistory history={history} loading={isLoading} /> : null}
-      {section === 'mensajes' ? <ManagementSection title="Conversaciones" description="Canales privados y soporte competitivo." icon={MessageSquare} tone="cyan" className="[&>div:last-child]:p-0"><Suspense fallback={<WorkspaceLoading />}><ChatSystem /></Suspense></ManagementSection> : null}
-      {section === 'ajustes' ? <div className="context-workspace-embedded"><UserProfileSettingsView brandColor={game.brandColor} /></div> : null}
+      {section === 'mensajes' ? <ManagementSection title="Conversaciones" description="Canales privados y soporte competitivo." icon={MessageSquare} tone="cyan" className="[&>div:last-child]:p-0"><ChatSystem /></ManagementSection> : null}
+      {section === 'ajustes' ? <div className="context-workspace-embedded"><UserProfileSettingsView brandColor={game.brandColor} embedded /></div> : null}
 
       <ConfirmModal
         isOpen={Boolean(offerDecision)}

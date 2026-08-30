@@ -42,8 +42,14 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
   const linksRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const activeLink = linksRef.current?.querySelector<HTMLElement>('[data-active="true"]');
-    activeLink?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    const frame = window.requestAnimationFrame(() => {
+      const container = linksRef.current;
+      const activeLink = container?.querySelector<HTMLElement>('[data-active="true"]');
+      if (!container || !activeLink || container.clientWidth === 0) return;
+      const centeredLeft = activeLink.offsetLeft - (container.clientWidth - activeLink.offsetWidth) / 2;
+      container.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'smooth' });
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [activeSegment, pathname]);
 
   const roleStr = (currentUser?.role || '').toLowerCase();
@@ -107,8 +113,8 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
       {showSegmentSwitcher ? <div className="game-portal-mobile-segments flex items-center justify-around border-b border-[var(--border-card)] p-1 text-xs font-black" role="tablist" aria-label="Cambiar contexto de navegación">
         
         {/* Segment 1: JUEGO */}
-        <button
-          type="button"
+        <Link
+          href={`/${game.slug}`}
           role="tab"
           aria-selected={activeSegment === 'game'}
           onClick={() => setPreferredSegment('game')}
@@ -120,12 +126,12 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
         >
           <Gamepad2 className="w-3.5 h-3.5" />
           <span>Juego</span>
-        </button>
+        </Link>
 
         {/* Segment 2: ATLETA (Users) */}
         {!isAdminOrOrganizer && isAuthenticated && (
-          <button
-            type="button"
+          <Link
+            href={`/${game.slug}/atleta`}
             role="tab"
             aria-selected={activeSegment === 'athlete'}
             onClick={() => setPreferredSegment('athlete')}
@@ -137,13 +143,13 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
           >
             <User className="w-3.5 h-3.5" />
             <span>Atleta</span>
-          </button>
+          </Link>
         )}
 
         {/* Segment 3: CLUB (Captains) */}
         {!isAdminOrOrganizer && isAuthenticated && myTeam && (
-          <button
-            type="button"
+          <Link
+            href={`/${game.slug}/club`}
             role="tab"
             aria-selected={activeSegment === 'club'}
             onClick={() => setPreferredSegment('club')}
@@ -155,7 +161,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
           >
             <Shield className="w-3.5 h-3.5 text-purple-400" />
             <span>Club</span>
-          </button>
+          </Link>
         )}
         {!isAdminOrOrganizer && isAuthenticated && !myTeam && (
           <button

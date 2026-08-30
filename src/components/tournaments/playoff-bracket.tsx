@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, ChevronRight, Clock3, Trophy } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronRight, Clock3, GitBranch, Trophy } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 
 interface PlayoffMatch {
@@ -15,10 +15,11 @@ interface PlayoffMatch {
   status: string;
   round_name: string;
   matchday?: number;
+  scheduled_time?: string | null;
 }
 
 interface PlayoffPair { ida: PlayoffMatch; vuelta?: PlayoffMatch }
-interface PlayoffBracketProps { matches: PlayoffMatch[]; brandColor?: string }
+interface PlayoffBracketProps { matches: PlayoffMatch[]; brandColor?: string; matchMode?: string }
 
 const ROUND_ORDER_MAP: Record<string, number> = {
   treintaidosavos: 1, 'treintaidosavos de final': 1,
@@ -41,10 +42,10 @@ function getRoundWeight(roundName: string): number {
 
 function isPlaceholderTeam(name: string): boolean {
   const normalized = name.toLowerCase();
-  return normalized.includes('definir') || normalized === 'tbd' || normalized.includes('ganador de');
+  return normalized.includes('definir') || normalized === 'tbd' || normalized.includes('ganador') || normalized.includes('perdedor') || normalized.includes('grupo');
 }
 
-function buildRoundPairs(matches: PlayoffMatch[]): Map<string, PlayoffPair[]> {
+export function buildRoundPairs(matches: PlayoffMatch[]): Map<string, PlayoffPair[]> {
   const matchesByRound = new Map<string, PlayoffMatch[]>();
 
   matches.forEach((match) => {
@@ -119,9 +120,15 @@ function TeamRow({ name, tag, logoUrl, firstLeg, secondLeg, total, hasSecondLeg,
   );
 }
 
-export function PlayoffBracket({ matches, brandColor = 'var(--game-brand)' }: PlayoffBracketProps) {
+function isFinished(status: string): boolean {
+  return ['FINALIZADO', 'TERMINADO'].includes(status.toUpperCase());
+}
+
+export function PlayoffBracket({ matches, brandColor = 'var(--game-brand)', matchMode }: PlayoffBracketProps) {
   const rounds = buildRoundPairs(matches);
   const sortedRounds = [...rounds.keys()].sort((a, b) => getRoundWeight(a) - getRoundWeight(b));
+  const hasTwoLeggedSeries = matchMode === 'IdaVuelta' || matches.some((match) => /\((ida|vuelta)\)/i.test(match.round_name));
+  const totalSeries = [...rounds.values()].reduce((total, pairs) => total + pairs.length, 0);
 
   if (sortedRounds.length === 0) {
     return <div className="p-8 text-center text-[var(--text-muted)] border border-[var(--border-card)] rounded-2xl glass-panel">No hay cruces de playoffs generados para esta competencia aún.</div>;
@@ -130,8 +137,17 @@ export function PlayoffBracket({ matches, brandColor = 'var(--game-brand)' }: Pl
   return (
     <div className="game-bracket" style={{ '--bracket-brand': brandColor } as React.CSSProperties}>
       <div className="game-bracket-guide">
-        <span><Trophy className="size-4" /> Ruta al campeonato</span>
-        <span className="game-bracket-swipe-hint">Desliza para recorrer las rondas <ChevronRight className="size-4" /></span>
+        <div className="game-bracket-guide-copy">
+          <span><GitBranch className="size-4" /> Cuadro eliminatorio</span>
+          <strong>Ruta al campeonato</strong>
+          <small>{sortedRounds.length} rondas · {totalSeries} cruces</small>
+        </div>
+        <div className="game-bracket-guide-actions">
+          <span className={`game-bracket-format ${hasTwoLeggedSeries ? 'is-two-legged' : ''}`}>
+            {hasTwoLeggedSeries ? 'Ida y vuelta · marcador global' : 'Partido único'}
+          </span>
+          <span className="game-bracket-swipe-hint">Desliza para recorrer las rondas <ChevronRight className="size-4" /></span>
+        </div>
       </div>
       <div className="game-bracket-track hide-scrollbar">
         {sortedRounds.map((roundName, roundIndex) => {
@@ -140,12 +156,12 @@ export function PlayoffBracket({ matches, brandColor = 'var(--game-brand)' }: Pl
             <section key={roundName} className="game-bracket-round" aria-labelledby={`round-${roundIndex}`}>
               <header className="game-bracket-round-heading">
                 <span className="game-bracket-round-index">{String(roundIndex + 1).padStart(2, '0')}</span>
-                <div><h3 id={`round-${roundIndex}`}>{roundName}</h3><p>{roundPairs.length} {roundPairs.length === 1 ? 'cruce' : 'cruces'}</p></div>
+                <div><h3 id={`round-${roundIndex}`}>{roundName}</h3><p>{roundPairs.length} {roundPairs.length === 1 ? 'cruce' : 'cruces'} · Ronda {roundIndex + 1}</p></div>
               </header>
               <div className="game-bracket-round-matches">
                 {roundPairs.map(({ ida, vuelta }, index) => {
-                  const idaPlayed = ida.status === 'FINALIZADO' && ida.score_home !== null && ida.score_away !== null;
-                  const vueltaPlayed = Boolean(vuelta?.status === 'FINALIZADO' && vuelta.score_home !== null && vuelta.score_away !== null);
+                  const idaPlayed = isFinished(ida.status) && ida.score_home !== null && ida.score_away !== null;
+                  const vueltaPlayed = Boolean(vuelta && isFinished(vuelta.status) && vuelta.score_home !== null && vuelta.score_away !== null);
                   const homeFirst = idaPlayed ? Number(ida.score_home) : null;
                   const awayFirst = idaPlayed ? Number(ida.score_away) : null;
                   const homeSecond = vueltaPlayed ? Number(vuelta!.score_away) : null;
@@ -157,9 +173,11 @@ export function PlayoffBracket({ matches, brandColor = 'var(--game-brand)' }: Pl
                     <article key={ida.id || index} className="game-bracket-match">
                       <div className="game-bracket-card">
                         <div className="game-bracket-match-meta">
-                          <span>Cruce {String(index + 1).padStart(2, '0')}</span>
+                          <span>Cruce {String(index + 1).padStart(2, '0')} {vuelta ? <b>2 partidos</b> : <b>Partido único</b>}</span>
                           <span className={finished ? 'is-finished' : ''}>{finished ? <CheckCircle2 className="size-3" /> : <Clock3 className="size-3" />}{finished ? 'Finalizado' : 'Pendiente'}</span>
                         </div>
+                        <div className="game-bracket-schedule"><CalendarDays />Jornada {ida.matchday || roundIndex + 1}{ida.scheduled_time ? ` · ${ida.scheduled_time}` : ''}</div>
+                        {vuelta ? <div className="game-bracket-leg-labels"><span>Ida</span><span>Vuelta</span><strong>Global</strong></div> : null}
                         <TeamRow name={ida.home_team_name || 'Por Definir'} tag={ida.home_team_tag || 'LOC'} logoUrl={ida.home_team_logo_url} firstLeg={homeFirst} secondLeg={homeSecond} total={homeTotal} hasSecondLeg={Boolean(vuelta)} winner={finished && homeTotal !== null && awayTotal !== null && homeTotal > awayTotal} />
                         <TeamRow name={ida.away_team_name || 'Por Definir'} tag={ida.away_team_tag || 'VIS'} logoUrl={ida.away_team_logo_url} firstLeg={awayFirst} secondLeg={awaySecond} total={awayTotal} hasSecondLeg={Boolean(vuelta)} winner={finished && homeTotal !== null && awayTotal !== null && awayTotal > homeTotal} />
                       </div>

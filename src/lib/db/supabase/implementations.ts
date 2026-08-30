@@ -177,6 +177,8 @@ export class SupabaseCompetitionRepository extends SupabaseBaseRepository<Compet
       id: row.id, name: row.name, gameSlug: row.game_slug, organizerId: row.organizer_id,
       organizerName: row.organizer_name, organizationId: row.organization_id, seasonId: row.season_id,
       prizePool: row.prize_pool, transferMarketMode: row.transfer_market_mode, modeFormat: row.mode_format,
+      format: row.format, matchMode: row.match_mode, groupCount: row.group_count,
+      qualifiersPerGroup: row.qualifiers_per_group,
       status: row.status, fechaLimiteInscripcion: row.fecha_limite_inscripcion, fechaInicio: row.fecha_inicio,
       fechaTermino: row.fecha_termino, description: row.description, createdAt: row.created_at
     };
@@ -202,23 +204,59 @@ export class SupabaseCompetitionRepository extends SupabaseBaseRepository<Compet
   }
 
   async getEnrolledTeams(competitionId: string): Promise<any[]> {
-    throw new Error('Not implemented for Supabase yet');
+    const { data, error } = await supabase
+      .from('competition_teams')
+      .select('*')
+      .eq('competition_id', competitionId)
+      .eq('status', 'CONFIRMADO');
+    if (error) throw error;
+    return data || [];
   }
 
   async removeEnrolledTeam(competitionId: string, teamId: string): Promise<void> {
-    throw new Error('Not implemented for Supabase yet');
+    const { error } = await supabase
+      .from('competition_teams')
+      .delete()
+      .eq('competition_id', competitionId)
+      .eq('team_id', teamId);
+    if (error) throw error;
   }
 
   async getReportedMatchesCount(competitionId: string): Promise<number> {
-    throw new Error('Not implemented for Supabase yet');
+    const { count, error } = await supabase
+      .from('matches')
+      .select('*', { count: 'exact', head: true })
+      .eq('competition_id', competitionId)
+      .in('status', ['POR_REVISAR', 'TERMINADO', 'DISPUTADO', 'FINALIZADO']);
+    if (error) throw error;
+    return count || 0;
   }
 
   async getMatchCompetitionId(matchId: string): Promise<string | null> {
-    throw new Error('Not implemented for Supabase yet');
+    const { data, error } = await supabase
+      .from('matches')
+      .select('competition_id')
+      .eq('id', matchId)
+      .single();
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+    return data?.competition_id || null;
   }
 
   async upsertCompetitionTeam(enrollId: string, competitionId: string, teamId: string, teamName: string, teamTag: string | null): Promise<void> {
-    throw new Error('Not implemented for Supabase yet');
+    const { error } = await supabase
+      .from('competition_teams')
+      .upsert({
+        id: enrollId,
+        competition_id: competitionId,
+        team_id: teamId,
+        team_name: teamName,
+        team_tag: teamTag,
+        status: 'CONFIRMADO'
+      }, { onConflict: 'competition_id,team_id' });
+    if (error) throw error;
   }
 }
 

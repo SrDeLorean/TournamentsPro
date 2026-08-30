@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateStandings, type ClassificationMatch } from '../src/features/competitions/classification/classification-model';
+import { calculateStandings, isFinalizedMatchStatus, type ClassificationMatch } from '../src/features/competitions/classification/classification-model';
 
 function match(overrides: Partial<ClassificationMatch>): ClassificationMatch {
   return {
@@ -44,5 +44,24 @@ describe('calculateStandings', () => {
       tag: 'BET',
       logoUrl: null,
     });
+  });
+
+  it('counts approved TERMINADO results as official standings data', () => {
+    const standings = calculateStandings([match({ status: 'TERMINADO', score_home: 3, score_away: 1 })]);
+
+    expect(isFinalizedMatchStatus('TERMINADO')).toBe(true);
+    expect(standings.find((team) => team.name === 'Alpha')).toMatchObject({ pts: 3, pj: 1, dif: 2 });
+  });
+
+  it('reports movement compared with the previous completed matchday', () => {
+    const standings = calculateStandings([
+      match({ id: 'j1-a', matchday: 1, home_team_name: 'Alpha', away_team_name: 'Beta', score_home: 0, score_away: 1 }),
+      match({ id: 'j1-b', matchday: 1, home_team_name: 'Gamma', home_team_tag: 'GAM', away_team_name: 'Delta', away_team_tag: 'DEL', score_home: 2, score_away: 0 }),
+      match({ id: 'j2-a', matchday: 2, home_team_name: 'Alpha', away_team_name: 'Gamma', away_team_tag: 'GAM', score_home: 4, score_away: 0 }),
+      match({ id: 'j2-b', matchday: 2, home_team_name: 'Beta', away_team_name: 'Delta', away_team_tag: 'DEL', score_home: 0, score_away: 2 }),
+    ]);
+
+    expect(standings.find((team) => team.name === 'Alpha')?.positionChange).toBeGreaterThan(0);
+    expect(standings.find((team) => team.name === 'Gamma')?.positionChange).toBeLessThan(0);
   });
 });

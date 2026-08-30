@@ -292,20 +292,15 @@ export async function generateFixtureAction(
       return { success: false, error: 'Se requieren al menos 2 equipos confirmados para generar el fixture.', code: 'NOT_ENOUGH_TEAMS' };
     }
 
-    const competitions = await dbProvider.query<CompetitionData>(
-      `SELECT * FROM competitions WHERE id = ?`,
-      [competitionId]
-    );
+    const competition = await dbProvider.competitions.findById(competitionId);
 
-    if (!competitions || competitions.length === 0) {
+    if (!competition) {
       return { success: false, error: 'Competencia no encontrada.', code: 'NOT_FOUND' };
     }
-
-    const competition = competitions[0];
-    const parsedFormat = z.enum(['Liga', 'Playoff', 'Hibrido']).safeParse(configOptions?.format || competition.mode_format);
+    const parsedFormat = z.enum(['Liga', 'Playoff', 'Hibrido']).safeParse(configOptions?.format || competition.modeFormat);
     const format: FixtureConfig['format'] = parsedFormat.success ? parsedFormat.data : 'Liga';
     const matchMode = configOptions?.matchMode || 'PartidoUnico';
-    const startDateBase = configOptions?.startDate || competition.fecha_inicio || new Date().toISOString();
+    const startDateBase = configOptions?.startDate || competition.fechaInicio || new Date().toISOString();
 
     const config: FixtureConfig = {
       startDate: startDateBase,
@@ -340,16 +335,11 @@ export async function regenerateFixtureAction(
 ): Promise<{ success: boolean; message?: string; error?: string; code?: string }> {
   try {
     await requireCompetitionManager(competitionId);
-    const competitions = await dbProvider.query<CompetitionData>(
-      `SELECT * FROM competitions WHERE id = ?`,
-      [competitionId]
-    );
+    const competition = await dbProvider.competitions.findById(competitionId);
 
-    if (!competitions || competitions.length === 0) {
+    if (!competition) {
       return { success: false, error: 'Competencia no encontrada.', code: 'NOT_FOUND' };
     }
-
-    const competition = competitions[0];
 
     const count = await dbProvider.competitions.getReportedMatchesCount(competitionId);
     const hasReportedResults = count > 0;
@@ -473,7 +463,7 @@ export async function getPublicCompetitionsAction(gameSlug: string): Promise<{
   try {
     const comps = await dbProvider.competitions.findByGameSlug(gameSlug);
     const publicComps = comps
-      .filter(c => ['Inscripcion', 'En Curso', 'Borrador'].includes(c.status))
+      .filter(c => ['Inscripcion', 'En Curso', 'Borrador', 'Activo', 'En_Juego'].includes(c.status))
       .map(c => ({
         id: c.id,
         name: c.name,

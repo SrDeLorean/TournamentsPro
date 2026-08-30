@@ -5,6 +5,7 @@ import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-serv
 import { canApproveMatch, canReportMatch } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
 import { matchApprovalBodySchema } from '@/lib/api-schemas';
+import { buildHybridPlayoffSeedAssignments } from '@/features/competitions/classification/hybrid-playoff-seeding';
 
 // POST /api/matches/approval - Report score (Captain) or Approve Visto Bueno (Organizer/Admin)
 export async function POST(request: Request) {
@@ -28,11 +29,21 @@ export async function POST(request: Request) {
 
     const competitionId = match.competitionId;
 
-    let competition = { organizationId: null as string | null, organizerId: null as string | null };
+    let competition = {
+      organizationId: null as string | null,
+      organizerId: null as string | null,
+      format: null as string | null,
+      qualifiersPerGroup: 2,
+    };
     if (competitionId) {
       const compObj = await dbProvider.competitions.findById(competitionId);
       if (compObj) {
-        competition = { organizationId: compObj.organizationId, organizerId: compObj.organizerId };
+        competition = {
+          organizationId: compObj.organizationId,
+          organizerId: compObj.organizerId,
+          format: compObj.format || compObj.modeFormat,
+          qualifiersPerGroup: Number(compObj.qualifiersPerGroup || 2),
+        };
       }
     }
 
@@ -135,6 +146,31 @@ export async function POST(request: Request) {
               homeTeamId: winnerId,
               homeTeamName: winnerName
             });
+          }
+        }
+
+        const isHybridGroupMatch = (competition.format || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('HIBRID')
+          && /^grupo\s+/i.test(lockedMatch.groupName || '');
+        if (isHybridGroupMatch && competitionId) {
+          const competitionMatches = await transaction.matches.findByCompetition(competitionId);
+          const seeding = buildHybridPlayoffSeedAssignments(competitionMatches, competition.qualifiersPerGroup);
+          for (const assignment of seeding.assignments) {
+            for (const targetMatchId of assignment.matchIds) {
+              const targetMatch = competitionMatches.find((candidate) => candidate.id === targetMatchId);
+              const isReturnLeg = /\(vuelta\)/i.test(targetMatch?.roundName || '') || /-vuelta$/i.test(targetMatchId);
+              const home = isReturnLeg ? assignment.away : assignment.home;
+              const away = isReturnLeg ? assignment.home : assignment.away;
+              await transaction.matches.update(targetMatchId, {
+                teamHomeId: home.id,
+                homeTeamId: home.id,
+                homeTeamName: home.name,
+                homeTeamTag: home.tag,
+                teamAwayId: away.id,
+                awayTeamId: away.id,
+                awayTeamName: away.name,
+                awayTeamTag: away.tag,
+              });
+            }
           }
         }
       });

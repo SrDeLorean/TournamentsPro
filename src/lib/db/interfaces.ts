@@ -105,6 +105,10 @@ export interface Competition {
   prizePool: string | null;
   transferMarketMode: string;
   modeFormat: string;
+  format?: 'Liga' | 'Playoff' | 'Hibrido' | string | null;
+  matchMode?: 'PartidoUnico' | 'IdaVuelta' | string | null;
+  groupCount?: number | null;
+  qualifiersPerGroup?: number | null;
   status: string;
   fechaLimiteInscripcion: string | null;
   fechaInicio: string;

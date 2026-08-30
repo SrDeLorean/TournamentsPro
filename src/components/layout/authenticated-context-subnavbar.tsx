@@ -77,8 +77,8 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
     <div className="authenticated-context-nav border-b border-[var(--border-card)]">
       <div className="mx-auto flex h-12 max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8">
         <div className="flex flex-shrink-0 items-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-main)] p-1" role="tablist" aria-label="Cambiar espacio de trabajo">
-          <button
-            type="button"
+          <Link
+            href={`/${gameSlug}/atleta`}
             role="tab"
             aria-selected={context === 'athlete'}
             onClick={() => setPreferredContext('athlete')}
@@ -86,10 +86,10 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
           >
             <User className="h-3.5 w-3.5" />
             Atleta
-          </button>
+          </Link>
           {myTeam ? (
-            <button
-              type="button"
+            <Link
+              href={`/${gameSlug}/club`}
               role="tab"
               aria-selected={context === 'club'}
               onClick={() => setPreferredContext('club')}
@@ -97,7 +97,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
             >
               <Shield className="h-3.5 w-3.5" />
               Club
-            </button>
+            </Link>
           ) : (
             <button
               type="button"

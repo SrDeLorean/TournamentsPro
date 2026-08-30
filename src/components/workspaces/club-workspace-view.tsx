@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowRight, BarChart3, CalendarCheck, Eye, History, MessageSquare, Shield, Shirt, Sparkles, Trophy, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -12,16 +13,25 @@ import { ManagementHero, ManagementMetrics, ManagementPage, ManagementSection, M
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChatSystem } from '@/components/chat/chat-system';
-import { ClubSettingsView } from '@/components/club/club-settings-view';
-import { MatchdayReportView } from '@/components/matches/matchday-report-view';
-import { TeamProfileView } from '@/components/teams/team-profile-view';
-import { SquadRosterModal } from '@/components/teams/squad-roster-modal';
-import { TransferMarket } from '@/components/transfers/transfer-market';
 import { getTeamSquadAction, type SquadMemberData } from '@/app/actions/squads';
+import type { ClubWorkspaceSection } from '@/lib/workspace-sections';
 
-export const CLUB_SECTIONS = ['resumen', 'ficha', 'plantilla', 'fichajes', 'matchday', 'estadisticas', 'historial', 'mensajes', 'ajustes'] as const;
-export type ClubWorkspaceSection = (typeof CLUB_SECTIONS)[number];
+const ChatSystem = dynamic(() => import('@/components/chat/chat-system').then((module) => module.ChatSystem), {
+  loading: WorkspaceLoading,
+});
+const ClubSettingsView = dynamic(() => import('@/components/club/club-settings-view').then((module) => module.ClubSettingsView), {
+  loading: WorkspaceLoading,
+});
+const MatchdayReportView = dynamic(() => import('@/components/matches/matchday-report-view').then((module) => module.MatchdayReportView), {
+  loading: WorkspaceLoading,
+});
+const TeamProfileView = dynamic(() => import('@/components/teams/team-profile-view').then((module) => module.TeamProfileView), {
+  loading: WorkspaceLoading,
+});
+const SquadRosterModal = dynamic(() => import('@/components/teams/squad-roster-modal').then((module) => module.SquadRosterModal));
+const TransferMarket = dynamic(() => import('@/components/transfers/transfer-market').then((module) => module.TransferMarket), {
+  loading: WorkspaceLoading,
+});
 
 const sectionCopy: Record<ClubWorkspaceSection, { eyebrow: string; title: string; description: string }> = {
   resumen: { eyebrow: 'Centro de gestión', title: 'Panel del club', description: 'Estado de la escuadra, plantilla y accesos operativos de la disciplina activa.' },
@@ -82,7 +92,7 @@ export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug:
       {section === 'matchday' ? <div className="context-workspace-embedded"><MatchdayReportView /></div> : null}
       {section === 'estadisticas' ? <ClubStats team={team} memberCount={memberCount} capacity={capacity} /> : null}
       {section === 'historial' ? <ClubHistory team={team} /> : null}
-      {section === 'mensajes' ? <ManagementSection title="Conversaciones del club" description="Coordinación interna y contactos de mercado." icon={MessageSquare} tone="violet" className="[&>div:last-child]:p-0"><Suspense fallback={<WorkspaceLoading />}><ChatSystem /></Suspense></ManagementSection> : null}
+      {section === 'mensajes' ? <ManagementSection title="Conversaciones del club" description="Coordinación interna y contactos de mercado." icon={MessageSquare} tone="violet" className="[&>div:last-child]:p-0"><ChatSystem /></ManagementSection> : null}
       {section === 'ajustes' ? <div className="context-workspace-embedded"><ClubSettingsView team={team} activeGameSlug={game.slug} refetchTeams={refetchTeams} /></div> : null}
 
       <SquadRosterModal isOpen={isRosterOpen} onClose={() => setIsRosterOpen(false)} team={{ id: team.id, name: team.name, tag: team.tag, game_slug: team.gameSlug, members_count: memberCount, max_members: capacity, logo_text: team.logoText, logo_url: team.logoUrl }} onRosterUpdated={() => void loadSquad()} />

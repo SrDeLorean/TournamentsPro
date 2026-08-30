@@ -48,7 +48,8 @@ interface TeamRow extends RowDataPacket {
 interface CompetitionRow extends RowDataPacket {
   id: string; name: string; game_slug: string; organizer_id: string | null; organizer_name: string | null;
   organization_id: string | null; season_id: string | null; prize_pool: string | null;
-  transfer_market_mode: string; mode_format: string; status: string; fecha_limite_inscripcion: string | null;
+  transfer_market_mode: string; mode_format: string; format: string | null; match_mode: string | null;
+  group_count: number | null; qualifiers_per_group: number | null; status: string; fecha_limite_inscripcion: string | null;
   fecha_inicio: string; fecha_termino: string | null; description: string | null; created_at: string;
 }
 
@@ -511,6 +512,10 @@ export class CompetitionRepository extends BaseRepository<Competition> {
       prizePool: row.prize_pool,
       transferMarketMode: row.transfer_market_mode,
       modeFormat: row.mode_format,
+      format: row.format,
+      matchMode: row.match_mode,
+      groupCount: row.group_count,
+      qualifiersPerGroup: row.qualifiers_per_group,
       status: row.status,
       fechaLimiteInscripcion: row.fecha_limite_inscripcion,
       fechaInicio: row.fecha_inicio,
@@ -880,6 +885,10 @@ export interface Competition {
   prizePool: string | null;
   transferMarketMode: string;
   modeFormat: string;
+  format?: string | null;
+  matchMode?: string | null;
+  groupCount?: number | null;
+  qualifiersPerGroup?: number | null;
   status: string;
   fechaLimiteInscripcion: string | null;
   fechaInicio: string;

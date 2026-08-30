@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
+import { ManagementTabs, type ManagementTab } from '@/components/dashboard/management-ui';
 import {
   User, Shield, Settings, Upload, Image as ImageIcon, CheckCircle2, AlertCircle, Sparkles, Globe, Share2, Video, Tv, MessageSquare, Phone, Hash, Tag, Save, ArrowLeft, Gamepad2, Key
 } from 'lucide-react';
@@ -21,16 +22,26 @@ import {
 interface UserProfileSettingsViewProps {
   onBack?: () => void;
   brandColor?: string;
+  embedded?: boolean;
 }
 
-export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: UserProfileSettingsViewProps) {
+type ProfileSettingsTab = 'juego_basico' | 'gamertags' | 'sistema_general' | 'redes_contacto';
+
+const PROFILE_SETTINGS_TABS: ManagementTab<ProfileSettingsTab>[] = [
+  { id: 'juego_basico', label: 'Disciplina y perfil', shortLabel: 'Disciplina', icon: Gamepad2, tone: 'cyan' },
+  { id: 'gamertags', label: 'Gamertags e IDs', shortLabel: 'Gamertags', icon: Sparkles, tone: 'violet' },
+  { id: 'sistema_general', label: 'Cuenta y seguridad', shortLabel: 'Cuenta', icon: User, tone: 'emerald' },
+  { id: 'redes_contacto', label: 'Contacto y redes', shortLabel: 'Contacto', icon: Globe, tone: 'gold' },
+];
+
+export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedded = false }: UserProfileSettingsViewProps) {
   const router = useRouter();
   const { currentUser, updateCurrentUser, refetchUser } = useAuth();
 
   const currentUserRoleLower = (currentUser?.role || '').toLowerCase();
   const isAdminOrOrganizer = currentUserRoleLower === 'administrador' || currentUserRoleLower === 'admin' || currentUserRoleLower === 'organizador';
 
-  const [activeTab, setActiveTab] = useState<'juego_basico' | 'gamertags' | 'sistema_general' | 'redes_contacto'>('juego_basico');
+  const [activeTab, setActiveTab] = useState<ProfileSettingsTab>('juego_basico');
 
   // 1. Información Básica del Juego
   const [configuredGame, setConfiguredGame] = useState<string>(currentUser?.primaryGame || 'eafc26');
@@ -347,14 +358,14 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
       const data = await res.json();
 
       if (data.success) {
-        setSavingMsg({ type: 'success', text: '¡Perfil de atleta y posiciones por juego actualizados en MySQL!' });
+        setSavingMsg({ type: 'success', text: 'Perfil y preferencias actualizados correctamente.' });
         // Synchronize in-memory session, local storage and trigger real-time route refresh
         const updatedUser = { ...currentUser, ...payload };
         updateCurrentUser({ ...updatedUser, primaryGame: primaryGame as UserProfile['primaryGame'] });
         await refetchUser();
         router.refresh();
       } else {
-        setSavingMsg({ type: 'error', text: data.error || 'Error actualizando el perfil en MySQL' });
+        setSavingMsg({ type: 'error', text: data.error || 'No fue posible actualizar el perfil.' });
       }
     } catch (err: unknown) {
       setSavingMsg({ type: 'error', text: err instanceof Error ? err.message : 'Error de conexión guardando perfil' });
@@ -364,9 +375,10 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+    <div className="account-settings-view space-y-5 sm:space-y-6 animate-in fade-in duration-300">
       {/* 1. Header Banner & Avatar Edit Preview */}
-      <div className="relative w-full left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-slate-950 border-b border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[260px] sm:min-h-[320px] flex flex-col justify-end">
+      {!embedded ? (
+      <div className="account-settings-cover relative w-full bg-slate-950 border border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[240px] sm:min-h-[300px] flex flex-col justify-end">
         {/* Full Bleed Banner Image Graphic */}
         <div className="absolute inset-0 z-0 group">
           <Image
@@ -453,50 +465,16 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
           )}
         </div>
       </div>
+      ) : null}
 
       {/* 2. TAB SECTIONS ORDERED BY USER SPECIFICATION */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab('juego_basico')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'juego_basico' ? 'bg-cyan-500 text-slate-950 shadow-lg scale-[1.02]' : 'bg-slate-900 border border-white/10 text-slate-300 hover:text-white'
-            }`}
-          >
-            <Gamepad2 className="w-4 h-4" />
-            1. Información Básica del Juego
-          </button>
-
-          <button
-            onClick={() => setActiveTab('gamertags')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'gamertags' ? 'bg-purple-600 text-white shadow-lg scale-[1.02]' : 'bg-slate-900 border border-white/10 text-slate-300 hover:text-white'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            2. Gamertags, IDs & Posiciones por Juego
-          </button>
-
-          <button
-            onClick={() => setActiveTab('sistema_general')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'sistema_general' ? 'bg-emerald-500 text-slate-950 shadow-lg scale-[1.02]' : 'bg-slate-900 border border-white/10 text-slate-300 hover:text-white'
-            }`}
-          >
-            <User className="w-4 h-4" />
-            3. Información General del Sistema
-          </button>
-
-          <button
-            onClick={() => setActiveTab('redes_contacto')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 ${
-              activeTab === 'redes_contacto' ? 'bg-amber-500 text-slate-950 shadow-lg scale-[1.02]' : 'bg-slate-900 border border-white/10 text-slate-300 hover:text-white'
-            }`}
-          >
-            <Globe className="w-4 h-4" />
-            4. Redes Sociales y Contacto
-          </button>
-        </div>
+      <div className={embedded ? 'account-settings-content space-y-5' : 'account-settings-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5'}>
+        <ManagementTabs
+          tabs={PROFILE_SETTINGS_TABS}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          label="Secciones de configuración de la cuenta"
+        />
 
         {/* Toast Notification */}
         {savingMsg && (
@@ -508,12 +486,12 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
           </div>
         )}
 
-        <form onSubmit={handleSaveProfile} className="space-y-6">
+        <form onSubmit={handleSaveProfile} className="account-settings-form space-y-5">
 
           {/* TAB 1: INFORMACIÓN BÁSICA DEL JUEGO (ESTILIZADA DINÁMICAMENTE SEGÚN EL JUEGO SELECCIONADO) */}
           {activeTab === 'juego_basico' && (
             <Card
-              className="p-6 space-y-6 bg-slate-950 transition-all duration-500 shadow-2xl"
+              className="account-settings-card p-4 sm:p-6 space-y-6 bg-slate-950 transition-all duration-500 shadow-2xl"
               style={{
                 borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 50%, transparent)`,
                 boxShadow: `0 0 35px ${(GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF')}20`,
@@ -805,7 +783,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
 
           {/* TAB 2: GAMERTAGS Y ID DE LOS JUEGOS */}
           {activeTab === 'gamertags' && (
-            <Card className="p-6 space-y-6 border-purple-500/30 bg-slate-950">
+            <Card className="account-settings-card p-4 sm:p-6 space-y-6 border-purple-500/30 bg-slate-950">
               <div>
                 <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-purple-400" />
@@ -892,7 +870,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
 
           {/* TAB 3: INFORMACIÓN GENERAL DEL SISTEMA */}
           {activeTab === 'sistema_general' && (
-            <Card className="p-6 space-y-6 border-emerald-500/30 bg-slate-950">
+            <Card className="account-settings-card p-4 sm:p-6 space-y-6 border-emerald-500/30 bg-slate-950">
               <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-2">
                 <User className="w-4 h-4 text-emerald-400" />
                 3. Información General del Sistema:
@@ -1020,7 +998,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
 
           {/* TAB 4: REDES SOCIALES Y CONTACTO */}
           {activeTab === 'redes_contacto' && (
-            <Card className="p-6 space-y-6 border-amber-500/30 bg-slate-950">
+            <Card className="account-settings-card p-4 sm:p-6 space-y-6 border-amber-500/30 bg-slate-950">
               <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-2">
                 <Globe className="w-4 h-4 text-amber-400" />
                 4. Redes Sociales y Contacto:
@@ -1143,14 +1121,14 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF' }: User
           )}
 
           {/* Submit Action Button */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="account-settings-actions flex items-center justify-end gap-3">
             <Button
               type="submit"
               disabled={isSubmitting}
               className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black text-xs px-6 py-3 rounded-xl shadow-xl flex items-center gap-2 uppercase tracking-wider"
             >
               <Save className="w-4 h-4" />
-              {isSubmitting ? 'Guardando en MySQL...' : 'Guardar Cambios de Perfil'}
+              {isSubmitting ? 'Guardando cambios...' : 'Guardar cambios'}
             </Button>
           </div>
         </form>

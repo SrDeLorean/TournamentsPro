@@ -2,19 +2,20 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
-import { Search, Building2, Trophy, RefreshCw, BarChart2, LoaderCircle, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { Search, Building2, Trophy, RefreshCw, BarChart2, LoaderCircle, X, SlidersHorizontal, RotateCcw, GitBranch, ListOrdered, CheckCircle2, Clock3 } from 'lucide-react';
 import { GameConfig } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar } from '@/components/ui/avatar';
 import { TacticalLoadingSkeleton } from './tactical-loading-skeleton';
 import { PlayoffBracket } from './playoff-bracket';
+import { LeagueStandingsTable } from './league-standings-table';
 import { getOrganizationsWithStatsAction } from '@/app/actions/organizations';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import {
   calculateStandings,
+  isFinalizedMatchStatus,
   type ClassificationMatch,
   type OrganizationApiItem,
   type OrganizationItem,
@@ -103,6 +104,8 @@ export function ClassificationView({
             name: t.name,
             organizationName: t.organization_name,
             formatType: parsedFormat,
+            matchMode: t.match_mode || 'PartidoUnico',
+            qualifiersPerGroup: Number(t.qualifiers_per_group || 2),
             logoUrl: t.logo_url || t.logoUrl || t.banner_url || t.bannerUrl || '/images/default/logo-default.png',
           };
         });
@@ -591,47 +594,71 @@ export function ClassificationView({
                     compMatches.flatMap((match) => [match.home_team_name, match.away_team_name])
                       .filter((name) => name && !name.toLowerCase().includes('definir')),
                   ).size;
+                  const playoffRoundPattern = /dieciseisavos|octavos|cuartos|semifinal|tercer|final/i;
+                  const leaguePhaseMatches = compMatches.filter((match) =>
+                    !playoffRoundPattern.test(match.round_name || '') &&
+                    !(match.group_name || '').toUpperCase().includes('PLAYOFF'),
+                  );
+                  const completedLeagueMatches = leaguePhaseMatches.filter((match) => isFinalizedMatchStatus(match.status));
+                  const leaguePhaseComplete = leaguePhaseMatches.length > 0 && completedLeagueMatches.length === leaguePhaseMatches.length;
+                  const playoffMatches = compMatches.filter((match) =>
+                    playoffRoundPattern.test(match.round_name || '') ||
+                    (match.group_name || '').toUpperCase().includes('PLAYOFF'),
+                  );
+                  const activePhase = activeTabs[compName] || 'LIGA';
 
                   return (
                     <div key={compName} className="classification-competition space-y-3">
                     
                     {/* Header de Competencia */}
-                    <div className="classification-competition-heading flex items-center justify-between px-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl shadow-sm mb-2">
+                    <div className="classification-competition-heading">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                        <div className="classification-competition-icon">
                           <Trophy className="w-4 h-4" />
                         </div>
-                        <span className="font-black uppercase text-[var(--text-heading)] tracking-wider text-sm truncate">
-                          {compName}
+                        <span className="classification-competition-copy">
+                          <strong>{compName}</strong>
+                          <small>{formatType === 'PLAYOFF' ? 'Eliminación directa' : formatType === 'HIBRIDO' ? 'Liga + fase eliminatoria' : 'Todos contra todos'}</small>
                         </span>
                       </div>
-                      <Badge variant="cyan" className="text-[10px] px-2.5 py-0.5 opacity-80">
-                        {Math.max(teamList.length, competitionTeamCount)} EQUIPOS
-                      </Badge>
+                      <div className="classification-competition-badges">
+                        <Badge variant={formatType === 'PLAYOFF' ? 'violet' : formatType === 'HIBRIDO' ? 'cyan' : 'gold'}>{formatType}</Badge>
+                        <Badge variant="slate">{Math.max(teamList.length, competitionTeamCount)} equipos</Badge>
+                      </div>
                     </div>
 
                     {/* TABS PARA HIBRIDO */}
                     {formatType === 'HIBRIDO' && (
-                      <div className="flex items-center gap-2 mb-4 bg-[var(--bg-card)] border border-[var(--border-card)] p-1 rounded-xl w-fit">
+                      <div className="classification-phase-switch" role="tablist" aria-label={`Fases de ${compName}`}>
                         <button
+                          type="button"
+                          role="tab"
+                          aria-selected={activePhase === 'LIGA'}
                           onClick={() => setActiveTabs(prev => ({ ...prev, [compName]: 'LIGA' }))}
-                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${activeTabs[compName] !== 'PLAYOFF' ? 'bg-[var(--accent-cyan-bg)] text-[var(--accent-cyan)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                          className={activePhase === 'LIGA' ? 'is-active' : ''}
                         >
-                          Fase de Grupos
+                          <ListOrdered /><span><strong>Fase de liga</strong><small>{completedLeagueMatches.length}/{leaguePhaseMatches.length} partidos</small></span>
                         </button>
                         <button
+                          type="button"
+                          role="tab"
+                          aria-selected={activePhase === 'PLAYOFF'}
                           onClick={() => setActiveTabs(prev => ({ ...prev, [compName]: 'PLAYOFF' }))}
-                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${activeTabs[compName] === 'PLAYOFF' ? 'bg-[var(--accent-cyan-bg)] text-[var(--accent-cyan)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                          className={activePhase === 'PLAYOFF' ? 'is-active' : ''}
                         >
-                          Fase Final
+                          <GitBranch /><span><strong>Playoff</strong><small>{leaguePhaseComplete ? 'Cruces habilitados' : 'Proyección de cruces'}</small></span>
                         </button>
+                        <div className={`classification-phase-status ${leaguePhaseComplete ? 'is-ready' : ''}`}>
+                          {leaguePhaseComplete ? <CheckCircle2 /> : <Clock3 />}
+                          <span>{leaguePhaseComplete ? 'Liga completada · fase final disponible' : 'La fase final se completa al cerrar la liga'}</span>
+                        </div>
                       </div>
                     )}
 
                     {/* RENDERIZADO CONDICIONAL */}
-                    {formatType === 'PLAYOFF' || (formatType === 'HIBRIDO' && activeTabs[compName] === 'PLAYOFF') ? (
-                      <div className="classification-bracket-shell bg-[var(--bg-card)] border border-[var(--border-card)] rounded-2xl p-4 shadow-xl">
-                        <PlayoffBracket matches={compMatches} brandColor={brandColor} />
+                    {formatType === 'PLAYOFF' || (formatType === 'HIBRIDO' && activePhase === 'PLAYOFF') ? (
+                      <div className="classification-bracket-shell">
+                        <PlayoffBracket matches={playoffMatches} brandColor={brandColor} matchMode={compInfo.matchMode} />
                       </div>
                     ) : (
                       <div className="space-y-6">
@@ -646,76 +673,13 @@ export function ClassificationView({
                           const sortedGroups = Object.entries(groupsObj).sort((a, b) => a[0].localeCompare(b[0]));
 
                           return sortedGroups.map(([gName, gTeams]) => (
-                            <div key={gName} className="game-data-surface w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl">
-                              {sortedGroups.length > 1 && (
-                                <div className="px-4 py-3 bg-[var(--bg-card)] border-b border-[var(--border-card)] text-sm font-black uppercase text-[var(--accent-cyan)] tracking-wider">
-                                  {gName}
-                                </div>
-                              )}
-                              <table className="classification-table w-full text-left border-collapse min-w-[720px]">
-                                <thead>
-                                  <tr className="bg-[var(--bg-card)] border-b border-[var(--border-card)] text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider">
-                                    <th className="classification-position-cell p-3.5 w-16 text-center">Pos</th>
-                                    <th className="classification-team-cell p-3.5 text-left text-[var(--accent-cyan)]">Club / Equipo</th>
-                                    <th className="p-3.5 w-12 text-center" title="Partidos Jugados">PJ</th>
-                                    <th className="p-3.5 w-12 text-center text-emerald-400" title="Ganados">G</th>
-                                    <th className="p-3.5 w-12 text-center text-amber-400" title="Empatados">E</th>
-                                    <th className="p-3.5 w-12 text-center text-rose-400" title="Perdidos">P</th>
-                                    <th className="classification-stat-secondary p-3.5 w-12 text-center" title="Goles a Favor">GF</th>
-                                    <th className="classification-stat-secondary p-3.5 w-12 text-center" title="Goles en Contra">GC</th>
-                                    <th className="p-3.5 w-12 text-center" title="Diferencia de Goles">DIF</th>
-                                    <th className="p-3.5 w-16 text-center text-[var(--accent-cyan)] text-xs">PTS</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[var(--border-card)] text-xs">
-                                  {gTeams.map((team, index) => {
-                                    const position = index + 1;
-                                    let posStyles = 'text-[var(--text-secondary)] font-bold';
-                                    if (position === 1) posStyles = 'text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5 shadow-sm';
-                                    else if (position === 2) posStyles = 'text-[var(--text-primary)] bg-[var(--bg-main)] border border-[var(--border-card)] rounded px-1.5 py-0.5';
-                                    else if (position === 3) posStyles = 'text-orange-500 bg-orange-500/10 border border-orange-500/30 rounded px-1.5 py-0.5';
-                                    
-                                    const isBottom = position > gTeams.length - 3 && gTeams.length > 5;
-
-                                    return (
-                                      <tr key={team.name} className={`hover:bg-[var(--bg-card-hover)] transition-colors group ${isBottom ? 'opacity-80' : ''}`}>
-                                        <td className="classification-position-cell p-3.5 text-center">
-                                          <span className={posStyles}>{position}</span>
-                                        </td>
-                                        <td className="classification-team-cell p-3.5">
-                                          <div className="flex items-center gap-3">
-                                            <Avatar src={team.logoUrl || undefined} alt={`Logo de ${team.name}`} fallback={team.tag} size="sm" className="ring-1 ring-[var(--border-card)] shrink-0" />
-                                            <span className="min-w-0">
-                                              <strong
-                                                className={`block font-extrabold font-display text-sm truncate max-w-[200px] transition-colors group-hover:text-[var(--team-hover)] ${position <= 3 ? 'text-[var(--text-primary)]' : 'text-[var(--text-heading)]'}`}
-                                                style={{ '--team-hover': brandColor } as React.CSSProperties & Record<'--team-hover', string>}
-                                              >{team.name}</strong>
-                                              <small className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--text-muted)]">{team.tag}</small>
-                                            </span>
-                                          </div>
-                                        </td>
-                                        <td className="p-3.5 text-center font-bold text-[var(--text-secondary)]">{team.pj}</td>
-                                        <td className="p-3.5 text-center font-black text-emerald-400/80">{team.g}</td>
-                                        <td className="p-3.5 text-center font-bold text-amber-400/80">{team.e}</td>
-                                        <td className="p-3.5 text-center font-bold text-rose-400/80">{team.p}</td>
-                                        <td className="classification-stat-secondary p-3.5 text-center font-semibold text-[var(--text-muted)]">{team.gf}</td>
-                                        <td className="classification-stat-secondary p-3.5 text-center font-semibold text-[var(--text-muted)]">{team.gc}</td>
-                                        <td className="p-3.5 text-center font-black">
-                                          <span className={team.dif > 0 ? 'text-emerald-400' : team.dif < 0 ? 'text-rose-400' : 'text-[var(--text-muted)]'}>
-                                            {team.dif > 0 ? `+${team.dif}` : team.dif}
-                                          </span>
-                                        </td>
-                                        <td className="p-3.5 text-center">
-                                          <span className="px-2 py-1 bg-[var(--bg-main)] border border-[var(--border-card)] rounded font-black text-sm shadow-sm transition-colors" style={{ color: brandColor }}>
-                                            {team.pts}
-                                          </span>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
+                            <LeagueStandingsTable
+                              key={gName}
+                              teams={gTeams}
+                              brandColor={brandColor}
+                              groupName={sortedGroups.length > 1 ? gName : undefined}
+                              qualifiedCount={formatType === 'HIBRIDO' ? compInfo.qualifiersPerGroup || 2 : 0}
+                            />
                           ));
                         })()}
                       </div>

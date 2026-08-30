@@ -12,6 +12,8 @@ export interface TournamentItem {
   gameSlug?: string;
   organizationName?: string;
   formatType?: string;
+  matchMode?: string;
+  qualifiersPerGroup?: number;
   logoUrl?: string;
 }
 
@@ -30,6 +32,8 @@ export interface TeamStanding {
   circuitName: string;
   competitionName: string;
   groupName: string;
+  previousPosition?: number;
+  positionChange?: number;
 }
 
 export interface ClassificationMatch {
@@ -58,6 +62,8 @@ export interface TournamentApiItem {
   organization_name?: string;
   format_type?: string;
   format?: string;
+  match_mode?: string;
+  qualifiers_per_group?: number;
   logo_url?: string;
   logoUrl?: string;
   banner_url?: string;
@@ -73,6 +79,11 @@ export interface OrganizationApiItem {
 }
 
 const PLAYOFF_ROUNDS = ['octavos', 'cuartos', 'semifinal', 'tercer', 'final', 'dieciseisavos'];
+const FINALIZED_STATUSES = new Set(['FINALIZADO', 'TERMINADO']);
+
+export function isFinalizedMatchStatus(status?: string | null): boolean {
+  return FINALIZED_STATUSES.has((status || '').toUpperCase());
+}
 
 function emptyStanding(
   name: string,
@@ -85,7 +96,15 @@ function emptyStanding(
   return { name, tag, logoUrl, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, dif: 0, pts: 0, circuitName, competitionName, groupName };
 }
 
-export function calculateStandings(matches: readonly ClassificationMatch[]): TeamStanding[] {
+function standingScope(item: Pick<TeamStanding, 'circuitName' | 'competitionName' | 'groupName'>): string {
+  return `${item.circuitName}::${item.competitionName}::${item.groupName}`.toLowerCase();
+}
+
+function matchScope(match: ClassificationMatch): string {
+  return `${match.organization_name || 'Organización Oficial BD'}::${match.tournament_name || 'Competencia BD'}::${match.group_name || 'GENERAL'}`.toLowerCase();
+}
+
+function calculateBaseStandings(matches: readonly ClassificationMatch[]): TeamStanding[] {
   const standings = new Map<string, TeamStanding>();
 
   for (const match of matches) {
@@ -110,7 +129,7 @@ export function calculateStandings(matches: readonly ClassificationMatch[]): Tea
 
     const homeScore = match.score_home == null ? null : Number(match.score_home);
     const awayScore = match.score_away == null ? null : Number(match.score_away);
-    if (match.status !== 'FINALIZADO' || homeScore === null || awayScore === null) continue;
+    if (!isFinalizedMatchStatus(match.status) || homeScore === null || awayScore === null) continue;
 
     const home = homeStanding;
     const away = awayStanding;
@@ -142,4 +161,33 @@ export function calculateStandings(matches: readonly ClassificationMatch[]): Tea
   return [...standings.values()].sort((left, right) =>
     right.pts - left.pts || right.dif - left.dif || right.gf - left.gf,
   );
+}
+
+export function calculateStandings(matches: readonly ClassificationMatch[]): TeamStanding[] {
+  const current = calculateBaseStandings(matches);
+  const scopes = new Map<string, TeamStanding[]>();
+  current.forEach((team) => scopes.set(standingScope(team), [...(scopes.get(standingScope(team)) || []), team]));
+
+  scopes.forEach((teams, scope) => {
+    const scopedMatches = matches.filter((match) => matchScope(match) === scope);
+    const completedMatchdays = scopedMatches
+      .filter((match) => isFinalizedMatchStatus(match.status) && Number.isFinite(Number(match.matchday)))
+      .map((match) => Number(match.matchday));
+    const currentMatchday = completedMatchdays.length ? Math.max(...completedMatchdays) : 0;
+    if (currentMatchday <= 1) return;
+
+    const previous = calculateBaseStandings(
+      scopedMatches.filter((match) => !isFinalizedMatchStatus(match.status) || Number(match.matchday || 0) < currentMatchday),
+    );
+    const previousPositions = new Map(previous.map((team, index) => [team.name.toLowerCase(), index + 1]));
+
+    teams.forEach((team, index) => {
+      const previousPosition = previousPositions.get(team.name.toLowerCase());
+      if (!previousPosition) return;
+      team.previousPosition = previousPosition;
+      team.positionChange = previousPosition - (index + 1);
+    });
+  });
+
+  return current;
 }

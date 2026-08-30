@@ -1120,56 +1120,49 @@ export async function generateFixtureService(
   competitionId: string,
   config: FixtureConfig
 ): Promise<FixtureGenerationResult> {
-  return dbProvider.withTransaction(async (transaction) => {
-    const competitions = await transaction.query<{ id: string }>(
-      'SELECT id FROM competitions WHERE id = ? FOR UPDATE',
-      [competitionId],
-    );
-    if (competitions.length === 0) {
-      return { success: false, error: 'Competencia no encontrada', code: 'NOT_FOUND' };
-    }
+  const { dbProvider } = await import('@/lib/db/provider');
+  const competition = await dbProvider.competitions.findById(competitionId);
+  if (!competition) {
+    return { success: false, error: 'Competencia no encontrada', code: 'NOT_FOUND' };
+  }
 
-    const enrolledTeams = await transaction.query<{ team_id: string; team_name: string; team_tag: string | null }>(
-      `SELECT * FROM competition_teams WHERE competition_id = ? AND status = 'CONFIRMADO' FOR UPDATE`,
-      [competitionId],
-    );
-    if (enrolledTeams.length < 2) {
-      return { success: false, error: 'Se requieren al menos 2 equipos confirmados', code: 'NOT_ENOUGH_TEAMS' };
-    }
+  const enrolledTeamsData = await dbProvider.competitions.getEnrolledTeams(competitionId);
+  if (enrolledTeamsData.length < 2) {
+    return { success: false, error: 'Se requieren al menos 2 equipos confirmados', code: 'NOT_ENOUGH_TEAMS' };
+  }
 
-    const teams = enrolledTeams.map((team) => ({ id: team.team_id, name: team.team_name, tag: team.team_tag }));
-    await (transaction as any).query(
-      'DELETE FROM matches WHERE competition_id = ?',
-      [competitionId],
-    );
+  const teams = enrolledTeamsData.map((team) => ({ id: team.team_id || team.teamId, name: team.team_name || team.teamName, tag: team.team_tag || team.teamTag }));
+  
+  const existingMatches = await dbProvider.matches.findByCompetition(competitionId);
+  for (const m of existingMatches) {
+    await dbProvider.matches.delete(m.id);
+  }
 
-    const { startDate, selectedDays, selectedTimes, matchMode, format, groupCount, qualifiersPerGroup } = config;
-    const totalSavedMatches = await generateMatchesForFormat(
-      transaction,
-      competitionId,
-      teams,
-      format,
-      matchMode,
-      startDate,
-      selectedDays,
-      selectedTimes,
-      groupCount,
-      qualifiersPerGroup,
-    );
+  const { startDate, selectedDays, selectedTimes, matchMode, format, groupCount, qualifiersPerGroup } = config;
+  const totalSavedMatches = await generateMatchesForFormat(
+    competitionId,
+    teams,
+    format,
+    matchMode,
+    startDate,
+    selectedDays,
+    selectedTimes,
+    groupCount,
+    qualifiersPerGroup,
+  );
 
-    await (transaction as any).query(
-      `UPDATE competitions
-          SET status = 'Activo', format = ?, match_mode = ?, group_count = ?, qualifiers_per_group = ?
-        WHERE id = ?`,
-      [config.format, config.matchMode, config.groupCount, config.qualifiersPerGroup, competitionId],
-    );
-
-    return { success: true, matchesCreated: totalSavedMatches };
+  await dbProvider.competitions.update(competitionId, {
+    status: 'Activo',
+    format: config.format,
+    matchMode: config.matchMode,
+    groupCount: config.groupCount,
+    qualifiersPerGroup: config.qualifiersPerGroup
   });
+
+  return { success: true, matchesCreated: totalSavedMatches };
 }
 
 async function generateMatchesForFormat(
-  transaction: IDatabaseProvider,
   competitionId: string,
   teams: { id: string; name: string; tag: string | null }[],
   format: 'Liga' | 'Playoff' | 'Hibrido',
@@ -1180,6 +1173,7 @@ async function generateMatchesForFormat(
   groupCount: number,
   qualifiersPerGroup: number
 ): Promise<number> {
+  const { dbProvider } = await import('@/lib/db/provider');
   const { getMatchdayDateTime } = await import('@/lib/fixture-date-scheduler');
   const { distributeTeamsIntoGroups, generatePlayoffBracket } = await import('@/lib/matchmaking-bracket');
   
@@ -1197,6 +1191,31 @@ async function generateMatchesForFormat(
     return { scheduledTime: info.timeStr, scheduledDateTimeISO: info.iso };
   };
 
+  const insertMatch = async (matchData: any) => {
+    await dbProvider.matches.create({
+      id: matchData.id,
+      tournamentId: competitionId,
+      competitionId: competitionId,
+      matchdayNumber: matchData.matchdayNumber,
+      matchday: matchData.matchdayNumber,
+      stage: matchData.stage,
+      roundName: matchData.roundName || null,
+      groupName: matchData.groupName || null,
+      nextMatchId: matchData.nextMatchId || null,
+      nextMatchSlot: matchData.nextMatchSlot || null,
+      homeTeamId: matchData.homeTeamId,
+      teamHomeId: matchData.homeTeamId,
+      awayTeamId: matchData.awayTeamId,
+      teamAwayId: matchData.awayTeamId,
+      homeTeamName: matchData.homeTeamName,
+      awayTeamName: matchData.awayTeamName,
+      status: 'PENDIENTE',
+      scheduledTime: matchData.scheduledTime,
+      scheduledAt: matchData.scheduledDateTimeISO
+    });
+    totalSavedMatches++;
+  };
+
   if (format === 'Playoff') {
     const playoffNodes = generatePlayoffBracket(competitionId, teams, matchMode);
     for (const node of playoffNodes.reverse()) {
@@ -1206,26 +1225,18 @@ async function generateMatchesForFormat(
       }
       const timing = getScheduledDateTime(matchdayNumber);
       
-      await (transaction as any).query(
-        `INSERT INTO matches 
-         (id, tournament_id, competition_id, matchday_number, matchday, stage, round_name, next_match_id, next_match_slot, 
-          home_team_id, away_team_id, team_home_id, team_away_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
-         VALUES (?, ?, ?, ?, ?, 'PLAYOFF', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?)`,
-        [
-          node.id, competitionId, competitionId, matchdayNumber, matchdayNumber,
-          node.roundName, node.nextMatchId, node.nextMatchSlot,
-          node.homeTeamId, node.awayTeamId, node.homeTeamId, node.awayTeamId,
-          node.homeTeamName, node.awayTeamName,
-          timing.scheduledTime, timing.scheduledDateTimeISO
-        ]
-      );
-      totalSavedMatches++;
+      await insertMatch({
+        id: node.id, matchdayNumber, stage: 'PLAYOFF', roundName: node.roundName,
+        nextMatchId: node.nextMatchId, nextMatchSlot: node.nextMatchSlot,
+        homeTeamId: node.homeTeamId, awayTeamId: node.awayTeamId,
+        homeTeamName: node.homeTeamName, awayTeamName: node.awayTeamName,
+        ...timing
+      });
     }
   } else if (format === 'Hibrido') {
     const groups = distributeTeamsIntoGroups(teams, groupCount);
     let maxGroupMatchday = 1;
 
-    // Fase de grupos
     for (const [groupIndex, group] of groups.entries()) {
       const groupTeams = [...group.teams];
       if (groupTeams.length % 2 !== 0) groupTeams.push({ id: 'BYE', name: 'DESCANSO (BYE)' });
@@ -1253,29 +1264,19 @@ async function generateMatchesForFormat(
             const away = groupTeams[awayIndex];
 
             if (home.id !== 'BYE' && away.id !== 'BYE') {
-              const matchId = `m-${compClean}-g${groupIndex + 1}-j${matchdayNumber}-m${matchIndex + 1}`;
-
-              await (transaction as any).query(
-                `INSERT INTO matches 
-                 (id, tournament_id, competition_id, matchday_number, matchday, stage, group_name, 
-                  team_home_id, team_away_id, home_team_id, away_team_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
-                 VALUES (?, ?, ?, ?, ?, 'GROUP', ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?)`,
-                [
-                  matchId, competitionId, competitionId, matchdayNumber, matchdayNumber,
-                  group.groupName,
-                  home.id, away.id, home.id, away.id,
-                  home.name, away.name,
-                  timing.scheduledTime, timing.scheduledDateTimeISO
-                ]
-              );
-              totalSavedMatches++;
+              await insertMatch({
+                id: `m-${compClean}-g${groupIndex + 1}-j${matchdayNumber}-m${matchIndex + 1}`,
+                matchdayNumber, stage: 'GROUP', groupName: group.groupName,
+                homeTeamId: home.id, awayTeamId: away.id,
+                homeTeamName: home.name, awayTeamName: away.name,
+                ...timing
+              });
             }
           }
         }
       }
     }
 
-    // Fase de playoffs híbrida
     const playoffTeamCount = groupCount * qualifiersPerGroup;
     const playoffNodes = generatePlayoffBracket(competitionId, teams.slice(0, playoffTeamCount), matchMode, true, groupCount, qualifiersPerGroup);
 
@@ -1287,25 +1288,17 @@ async function generateMatchesForFormat(
       const matchdayNumber = maxGroupMatchday + playoffRoundOffset;
       const timing = getScheduledDateTime(matchdayNumber);
 
-      await (transaction as any).query(
-        `INSERT INTO matches 
-         (id, tournament_id, competition_id, matchday_number, matchday, stage, round_name, next_match_id, next_match_slot, 
-          home_team_id, away_team_id, team_home_id, team_away_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
-         VALUES (?, ?, ?, ?, ?, 'PLAYOFF', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?)`,
-        [
-          node.id, competitionId, competitionId, matchdayNumber, matchdayNumber,
-          node.roundName, node.nextMatchId, node.nextMatchSlot,
-          node.homeTeamId, node.awayTeamId, node.homeTeamId, node.awayTeamId,
-          node.homeTeamName, node.awayTeamName,
-          timing.scheduledTime, timing.scheduledDateTimeISO
-        ]
-      );
-      totalSavedMatches++;
+      await insertMatch({
+        id: node.id, matchdayNumber, stage: 'PLAYOFF', roundName: node.roundName,
+        nextMatchId: node.nextMatchId, nextMatchSlot: node.nextMatchSlot,
+        homeTeamId: node.homeTeamId, awayTeamId: node.awayTeamId,
+        homeTeamName: node.homeTeamName, awayTeamName: node.awayTeamName,
+        ...timing
+      });
     }
   } else {
-    // Liga
     const teamsCopy = [...teams];
-    if (teamsCopy.length % 2 !== 0) teamsCopy.push({ id: 'BYE', name: 'DESCANSO (BYE)', tag: 'BYE' });
+    if (teamsCopy.length % 2 !== 0) teamsCopy.push({ id: 'BYE', name: 'DESCANSO (BYE)' });
     
     const numTeams = teamsCopy.length;
     const singleRoundMatchesCount = numTeams - 1;
@@ -1329,21 +1322,13 @@ async function generateMatchesForFormat(
           const away = teamsCopy[awayIndex];
 
           if (home.id !== 'BYE' && away.id !== 'BYE') {
-            const matchId = `m-${compClean}-j${matchdayNumber}-m${matchIndex + 1}`;
-
-            await (transaction as any).query(
-              `INSERT INTO matches 
-               (id, tournament_id, competition_id, matchday_number, matchday, stage, 
-                team_home_id, team_away_id, home_team_id, away_team_id, home_team_name, away_team_name, status, scheduled_time, scheduled_at)
-               VALUES (?, ?, ?, ?, ?, 'GROUP', ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?)`,
-              [
-                matchId, competitionId, competitionId, matchdayNumber, matchdayNumber,
-                home.id, away.id, home.id, away.id,
-                home.name, away.name,
-                timing.scheduledTime, timing.scheduledDateTimeISO
-              ]
-            );
-            totalSavedMatches++;
+            await insertMatch({
+              id: `m-${compClean}-j${matchdayNumber}-m${matchIndex + 1}`,
+              matchdayNumber, stage: 'GROUP', groupName: 'LIGA',
+              homeTeamId: home.id, awayTeamId: away.id,
+              homeTeamName: home.name, awayTeamName: away.name,
+              ...timing
+            });
           }
         }
       }
@@ -1352,10 +1337,6 @@ async function generateMatchesForFormat(
 
   return totalSavedMatches;
 }
-
-// ── Transfer Service ────────────────────────────────────────────────────────
-
-// ── Transfer Service ────────────────────────────────────────────────────────
 
 export interface CreateTransferResult {
   success: boolean;
