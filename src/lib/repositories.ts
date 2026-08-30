@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import { queryDB, dbPool, executeCommand, type DatabaseParams } from '@/lib/db';
+import type { Game, Match } from '@/lib/db/interfaces';
 
 type MutableDatabaseParams = Array<DatabaseParams[number]>;
 
@@ -15,6 +16,25 @@ interface OrganizationRow extends RowDataPacket {
   id: string; name: string; tag: string; owner_id: string; logo_url: string | null;
   banner_url: string | null; description: string | null; country: string;
   allowed_games: string | null; created_at: string;
+  status?: string; slug?: string; is_banned?: number; ban_reason?: string | null;
+  banned_at?: string | null; social_media?: string | null;
+}
+
+interface MatchRow extends RowDataPacket {
+  id: string; tournament_id: string | null; competition_id: string | null; round: number | null;
+  matchday: number | null; round_name: string | null; group_name: string | null;
+  team_home_id: string | null; home_team_id: string | null; team_away_id: string | null;
+  away_team_id: string | null; home_team_name: string | null; home_team_tag: string | null;
+  away_team_name: string | null; away_team_tag: string | null; score_home: number | null;
+  score_away: number | null; reported_score_home: number | null; reported_score_away: number | null;
+  winner_team_id: string | null; proof_url: string | null; reported_by_user_id: string | null;
+  next_match_id: string | null; next_match_slot: string | null; scheduled_at: string | null;
+  scheduled_time: string | null; status: string; created_at?: string;
+}
+
+interface GameRow extends RowDataPacket {
+  slug: string; name: string; category: string; team_size: number; positions_json: unknown;
+  brand_color: string; stats_schema: unknown; created_at: string;
 }
 
 interface TeamRow extends RowDataPacket {
@@ -261,6 +281,12 @@ export class OrganizationRepository extends BaseRepository<Organization> {
       description: row.description,
       country: row.country,
       allowedGames: row.allowed_games ? JSON.parse(row.allowed_games) : [],
+      status: row.status,
+      slug: row.slug,
+      isBanned: Boolean(row.is_banned),
+      banReason: row.ban_reason,
+      bannedAt: row.banned_at,
+      socialMedia: row.social_media ? JSON.parse(row.social_media) : null,
       createdAt: row.created_at,
     };
   }
@@ -318,14 +344,17 @@ export class OrganizationRepository extends BaseRepository<Organization> {
     
     const fieldMap: Record<string, string> = {
       name: 'name', tag: 'tag', logoUrl: 'logo_url', bannerUrl: 'banner_url',
-      description: 'description', country: 'country', allowedGames: 'allowed_games'
+      description: 'description', country: 'country', allowedGames: 'allowed_games',
+      status: 'status', slug: 'slug', isBanned: 'is_banned', banReason: 'ban_reason',
+      bannedAt: 'banned_at', socialMedia: 'social_media'
     };
     
     for (const [key, value] of Object.entries(data)) {
       const dbKey = fieldMap[key];
       if (dbKey) {
         fields.push(`\`${dbKey}\` = ?`);
-        params.push(key === 'allowedGames' ? JSON.stringify(value) : value);
+        if (['allowedGames', 'socialMedia'].includes(key)) params.push(JSON.stringify(value));
+        else params.push(value as DatabaseParams[number]);
       }
     }
     
@@ -692,7 +721,129 @@ export interface Organization {
   description: string | null;
   country: string;
   allowedGames: string[];
+  status?: string;
+  slug?: string;
+  isBanned?: boolean;
+  banReason?: string | null;
+  bannedAt?: string | null;
+  socialMedia?: Record<string, unknown> | null;
   createdAt: string;
+}
+
+export class MatchRepository extends BaseRepository<Match> {
+  protected tableName = 'matches';
+  protected primaryKey = 'id';
+
+  protected mapRow(row: MatchRow): Match {
+    return {
+      id: row.id, tournamentId: row.tournament_id, competitionId: row.competition_id,
+      round: row.round, matchday: row.matchday, roundName: row.round_name, groupName: row.group_name,
+      teamHomeId: row.team_home_id, homeTeamId: row.home_team_id,
+      teamAwayId: row.team_away_id, awayTeamId: row.away_team_id,
+      homeTeamName: row.home_team_name, homeTeamTag: row.home_team_tag,
+      awayTeamName: row.away_team_name, awayTeamTag: row.away_team_tag,
+      scoreHome: row.score_home, scoreAway: row.score_away,
+      reportedScoreHome: row.reported_score_home, reportedScoreAway: row.reported_score_away,
+      winnerTeamId: row.winner_team_id, proofUrl: row.proof_url,
+      reportedByUserId: row.reported_by_user_id, nextMatchId: row.next_match_id,
+      nextMatchSlot: row.next_match_slot, scheduledAt: row.scheduled_at,
+      scheduledTime: row.scheduled_time, status: row.status, createdAt: row.created_at,
+    };
+  }
+
+  async findByCompetition(competitionId: string): Promise<Match[]> {
+    const rows = await queryDB<MatchRow>(
+      'SELECT * FROM matches WHERE competition_id = ? OR tournament_id = ? ORDER BY scheduled_at ASC',
+      [competitionId, competitionId],
+    );
+    return rows.map((row) => this.mapRow(row));
+  }
+
+  async addPlayerStat(statsId: string, matchId: string, playerId: string, gameSlug: string, statsJson: string): Promise<void> {
+    await queryDB(
+      'INSERT INTO match_player_stats (id, match_id, player_id, game_slug, stats_json) VALUES (?, ?, ?, ?, ?)',
+      [statsId, matchId, playerId, gameSlug, statsJson],
+    );
+  }
+
+  async create(data: Partial<Match>): Promise<Match> {
+    const id = data.id || `match-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    await queryDB(
+      `INSERT INTO matches (id, tournament_id, competition_id, team_home_id, home_team_id, team_away_id, away_team_id, scheduled_at, scheduled_time, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [id, data.tournamentId || null, data.competitionId || null, data.teamHomeId || null, data.homeTeamId || null, data.teamAwayId || null, data.awayTeamId || null, data.scheduledAt || null, data.scheduledTime || null, data.status || 'PROGRAMADO'],
+    );
+    const match = await this.findById(id);
+    if (!match) throw new Error('Error creando encuentro');
+    return match;
+  }
+
+  async update(id: string, data: Partial<Match>): Promise<Match | null> {
+    const fieldMap: Record<string, string> = {
+      tournamentId: 'tournament_id', competitionId: 'competition_id', round: 'round', matchday: 'matchday',
+      roundName: 'round_name', groupName: 'group_name', teamHomeId: 'team_home_id', homeTeamId: 'home_team_id',
+      teamAwayId: 'team_away_id', awayTeamId: 'away_team_id', homeTeamName: 'home_team_name',
+      homeTeamTag: 'home_team_tag', awayTeamName: 'away_team_name', awayTeamTag: 'away_team_tag',
+      scoreHome: 'score_home', scoreAway: 'score_away', reportedScoreHome: 'reported_score_home',
+      reportedScoreAway: 'reported_score_away', winnerTeamId: 'winner_team_id', proofUrl: 'proof_url',
+      reportedByUserId: 'reported_by_user_id', nextMatchId: 'next_match_id', nextMatchSlot: 'next_match_slot',
+      scheduledAt: 'scheduled_at', scheduledTime: 'scheduled_time', status: 'status',
+    };
+    const entries = Object.entries(data).filter(([key]) => fieldMap[key]);
+    if (entries.length === 0) return this.findById(id);
+    await queryDB(
+      `UPDATE matches SET ${entries.map(([key]) => `\`${fieldMap[key]}\` = ?`).join(', ')} WHERE id = ?`,
+      [...entries.map(([, value]) => value ?? null), id],
+    );
+    return this.findById(id);
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const result = await executeCommand('DELETE FROM matches WHERE id = ?', [id]);
+    return result.affectedRows > 0;
+  }
+}
+
+export class GameRepository implements Repository<Game> {
+  private mapRow(row: GameRow): Game {
+    return { slug: row.slug, name: row.name, category: row.category, teamSize: row.team_size, positionsJson: row.positions_json, brandColor: row.brand_color, statsSchema: row.stats_schema, createdAt: row.created_at };
+  }
+
+  async findById(slug: string): Promise<Game | null> {
+    const rows = await queryDB<GameRow>('SELECT * FROM games WHERE slug = ? LIMIT 1', [slug]);
+    return rows[0] ? this.mapRow(rows[0]) : null;
+  }
+
+  async findAll(options: FindOptions = {}): Promise<Game[]> {
+    const direction = options.orderDirection === 'ASC' ? 'ASC' : 'DESC';
+    const orderBy = options.orderBy === 'name' ? 'name' : 'created_at';
+    const rows = await queryDB<GameRow>(`SELECT * FROM games ORDER BY \`${orderBy}\` ${direction} LIMIT ? OFFSET ?`, [options.limit || 100, options.offset || 0]);
+    return rows.map((row) => this.mapRow(row));
+  }
+
+  async create(data: Partial<Game>): Promise<Game> {
+    if (!data.slug) throw new Error('Slug de disciplina requerido');
+    await queryDB('INSERT INTO games (slug, name, category, team_size, positions_json, brand_color, stats_schema, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())', [data.slug, data.name, data.category || 'eSports', data.teamSize || 5, data.positionsJson ? JSON.stringify(data.positionsJson) : null, data.brandColor || '#FFFFFF', data.statsSchema ? JSON.stringify(data.statsSchema) : null]);
+    return (await this.findById(data.slug))!;
+  }
+
+  async update(slug: string, data: Partial<Game>): Promise<Game | null> {
+    const fieldMap: Record<string, string> = { name: 'name', category: 'category', teamSize: 'team_size', positionsJson: 'positions_json', brandColor: 'brand_color', statsSchema: 'stats_schema' };
+    const entries = Object.entries(data).filter(([key]) => fieldMap[key]);
+    if (entries.length === 0) return this.findById(slug);
+    await queryDB(`UPDATE games SET ${entries.map(([key]) => `\`${fieldMap[key]}\` = ?`).join(', ')} WHERE slug = ?`, [...entries.map(([key, value]) => ['positionsJson', 'statsSchema'].includes(key) && typeof value !== 'string' ? JSON.stringify(value) : value ?? null), slug]);
+    return this.findById(slug);
+  }
+
+  async delete(slug: string): Promise<boolean> {
+    const result = await executeCommand('DELETE FROM games WHERE slug = ?', [slug]);
+    return result.affectedRows > 0;
+  }
+
+  async count(): Promise<number> {
+    const rows = await queryDB<{ total: number }>('SELECT COUNT(*) AS total FROM games');
+    return rows[0]?.total || 0;
+  }
 }
 
 export interface Team {

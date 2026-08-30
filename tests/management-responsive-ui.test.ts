@@ -80,9 +80,15 @@ describe('management workspace UI', () => {
     ]);
 
     expect(layout).toContain('<Footer compact={showRoleAwareChrome} />');
+    expect(layout).not.toContain('key={`management-header-${pathname}`}');
+    expect(layout).not.toContain('<Navbar key={pathname} />');
     expect(layout).not.toContain("['/dashboard', '/admin']");
     expect(footer).toContain("compact && 'app-footer-management'");
-    expect(footer).toContain('aria-label="Navegación del pie de página"');
+    expect(footer).toContain('aria-label="Información institucional"');
+    expect(footer).toContain('Misión y visión');
+    expect(footer).toContain('Quiénes somos');
+    expect(footer).not.toContain("label: 'Equipos'");
+    expect(footer).not.toContain("label: 'Jugadores'");
     expect(styles).toContain('.app-footer-inner');
     expect(styles).toContain('.app-footer-management');
   });
@@ -323,7 +329,9 @@ describe('management workspace UI', () => {
     expect(modal).toContain("useBodyScrollLock(isOpen, 'modal')");
 
     expect(layout).toContain('managementMenuState.pathname === pathname');
-    expect(layout).toContain('<Navbar key={pathname} />');
+    expect(layout).toContain('<Navbar />');
+    expect(layout).not.toContain('<Navbar key={pathname} />');
+    expect(navbar).toContain('mobileMenuState.pathname === pathname');
     expect(navbar).toContain("useBodyScrollLock(isMobileMenuOpen, 'public-navigation')");
     expect(navbar).toContain('closeAtDesktopBreakpoint');
     expect(navbar).toContain("event.key === 'Escape'");

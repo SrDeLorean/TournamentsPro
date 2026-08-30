@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const isProduction = process.env.NODE_ENV === "production";
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self'${isProduction ? "" : " 'unsafe-inline' 'unsafe-eval'"} https://accounts.google.com`,
+  `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"} https://accounts.google.com`,
   "style-src 'self' 'unsafe-inline' https://accounts.google.com",
   "img-src 'self' data: blob: https: http:",
   "font-src 'self' data:",
@@ -17,7 +17,11 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
-    typescript: {
+  output: "standalone",
+  compress: true,
+  poweredByHeader: false,
+  deploymentId: process.env.DEPLOYMENT_VERSION || undefined,
+  typescript: {
     ignoreBuildErrors: false,
   },
   experimental: {

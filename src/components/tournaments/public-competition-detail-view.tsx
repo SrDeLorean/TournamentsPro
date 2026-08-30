@@ -27,45 +27,59 @@ export interface CompetitionDetail {
   qualifiers_per_group?: number;
   max_teams?: number;
   registered_teams_count?: number;
-  prize_pool?: string;
+  prize_pool?: string | null;
   status: string;
-  fecha_inicio?: string;
-  fecha_termino?: string;
-  fecha_limite_inscripcion?: string;
-  description?: string;
+  fecha_inicio?: string | null;
+  fecha_termino?: string | null;
+  fecha_limite_inscripcion?: string | null;
+  description?: string | null;
   transfer_market_mode?: string;
   org_name?: string;
   org_logo?: string;
   org_banner?: string;
-  organization_id?: string;
+  organization_id?: string | null;
+  organizer_id?: string | null;
+  organizer_name?: string | null;
+  season_id?: string | null;
+  created_at?: string;
 }
 
 export interface ConfirmedTeam {
   id: string;
+  competition_id?: string;
   team_id?: string;
   team_name: string;
   team_tag?: string;
-  team_logo?: string;
+  team_logo?: string | null;
   captain_name?: string;
   status?: string;
   created_at?: string;
+  enrolled_at?: string;
+  updated_at?: string;
 }
 
 export interface CompetitionMatch {
   id: string;
-  home_team_name?: string;
-  home_team_tag?: string;
-  home_logo?: string;
-  away_team_name?: string;
-  away_team_tag?: string;
-  away_logo?: string;
+  home_team_id?: string | null;
+  team_home_id?: string | null;
+  away_team_id?: string | null;
+  team_away_id?: string | null;
+  home_team_name?: string | null;
+  home_team_tag?: string | null;
+  home_logo?: string | null;
+  away_team_name?: string | null;
+  away_team_tag?: string | null;
+  away_logo?: string | null;
   score_home?: number | null;
   score_away?: number | null;
   status?: string;
   scheduled_at?: string;
-  matchday?: number;
-  round_name?: string;
-  group_name?: string;
+  reported_score_home?: number | null;
+  reported_score_away?: number | null;
+  matchday_number?: number | null;
+  matchday?: number | null;
+  round_name?: string | null;
+  group_name?: string | null;
 }
 
 interface PublicCompetitionDetailViewProps {
@@ -118,7 +132,7 @@ export function PublicCompetitionDetailView({
     score_away: match.score_away ?? null,
     status: match.status || 'Pendiente',
     round_name: match.round_name || 'Ronda Única',
-    matchday: match.matchday,
+    matchday: match.matchday ?? undefined,
   }));
 
   return (

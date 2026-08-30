@@ -1,36 +1,36 @@
 # Graph Report - TournamentsPro  (2026-08-29)
 
 ## Corpus Check
-- 458 files · ~561,900 words
+- 468 files · ~567,533 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2342 nodes · 5223 edges · 240 communities (121 shown, 119 thin omitted)
+- 2409 nodes · 5319 edges · 254 communities (126 shown, 128 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 19 edges (avg confidence: 0.84)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `709ba996`
+- Built from commit: `d56522b5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - api-types.ts
-- card.tsx
+- button.tsx
 - cn
-- avatar.tsx
+- create-team-modal.tsx
 - game-portal-client.tsx
 - dependencies
 - devDependencies
 - compilerOptions
 - GameConfig
-- games-data.ts
-- getActionErrorMessage
+- users-page-client.tsx
+- new-squads.ts
 - global-directory-page.tsx
 - organization-profile-view.tsx
-- badge.tsx
-- users-page-client.tsx
-- auth-provider.tsx
+- useAuth
+- teams-page-client.tsx
+- games-data.ts
 - alter-orgs.js
 - seed-all-data.js
 - update-statuses.js
@@ -41,11 +41,11 @@
 - next-env.d.ts
 - postcss.config.mjs
 - auth.ts
-- login/route.ts
+- apiError
 - services.ts
 - athlete-workspace-view.tsx
-- button.tsx
-- db/provider.ts
+- moderation-dashboard-view.tsx
+- authorizationErrorResponse
 - security.ts
 - requireServerActor
 - validation.ts
@@ -54,44 +54,44 @@
 - app/layout.tsx
 - auth-server.ts
 - .mapRow
-- transfer-market.tsx
+- organization-directory.tsx
 - transfers.ts
 - migrate.mjs
 - 🏆 TournamentsPro — Plataforma eSports Integral
-- competitions.ts
+- getActionErrorMessage
 - plantilla-management-view.tsx
 - mobile-responsive-subnavbar.tsx
-- game-ui-showcase-client.tsx
+- auth-provider.tsx
 - 5. Re-render Optimization
 - 🧠 CONTEXTO COMPLETO DEL PROYECTO: TOURNAMENTSPRO (Para Modelos GPT / ChatGPT / Antigravity)
 - 7. JavaScript Performance
 - Quick Reference
-- section-config.ts
+- competition-tabs.tsx
 - classification-view.tsx
-- fixture-schedule-view.tsx
+- public-competition-detail-view.tsx
 - 3. 🚀 Módulos y Funcionalidades Desarrolladas
 - scripts
 - queryDB
 - logger.ts
 - 6. Rendering Performance
 - Fases y estado
-- register-page-client.tsx
+- esports-card.tsx
 - TeamRepository
 - 3. Server-Side Performance
 - security-housekeeping.mjs
-- esports-card.tsx
+- matchday-report-view.tsx
 - React Best Practices
 - Sections
 - match-reports.ts
 - lib/repositories.ts
 - check-architecture.mjs
-- UserRepository
+- .findById
 - Runbook operativo
 - 1. Eliminating Waterfalls
 - 2. Bundle Size Optimization
 - app/matchday/page.tsx
 - auth-server.js
-- CompetitionRepository
+- executeCommand
 - React Best Practices
 - Security model
 - 🕸️ GRAPHIFY — Mapa Estructural y Grafo de Navegación de TournamentsPro
@@ -194,25 +194,25 @@
 - server-parallel-nested-fetching.md
 - server-serialization.md
 - _template.md
-- dbProvider
+- db/provider.ts
 - @next/env
-- next-themes
+- competitions-client.tsx
 - tailwind.config.ts
 - public-asset-policy.test.ts
 - mysql/provider.ts
 - .mapRow
-- SupabaseTeamRepository
-- useAuth
-- [gameSlug]/layout.tsx
+- organizer-dashboard-view.tsx
+- modal.tsx
+- playoff-bracket.tsx
 - implementations.ts
-- esports-analytics-view.tsx
-- db.ts
+- BaseRepository
+- IDatabaseProvider
 - ICompetitionRepository
 - SupabaseBaseRepository
 - SupabaseBaseRepository
 - mysql/provider.js
 - patch_auth.js
-- test_auth.js
+- Match
 - SupabaseMatchRepository
 - SupabaseOrganizationRepository
 - SupabaseDatabaseProvider
@@ -221,6 +221,7 @@
 - Q: quiero que mejores los table, modal, eliminar, alertas que se generan en la gestion global.
 - prepare-standalone.mjs
 - componentes/page.tsx
+- fix_ts.js
 - patch_login.js
 - patch_profiles.js
 - upload_to_supabase.mjs
@@ -235,8 +236,21 @@
 - app/moderacion/page.tsx
 - teams-data.ts
 - append.js
-- bcryptjs
+- fix_ts2.js
 - client.js
+- SupabaseUserRepository
+- Despliegue de producción en Hostinger
+- smoke-standalone.mjs
+- ITeamRepository
+- SupabaseSeasonRepository
+- fix_mysql.js
+- fix_standalone.js
+- patch_all.js
+- patch_pkg.js
+- patch_snakecase.js
+- patch_supabase_orgs.js
+- react
+- tailwind-merge
 
 ## God Nodes (most connected - your core abstractions)
 1. `useAuth()` - 97 edges
@@ -255,41 +269,41 @@
   scripts/migrate-games-catalog.ts → src/lib/db.ts
 - `test()` --calls--> `getRequestUserSession()`  [EXTRACTED]
   test_auth.ts → src/lib/auth-server.ts
+- `TestUserRepository` --inherits--> `UserRepository`  [EXTRACTED]
+  tests/repositories-mapping.test.ts → src/lib/repositories.ts
 - `DedicatedPlayerProfilePage()` --calls--> `useAuth()`  [EXTRACTED]
   src/app/[gameSlug]/jugadores/[playerId]/page.tsx → src/components/providers/auth-provider.tsx
-- `AtletaFichaPage()` --calls--> `useAuth()`  [EXTRACTED]
-  src/app/atleta/ficha/page.tsx → src/components/providers/auth-provider.tsx
-- `ClubAjustesPage()` --calls--> `useAuth()`  [EXTRACTED]
-  src/app/club/ajustes/page.tsx → src/components/providers/auth-provider.tsx
+- `CompetitionsListClientProps` --references--> `CompetitionData`  [EXTRACTED]
+  src/app/dashboard/competencias/competitions-client.tsx → src/app/actions/competitions.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (240 total, 119 thin omitted)
+## Communities (254 total, 128 thin omitted)
 
 ### Community 0 - "api-types.ts"
 Cohesion: 0.07
-Nodes (33): GET(), GET(), POST(), PUT(), GET(), POST(), PUT(), teamUpdateBodySchema (+25 more)
+Nodes (26): GET(), POST(), GET(), POST(), teamUpdateBodySchema, userCreateBodySchema, ApiErrorResponse, ApiResponse (+18 more)
 
-### Community 1 - "card.tsx"
-Cohesion: 0.24
-Nodes (8): AtletaFichaPage(), ClubPlantillaPage(), Card(), CardContent(), CardHeader(), CardTitle(), PageHeader(), PageHeaderProps
+### Community 1 - "button.tsx"
+Cohesion: 0.09
+Nodes (25): RegenerateWarningModalProps, metadata, metadata, GoogleCredentialResponse, GoogleIdentityServices, GoogleOAuthModal(), GoogleOAuthModalProps, Window (+17 more)
 
 ### Community 2 - "cn"
-Cohesion: 0.12
-Nodes (25): ManagementToolbar(), Footer(), footerLinks, FooterProps, useTranslation(), Alert(), AlertProps, EmptyState() (+17 more)
+Cohesion: 0.07
+Nodes (36): ManagementToolbar(), AdminOrganizerHeader(), AdminOrganizerHeaderProps, AppLayoutWrapper(), HIDE_FOOTER_PATTERNS, Footer(), footerLinks, FooterProps (+28 more)
 
-### Community 3 - "avatar.tsx"
-Cohesion: 0.13
-Nodes (18): AdminNavbar(), NotificationCenter(), NotificationFilter, NotificationItem, CreateTeamModal(), Avatar(), AvatarProps, ImageUploadCard() (+10 more)
+### Community 3 - "create-team-modal.tsx"
+Cohesion: 0.26
+Nodes (8): CreateTeamModal(), mapGamePlayer(), useGamePlayers(), checkTeamNameAvailability(), fetchJson(), fetchWithAuth(), getAuthHeaders(), compressImageToWebP()
 
 ### Community 4 - "game-portal-client.tsx"
-Cohesion: 0.11
-Nodes (20): ClubDashboardSection(), GameDataSection(), MatchdaySection(), PlayerFichaCrudSection(), PlayerOffersSection(), PlayerStatsSection(), RosterSection(), PlayerCardData (+12 more)
+Cohesion: 0.08
+Nodes (29): ClubDashboardSection(), GameDataSection(), MatchdaySection(), PlayerFichaCrudSection(), PlayerOffersSection(), PlayerStatsSection(), RosterSection(), DirectoryManager (+21 more)
 
 ### Community 5 - "dependencies"
 Cohesion: 0.08
-Nodes (25): clsx, framer-motion, google-auth-library, jsonwebtoken, lucide-react, mysql2, next, dependencies (+17 more)
+Nodes (25): bcryptjs, clsx, framer-motion, google-auth-library, jsonwebtoken, lucide-react, mysql2, next (+17 more)
 
 ### Community 6 - "devDependencies"
 Cohesion: 0.08
@@ -300,108 +314,108 @@ Cohesion: 0.07
 Nodes (28): dom, dom.iterable, esnext, .next/dev/types/**/*.ts, next-env.d.ts, .next/types/**/*.ts, node_modules, Nueva carpeta (+20 more)
 
 ### Community 8 - "GameConfig"
-Cohesion: 0.11
-Nodes (15): GameHighlightsSection(), GameHighlightsSectionProps, GameHomeHero(), GameHomeHeroProps, MockMatch, ClubDashboardSectionProps, GameSubNavbarProps, SideMarginsBackgroundProps (+7 more)
+Cohesion: 0.05
+Nodes (42): metadata, GameHighlightsSection(), GameHighlightsSectionProps, GameHomeHero(), GameHomeHeroProps, MockMatch, GameSubNavbar(), GameSubNavbarProps (+34 more)
 
-### Community 9 - "games-data.ts"
-Cohesion: 0.10
-Nodes (19): metadata, metadata, AtletaAjustesPageProps, AdminOrganizerHeaderProps, NavLinks(), MatchdayReportItem, MatchApiItem, MatchdayReportView() (+11 more)
+### Community 9 - "users-page-client.tsx"
+Cohesion: 0.14
+Nodes (15): DashboardUsersPage(), dynamic, metadata, FilterBar(), Pagination(), PaginationProps, PositionBadge(), PositionBadgeProps (+7 more)
 
-### Community 10 - "getActionErrorMessage"
-Cohesion: 0.12
-Nodes (29): expelPlayerFromSquadAction(), getNewPlayerInscriptionsMatrixAction(), getNewTeamSquadAction(), getUserEnrolledTeamsAction(), InscriptionRow, NewSquadMember, NewSquadRow, OrganizationSummary (+21 more)
+### Community 10 - "new-squads.ts"
+Cohesion: 0.14
+Nodes (15): getUserEnrolledTeamsAction(), InscriptionRow, NewSquadMember, NewSquadRow, OrganizationSummary, PlayerInscription, TeamEnrollment, TeamEnrollmentRow (+7 more)
 
 ### Community 11 - "global-directory-page.tsx"
 Cohesion: 0.15
 Nodes (10): metadata, metadata, metadata, DIRECTORY_CONFIG, DirectoryRecord, DirectoryResponse, extractRecords(), getGameSlug() (+2 more)
 
 ### Community 12 - "organization-profile-view.tsx"
-Cohesion: 0.07
-Nodes (36): revalidate, OrganizacionPage(), OrganizationRow, parseJsonField(), revalidate, GlobalOrganizationPage(), OrganizationRow, parseField() (+28 more)
+Cohesion: 0.19
+Nodes (15): OrganizacionPage(), OrganizationRow, parseJsonField(), GlobalOrganizationPage(), OrganizationRow, parseField(), AffiliatedTeam, CompetitionData (+7 more)
 
-### Community 13 - "badge.tsx"
-Cohesion: 0.09
-Nodes (18): SquadMemberData, MatchReportModal(), MatchReportModalProps, AthleteManagementModal(), AthleteManagementModalProps, AthleteTabOption, SquadRosterModalProps, ReportableMatch (+10 more)
+### Community 13 - "useAuth"
+Cohesion: 0.08
+Nodes (23): SquadMemberData, AtletaFichaPage(), ClubAjustesPage(), ClubPlantillaPage(), AccountSettingsPage(), ClubSettingsView(), AdminGlobalSubnavbar(), AdminNavbar() (+15 more)
 
-### Community 14 - "users-page-client.tsx"
-Cohesion: 0.12
-Nodes (20): PositionBadge(), PositionBadgeProps, errorMessage(), OrganizationRecord, OrganizationsModulePage(), organizationSocials(), OrganizerOption, errorMessage() (+12 more)
+### Community 14 - "teams-page-client.tsx"
+Cohesion: 0.10
+Nodes (24): DashboardTeamsPage(), dynamic, metadata, DashboardOrganizationsPage(), dynamic, metadata, ImageUploadCard(), ImageUploadCardProps (+16 more)
 
-### Community 15 - "auth-provider.tsx"
-Cohesion: 0.07
-Nodes (39): ClubAjustesPage(), TeamPageProps, ClubSettingsView(), ClubSettingsViewProps, TeamAdminSection, TeamAdminSubnavbarProps, AuthContext, AuthContextType (+31 more)
+### Community 15 - "games-data.ts"
+Cohesion: 0.08
+Nodes (32): metadata, AtletaAjustesPageProps, ClubSettingsViewProps, ClubDashboardSectionProps, TeamAdminSection, TeamAdminSubnavbarProps, TeamsContextType, AthleteManagementModal() (+24 more)
 
 ### Community 19 - "api-schemas.ts"
-Cohesion: 0.26
-Nodes (10): fixtureRequestBodySchema, loginBodySchema, matchApprovalBodySchema, registerBodySchema, teamCreateBodySchema, teamMutationFields, transferPostBodySchema, uploadRequestBodySchema (+2 more)
+Cohesion: 0.16
+Nodes (14): POST(), GET(), Params, fixtureRequestBodySchema, loginBodySchema, matchApprovalBodySchema, registerBodySchema, teamCreateBodySchema (+6 more)
 
 ### Community 20 - "fixture-generator.tsx"
-Cohesion: 0.08
-Nodes (37): CompetitionData, CompetitionTeamData, CompetitionsListClientProps, CompetitionDetailClientProps, AvailableUser, CompetitionTabsProps, FixtureGenerator(), FixtureGeneratorProps (+29 more)
+Cohesion: 0.13
+Nodes (24): FixtureGenerator(), generateFixtureSchedule(), MatchMode, MatchScheduled, StoredMatch, TimeSlotConfig, TournamentFormat, calculateProjectedSlots() (+16 more)
 
 ### Community 25 - "auth.ts"
 Cohesion: 0.08
-Nodes (23): POST(), GET(), Params, ALLOWED_IMAGE_MIMES, canManageOrganization(), csrfTokens, getJwtSecret(), isAdmin() (+15 more)
+Nodes (22): POST(), ALLOWED_IMAGE_MIMES, authenticateRequest(), canManageOrganization(), csrfTokens, extractTokenFromRequest(), getJwtSecret(), isAdmin() (+14 more)
 
-### Community 26 - "login/route.ts"
-Cohesion: 0.19
-Nodes (20): googleClient, POST(), POST(), POST(), POST(), authenticateRequest(), extractTokenFromRequest(), generateTokenPair() (+12 more)
+### Community 26 - "apiError"
+Cohesion: 0.21
+Nodes (21): googleClient, POST(), POST(), POST(), GET(), apiError(), mapUserRowToProfile(), UserRow (+13 more)
 
 ### Community 34 - "services.ts"
 Cohesion: 0.05
-Nodes (48): cancelTransferPostAction(), executeCas(), Competition, Team, User, AddPlayerToSquadResult, AthleteTransferHistoryItem, AthleteTransferHistoryResult (+40 more)
+Nodes (41): Competition, Team, User, AddPlayerToSquadResult, AthleteTransferHistoryItem, AthleteTransferHistoryResult, AvailablePlayerRow, ChatMessageDTO (+33 more)
 
 ### Community 35 - "athlete-workspace-view.tsx"
-Cohesion: 0.10
-Nodes (12): DedicatedPlayerProfilePage(), PlayerPageProps, PublicUser, PlayerData, PlayerProfileView(), PlayerProfileViewProps, ATHLETE_SECTIONS, AthleteStatsData (+4 more)
+Cohesion: 0.11
+Nodes (6): ATHLETE_SECTIONS, AthleteStatsData, AthleteWorkspaceSection, ContractOffer, sectionCopy, TransferHistoryEntry
 
-### Community 36 - "button.tsx"
-Cohesion: 0.06
-Nodes (61): CompetitionStatus, CompetitionFilter, TimeFilter, AvailableTeam, CompetitionMatch, CompetitionTabType, RegenerateWarningModalProps, AdminDashboardView() (+53 more)
+### Community 36 - "moderation-dashboard-view.tsx"
+Cohesion: 0.11
+Nodes (28): DisciplinasPage(), dynamic, metadata, AdminDashboardView(), AdminOrganization, AdminTab, AdminTeam, AdminUser (+20 more)
 
-### Community 37 - "db/provider.ts"
-Cohesion: 0.13
-Nodes (34): GET(), PUT(), AdminTeamRow, canAssignTeamStaff(), DELETE(), GET(), loadTeamScope(), POST() (+26 more)
+### Community 37 - "authorizationErrorResponse"
+Cohesion: 0.17
+Nodes (33): GET(), PUT(), AdminTeamRow, canAssignTeamStaff(), DELETE(), GET(), loadTeamScope(), POST() (+25 more)
 
 ### Community 38 - "security.ts"
-Cohesion: 0.07
-Nodes (21): AuthorizationActor, createRateLimiter(), createSessionRegistry(), InMemoryRateLimitStore, isAuthSessionActive(), MUTATION_METHODS, MutationOriginResult, mysqlRateLimitStore (+13 more)
+Cohesion: 0.08
+Nodes (18): createRateLimiter(), createSessionRegistry(), InMemoryRateLimitStore, MUTATION_METHODS, MutationOriginResult, mysqlRateLimitStore, mysqlSessionStore, RateLimitResult (+10 more)
 
 ### Community 39 - "requireServerActor"
-Cohesion: 0.06
-Nodes (37): createSeasonAction(), deleteSeasonAction(), getOrganizationSeasonsAction(), SeasonData, updateSeasonAction(), DELETE(), GET(), POST() (+29 more)
+Cohesion: 0.11
+Nodes (27): createCompetitionAction(), createSeasonAction(), deleteSeasonAction(), getOrganizationSeasonsAction(), updateSeasonAction(), DELETE(), GET(), POST() (+19 more)
 
 ### Community 40 - "validation.ts"
 Cohesion: 0.06
-Nodes (32): AddPlayerToSquadInput, addPlayerToSquadSchema, competitionStatusSchema, CreateCompetitionInput, CreateSeasonInput, createSeasonSchema, CreateTeamInput, createTeamSchema (+24 more)
+Nodes (32): AddPlayerToSquadInput, addPlayerToSquadSchema, competitionStatusSchema, CreateCompetitionInput, createCompetitionSchema, CreateSeasonInput, createSeasonSchema, CreateTeamInput (+24 more)
 
 ### Community 41 - "chat.ts"
-Cohesion: 0.15
-Nodes (30): banUserFromChatAction(), checkUserBanStatusAction(), clearTypingStatusAction(), createOrGetDirectThreadAction(), getChatThreadsAction(), getThreadMessagesAction(), getTypingUsersAction(), getUsersByRoleAction() (+22 more)
+Cohesion: 0.13
+Nodes (29): banUserFromChatAction(), checkUserBanStatusAction(), clearTypingStatusAction(), createOrGetDirectThreadAction(), getChatThreadsAction(), getThreadMessagesAction(), getTypingUsersAction(), getUsersByRoleAction() (+21 more)
 
 ### Community 42 - "squads.ts"
-Cohesion: 0.11
-Nodes (29): AcceptedPlayerOffer, AcceptedTeamOffer, addPlayerToSquadAction(), AvailablePlayerData, checkTeamManagementPermissionAction(), EnrolledTeamEntry, EnrolledTeamRow, getAllPlayersForContractOfferAction() (+21 more)
+Cohesion: 0.08
+Nodes (44): expelPlayerFromSquadAction(), getNewPlayerInscriptionsMatrixAction(), getNewTeamSquadAction(), getSentContractsByTeamAction(), issueNewContractOfferService(), AcceptedPlayerOffer, AcceptedTeamOffer, addPlayerToSquadAction() (+36 more)
 
 ### Community 43 - "app/layout.tsx"
 Cohesion: 0.06
 Nodes (40): inter, jetbrainsMono, metadata, outfit, viewport, AuthProvider(), ChunkErrorHandler(), applyPreferences() (+32 more)
 
 ### Community 44 - "auth-server.ts"
-Cohesion: 0.17
-Nodes (21): POST(), ServerUserSession, SessionUserRow, assertAllowedRole(), toAuthorizationActor(), belongsToActorOrganization(), canApproveMatch(), canCreateOrganization() (+13 more)
+Cohesion: 0.11
+Nodes (27): POST(), FixtureTeam, POST(), ServerUserSession, SessionUserRow, assertAllowedRole(), getRequestUserSession(), loadServerUser() (+19 more)
 
 ### Community 45 - ".mapRow"
 Cohesion: 0.08
 Nodes (8): client_1, SupabaseCompetitionRepository, SupabaseOrganizationRepository, SupabaseSeasonRepository, SupabaseTeamRepository, SupabaseUserRepository, toSnakeCase(), repositories_1
 
-### Community 46 - "transfer-market.tsx"
-Cohesion: 0.12
-Nodes (18): getOrganizationsWithStatsAction(), OrgWithStats, OrganizationDirectory(), OrganizationDirectoryProps, OrganizationDisplayData, TacticalLoadingSkeleton(), TacticalLoadingSkeletonProps, CompletedTransfer (+10 more)
+### Community 46 - "organization-directory.tsx"
+Cohesion: 0.33
+Nodes (7): getOrganizationsWithStatsAction(), OrgWithStats, OrganizationDirectory(), OrganizationDirectoryProps, OrganizationDisplayData, OrganizationDirectory, Organization
 
 ### Community 47 - "transfers.ts"
 Cohesion: 0.10
-Nodes (29): approveExtraordinaryTransferAction(), cancelTransferApplicationAction(), createTransferApplicationAction(), createTransferPostAction(), getAthleteTransferHistoryAction(), getCompletedTransfersAction(), getGameConfigurationAction(), getPlayerContractOffersAction() (+21 more)
+Nodes (35): approveExtraordinaryTransferAction(), cancelTransferApplicationAction(), cancelTransferPostAction(), createTransferApplicationAction(), createTransferPostAction(), getAthleteTransferHistoryAction(), getCompletedTransfersAction(), getGameConfigurationAction() (+27 more)
 
 ### Community 48 - "migrate.mjs"
 Cohesion: 0.21
@@ -411,21 +425,21 @@ Nodes (17): baselinePath, connectionOptions(), databaseDirectory, loadBaseline()
 Cohesion: 0.10
 Nodes (19): 1. Clonar el Repositorio, 1. 🛡️ Módulo de Gestión de Usuarios y Atletas (`/usuarios`), 2. Instalar Dependencias, 2. 🏢 Módulo de Organizaciones Madre (`/organizaciones`), 3. Configurar Variables de Entorno, 3. 🛡️ Módulo de Clubes y Escuadras (`/equipos`), 4. Inicializar la Base de Datos MySQL, 4. 🏆 Panel de Control del Organizador eSports (`/dashboard`) (+11 more)
 
-### Community 50 - "competitions.ts"
-Cohesion: 0.16
-Nodes (18): advancePlayoffWinnerAction(), createCompetitionAction(), enrollIndividualAthleteAction(), enrollTeamAction(), FixtureConfig, generateFixtureAction(), PlayoffMatchRow, regenerateFixtureAction() (+10 more)
+### Community 50 - "getActionErrorMessage"
+Cohesion: 0.28
+Nodes (15): advancePlayoffWinnerAction(), enrollIndividualAthleteAction(), enrollTeamAction(), FixtureConfig, generateFixtureAction(), PlayoffMatchRow, regenerateFixtureAction(), removeEnrolledTeamAction() (+7 more)
 
 ### Community 51 - "plantilla-management-view.tsx"
 Cohesion: 0.12
 Nodes (15): CompetitionOption, ContractPlayer, errorMessage(), InscriptionMatrixEntry, ManagedTeam, MatrixOrganization, OrganizationOption, OutgoingOffer (+7 more)
 
 ### Community 52 - "mobile-responsive-subnavbar.tsx"
-Cohesion: 0.24
-Nodes (15): AuthenticatedContextSubnavbar(), Context, iconById, GameSection, MobileResponsiveSubnavbar(), MobileResponsiveSubnavbarProps, MobileSubnavSegment, AuthenticatedNavItem (+7 more)
+Cohesion: 0.08
+Nodes (33): GameLayout(), GameLayoutProps, GamePageProps, GameSectionDynamicPage(), GameSectionPageProps, generateMetadata(), GamePortalBackdrop(), getGamePortalStyle() (+25 more)
 
-### Community 53 - "game-ui-showcase-client.tsx"
-Cohesion: 0.17
-Nodes (11): metadata, CalendarDayItem, DateCarousel(), DateCarouselProps, MatchFilterToolbar(), MatchFilterToolbarProps, OrgOption, TournOption (+3 more)
+### Community 53 - "auth-provider.tsx"
+Cohesion: 0.09
+Nodes (22): TeamPageProps, DedicatedPlayerProfilePage(), PlayerPageProps, PublicUser, PlayerData, PlayerProfileView(), PlayerProfileViewProps, AuthContext (+14 more)
 
 ### Community 54 - "5. Re-render Optimization"
 Cohesion: 0.12
@@ -443,28 +457,28 @@ Nodes (15): 7.10 Hoist RegExp Creation, 7.11 Use flatMap to Map and Filter in On
 Cohesion: 0.13
 Nodes (14): 1. Eliminating Waterfalls (CRITICAL), 2. Bundle Size Optimization (CRITICAL), 3. Server-Side Performance (HIGH), 4. Client-Side Data Fetching (MEDIUM-HIGH), 5. Re-render Optimization (MEDIUM), 6. Rendering Performance (MEDIUM), 7. JavaScript Performance (LOW-MEDIUM), 8. Advanced Patterns (LOW) (+6 more)
 
-### Community 58 - "section-config.ts"
-Cohesion: 0.13
-Nodes (14): GamePageProps, GameSectionDynamicPage(), GameSectionPageProps, generateMetadata(), GameSwitcher(), GameSwitcherProps, targetForGame(), GamePortalClient() (+6 more)
+### Community 58 - "competition-tabs.tsx"
+Cohesion: 0.15
+Nodes (20): CompetitionData, CompetitionStatus, CompetitionTeamData, CompetitionDetailClientProps, AvailableTeam, AvailableUser, CompetitionMatch, CompetitionTabsProps (+12 more)
 
 ### Community 59 - "classification-view.tsx"
 Cohesion: 0.24
 Nodes (11): ClassificationView(), calculateStandings(), ClassificationMatch, emptyStanding(), OrganizationApiItem, OrganizationItem, PLAYOFF_ROUNDS, TeamStanding (+3 more)
 
-### Community 60 - "fixture-schedule-view.tsx"
-Cohesion: 0.20
-Nodes (12): FixtureScheduleView(), isPlaceholder(), MatchCard(), MatchCardProps, FixtureApiMatch, FixtureMatchItem, getLocalDateString(), OrganizationApiItem (+4 more)
+### Community 60 - "public-competition-detail-view.tsx"
+Cohesion: 0.19
+Nodes (11): revalidate, revalidate, SubSubNavbar(), SubSubNavbarProps, SubSubTabOption, CompetitionDetail, CompetitionMatch, CompTab (+3 more)
 
 ### Community 61 - "3. 🚀 Módulos y Funcionalidades Desarrolladas"
 Cohesion: 0.14
 Nodes (13): 1. 📌 Resumen del Proyecto, 2. 🏛️ Arquitectura & Modelo de Datos (Base de Datos MySQL), 3.1 🔒 Módulo del Organizador eSports (`http://localhost:3000/dashboard/competencias`), 3.2 🏆 Detalle de Competencia e Inscripción (`http://localhost:3000/dashboard/competencias/[id]`), 3.3 📅 Fixture, Clasificación & Directorio de Clubes (`http://localhost:3000/eafc26/equipos`, `/eafc26/partidos` & `/valorant/UI`), 3.4 🔁 Mercado de Transferencias y Traspasos Extraordinarios (`src/app/actions/transfers.ts`), 3.5 👥 Gestión Directa de Roster (`http://localhost:3000/equipos`), 3.6 🎨 Layout del Organizador Reestructurado (`src/components/layout/admin-organizer-header.tsx` & `admin-organizer-sidebar.tsx`) (+5 more)
 
 ### Community 62 - "scripts"
-Cohesion: 0.13
-Nodes (15): scripts, architecture:check, build, db:migrate, db:migrate:check, db:migrate:verify, dev, lint (+7 more)
+Cohesion: 0.11
+Nodes (18): scripts, architecture:check, build, build:next, db:migrate, db:migrate:check, db:migrate:verify, dev (+10 more)
 
 ### Community 63 - "queryDB"
-Cohesion: 0.22
+Cohesion: 0.21
 Nodes (3): queryDB(), OrganizationRepository, SeasonRepository
 
 ### Community 64 - "logger.ts"
@@ -479,9 +493,13 @@ Nodes (12): 6.10 Use React DOM Resource Hints, 6.11 Use useTransition Over Manua
 Cohesion: 0.17
 Nodes (11): 1. Fundaciones — implementada, 2. Páginas delgadas — implementada, 3. Portal por juego — implementada en rutas, 4. Datos — fase expandir implementada, 5. Mega-vistas — en curso, 6. Objetivos medibles, Fases y estado, Objetivo (+3 more)
 
-### Community 67 - "register-page-client.tsx"
-Cohesion: 0.15
-Nodes (11): metadata, metadata, GoogleCredentialResponse, GoogleIdentityServices, GoogleOAuthModal(), GoogleOAuthModalProps, Window, CardDescription() (+3 more)
+### Community 67 - "esports-card.tsx"
+Cohesion: 0.13
+Nodes (13): PlayerCardData, PlayerCardGrid(), PlayerCardGridProps, SocialMediaLinks, BADGE_CLASS, COUNTRY_MAP, ENTITY_LABEL, EsportsCard() (+5 more)
+
+### Community 68 - "TeamRepository"
+Cohesion: 0.14
+Nodes (3): TeamRepository, TestTeamRepository, TestUserRepository
 
 ### Community 69 - "3. Server-Side Performance"
 Cohesion: 0.18
@@ -491,9 +509,9 @@ Nodes (10): 3.10 Use after() for Non-Blocking Operations, 3.1 Authenticate Serve
 Cohesion: 0.29
 Nodes (8): checkOnly, config, buildSecurityHousekeepingPlan(), mysqlDate(), readSecurityRetentionConfig(), retentionDays(), databaseDirectory, plan
 
-### Community 71 - "esports-card.tsx"
+### Community 71 - "matchday-report-view.tsx"
 Cohesion: 0.09
-Nodes (20): BracketMatch, isPlaceholderTeam(), OrganizationApiItem, StandingsMatch, StandingsView(), StandingsViewProps, StandingTeamRow, TournamentApiItem (+12 more)
+Nodes (20): metadata, formatMatchDate(), MatchdayMatchCard(), MatchdayMatchCardProps, MatchdayReportItem, statusCopy, MatchApiItem, MatchdayReportView() (+12 more)
 
 ### Community 72 - "React Best Practices"
 Cohesion: 0.20
@@ -508,12 +526,16 @@ Cohesion: 0.31
 Nodes (8): getTeamRosterForMatchReportAction(), PlayerStatInput, submitMatchReportAction(), SubmitMatchReportInput, requireMatchReporter(), getTeamRosterForMatchReportService(), submitMatchReportService(), requiredIdSchema
 
 ### Community 75 - "lib/repositories.ts"
-Cohesion: 0.10
-Nodes (11): DatabaseParams, BaseRepository, CompetitionRow, FindOptions, MutableDatabaseParams, OrganizationRow, Repository, Season (+3 more)
+Cohesion: 0.11
+Nodes (17): createExecutor(), DatabaseParams, dbPool, poolExecutor, queryRows, withTransaction(), CompetitionRow, FindOptions (+9 more)
 
 ### Community 76 - "check-architecture.mjs"
 Cohesion: 0.22
 Nodes (6): appDirectory, componentFiles, componentViolations, debt, debtPath, oversized
+
+### Community 77 - ".findById"
+Cohesion: 0.21
+Nodes (3): Game, GameRepository, UserRepository
 
 ### Community 78 - "Runbook operativo"
 Cohesion: 0.25
@@ -531,8 +553,8 @@ Nodes (7): 2.1 Avoid Barrel File Imports, 2.2 Conditional Module Loading, 2.3 De
 Cohesion: 0.14
 Nodes (20): auth_1, auth_2, authorization_1, headers_1, assertAllowedRole(), AuthorizationError, getRequestUserSession(), getServerUserSession() (+12 more)
 
-### Community 83 - "CompetitionRepository"
-Cohesion: 0.15
+### Community 83 - "executeCommand"
+Cohesion: 0.12
 Nodes (3): migrateGames(), executeCommand, CompetitionRepository
 
 ### Community 84 - "React Best Practices"
@@ -564,8 +586,8 @@ Cohesion: 0.40
 Nodes (4): Acciones de despliegue (no son cambios de código), Mejoras futuras opcionales, Recomendaciones implementadas, Recomendaciones integrales de TournamentsPro
 
 ### Community 91 - "interfaces.ts"
-Cohesion: 0.10
-Nodes (6): Game, IGameRepository, IRepository, ISeasonRepository, ITeamRepository, IUserRepository
+Cohesion: 0.13
+Nodes (5): IGameRepository, IOrganizationRepository, IRepository, ISeasonRepository, IUserRepository
 
 ### Community 92 - "🛠️ Core Principles"
 Cohesion: 0.50
@@ -583,41 +605,37 @@ Nodes (3): name, private, version
 Cohesion: 0.50
 Nodes (3): baseline, compatibilityMigration, organizationGamesMigration
 
-### Community 188 - "dbProvider"
-Cohesion: 0.17
-Nodes (9): GET(), parseJsonValue(), PublicOrganizationRow, GET(), TournamentListRow, getRequestUserSession(), loadServerUser(), dbProvider (+1 more)
+### Community 188 - "db/provider.ts"
+Cohesion: 0.10
+Nodes (15): POST(), GET(), GET(), parseJsonValue(), PublicOrganizationRow, GET(), TournamentListRow, dbProvider (+7 more)
+
+### Community 190 - "competitions-client.tsx"
+Cohesion: 0.20
+Nodes (10): SeasonData, CompetitionFilter, CompetitionsListClientProps, TimeFilter, ColumnDef, DataTable(), DataTableProps, FilterOption (+2 more)
 
 ### Community 201 - "mysql/provider.ts"
-Cohesion: 0.11
-Nodes (7): DatabaseExecutor, IDatabaseProvider, mysqlProvider, MysqlDatabaseProvider, provider_1, provider_2, SupabaseDatabaseProvider
+Cohesion: 0.27
+Nodes (3): DatabaseExecutor, mysqlProvider, MysqlDatabaseProvider
 
 ### Community 202 - ".mapRow"
-Cohesion: 0.17
-Nodes (4): Competition, User, SupabaseCompetitionRepository, SupabaseUserRepository
+Cohesion: 0.14
+Nodes (5): Competition, Team, SupabaseCompetitionRepository, SupabaseTeamRepository, toSnakeCase()
 
-### Community 203 - "SupabaseTeamRepository"
-Cohesion: 0.25
-Nodes (3): Team, SupabaseTeamRepository, toSnakeCase()
+### Community 203 - "organizer-dashboard-view.tsx"
+Cohesion: 0.20
+Nodes (9): EnrolledTeam, GAME_MODES, OrganizationUser, OrganizerMatch, OrganizerOrganization, OrganizerTab, OrganizerTournament, ConfirmModal() (+1 more)
 
-### Community 204 - "useAuth"
-Cohesion: 0.10
-Nodes (20): AccountSettingsPage(), AdminGlobalSubnavbar(), AdminOrganizerHeader(), AdminOrganizerSidebar(), AdminOrganizerSidebarProps, isNavigationItemActive(), AppLayoutWrapper(), HIDE_FOOTER_PATTERNS (+12 more)
+### Community 204 - "modal.tsx"
+Cohesion: 0.26
+Nodes (9): AdminOrganizerSidebar(), AdminOrganizerSidebarProps, isNavigationItemActive(), ModalProps, modalSizes, acquireBodyScrollLock(), activeOwners, releaseBodyScrollLock() (+1 more)
 
-### Community 205 - "[gameSlug]/layout.tsx"
-Cohesion: 0.31
-Nodes (5): GameLayout(), GameLayoutProps, GamePortalBackdrop(), getGamePortalStyle(), GameSubNavbar()
+### Community 205 - "playoff-bracket.tsx"
+Cohesion: 0.24
+Nodes (10): buildRoundPairs(), getRoundWeight(), isPlaceholderTeam(), PlayoffBracket(), PlayoffBracketProps, PlayoffMatch, PlayoffPair, ROUND_ORDER_MAP (+2 more)
 
 ### Community 206 - "implementations.ts"
-Cohesion: 0.28
-Nodes (5): Season, supabase, SupabaseGameRepository, SupabaseSeasonRepository, supabaseProvider
-
-### Community 207 - "esports-analytics-view.tsx"
-Cohesion: 0.33
-Nodes (4): EsportsAnalyticsViewProps, GAME_SELECTOR_OPTIONS, ROLE_ANALYTICS_DATA, EsportsAnalyticsView
-
-### Community 208 - "db.ts"
-Cohesion: 0.28
-Nodes (6): createExecutor(), dbPool, poolExecutor, queryRows, withTransaction(), mocks
+Cohesion: 0.29
+Nodes (5): provider_1, provider_2, supabase, SupabaseGameRepository, supabaseProvider
 
 ### Community 212 - "mysql/provider.js"
 Cohesion: 0.25
@@ -626,18 +644,6 @@ Nodes (3): db_1, MysqlDatabaseProvider, repositories_1
 ### Community 213 - "patch_auth.js"
 Cohesion: 0.29
 Nodes (5): ./db/provider, code, fs, code, fs
-
-### Community 214 - "test_auth.js"
-Cohesion: 0.33
-Nodes (4): auth_server_1, env_1, provider_1, server_1
-
-### Community 215 - "SupabaseMatchRepository"
-Cohesion: 0.28
-Nodes (3): IMatchRepository, Match, SupabaseMatchRepository
-
-### Community 216 - "SupabaseOrganizationRepository"
-Cohesion: 0.28
-Nodes (3): IOrganizationRepository, Organization, SupabaseOrganizationRepository
 
 ### Community 218 - "Q: Actualizar el grafo y mejorar la página /moderacion y sus componentes internos"
 Cohesion: 0.40
@@ -652,12 +658,16 @@ Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: quiero que mejores los table, modal, eliminar, alertas que se generan en la gestion global., Source Nodes
 
 ### Community 221 - "prepare-standalone.mjs"
-Cohesion: 0.60
-Nodes (3): assertDirectory(), prepareStandalone(), temporaryDirectories
+Cohesion: 0.50
+Nodes (6): assertDirectory(), assertFile(), countFiles(), prepareStandalone(), verifyStandalone(), temporaryDirectories
 
 ### Community 222 - "componentes/page.tsx"
 Cohesion: 0.50
 Nodes (3): ComponentsPage(), metadata, ComponentsShowcasePage()
+
+### Community 223 - "fix_ts.js"
+Cohesion: 0.29
+Nodes (6): auth, fs, ifaces, rep, sec, srv
 
 ### Community 224 - "patch_login.js"
 Cohesion: 0.50
@@ -679,10 +689,34 @@ Nodes (3): fs, tables, text
 Cohesion: 0.50
 Nodes (3): fs, tables, text
 
+### Community 238 - "fix_ts2.js"
+Cohesion: 0.29
+Nodes (6): auth, fs, ifaces, rep, sec, upload
+
+### Community 242 - "Despliegue de producción en Hostinger"
+Cohesion: 0.33
+Nodes (5): Actualizaciones, Comprobar una publicación, Configurar Hostinger, Despliegue de producción en Hostinger, Generar el artefacto
+
+### Community 243 - "smoke-standalone.mjs"
+Cohesion: 0.33
+Nodes (4): assetPaths, baseUrl, pageUrl, uniqueAssets
+
+### Community 246 - "fix_mysql.js"
+Cohesion: 0.50
+Nodes (3): fs, mysqlProvider, repos
+
+### Community 247 - "fix_standalone.js"
+Cohesion: 0.50
+Nodes (3): fs, nextConfig, pkg
+
+### Community 248 - "patch_all.js"
+Cohesion: 0.50
+Nodes (3): fs, impl, pkg
+
 ## Knowledge Gaps
-- **787 isolated node(s):** `fs`, `databaseDirectory`, `projectDirectory`, `migrationsDirectory`, `baselinePath` (+782 more)
+- **827 isolated node(s):** `fs`, `databaseDirectory`, `projectDirectory`, `migrationsDirectory`, `baselinePath` (+822 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **119 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **128 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
@@ -695,17 +729,17 @@ Nodes (3): fs, tables, text
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `useAuth()` connect `useAuth` to `card.tsx`, `avatar.tsx`, `game-portal-client.tsx`, `games-data.ts`, `getActionErrorMessage`, `badge.tsx`, `users-page-client.tsx`, `auth-provider.tsx`, `athlete-workspace-view.tsx`, `button.tsx`, `chat.ts`, `squads.ts`, `transfer-market.tsx`, `transfers.ts`, `competitions.ts`, `plantilla-management-view.tsx`, `mobile-responsive-subnavbar.tsx`, `section-config.ts`, `fixture-schedule-view.tsx`, `register-page-client.tsx`, `[gameSlug]/layout.tsx`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
-- **Why does `GAMES_CATALOG` connect `games-data.ts` to `card.tsx`, `cn`, `avatar.tsx`, `game-portal-client.tsx`, `global-directory-page.tsx`, `organization-profile-view.tsx`, `badge.tsx`, `users-page-client.tsx`, `auth-provider.tsx`, `services.ts`, `athlete-workspace-view.tsx`, `button.tsx`, `transfer-market.tsx`, `game-ui-showcase-client.tsx`, `section-config.ts`, `register-page-client.tsx`, `useAuth`, `[gameSlug]/layout.tsx`, `CompetitionRepository`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
-- **Why does `Button` connect `button.tsx` to `card.tsx`, `cn`, `avatar.tsx`, `game-portal-client.tsx`, `GameConfig`, `games-data.ts`, `getActionErrorMessage`, `badge.tsx`, `users-page-client.tsx`, `auth-provider.tsx`, `fixture-generator.tsx`, `athlete-workspace-view.tsx`, `chat.ts`, `app/layout.tsx`, `transfer-market.tsx`, `transfers.ts`, `plantilla-management-view.tsx`, `game-ui-showcase-client.tsx`, `classification-view.tsx`, `fixture-schedule-view.tsx`, `register-page-client.tsx`, `useAuth`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `GAMES_CATALOG` connect `games-data.ts` to `button.tsx`, `cn`, `create-team-modal.tsx`, `game-portal-client.tsx`, `GameConfig`, `users-page-client.tsx`, `global-directory-page.tsx`, `organization-profile-view.tsx`, `useAuth`, `teams-page-client.tsx`, `services.ts`, `athlete-workspace-view.tsx`, `moderation-dashboard-view.tsx`, `mobile-responsive-subnavbar.tsx`, `auth-provider.tsx`, `competition-tabs.tsx`, `public-competition-detail-view.tsx`, `competitions-client.tsx`, `matchday-report-view.tsx`, `organizer-dashboard-view.tsx`, `modal.tsx`, `executeCommand`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+- **Why does `useAuth()` connect `useAuth` to `button.tsx`, `cn`, `create-team-modal.tsx`, `game-portal-client.tsx`, `GameConfig`, `users-page-client.tsx`, `new-squads.ts`, `teams-page-client.tsx`, `games-data.ts`, `athlete-workspace-view.tsx`, `moderation-dashboard-view.tsx`, `requireServerActor`, `chat.ts`, `squads.ts`, `transfers.ts`, `plantilla-management-view.tsx`, `mobile-responsive-subnavbar.tsx`, `auth-provider.tsx`, `competitions-client.tsx`, `matchday-report-view.tsx`, `organizer-dashboard-view.tsx`, `modal.tsx`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+- **Why does `Button` connect `button.tsx` to `cn`, `create-team-modal.tsx`, `game-portal-client.tsx`, `GameConfig`, `users-page-client.tsx`, `useAuth`, `teams-page-client.tsx`, `games-data.ts`, `fixture-generator.tsx`, `athlete-workspace-view.tsx`, `moderation-dashboard-view.tsx`, `chat.ts`, `squads.ts`, `app/layout.tsx`, `transfers.ts`, `plantilla-management-view.tsx`, `auth-provider.tsx`, `competition-tabs.tsx`, `classification-view.tsx`, `competitions-client.tsx`, `matchday-report-view.tsx`, `organizer-dashboard-view.tsx`?**
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
 - **What connects `fs`, `databaseDirectory`, `projectDirectory` to the rest of the system?**
-  _787 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _827 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `api-types.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07102040816326531 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06951219512195123 - nodes in this community are weakly interconnected._
+- **Should `button.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.09154437456324249 - nodes in this community are weakly interconnected._
 - **Should `cn` be split into smaller, more focused modules?**
-  _Cohesion score 0.1226890756302521 - nodes in this community are weakly interconnected._
-- **Should `avatar.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.13257575757575757 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07103825136612021 - nodes in this community are weakly interconnected._

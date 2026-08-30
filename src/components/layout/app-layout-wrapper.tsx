@@ -32,7 +32,6 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
       {/* Managers keep their role-aware navigation on private and public pages. */}
       {showRoleAwareChrome ? (
         <AdminOrganizerHeader
-          key={`management-header-${pathname}`}
           isManagementRoute={isManagementRoute}
           isMenuOpen={isManagementMenuOpen}
           onMenuToggle={() => setManagementMenuState((current) => ({
@@ -40,13 +39,12 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
             open: current.pathname === pathname ? !current.open : true,
           }))}
         />
-      ) : <Navbar key={pathname} />}
+      ) : <Navbar />}
 
       {/* Shared workspace shell. Phones and tablets use the drawer; desktop keeps the rail visible. */}
       <div className="relative flex min-w-0 flex-1">
         {showRoleAwareChrome ? (
           <AdminOrganizerSidebar
-            key={`management-sidebar-${pathname}`}
             isDocked={isManagementRoute}
             isMobileOpen={isManagementMenuOpen}
             onMobileOpenChange={setIsManagementMenuOpen}

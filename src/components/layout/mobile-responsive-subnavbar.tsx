@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GameConfig } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
+import { CreateTeamModal } from '@/components/teams/create-team-modal';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
 import { PUBLIC_GAME_NAV_ITEMS } from '@/lib/section-config';
 import {
@@ -16,7 +17,7 @@ import {
   type AuthenticatedNavItemId,
 } from '@/lib/authenticated-navigation';
 import {
-  Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, UserCheck, Calendar, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard, MessageSquare, History, BriefcaseBusiness, Activity
+  Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, UserCheck, Calendar, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard, MessageSquare, History, BriefcaseBusiness, Activity, Plus
 } from 'lucide-react';
 
 export type MobileSubnavSegment = 'game' | 'athlete' | 'club';
@@ -29,8 +30,9 @@ interface MobileResponsiveSubnavbarProps {
 
 export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection }: MobileResponsiveSubnavbarProps) {
   const pathname = usePathname();
-  const { currentUser, userTeams, isAuthenticated } = useAuth();
+  const { currentUser, userTeams, isAuthenticated, refetchTeams } = useAuth();
   const [preferredSegment, setPreferredSegment] = useState<MobileSubnavSegment>('game');
+  const [isCreateClubOpen, setIsCreateClubOpen] = useState(false);
   const routeSegment: MobileSubnavSegment | null = pathname.startsWith(`/${game.slug}/atleta`)
     ? 'athlete'
     : pathname.startsWith(`/${game.slug}/club`)
@@ -155,6 +157,17 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
             <span>Club</span>
           </button>
         )}
+        {!isAdminOrOrganizer && isAuthenticated && !myTeam && (
+          <button
+            type="button"
+            onClick={() => setIsCreateClubOpen(true)}
+            className="game-portal-mobile-create-club flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5"
+            aria-label={`Crear club en ${game.name}`}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Crear club</span>
+          </button>
+        )}
       </div> : null}
 
       {/* 2. Active Segment Scrollable Options Bar */}
@@ -225,6 +238,12 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
           })}
 
       </div>
+      <CreateTeamModal
+        isOpen={isCreateClubOpen}
+        onClose={() => setIsCreateClubOpen(false)}
+        defaultGameSlug={game.slug}
+        onSuccess={() => refetchTeams()}
+      />
     </div>
   );
 }

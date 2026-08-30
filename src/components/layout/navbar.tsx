@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, type SetStateAction } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
@@ -20,7 +20,14 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
   const { currentUser, isAuthenticated, activeGameSlug } = useAuth();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileMenuState, setMobileMenuState] = useState({ pathname, open: false });
+  const isMobileMenuOpen = mobileMenuState.pathname === pathname && mobileMenuState.open;
+  const setIsMobileMenuOpen = useCallback((next: SetStateAction<boolean>) => {
+    setMobileMenuState((current) => ({
+      pathname,
+      open: typeof next === 'function' ? next(current.pathname === pathname && current.open) : next,
+    }));
+  }, [pathname]);
   useBodyScrollLock(isMobileMenuOpen, 'public-navigation');
 
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -52,7 +59,7 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
       document.removeEventListener('keydown', handleEscape);
       desktopViewport.removeEventListener('change', closeAtDesktopBreakpoint);
     };
-  }, []);
+  }, [setIsMobileMenuOpen]);
 
   // Keep hook ordering stable across authentication changes.
   if (isAuthenticated && !forcePublic) {

@@ -46,7 +46,7 @@ export interface CompetitionData {
   max_teams?: number;
   registered_teams_count?: number;
   teams_count?: number;
-  prize_pool?: string;
+  prize_pool?: string | null;
   total_matches?: number;
   finished_matches?: number;
   logo_url?: string;
@@ -71,11 +71,11 @@ export interface AffiliatedTeam {
   id: string;
   name: string;
   tag?: string;
-  logo_url?: string;
+  logo_url?: string | null;
   rating?: string;
   player_count?: number;
-  banner_url?: string;
-  description?: string;
+  banner_url?: string | null;
+  description?: string | null;
   country?: string;
   platform?: string;
   status?: string;
@@ -83,20 +83,20 @@ export interface AffiliatedTeam {
 
 export interface OrgMatch {
   id: string;
-  competition_id?: string;
+  competition_id?: string | null;
   competition_name?: string;
-  home_team_name?: string;
-  home_team_tag?: string;
-  home_logo?: string;
-  away_team_name?: string;
-  away_team_tag?: string;
-  away_logo?: string;
+  home_team_name?: string | null;
+  home_team_tag?: string | null;
+  home_logo?: string | null;
+  away_team_name?: string | null;
+  away_team_tag?: string | null;
+  away_logo?: string | null;
   score_home?: number | null;
   score_away?: number | null;
   status?: string;
-  scheduled_at?: string;
-  matchday?: number;
-  round_name?: string;
+  scheduled_at?: string | null;
+  matchday?: number | null;
+  round_name?: string | null;
 }
 
 interface OrganizationProfileViewProps {

@@ -9,9 +9,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const isBanned = searchParams.get('isBanned');
 
-    let where: Record<string, any> = {};
+    const where: Record<string, unknown> = {};
     if (isBanned !== null && isBanned !== undefined) {
-      where.isBanned = (isBanned === 'true' || isBanned === '1' ? 1 : 0);
+      where.isBanned = isBanned === 'true' || isBanned === '1';
     }
 
     const organizations = await dbProvider.organizations.findAll({
@@ -61,13 +61,13 @@ export async function PUT(request: Request) {
     }
 
     if (action === 'UNBAN') {
-      await dbProvider.organizations.update(orgId, { isBanned: 0, status: 'Activa', banReason: null, bannedAt: null });
+      await dbProvider.organizations.update(orgId, { isBanned: false, status: 'Activa', banReason: null, bannedAt: null });
       return NextResponse.json({ success: true, message: 'Organización desbaneada con éxito' });
     }
 
     if (action === 'BAN' || isBanned === 1 || isBanned === true) {
       const reason = banReason || 'Violación de normas disciplinarias';
-      await dbProvider.organizations.update(orgId, { isBanned: 1, status: 'Baneada', banReason: reason, bannedAt: new Date().toISOString() });
+      await dbProvider.organizations.update(orgId, { isBanned: true, status: 'Baneada', banReason: reason, bannedAt: new Date().toISOString() });
       return NextResponse.json({ success: true, message: 'Organización baneada del sistema' });
     }
 

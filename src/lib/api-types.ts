@@ -36,6 +36,7 @@ export interface UserRow {
   status: string;
   avatar_url: string | null;
   banner_url: string | null;
+  last_login_at?: string | null;
   organization_id: string | null;
   is_banned: number;
   ban_reason: string | null;

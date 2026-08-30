@@ -21,7 +21,9 @@ describe('standalone deployment assets', () => {
       mkdir(path.join(root, 'public', 'images'), { recursive: true }),
     ]);
     await Promise.all([
+      writeFile(path.join(root, '.next', 'standalone', 'server.js'), 'server'),
       writeFile(path.join(root, '.next', 'static', 'chunks', 'app.css'), 'body{display:grid}'),
+      writeFile(path.join(root, '.next', 'static', 'chunks', 'app.js'), 'console.log("ready")'),
       writeFile(path.join(root, 'public', 'images', 'logo.txt'), 'logo'),
     ]);
 
@@ -29,8 +31,31 @@ describe('standalone deployment assets', () => {
 
     await expect(readFile(path.join(root, '.next', 'standalone', '.next', 'static', 'chunks', 'app.css'), 'utf8'))
       .resolves.toBe('body{display:grid}');
+    await expect(readFile(path.join(root, '.next', 'standalone', '.next', 'static', 'chunks', 'app.js'), 'utf8'))
+      .resolves.toContain('ready');
     await expect(readFile(path.join(root, '.next', 'standalone', 'public', 'images', 'logo.txt'), 'utf8'))
       .resolves.toBe('logo');
+  });
+
+  it('removes stale assets before copying a new build', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'tournamentspro-standalone-'));
+    temporaryDirectories.push(root);
+    await Promise.all([
+      mkdir(path.join(root, '.next', 'standalone', '.next', 'static', 'chunks'), { recursive: true }),
+      mkdir(path.join(root, '.next', 'static', 'chunks'), { recursive: true }),
+      mkdir(path.join(root, 'public'), { recursive: true }),
+    ]);
+    await Promise.all([
+      writeFile(path.join(root, '.next', 'standalone', 'server.js'), 'server'),
+      writeFile(path.join(root, '.next', 'standalone', '.next', 'static', 'chunks', 'stale.css'), 'stale'),
+      writeFile(path.join(root, '.next', 'static', 'chunks', 'fresh.css'), 'fresh'),
+      writeFile(path.join(root, '.next', 'static', 'chunks', 'fresh.js'), 'fresh'),
+    ]);
+
+    await prepareStandalone(root);
+
+    await expect(readFile(path.join(root, '.next', 'standalone', '.next', 'static', 'chunks', 'fresh.css'), 'utf8')).resolves.toBe('fresh');
+    await expect(readFile(path.join(root, '.next', 'standalone', '.next', 'static', 'chunks', 'stale.css'), 'utf8')).rejects.toThrow();
   });
 
   it('fails clearly when the standalone build has not been generated', async () => {

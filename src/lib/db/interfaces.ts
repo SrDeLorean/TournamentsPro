@@ -52,6 +52,8 @@ export interface User {
 export interface Organization {
   isBanned?: boolean;
   banReason?: string | null;
+  bannedAt?: string | null;
+  socialMedia?: Record<string, unknown> | null;
   status?: string;
   slug?: string;
   foundedYear?: string | null;
@@ -68,10 +70,6 @@ export interface Organization {
 }
 
 export interface Team {
-  isBanned?: boolean;
-  banReason?: string | null;
-  isBanned?: boolean;
-  banReason?: string | null;
   id: string;
   name: string;
   tag: string;
@@ -215,6 +213,7 @@ export interface IDatabaseProvider {
   competitions: ICompetitionRepository;
   seasons: ISeasonRepository;
   matches: IMatchRepository;
+  games: IGameRepository;
 
   query<T = any>(sql: string, params?: any[]): Promise<T[]>;
   execute(sql: string, params?: any[]): Promise<any>;

@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import nextConfig from '../next.config';
 
 describe('Next security configuration', () => {
+  it('generates a self-contained standalone server for Hostinger', () => {
+    expect(nextConfig.output).toBe('standalone');
+    expect(nextConfig.compress).toBe(true);
+    expect(nextConfig.poweredByHeader).toBe(false);
+  });
+
   it('limits Server Action request bodies', () => {
     expect(nextConfig.experimental?.serverActions?.bodySizeLimit).toBe('1mb');
   });
@@ -13,6 +19,7 @@ describe('Next security configuration', () => {
     const headers = Object.fromEntries(groups[0].headers.map(({ key, value }) => [key, value]));
 
     expect(headers['Content-Security-Policy']).toContain("object-src 'none'");
+    expect(headers['Content-Security-Policy']).toContain("script-src 'self' 'unsafe-inline'");
     expect(headers['Content-Security-Policy']).toContain("frame-ancestors 'none'");
     expect(headers['X-Content-Type-Options']).toBe('nosniff');
     expect(headers['Referrer-Policy']).toBe('strict-origin-when-cross-origin');

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { initialTeams } from '@/lib/data-store';
+import { CreateTeamModal } from '@/components/teams/create-team-modal';
 import {
   findManagedTeamForUser,
   getAthleteNavigation,
@@ -21,6 +22,7 @@ import {
   History,
   LayoutDashboard,
   MessageSquare,
+  Plus,
   Settings,
   Shield,
   Sparkles,
@@ -52,11 +54,12 @@ const iconById: Record<AuthenticatedNavItemId, React.ReactNode> = {
 
 export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }) {
   const pathname = usePathname();
-  const { currentUser, userTeams } = useAuth();
+  const { currentUser, userTeams, refetchTeams } = useAuth();
   const teamsPool = userTeams?.length ? userTeams : initialTeams;
   const myTeam = findManagedTeamForUser(teamsPool, currentUser, gameSlug);
 
   const [preferredContext, setPreferredContext] = useState<Context>(() => (myTeam ? 'club' : 'athlete'));
+  const [isCreateClubOpen, setIsCreateClubOpen] = useState(false);
   const routeContext: Context | null = pathname.startsWith(`/${gameSlug}/club`)
     ? 'club'
     : pathname.startsWith(`/${gameSlug}/atleta`)
@@ -95,7 +98,17 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
               <Shield className="h-3.5 w-3.5" />
               Club
             </button>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsCreateClubOpen(true)}
+              className="authenticated-context-tab authenticated-context-tab-create"
+              aria-label={`Crear club en ${gameSlug}`}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Crear club
+            </button>
+          )}
         </div>
 
         <div className="h-5 w-px flex-shrink-0 bg-[var(--border-card)]" />
@@ -121,6 +134,12 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
           {context === 'club' && myTeam ? myTeam.name : `@${currentUser.gamertag || 'atleta'}`}
         </span>
       </div>
+      <CreateTeamModal
+        isOpen={isCreateClubOpen}
+        onClose={() => setIsCreateClubOpen(false)}
+        defaultGameSlug={gameSlug}
+        onSuccess={() => refetchTeams()}
+      />
     </div>
   );
 }

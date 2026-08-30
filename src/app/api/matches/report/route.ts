@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         const playerId = user ? user.id : `temp-${cleanGamertag}`;
         
         const statsId = `st-${randomUUID().substring(0, 8)}`;
-        await dbProvider.matches.addPlayerStat(statsId, matchId, playerId, competition_id || match.competition_id || '', JSON.stringify(p.stats));
+        await dbProvider.matches.addPlayerStat(statsId, matchId, playerId, competition_id || match.competitionId || '', JSON.stringify(p.stats));
       }
     } 
     // Fallback: Si solo reportaron el MVP manual
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       const mvpId = user ? user.id : `temp-${cleanGamertag}`;
 
       const statsId = `st-${randomUUID().substring(0, 8)}`;
-      await dbProvider.matches.addPlayerStat(statsId, matchId, mvpId, competition_id || match.competition_id || '', JSON.stringify(dynamicStats));
+      await dbProvider.matches.addPlayerStat(statsId, matchId, mvpId, competition_id || match.competitionId || '', JSON.stringify(dynamicStats));
     }
 
     return NextResponse.json({ success: true, message: 'Reporte enviado a revisión' });

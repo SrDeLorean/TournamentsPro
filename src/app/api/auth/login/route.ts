@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       id: user.id, email: user.email, name: user.name, gamertag: user.gamertag, role: user.role,
       primary_game_slug: user.primaryGameSlug, platform: user.platform, position: user.position,
       secondary_position: user.secondaryPosition, rank_badge: user.rankBadge, rating: user.rating,
-      status: user.status, avatar_url: user.avatarUrl, organization_id: user.organizationId,
+      status: user.status, avatar_url: user.avatarUrl, banner_url: user.bannerUrl || null, organization_id: user.organizationId,
       is_banned: user.isBanned ? 1 : 0, ban_reason: user.banReason, last_login_at: user.lastLoginAt,
       created_at: user.createdAt, updated_at: user.updatedAt, password_hash: user.passwordHash, google_id: user.googleId
     };

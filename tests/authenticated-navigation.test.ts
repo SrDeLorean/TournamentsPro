@@ -56,9 +56,13 @@ describe('authenticated player and captain navigation', () => {
     expect(gameNav).not.toContain('<TeamClubSubnavbar');
     expect(contextNav).toContain('getAthleteNavigation');
     expect(contextNav).toContain('getClubNavigation');
+    expect(contextNav).toContain('Crear club');
+    expect(contextNav).toContain('<CreateTeamModal');
     expect(contextNav).toContain("pathname.startsWith(`/${gameSlug}/club`)");
     expect(mobileNav).toContain('getAthleteNavigation');
     expect(mobileNav).toContain('getClubNavigation');
+    expect(mobileNav).toContain('Crear club');
+    expect(mobileNav).toContain('<CreateTeamModal');
     expect(mobileNav).toContain("pathname.startsWith(`/${game.slug}/club`)");
     expect(topNav).toContain('authenticated-explore-menu');
     expect(topNav).not.toContain('<NavLinks');

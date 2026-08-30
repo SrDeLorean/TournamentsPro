@@ -6,7 +6,7 @@ import { ArrowRight, Globe2, Shield, Gamepad2, Users, Sparkles, Trophy } from 'l
 export default function InformationPage() {
   return (
     <main className="public-info-page">
-      <section className="public-info-hero">
+      <section id="mission" className="public-info-hero scroll-mt-28">
         <div className="public-info-hero-glow" />
         <div className="public-info-copy">
           <div className="public-info-badge">
@@ -27,7 +27,7 @@ export default function InformationPage() {
         </div>
       </section>
 
-      <section className="public-info-content" aria-labelledby="public-info-capabilities">
+      <section id="about" className="public-info-content scroll-mt-28" aria-labelledby="public-info-capabilities">
         <header className="public-info-section-heading">
           <div><p>Capacidades principales</p><h2 id="public-info-capabilities">Todo el circuito en un solo lugar</h2></div>
           <span>Tres pilares del ecosistema</span>
@@ -66,6 +66,18 @@ export default function InformationPage() {
           </CardContent>
         </Card>
       </div>
+      </section>
+
+      <section id="privacy" className="public-info-content scroll-mt-28" aria-labelledby="public-info-privacy">
+        <header className="public-info-section-heading">
+          <div><p>Confianza y comunidad</p><h2 id="public-info-privacy">Una plataforma responsable</h2></div>
+          <span>Privacidad desde el diseño</span>
+        </header>
+        <div className="public-info-grid">
+          <Card className="public-info-card glass-panel-hover"><CardHeader><div className="public-info-card-icon is-cyan"><Sparkles className="size-6" /></div><CardTitle>Nuestra misión</CardTitle></CardHeader><CardContent className="text-xs text-[var(--text-secondary)] leading-relaxed">Dar a clubes, atletas y organizadores herramientas claras para competir, crecer y construir una trayectoria eSports verificable.</CardContent></Card>
+          <Card className="public-info-card glass-panel-hover"><CardHeader><div className="public-info-card-icon is-violet"><Users className="size-6" /></div><CardTitle>Quiénes somos</CardTitle></CardHeader><CardContent className="text-xs text-[var(--text-secondary)] leading-relaxed">Somos un ecosistema dedicado a profesionalizar la organización competitiva multijuego y fortalecer sus comunidades.</CardContent></Card>
+          <Card className="public-info-card glass-panel-hover"><CardHeader><div className="public-info-card-icon is-emerald"><Shield className="size-6" /></div><CardTitle>Privacidad</CardTitle></CardHeader><CardContent className="text-xs text-[var(--text-secondary)] leading-relaxed">Protegemos los datos de cuenta y mostramos públicamente solo la información deportiva destinada a cada perfil.</CardContent></Card>
+        </div>
       </section>
     </main>
   );
