@@ -16,6 +16,9 @@ El comando produce `.next/standalone` y luego verifica automáticamente que cont
 - `public` con imágenes y recursos;
 - `deployment-manifest.json` con el identificador y conteo del build.
 
+Cada ejecución de `npm run build` crea también un `NEXT_DEPLOYMENT_ID` único. No use
+`npm run build:next` para publicar: ese comando existe solamente para diagnóstico local.
+
 Si falta alguno de esos recursos el build falla. Esto evita publicar páginas que respondan HTML pero aparezcan sin estilos después de recargar.
 
 ## Configurar Hostinger
@@ -27,6 +30,7 @@ Si falta alguno de esos recursos el build falla. Esto evita publicar páginas qu
 - Versión de Node.js: 22 LTS o una versión compatible con Next.js 16.
 - No configure `public` como raíz web de una aplicación estática.
 - El proxy de Hostinger debe enviar también `/_next/*`, `/api/*` y las rutas dinámicas al mismo proceso Node.js.
+- En hPanel, desactive temporalmente la caché/CDN durante la primera publicación corregida y pulse **Purgar caché** antes de volver a activarla.
 
 Las variables `PORT` y `HOSTNAME` son leídas por el servidor standalone. Hostinger normalmente define `PORT`; no debe fijarse manualmente en el código.
 
@@ -43,3 +47,7 @@ La prueba solicita la página dos veces —incluyendo una recarga sin caché— 
 ## Actualizaciones
 
 Cada publicación debe reemplazar el artefacto completo. No mezcle `.next/static` de un build con `server.js` de otro: los nombres contienen hashes y una mezcla genera errores 404 únicamente después de ciertas recargas o navegaciones.
+
+El HTML de la aplicación se entrega con `no-store` para impedir que hCDN conserve durante
+un año referencias a chunks eliminados. Los CSS y JavaScript con hash continúan usando caché
+inmutable, por lo que esta protección no sacrifica el cacheado de los recursos pesados.

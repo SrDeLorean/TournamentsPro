@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   compress: true,
   poweredByHeader: false,
-  deploymentId: process.env.DEPLOYMENT_VERSION || undefined,
+  deploymentId: process.env.NEXT_DEPLOYMENT_ID || process.env.DEPLOYMENT_VERSION || undefined,
   typescript: {
     ignoreBuildErrors: false,
   },

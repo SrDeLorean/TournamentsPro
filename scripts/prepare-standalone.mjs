@@ -63,8 +63,8 @@ export async function prepareStandalone(projectRoot = process.cwd()) {
   const staticDestination = path.join(standaloneDirectory, '.next', 'static');
   const publicDestination = path.join(standaloneDirectory, 'public');
 
+  await assertDirectory(standaloneDirectory, 'Standalone build');
   await Promise.all([
-    assertDirectory(standaloneDirectory, 'Standalone build'),
     assertFile(path.join(standaloneDirectory, 'server.js'), 'Standalone server'),
     assertDirectory(staticSource, 'Next.js static assets'),
     assertDirectory(publicSource, 'Public assets'),
@@ -86,7 +86,7 @@ export async function prepareStandalone(projectRoot = process.cwd()) {
   const buildId = await readFile(buildIdFile, 'utf8').then((value) => value.trim()).catch(() => 'development');
   await writeFile(
     path.join(standaloneDirectory, 'deployment-manifest.json'),
-    `${JSON.stringify({ buildId, generatedAt: new Date().toISOString(), cssFiles: verification.cssFiles, javascriptFiles: verification.javascriptFiles, publicFiles: verification.publicFiles }, null, 2)}\n`,
+    `${JSON.stringify({ buildId, deploymentId: process.env.NEXT_DEPLOYMENT_ID || process.env.DEPLOYMENT_VERSION || null, generatedAt: new Date().toISOString(), cssFiles: verification.cssFiles, javascriptFiles: verification.javascriptFiles, publicFiles: verification.publicFiles }, null, 2)}\n`,
   );
   return verification;
 }

@@ -2,9 +2,12 @@
 
 import { useEffect } from 'react';
 
+const CHUNK_RETRY_KEY = 'tournamentspro:chunk-retry';
+const CHUNK_RETRY_WINDOW_MS = 60_000;
+
 /**
- * Listener global para recargar automáticamente la app en caso de ChunkLoadError
- * (Ocurre cuando se hace un git push y el celular o navegador intenta cargar chunks antiguos 404)
+ * Recovers once from a stale document after a deployment. The cache-busting
+ * query forces intermediate CDNs to request the HTML for the active release.
  */
 export function ChunkErrorHandler() {
   useEffect(() => {
@@ -19,8 +22,18 @@ export function ChunkErrorHandler() {
           errorMsg.includes('Loading chunk') ||
           errorMsg.includes('Failed to load chunk'))
       ) {
-        console.warn('⚡ Detectado ChunkLoadError por nuevo despliegue. Recargando página...');
-        window.location.reload();
+        const previousRetry = Number(window.sessionStorage.getItem(CHUNK_RETRY_KEY) || 0);
+        const now = Date.now();
+
+        if (now - previousRetry < CHUNK_RETRY_WINDOW_MS) {
+          console.error('No fue posible recuperar los recursos de la publicación activa.', event);
+          return;
+        }
+
+        window.sessionStorage.setItem(CHUNK_RETRY_KEY, String(now));
+        const recoveryUrl = new URL(window.location.href);
+        recoveryUrl.searchParams.set('__dpl_retry', String(now));
+        window.location.replace(recoveryUrl.toString());
       }
     };
 

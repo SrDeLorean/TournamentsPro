@@ -9,6 +9,11 @@ import { DesignProvider } from '@/components/providers/design-provider';
 import { AppLayoutWrapper } from '@/components/layout/app-layout-wrapper';
 import { ChunkErrorHandler } from '@/components/providers/chunk-error-handler';
 
+// Hostinger hCDN respects the one-year s-maxage emitted for prerendered HTML.
+// A dynamic shell keeps HTML aligned with the currently running standalone build;
+// hashed CSS and JavaScript remain immutable and cacheable for one year.
+export const dynamic = 'force-dynamic';
+
 const outfit = Outfit({
   subsets: ['latin'],
   variable: '--font-outfit',

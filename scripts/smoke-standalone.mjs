@@ -10,12 +10,19 @@ async function request(url, init) {
 
 const firstResponse = await request(pageUrl);
 const reloadResponse = await request(pageUrl, { headers: { 'cache-control': 'no-cache' } });
+const pageCacheControl = reloadResponse.headers.get('cache-control') || '';
 const html = await reloadResponse.text();
 const assetPaths = [...html.matchAll(/(?:href|src)="(?<path>\/_next\/static\/[^"?]+\.(?:css|js)(?:\?[^\"]*)?)"/g)]
   .map((match) => match.groups?.path)
   .filter(Boolean);
 const uniqueAssets = [...new Set(assetPaths)];
 
+if (/s-maxage\s*=\s*31536000/i.test(pageCacheControl)) {
+  throw new Error(`HTML is cached for one year (${pageCacheControl}). Purge the Hostinger CDN and deploy the dynamic application shell.`);
+}
+if (!html.includes('data-dpl-id=')) {
+  throw new Error('The page has no deployment identifier. Build and deploy with npm run build.');
+}
 if (!uniqueAssets.some((asset) => asset.includes('.css'))) throw new Error('The page does not reference a CSS chunk.');
 if (!uniqueAssets.some((asset) => asset.includes('.js'))) throw new Error('The page does not reference a JavaScript chunk.');
 
