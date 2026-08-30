@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   try {
     const where: any = {};
     if (gameSlug && !['ALL', 'all', 'TODOS', 'todas'].includes(gameSlug)) {
-      where.gameSlug = gameSlug;
+      where.game_slug = gameSlug;
     }
 
     const { dbProvider } = await import('@/lib/db/provider');

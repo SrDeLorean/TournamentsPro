@@ -87,9 +87,9 @@ export const loginBodySchema = z.object({
 
 export const registerBodySchema = z.object({
   gamertag: z.string().trim().min(3).max(50),
-  name: z.string().max(100).optional(),
-  email: z.string().email().max(191).optional(),
+  name: z.string().trim().max(100).optional(),
+  email: z.string().trim().email().max(191).optional(),
   password: z.string().min(10).max(128).regex(/[A-Za-z]/).regex(/[0-9]/),
-  primaryGame: z.string().max(50).optional(),
-  platform: z.string().max(30).optional(),
+  primaryGame: z.string().trim().max(50).optional(),
+  platform: z.string().trim().max(30).optional(),
 }).passthrough();

@@ -445,3 +445,56 @@ export async function advancePlayoffWinnerAction(
     return { success: false, error: getActionErrorMessage(error, 'Error al ejecutar el auto-avance del ganador.'), code: 'INTERNAL_ERROR' };
   }
 }
+
+export async function reportMatchResultAction(matchId: string, homeScore: number, awayScore: number): Promise<{ success: boolean; message?: string; error?: string; code?: string }> {
+  try {
+    const competitionId = await dbProvider.competitions.getMatchCompetitionId(matchId);
+    if (!competitionId) throw new Error('Partido no encontrado');
+    await requireCompetitionManager(competitionId);
+    const result = await dbProvider.withTransaction(async (transaction) => {
+      await transaction.execute(
+        "UPDATE matches SET home_score = ?, away_score = ?, status = 'TERMINADO' WHERE id = ?",
+        [homeScore, awayScore, matchId]
+      );
+      return { success: true, message: 'Resultado registrado correctamente.' };
+    });
+
+    if (result.success) revalidatePath(`/dashboard/competencias/${competitionId}`);
+    return result;
+  } catch (error: unknown) {
+    console.error('Error reportando partido:', error);
+    return { success: false, error: getActionErrorMessage(error, 'Ocurrió un error en el servidor') };
+  }
+}
+
+export async function getPublicCompetitionsAction(gameSlug: string): Promise<{
+  success: boolean; competitions?: CompetitionData[]; error?: string;
+}> {
+  try {
+    const comps = await dbProvider.competitions.findByGameSlug(gameSlug);
+    const publicComps = comps
+      .filter(c => ['Inscripcion', 'En Curso', 'Borrador'].includes(c.status))
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        game_slug: c.gameSlug,
+        organizer_id: c.organizerId,
+        organizer_name: c.organizerName,
+        organization_id: c.organizationId,
+        season_id: c.seasonId,
+        prize_pool: c.prizePool,
+        transfer_market_mode: c.transferMarketMode as any,
+        mode_format: c.modeFormat,
+        status: c.status as any,
+        fecha_limite_inscripcion: c.fechaLimiteInscripcion,
+        fecha_inicio: c.fechaInicio,
+        fecha_termino: c.fechaTermino,
+        description: c.description,
+        created_at: c.createdAt,
+      }));
+    return { success: true, competitions: publicComps };
+  } catch (error: unknown) {
+    console.error('Error fetching public competitions:', error);
+    return { success: false, error: getActionErrorMessage(error, 'Ocurrió un error en el servidor') };
+  }
+}

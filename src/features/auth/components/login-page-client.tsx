@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Trophy, Mail, Lock, Sparkles, ArrowRight, Tv, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { Trophy, Mail, Lock, Sparkles, ArrowRight, Tv, MessageSquare, CheckCircle2, AlertCircle } from 'lucide-react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 
@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Auto-scroll on initial load to focus 100% on auth content, revealing Navbar when scrolling up
   useEffect(() => {
@@ -32,11 +33,14 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
+    setLoginError(null);
     setIsLoading(true);
-    const success = await login(email, password);
+    const result = await login(email, password);
     setIsLoading(false);
-    if (success) {
+    if (result.success) {
       router.push('/dashboard');
+    } else {
+      setLoginError(result.error || 'No fue posible iniciar sesión.');
     }
   };
 
@@ -207,7 +211,10 @@ export default function LoginPage() {
                     required
                     placeholder="ej. SrDeLorean o correo@esports.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (loginError) setLoginError(null);
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl input-theme border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
                   />
                 </div>
@@ -229,7 +236,10 @@ export default function LoginPage() {
                     required
                     placeholder="••••••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (loginError) setLoginError(null);
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl input-theme border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
                   />
                 </div>
@@ -246,6 +256,17 @@ export default function LoginPage() {
                   Recordar mi sesión
                 </label>
               </div>
+
+              {loginError && (
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="flex items-start gap-2.5 rounded-xl border border-rose-500/35 bg-rose-500/10 px-3.5 py-3 text-xs font-semibold leading-relaxed text-rose-300"
+                >
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                  <span>{loginError}</span>
+                </div>
+              )}
 
               <Button
                 type="submit"

@@ -6,9 +6,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Trophy, Mail, Lock, User, Gamepad2, ArrowRight, CheckCircle2, Tv, MessageSquare, Flame } from 'lucide-react';
+import { Trophy, Mail, Lock, User, Gamepad2, ArrowRight, CheckCircle2, Tv, MessageSquare, Flame, AlertCircle, ShieldCheck } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { useAuth } from '@/components/providers/auth-provider';
+import { buildRegistrationPayload, validateRegistrationForm } from '@/features/auth/lib/register-form';
 
 import { GoogleOAuthModal } from '@/components/auth/google-oauth-modal';
 
@@ -25,9 +26,9 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [primaryGame, setPrimaryGame] = useState('eafc26');
   const [platform, setPlatform] = useState('PS5');
-  const [role, setRole] = useState('JUGADOR');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
 
   // Auto-scroll on initial load to focus 100% on auth content, revealing Navbar when scrolling up
   useEffect(() => {
@@ -40,17 +41,27 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!acceptTerms) return;
-    setIsLoading(true);
-    const success = await register({
-      gamertag: gamertag.trim(),
-      name: fullName.trim(),
+    const formValues = {
+      gamertag,
+      fullName,
+      email,
+      password,
       primaryGame: primaryGame as 'eafc26' | 'valorant' | 'csgo' | 'lol' | 'rocketleague',
       platform: platform as 'PS5' | 'PS4' | 'XBOX' | 'PC' | 'CROSSPLAY',
-      role: role === 'CAPITAN' ? 'Capitán' : role === 'ORGANIZADOR' ? 'Organizador' : 'Jugador',
-    });
+    };
+    const validationError = validateRegistrationForm(formValues);
+    if (validationError) {
+      setRegistrationError(validationError);
+      return;
+    }
+    setRegistrationError(null);
+    setIsLoading(true);
+    const result = await register(buildRegistrationPayload(formValues));
     setIsLoading(false);
-    if (success) {
+    if (result.success) {
       router.push('/dashboard');
+    } else {
+      setRegistrationError(result.error || 'No fue posible completar el registro.');
     }
   };
 
@@ -229,9 +240,15 @@ export default function RegisterPage() {
                     <input
                       type="text"
                       required
+                      minLength={3}
+                      maxLength={50}
+                      autoComplete="nickname"
                       placeholder="ej. SrDeLorean"
                       value={gamertag}
-                      onChange={(e) => setGamertag(e.target.value)}
+                      onChange={(e) => {
+                        setGamertag(e.target.value);
+                        if (registrationError) setRegistrationError(null);
+                      }}
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl input-theme border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
                     />
                   </div>
@@ -247,9 +264,14 @@ export default function RegisterPage() {
                     <input
                       type="text"
                       required
+                      maxLength={100}
+                      autoComplete="name"
                       placeholder="ej. Sebastián Rodríguez"
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      onChange={(e) => {
+                        setFullName(e.target.value);
+                        if (registrationError) setRegistrationError(null);
+                      }}
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl input-theme border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
                     />
                   </div>
@@ -266,9 +288,14 @@ export default function RegisterPage() {
                   <input
                     type="email"
                     required
+                    maxLength={191}
+                    autoComplete="email"
                     placeholder="correo@ejemplo.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (registrationError) setRegistrationError(null);
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl input-theme border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
                   />
                 </div>
@@ -284,16 +311,25 @@ export default function RegisterPage() {
                   <input
                     type="password"
                     required
+                    minLength={10}
+                    maxLength={128}
+                    autoComplete="new-password"
                     placeholder="••••••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (registrationError) setRegistrationError(null);
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl input-theme border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-cyan)] transition-colors"
                   />
                 </div>
+                <p className="text-[10px] font-medium text-[var(--text-muted)]">
+                  Mínimo 10 caracteres, con al menos una letra y un número.
+                </p>
               </div>
 
               {/* eSports Preferences Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-[var(--text-muted)] block uppercase">
                     Juego Principal
@@ -327,19 +363,15 @@ export default function RegisterPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-[var(--text-muted)] block uppercase">
-                    Perfil / Rol
-                  </label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl input-theme border border-[var(--border-card)] text-xs font-bold"
-                  >
-                    <option value="JUGADOR">Jugador Libre</option>
-                    <option value="CAPITAN">Capitán de Club</option>
-                    <option value="ORGANIZADOR">Organizador</option>
-                  </select>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-3.5 py-3">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-cyan-400" aria-hidden="true" />
+                <div className="space-y-0.5">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-cyan-300">Cuenta de atleta</p>
+                  <p className="text-[10px] leading-relaxed text-[var(--text-secondary)]">
+                    Después podrás crear o administrar un club. Los permisos de organizador requieren aprobación administrativa.
+                  </p>
                 </div>
               </div>
 
@@ -360,6 +392,17 @@ export default function RegisterPage() {
                   y la política de privacidad eSports.
                 </span>
               </div>
+
+              {registrationError && (
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="flex items-start gap-2.5 rounded-xl border border-rose-500/35 bg-rose-500/10 px-3.5 py-3 text-xs font-semibold leading-relaxed text-rose-300"
+                >
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                  <span>{registrationError}</span>
+                </div>
+              )}
 
               <Button
                 type="submit"

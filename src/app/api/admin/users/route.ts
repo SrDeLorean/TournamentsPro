@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const where: Record<string, unknown> = {};
 
     if (!isAdministrator(actor)) {
-      where.organizationId = actor.organizationId;
+      where.organization_id = actor.organizationId;
     }
 
     if (roleFilter) {
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       where.status = statusFilter;
     }
     if (isBannedFilter !== null && isBannedFilter !== undefined) {
-      where.isBanned = isBannedFilter === 'true' || isBannedFilter === '1';
+      where.is_banned = isBannedFilter === 'true' || isBannedFilter === '1';
     }
 
     const { dbProvider } = await import('@/lib/db/provider');

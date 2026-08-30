@@ -5,6 +5,8 @@ import { authorizationErrorResponse, requireValidMutationOrigin } from '@/lib/au
 import { consumeSecurityRateLimit, createAuthSession, getTrustedClientAddress } from '@/lib/security';
 import { loginBodySchema } from '@/lib/api-schemas';
 
+const INVALID_CREDENTIALS_MESSAGE = 'Credenciales inválidas. Verifica tu email/gamertag y contraseña.';
+
 export async function POST(request: Request) {
   try {
     requireValidMutationOrigin(request);
@@ -29,19 +31,19 @@ export async function POST(request: Request) {
       return apiError('Contraseña requerida', 400);
     }
 
-    const term = emailOrGamertag.trim();
+    const term = emailOrGamertag.trim().toLowerCase();
     const accountRateLimit = await consumeSecurityRateLimit('auth-login-account', term, 10, 15 * 60 * 1000);
     if (!accountRateLimit.allowed) {
       return apiError(`Demasiados intentos. Reintenta en ${accountRateLimit.retryAfter} segundos.`, 429, 'RATE_LIMITED');
     }
 
-    // Query user in MySQL database
-    const userByEmail = await import('@/lib/db/provider').then(m => m.dbProvider.users.findByEmail(term));
-    const usersByGamer = await import('@/lib/db/provider').then(m => m.dbProvider.users.findAll({ where: { gamertag: term }, limit: 1 }));
-    const user = userByEmail || usersByGamer[0];
+    // Keep identifier resolution inside the active database adapter. Both MySQL
+    // and Supabase implement a case-insensitive email/gamertag lookup.
+    const user = await import('@/lib/db/provider')
+      .then((module) => module.dbProvider.users.findByEmailOrGamertag(term));
 
     if (!user) {
-      return apiError('Credenciales invǭlidas. Verifica tu email/gamertag y contrasea.', 401);
+      return apiError(INVALID_CREDENTIALS_MESSAGE, 401, 'INVALID_CREDENTIALS');
     }
 
     const row = {
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
       : false;
 
     if (!passwordValid) {
-      return apiError('Credenciales inválidas. Verifica tu email/gamertag y contraseña.', 401);
+      return apiError(INVALID_CREDENTIALS_MESSAGE, 401, 'INVALID_CREDENTIALS');
     }
 
     // Generate JWT token

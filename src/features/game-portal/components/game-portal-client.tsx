@@ -55,6 +55,7 @@ const EsportsAnalyticsView = dynamic(() => import('@/components/stats/esports-an
 const TeamProfileView = dynamic(() => import('@/components/teams/team-profile-view').then(m => ({ default: m.TeamProfileView })), { loading: () => <PortalChunkLoading /> });
 const GameUIShowcasePage = dynamic(() => import('@/features/design-system/components/game-ui-showcase-client').then(m => ({ default: m.default })), { loading: () => <PortalChunkLoading /> });
 const OrganizationDirectory = dynamic(() => import('@/components/tournaments/organization-directory').then(m => ({ default: m.OrganizationDirectory })), { loading: () => <PortalChunkLoading /> });
+const CompetitionDirectory = dynamic(() => import('@/components/tournaments/competition-directory').then(m => ({ default: m.CompetitionDirectory })), { loading: () => <PortalChunkLoading /> });
 const TeamDirectory = dynamic(() => import('@/components/teams/team-directory').then(m => ({ default: m.TeamDirectory })), { loading: () => <PortalChunkLoading /> });
 const PlayerProfileView = dynamic(() => import('@/components/players/player-profile-view').then(m => ({ default: m.PlayerProfileView })), { loading: () => <PortalChunkLoading /> });
 
@@ -153,7 +154,7 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
           {/* ── COMPETENCIAS ──────────────────────────────────────────── */}
           {activeSection === 'competencias' && (
             <div className="pt-3 sm:pt-4">
-              <OrganizationDirectory gameSlug={game.slug} gameConfig={game} mode="competitions" />
+              <CompetitionDirectory gameSlug={game.slug} gameConfig={game} />
             </div>
           )}
 

@@ -58,7 +58,7 @@ describe('public directory routing', () => {
     expect(layout).toContain("pathname.startsWith('/dashboard')");
     expect(layout).toContain('showRoleAwareChrome = isAdminOrOrganizer');
     expect(layout).toContain('<AdminOrganizerHeader');
-    expect(layout).toContain(') : <Navbar key={pathname} />}');
+    expect(layout).toContain(') : <Navbar />}');
   });
 
   it('keeps every global management destination under dashboard', async () => {

@@ -76,14 +76,14 @@ export async function GET(request: Request) {
     const where: Record<string, unknown> = {};
 
     if (!isAdministrator(actor)) {
-      where.organizationId = actor.organizationId;
+      where.organization_id = actor.organizationId;
     }
 
     if (gameSlug) {
-      where.gameSlug = gameSlug;
+      where.game_slug = gameSlug;
     }
     if (isBanned !== null && isBanned !== undefined) {
-      where.isBanned = isBanned === 'true' || isBanned === '1';
+      where.is_banned = isBanned === 'true' || isBanned === '1';
     }
 
     const { dbProvider } = await import('@/lib/db/provider');

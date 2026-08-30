@@ -19,6 +19,10 @@ function toSnakeCase(obj: Record<string, any>): Record<string, any> {
   return result;
 }
 
+function escapeIlikeLiteral(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
 export class SupabaseUserRepository extends SupabaseBaseRepository<User> implements IUserRepository {
   protected tableName = 'users';
   protected primaryKey = 'id';
@@ -39,21 +43,34 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const { data } = await supabase.from(this.tableName).select('*').ilike('email', email).maybeSingle();
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*')
+      .ilike('email', escapeIlikeLiteral(email.trim()))
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
     return data ? this.mapRow(data) : null;
   }
 
   async findByGamertag(gamertag: string): Promise<User | null> {
-    const { data } = await supabase.from(this.tableName).select('*').ilike('gamertag', gamertag).maybeSingle();
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*')
+      .ilike('gamertag', escapeIlikeLiteral(gamertag.trim()))
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
     return data ? this.mapRow(data) : null;
   }
 
   async findByEmailOrGamertag(identifier: string): Promise<User | null> {
-    const { data } = await supabase.from(this.tableName)
-      .select('*')
-      .or(`email.ilike.${identifier},gamertag.ilike.${identifier}`)
-      .maybeSingle();
-    return data ? this.mapRow(data) : null;
+    const normalizedIdentifier = identifier.trim();
+    const [userByEmail, userByGamertag] = await Promise.all([
+      this.findByEmail(normalizedIdentifier),
+      this.findByGamertag(normalizedIdentifier),
+    ]);
+    return userByEmail ?? userByGamertag;
   }
 }
 

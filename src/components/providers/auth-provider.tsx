@@ -23,10 +23,16 @@ interface AuthContextType {
   setActiveGameSlug: (slug: string) => void;
   updateCurrentUser: (updatedData: Partial<UserProfile>) => void;
   refetchUser: () => Promise<void>;
-  login: (emailOrGamertag: string, password?: string) => Promise<boolean>;
+  login: (emailOrGamertag: string, password?: string) => Promise<AuthActionResult>;
   loginWithGoogle: (credential: string) => Promise<boolean>;
-  register: (data: Partial<UserProfile> & { password?: string }) => Promise<boolean>;
+  register: (data: Partial<UserProfile> & { password?: string }) => Promise<AuthActionResult>;
   logout: () => void;
+}
+
+export interface AuthActionResult {
+  success: boolean;
+  error?: string;
+  code?: string;
 }
 
 interface TeamsContextType {
@@ -109,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [applyAuthenticatedUser]);
 
-  const login = useCallback(async (emailOrGamertag: string, password?: string): Promise<boolean> => {
+  const login = useCallback(async (emailOrGamertag: string, password?: string): Promise<AuthActionResult> => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/auth/login', {
@@ -118,20 +124,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ emailOrGamertag, password }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       // Support both old { user } and new { data: { user } } response formats
       const user = data.data?.user || data.user;
 
       if (res.ok && user) {
         applyAuthenticatedUser(user);
-        return true;
+        return { success: true };
       } else {
         console.warn('Login falló:', data.error);
-        return false;
+        return {
+          success: false,
+          error: data.error || 'No fue posible iniciar sesión. Revisa tus datos e inténtalo nuevamente.',
+          code: data.code,
+        };
       }
     } catch (err) {
       console.error('Error de red en login:', err);
-      return false;
+      return {
+        success: false,
+        error: 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo nuevamente.',
+        code: 'NETWORK_ERROR',
+      };
     } finally {
       setIsLoading(false);
     }
@@ -163,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyAuthenticatedUser]);
 
-  const register = useCallback(async (data: Partial<UserProfile> & { password?: string }): Promise<boolean> => {
+  const register = useCallback(async (data: Partial<UserProfile> & { password?: string }): Promise<AuthActionResult> => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/auth/register', {
@@ -172,19 +186,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(data),
       });
 
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
       const user = result.data?.user || result.user;
 
       if (res.ok && user) {
         applyAuthenticatedUser(user);
-        return true;
+        return { success: true };
       } else {
         console.warn('Register falló:', result.error);
-        return false;
+        return {
+          success: false,
+          error: result.error || 'No fue posible completar el registro.',
+          code: result.code,
+        };
       }
     } catch (err) {
       console.error('Error de red en register:', err);
-      return false;
+      return {
+        success: false,
+        error: 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo nuevamente.',
+        code: 'NETWORK_ERROR',
+      };
     } finally {
       setIsLoading(false);
     }
