@@ -10,6 +10,7 @@ import { Building2, Plus, Shield, Edit, Users, Trophy, Star, Trash2, Gamepad2, A
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
+import { CreateOrganizationModal } from '@/features/organizations/components/create-organization-modal';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
@@ -122,7 +123,7 @@ export default function OrganizationsModulePage() {
     if (!isAdmin) return [];
 
     try {
-      const res = await fetch('/api/admin/users?role=Organizador');
+      const res = await fetch('/api/admin/users?role=Organizador&unassignedOrg=true');
       if (!res.ok) throw new Error(`No se pudieron cargar los organizadores (${res.status})`);
       const data: { success?: boolean; users?: OrganizerOption[] } = await res.json();
       return data.success && Array.isArray(data.users) ? data.users : [];
@@ -562,102 +563,15 @@ export default function OrganizationsModulePage() {
       )}
 
       {/* MODAL CREAR ORGANIZACIÓN */}
-      <ModalForm
+      <CreateOrganizationModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Crear Nueva Organización eSports"
-        subtitle="Registrar organización en la base de datos MySQL"
-        onSubmit={handleCreateOrg}
-        isSubmitting={isSubmitting}
-        brandColor="#A855F7"
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-900 border border-white/10">
-            <ImageUploadCard
-              label="Logo / Escudo Oficial"
-              subtitle="Formato WebP"
-              currentUrl={modalLogoUrl}
-              fallbackType="logo"
-              uploadType="logo"
-              maxDimension={512}
-              brandColor="#A855F7"
-              uploadButtonText="Subir Escudo"
-              entityName="org-new"
-              onUploadSuccess={(url) => setModalLogoUrl(url)}
-            />
-            <ImageUploadCard
-              label="Banner de Portada"
-              subtitle="Formato HD WebP"
-              currentUrl={modalBannerUrl}
-              fallbackType="banner"
-              uploadType="banner"
-              maxDimension={1200}
-              brandColor="#A855F7"
-              uploadButtonText="Subir Banner"
-              entityName="org-new"
-              onUploadSuccess={(url) => setModalBannerUrl(url)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Nombre Oficial:</label>
-              <input type="text" name="name" required placeholder="San Lorenzo eSports" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Tag / Abreviatura:</label>
-              <input type="text" name="tag" required maxLength={5} placeholder="SL" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-purple-300 font-mono uppercase" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">País / Sede:</label>
-              <input type="text" name="country" defaultValue="Venezuela" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Año de Fundación:</label>
-              <input type="text" name="foundedYear" defaultValue="2019" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Rating de Prestigio:</label>
-              <input type="text" name="rating" defaultValue="4.98" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-amber-400 font-mono" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Sitio Web Oficial:</label>
-              <input type="text" name="website" placeholder="https://sanlorenzoesports.com" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
-            </div>
-          </div>
-
-          {/* Asignación de Organizadores */}
-          <div className="space-y-2 p-3 rounded-xl bg-slate-900 border border-white/10">
-            <label className="text-xs font-bold text-slate-300 uppercase block flex items-center gap-1">
-              <Users className="w-4 h-4 text-purple-400" />
-              Asignar Organizadores a la Organización:
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {availableOrganizers.map((oUser) => (
-                <label key={oUser.id} className="flex items-center gap-2 text-xs font-semibold text-white bg-slate-950 p-2 rounded-lg border border-white/10 cursor-pointer">
-                  <input type="checkbox" name={`organizer_${oUser.id}`} />
-                  <Avatar fallback={oUser.name} src={oUser.avatar_url || oUser.foto} size="sm" />
-                  <span>@{oUser.gamertag || oUser.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-300 uppercase block">Disciplinas eSports Autorizadas:</label>
-            <div className="flex flex-wrap gap-3">
-              {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
-                <label key={slug} className="flex items-center gap-2 text-xs font-semibold text-white bg-slate-900 p-2 rounded-xl border border-white/10 cursor-pointer">
-                  <input type="checkbox" name={`game_${slug}`} defaultChecked />
-                  <span>{g.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <SocialMediaGroup prefixName="social" />
-        </div>
-      </ModalForm>
+        onSuccess={() => {
+          endSuccess('La organización fue creada y ya está disponible en el directorio.');
+          refreshOrganizations();
+        }}
+        currentUser={currentUser}
+      />
 
       {/* MODAL EDITAR ORGANIZACIÓN */}
       {editingOrg && (

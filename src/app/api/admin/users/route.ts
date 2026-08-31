@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     const roleFilter = searchParams.get('role');
     const statusFilter = searchParams.get('status');
     const isBannedFilter = searchParams.get('isBanned');
+    const unassignedOrg = searchParams.get('unassignedOrg');
 
     const where: Record<string, unknown> = {};
 
@@ -25,6 +26,9 @@ export async function GET(request: Request) {
     }
     if (statusFilter) {
       where.status = statusFilter;
+    }
+    if (unassignedOrg === 'true') {
+      where.organization_id = null;
     }
     if (isBannedFilter !== null && isBannedFilter !== undefined) {
       where.is_banned = isBannedFilter === 'true' || isBannedFilter === '1';

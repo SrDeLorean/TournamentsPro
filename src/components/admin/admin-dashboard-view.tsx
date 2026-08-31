@@ -18,6 +18,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { ModalForm } from '@/components/ui/modal-form';
+import { CreateOrganizationModal } from '@/features/organizations/components/create-organization-modal';
 import { GAMES_CATALOG } from '@/lib/games-data';
 
 interface AdminUser {
@@ -251,35 +252,12 @@ export function AdminDashboardView() {
           tone="violet"
           action={<Button onClick={() => setIsCreatingOrg((value) => !value)} className="w-full sm:w-auto"><Plus className="mr-1 size-4" />Nueva organización</Button>}
         >
-          <ModalForm
+          <CreateOrganizationModal
             isOpen={isCreatingOrg}
             onClose={() => { setIsCreatingOrg(false); setCreateOrgError(''); }}
-            onSubmit={handleCreateOrg}
-            title="Nueva organización"
-            subtitle="Define su identidad y las disciplinas que podrá gestionar."
-            submitButtonText="Crear organización"
-            errorMessage={createOrgError}
-            size="xl"
-            brandColor="var(--accent-violet)"
-          >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input name="name" required placeholder="Nombre de la organización" className="ui-control h-11" />
-                <input name="tag" required maxLength={5} placeholder="Tag (ej. TPRO)" className="ui-control h-11 uppercase" />
-              </div>
-              <fieldset>
-                <legend className="mb-2 text-xs font-bold uppercase text-[var(--text-secondary)]">Disciplinas autorizadas</legend>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-                  {Object.entries(GAMES_CATALOG).map(([slug, game]) => (
-                    <label key={slug} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] px-3 text-xs font-semibold text-[var(--text-primary)]">
-                      <input type="checkbox" name={`game_${slug}`} defaultChecked className="accent-[var(--accent-violet)]" />
-                      <span className="truncate">{game.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-          </ModalForm>
-
-          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            onSuccess={() => fetchOrganizations()}
+            currentUser={currentUser}
+          />          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
             {organizations.map((organization) => (
               <article key={organization.id} className="rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-4 transition-colors hover:bg-[var(--bg-card-hover)]">
                 <div className="flex items-start justify-between gap-3"><div><h3 className="font-black uppercase text-[var(--text-heading)]">{organization.name}</h3><p className="font-mono text-xs text-[var(--accent-violet)]">[{organization.tag}]</p></div><Badge variant="emerald">{organization.status || 'Activa'}</Badge></div>
