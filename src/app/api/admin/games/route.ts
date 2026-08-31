@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const games = await dbProvider.games.findAll({ orderBy: 'createdAt', orderDirection: 'DESC' });
+    const games = await dbProvider.games.findAll({ orderBy: 'created_at', orderDirection: 'DESC' });
     const formattedGames = games.map(g => ({
       slug: g.slug,
       name: g.name,

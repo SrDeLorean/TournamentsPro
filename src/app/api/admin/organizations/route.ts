@@ -11,12 +11,12 @@ export async function GET(request: Request) {
 
     const where: Record<string, unknown> = {};
     if (isBanned !== null && isBanned !== undefined) {
-      where.isBanned = isBanned === 'true' || isBanned === '1';
+      where.is_banned = isBanned === 'true' || isBanned === '1';
     }
 
     const organizations = await dbProvider.organizations.findAll({
       where,
-      orderBy: 'createdAt',
+      orderBy: 'created_at',
       orderDirection: 'DESC'
     });
 
@@ -24,6 +24,10 @@ export async function GET(request: Request) {
       id: o.id,
       name: o.name,
       slug: o.slug,
+      tag: o.tag,
+      country: o.country,
+      founded_year: o.foundedYear,
+      allowedGames: o.allowedGames,
       owner_id: o.ownerId,
       logo_url: o.logoUrl,
       banner_url: o.bannerUrl,
