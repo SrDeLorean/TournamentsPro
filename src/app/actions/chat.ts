@@ -138,7 +138,14 @@ export async function getUsersByRoleAction(role: string) {
 
 export async function banUserFromChatAction(targetUserId: string, reason?: string) {
   try {
-    const actor = await requireServerActor(['Administrador']);
+    const actor = await requireServerActor(['Administrador', 'Organizador']);
+    const target = await dbProvider.users.findById(targetUserId);
+    if (target && actor.role === 'Organizador') {
+      if (target.role === 'Administrador' || target.role === 'Organizador') {
+        return { success: false, error: 'Los organizadores no pueden sancionar a otros organizadores o administradores.' };
+      }
+    }
+
     const res = await banUserFromChatService(targetUserId, reason);
     if (res.success) {
       await revokeUserSessions(targetUserId);
@@ -160,7 +167,14 @@ export async function banUserFromChatAction(targetUserId: string, reason?: strin
 
 export async function unbanUserFromChatAction(targetUserId: string) {
   try {
-    const actor = await requireServerActor(['Administrador']);
+    const actor = await requireServerActor(['Administrador', 'Organizador']);
+    const target = await dbProvider.users.findById(targetUserId);
+    if (target && actor.role === 'Organizador') {
+      if (target.role === 'Administrador' || target.role === 'Organizador') {
+        return { success: false, error: 'No tienes permisos para modificar sanciones de este usuario.' };
+      }
+    }
+
     const res = await unbanUserFromChatService(targetUserId);
     if (res.success) {
       await writeSecurityAudit({

@@ -369,7 +369,14 @@ export default function UsersModulePage() {
     }
   };
 
-  const bannedUsers = usersList.filter((u) => u.is_banned === 1 || u.status === 'Baneado');
+  const managedUsersList = React.useMemo(() => {
+    if (isOrganizer && !isAdmin) {
+      return usersList.filter((u) => u.role !== 'Administrador' && (u.role !== 'Organizador' || u.id === currentUser?.id));
+    }
+    return usersList;
+  }, [usersList, isOrganizer, isAdmin, currentUser]);
+
+  const bannedUsers = managedUsersList.filter((u) => u.is_banned === 1 || u.status === 'Baneado');
 
   // Columns definition for DataTable
   const userColumns: ColumnDef<UserRecord>[] = [
@@ -603,7 +610,7 @@ export default function UsersModulePage() {
 
           <DataTable
             columns={userColumns}
-            data={usersList}
+            data={managedUsersList}
             searchPlaceholder="Buscar por nombre, gamertag o email..."
             searchField={(row) => `${row.name} ${row.gamertag} ${row.email}`}
             filterOptions={[
@@ -611,8 +618,9 @@ export default function UsersModulePage() {
                 key: 'role',
                 label: 'Rol',
                 options: [
-                  { label: 'Administrador', value: 'Administrador' },
-                  { label: 'Organizador', value: 'Organizador' },
+                  ...(isAdmin ? [{ label: 'Administrador', value: 'Administrador' }] : []),
+                  ...(isAdmin ? [{ label: 'Organizador', value: 'Organizador' }] : []),
+                  { label: 'Capitán', value: 'Capitán' },
                   { label: 'Jugador', value: 'Jugador' },
                 ],
               },
@@ -750,6 +758,7 @@ export default function UsersModulePage() {
               <label className="text-slate-300 uppercase block">Rol eSports:</label>
               <select name="role" defaultValue="Jugador" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
                 <option value="Jugador">Jugador</option>
+                <option value="Capitán">Capitán</option>
                 {isAdmin && <option value="Organizador">Organizador</option>}
                 {isAdmin && <option value="Administrador">Administrador</option>}
               </select>
@@ -830,10 +839,11 @@ export default function UsersModulePage() {
               </div>
               <div className="space-y-1">
                 <label className="text-slate-300 uppercase block">Rol eSports:</label>
-                <select name="role" defaultValue={editingUser.role} disabled={!isAdmin} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
+                <select name="role" defaultValue={editingUser.role} disabled={!isAdmin && !isOrganizer} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
                   <option value="Jugador">Jugador</option>
-                  <option value="Organizador">Organizador</option>
-                  <option value="Administrador">Administrador</option>
+                  <option value="Capitán">Capitán</option>
+                  {isAdmin && <option value="Organizador">Organizador</option>}
+                  {isAdmin && <option value="Administrador">Administrador</option>}
                 </select>
               </div>
               <div className="space-y-1">

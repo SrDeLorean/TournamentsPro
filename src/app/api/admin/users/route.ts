@@ -17,10 +17,6 @@ export async function GET(request: Request) {
 
     const where: Record<string, unknown> = {};
 
-    if (!isAdministrator(actor)) {
-      where.organization_id = actor.organizationId;
-    }
-
     if (roleFilter) {
       where.role = roleFilter;
     }
@@ -37,7 +33,16 @@ export async function GET(request: Request) {
     const { dbProvider } = await import('@/lib/db/provider');
     const users = await dbProvider.users.findAll({ where, orderBy: 'created_at', orderDirection: 'DESC' });
 
-    const safeUsers = users.map((user) => ({
+    // For organizers, filter out other organizers and administrators
+    let visibleUsers = users;
+    if (!isAdministrator(actor)) {
+      visibleUsers = users.filter((user) => {
+        const uRole = user.role;
+        return uRole !== 'Administrador' && (uRole !== 'Organizador' || user.id === actor.userId);
+      });
+    }
+
+    const safeUsers = visibleUsers.map((user) => ({
       id: user.id,
       name: user.name,
       gamertag: user.gamertag,

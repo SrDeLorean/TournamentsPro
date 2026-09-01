@@ -5,6 +5,7 @@ import {
   canManageOrganization,
   canManageTeam,
   isAdministrator,
+  isOrganizer,
   type AuthorizationActor,
 } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
@@ -48,7 +49,7 @@ async function canAssignTeamStaff(
   organizationId: string | null,
   userIds: string[],
 ): Promise<boolean> {
-  if (isAdministrator(actor) || userIds.length === 0) return true;
+  if (isAdministrator(actor) || isOrganizer(actor) || userIds.length === 0) return true;
   if (!organizationId || organizationId !== actor.organizationId) return false;
 
   const { dbProvider } = await import('@/lib/db/provider');
@@ -75,7 +76,7 @@ export async function GET(request: Request) {
 
     const where: Record<string, unknown> = {};
 
-    if (!isAdministrator(actor)) {
+    if (!isAdministrator(actor) && !isOrganizer(actor)) {
       where.organization_id = actor.organizationId;
     }
 
@@ -139,10 +140,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nombre y Tag del club requeridos' }, { status: 400 });
     }
 
-    const targetOrganizationId = isAdministrator(actor) ? (organizationId || null) : actor.organizationId;
-    if (!isAdministrator(actor) && (!targetOrganizationId || !canManageOrganization(actor, targetOrganizationId))) {
-      return NextResponse.json({ error: 'No tienes permisos para crear equipos en esta Organización' }, { status: 403 });
-    }
+    const targetOrganizationId = isAdministrator(actor) ? (organizationId || null) : (organizationId || actor.organizationId || null);
 
     const encargadosArray = Array.isArray(encargados) ? encargados : [];
     const staffIds = [
@@ -235,7 +233,7 @@ export async function PUT(request: Request) {
     if ((action === 'BAN' || action === 'UNBAN' || isBanned !== undefined || status === 'Baneado') && actor.role === 'Capitán') {
       return NextResponse.json({ error: 'Solo Administradores u Organizadores pueden aplicar sanciones' }, { status: 403 });
     }
-    if (organizationId !== undefined && !isAdministrator(actor) && organizationId !== actor.organizationId) {
+    if (organizationId !== undefined && !isAdministrator(actor) && !isOrganizer(actor) && organizationId !== actor.organizationId) {
       return NextResponse.json({ error: 'No puedes mover el equipo fuera de tu Organización' }, { status: 403 });
     }
     const requestedStaffIds = [

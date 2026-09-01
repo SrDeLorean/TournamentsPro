@@ -10,6 +10,6 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardModerationPage() {
-  await requireServerActor(['Administrador']);
+  await requireServerActor(['Administrador', 'Organizador']);
   return <ModerationDashboard />;
 }

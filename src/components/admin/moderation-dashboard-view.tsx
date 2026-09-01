@@ -26,6 +26,8 @@ import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { GAMES_CATALOG } from '@/lib/games-data';
 
+import { useAuth } from '@/components/providers/auth-provider';
+
 interface ModeratedUser {
   id: string;
   name: string;
@@ -40,6 +42,7 @@ type ModerationTab = 'bans' | 'chat';
 const MODERATED_ROLES = ['Administrador', 'Organizador', 'Capitan', 'Jugador'] as const;
 
 export function ModerationDashboard() {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<ModerationTab>('bans');
   const [users, setUsers] = useState<ModeratedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,6 +53,9 @@ export function ModerationDashboard() {
   const [selectedUserToRestore, setSelectedUserToRestore] = useState<ModeratedUser | null>(null);
   const [banReason, setBanReason] = useState('Infracción disciplinaria del reglamento eSports.');
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
+
+  const isOrganizer = currentUser?.role === 'Organizador';
+  const isAdmin = currentUser?.role === 'Administrador';
 
   const loadUsers = useCallback(async (refresh = false) => {
     if (refresh) setIsRefreshing(true);
@@ -75,9 +81,17 @@ export function ModerationDashboard() {
     void Promise.resolve().then(() => loadUsers());
   }, [loadUsers]);
 
-  const bannedUsers = useMemo(() => users.filter((user) => user.isBanned), [users]);
-  const availableUsers = useMemo(() => users.filter((user) => !user.isBanned && user.role !== 'Administrador'), [users]);
-  const gamesUnderModeration = useMemo(() => new Set(users.map((user) => user.gameSlug).filter(Boolean)).size, [users]);
+  // For Organizers, exclude Administrators and other Organizers
+  const visibleModeratedUsers = useMemo(() => {
+    if (isOrganizer && !isAdmin) {
+      return users.filter((u) => u.role !== 'Administrador' && (u.role !== 'Organizador' || u.id === currentUser?.id));
+    }
+    return users;
+  }, [users, isOrganizer, isAdmin, currentUser]);
+
+  const bannedUsers = useMemo(() => visibleModeratedUsers.filter((user) => user.isBanned), [visibleModeratedUsers]);
+  const availableUsers = useMemo(() => visibleModeratedUsers.filter((user) => !user.isBanned && user.role !== 'Administrador' && (user.role !== 'Organizador' || !isOrganizer)), [visibleModeratedUsers, isOrganizer]);
+  const gamesUnderModeration = useMemo(() => new Set(visibleModeratedUsers.map((user) => user.gameSlug).filter(Boolean)).size, [visibleModeratedUsers]);
 
   const tabs: ManagementTab<ModerationTab>[] = [
     { id: 'bans', label: 'Cuentas y sanciones', shortLabel: 'Sanciones', count: bannedUsers.length, icon: Ban, tone: 'crimson' },
@@ -103,7 +117,7 @@ export function ModerationDashboard() {
       return;
     }
     setIsBanModalOpen(false);
-    endSuccess(result.message || 'Sanción aplicada correctamente.');
+    endSuccess(('message' in result && result.message) ? result.message : 'Sanción aplicada correctamente.');
     await loadUsers(true);
   };
 

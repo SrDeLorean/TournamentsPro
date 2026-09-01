@@ -64,11 +64,11 @@ export function canManageUser(
   if (isAdministrator(actor)) return true;
   if (actor.userId === target.userId) return true;
 
+  const targetRole = normalizeRole(target.role);
   return Boolean(
     isOrganizer(actor) &&
-      normalizeRole(target.role) !== 'Administrador' &&
-      actor.organizationId &&
-      actor.organizationId === target.organizationId,
+      targetRole !== 'Administrador' &&
+      targetRole !== 'Organizador'
   );
 }
 
@@ -79,15 +79,14 @@ export function canAssignRole(
   const role = normalizeRole(requestedRole);
   if (!role) return false;
   if (isAdministrator(actor)) return true;
-  return isOrganizer(actor) && role !== 'Administrador';
+  return isOrganizer(actor) && role !== 'Administrador' && role !== 'Organizador';
 }
 
 export function canManageTeam(
   actor: AuthorizationActor,
   team: TeamResource,
 ): boolean {
-  if (isAdministrator(actor)) return true;
-  if (isOrganizer(actor) && belongsToActorOrganization(actor, team)) return true;
+  if (isAdministrator(actor) || isOrganizer(actor)) return true;
   if (team.captainId === actor.userId) return true;
   return team.managerIds?.includes(actor.userId) ?? false;
 }
