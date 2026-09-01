@@ -21,8 +21,19 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   deploymentId: process.env.NEXT_DEPLOYMENT_ID || process.env.DEPLOYMENT_VERSION || undefined,
+  images: {
+    unoptimized: true,
+  },
   typescript: {
     ignoreBuildErrors: false,
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: '/api/uploads/:path*',
+      },
+    ];
   },
   experimental: {
     // Preserve static rendering while adding integrity attributes to framework

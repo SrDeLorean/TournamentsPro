@@ -4,5 +4,5 @@
  * dynamic and cannot be safely allow-listed globally.
  */
 export function shouldBypassImageOptimization(src: string): boolean {
-  return /^(?:https?:|data:|blob:)/i.test(src);
+  return true;
 }

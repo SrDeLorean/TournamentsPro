@@ -17,15 +17,23 @@ export async function GET(request: Request, { params }: Params) {
     }
 
     // Sanitize path to prevent directory traversal attacks
-    const baseDir = path.join(process.cwd(), 'uploads');
     const requestedPath = pathSegments.join('/');
-    const safePath = sanitizeUploadPath(requestedPath, baseDir);
+    const candidateDirs = [
+      path.join(process.cwd(), 'public', 'uploads'),
+      path.join(process.cwd(), 'uploads'),
+      path.join(process.cwd(), 'EXTRA', 'uploads'),
+    ];
 
-    if (!safePath) {
-      return new NextResponse('Ruta de archivo no permitida', { status: 403 });
+    let safePath: string | null = null;
+    for (const baseDir of candidateDirs) {
+      const candidate = sanitizeUploadPath(requestedPath, baseDir);
+      if (candidate && existsSync(candidate)) {
+        safePath = candidate;
+        break;
+      }
     }
 
-    if (!existsSync(safePath)) {
+    if (!safePath) {
       return new NextResponse('Imagen no encontrada', { status: 404 });
     }
 
