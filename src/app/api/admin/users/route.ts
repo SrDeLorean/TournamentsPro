@@ -44,6 +44,15 @@ export async function GET(request: Request) {
       email: user.email,
       role: user.role,
       status: user.status,
+      avatar_url: user.avatarUrl || user.foto || null,
+      avatarUrl: user.avatarUrl || user.foto || null,
+      foto: user.avatarUrl || user.foto || null,
+      primary_game_slug: user.primaryGameSlug || 'eafc26',
+      primaryGame: user.primaryGameSlug || 'eafc26',
+      position: user.position || 'DFC',
+      rating: user.rating ?? 9.0,
+      rank_badge: user.rankBadge || 'Competitivo',
+      rankBadge: user.rankBadge || 'Competitivo',
       is_banned: user.isBanned ? 1 : 0,
       ban_reason: user.banReason,
       banned_at: user.bannedAt || user.updatedAt,
@@ -315,4 +324,3 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error actualizando usuario' }, { status: 500 });
   }
 }
-

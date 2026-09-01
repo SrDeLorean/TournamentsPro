@@ -350,24 +350,32 @@ export function buildPaginationMeta(page: number, limit: number, total: number):
   };
 }
 
-export function mapUserRowToProfile(row: UserRow): UserProfile {
+export function mapUserRowToProfile(row: any): UserProfile {
+  const avatar = row.avatar_url || row.avatarUrl || row.foto || null;
+  const banner = row.banner_url || row.bannerUrl || null;
+  const game = row.primary_game_slug || row.primaryGameSlug || row.primaryGame || 'eafc26';
+  const pos = row.position || 'DFC';
+  const secPos = row.secondary_position || row.secondaryPosition || null;
+  const badge = row.rank_badge || row.rankBadge || 'Competitivo';
+  const orgId = row.organization_id || row.organizationId || null;
+
   return {
     id: row.id,
-    email: row.email,
-    name: row.name,
-    gamertag: row.gamertag,
-    role: row.role,
-    primaryGame: row.primary_game_slug,
-    platform: row.platform,
-    position: row.position,
-    secondaryPosition: row.secondary_position,
-    rankBadge: row.rank_badge,
-    rating: row.rating,
-    status: row.status,
-    avatarUrl: row.avatar_url,
-    bannerUrl: row.banner_url,
-    country: row.country || null,
-    bio: row.bio || null,
+    email: row.email || '',
+    name: row.name || row.gamertag || 'Atleta Pro',
+    gamertag: row.gamertag || row.name || 'Gamertag',
+    role: row.role || 'Jugador',
+    primaryGame: game,
+    platform: row.platform || 'CROSSPLAY',
+    position: pos,
+    secondaryPosition: secPos,
+    rankBadge: badge,
+    rating: typeof row.rating === 'number' ? row.rating : parseFloat(row.rating || '9.0') || 9.0,
+    status: row.status || 'Activo',
+    avatarUrl: avatar,
+    bannerUrl: banner,
+    country: row.country || row.pais || 'Chile',
+    bio: row.bio || row.biografia || null,
     socialMedia: {
       whatsapp: row.whatsapp || undefined,
       instagram: row.instagram || undefined,
@@ -378,34 +386,45 @@ export function mapUserRowToProfile(row: UserRow): UserProfile {
       twitter: row.twitter || undefined,
       website: row.website || undefined,
     },
-    organizationId: row.organization_id,
-    isBanned: Boolean(row.is_banned),
-    banReason: row.ban_reason,
+    organizationId: orgId,
+    isBanned: Boolean(row.is_banned ?? row.isBanned),
+    banReason: row.ban_reason || row.banReason || null,
   };
 }
 
-export function mapTeamRowToData(row: TeamRow): TeamData {
+export function mapTeamRowToData(row: any): TeamData {
+  let vacant: string[] = [];
+  if (Array.isArray(row.vacant_positions || row.vacantPositions)) {
+    vacant = row.vacant_positions || row.vacantPositions;
+  } else if (typeof (row.vacant_positions || row.vacantPositions) === 'string') {
+    try {
+      vacant = JSON.parse(row.vacant_positions || row.vacantPositions);
+    } catch {
+      vacant = [];
+    }
+  }
+
   return {
     id: row.id,
     name: row.name,
-    tag: row.tag,
-    gameSlug: row.game_slug,
-    organizationId: row.organization_id,
-    captainId: row.captain_id,
-    captainName: row.captain_name,
-    platform: row.platform,
-    membersCount: row.members_count,
-    maxMembers: row.max_members,
-    color: row.color,
-    logoText: row.logo_text,
-    description: row.description,
-    vacantPositions: row.vacant_positions ? JSON.parse(row.vacant_positions) : [],
-    logoUrl: row.logo_url,
-    bannerUrl: row.banner_url,
-    status: row.status,
-    clubIdEa: row.club_id_ea,
-    isBanned: Boolean(row.is_banned),
-    banReason: row.ban_reason,
+    tag: row.tag || 'TP',
+    gameSlug: row.game_slug || row.gameSlug || 'eafc26',
+    organizationId: row.organization_id || row.organizationId || null,
+    captainId: row.captain_id || row.captainId || 'usr-srdelorean',
+    captainName: row.captain_name || row.captainName || 'Capitán',
+    platform: row.platform || 'CROSSPLAY',
+    membersCount: typeof (row.members_count ?? row.membersCount) === 'number' ? (row.members_count ?? row.membersCount) : 20,
+    maxMembers: typeof (row.max_members ?? row.maxMembers) === 'number' ? (row.max_members ?? row.maxMembers) : 45,
+    color: row.color || '#00F0FF',
+    logoText: row.logo_text || row.logoText || row.tag || 'TP',
+    description: row.description || null,
+    vacantPositions: vacant,
+    logoUrl: row.logo_url || row.logoUrl || null,
+    bannerUrl: row.banner_url || row.bannerUrl || null,
+    status: row.status || 'ACTIVO',
+    clubIdEa: row.club_id_ea || row.clubIdEa || null,
+    isBanned: Boolean(row.is_banned ?? row.isBanned),
+    banReason: row.ban_reason || row.banReason || null,
   };
 }
 

@@ -91,8 +91,35 @@ export function TeamProfileView({
   // Dynamic theme color for team profile matching the active game
   const activeColor = brandColor || team.color || '#00F0FF';
 
+  // Resolve display squad with fallbacks if backend query is loading or empty
+  const rawSquad: TeamProfileSquadMember[] = squad.length > 0
+    ? squad
+    : (team.members && team.members.length > 0)
+      ? team.members.map(m => ({
+          id: m.id,
+          user_id: m.id,
+          user_name: m.name,
+          gamertag: m.gamertag,
+          tactical_position: m.position,
+          avatar_url: m.avatarUrl || m.foto,
+          foto: m.avatarUrl || m.foto,
+          original_orgs: ['Plantilla Oficial']
+        }))
+      : [
+          {
+            id: `tm-${team.captainId || 'cap'}`,
+            user_id: team.captainId || 'cap',
+            user_name: team.captainName || (team as any).captain || 'Capitán del Club',
+            gamertag: team.captainName || (team as any).captain || 'Capitán',
+            tactical_position: 'DC / Capitán',
+            avatar_url: '/uploads/usuarios/1Zkhgan1DNOdEdM5S9y6_1783873006.webp',
+            foto: '/uploads/usuarios/1Zkhgan1DNOdEdM5S9y6_1783873006.webp',
+            original_orgs: ['Plantilla Oficial'],
+          }
+        ];
+
   const profileTabs: Array<{ id: ProfileTab; label: string; icon: React.ReactNode; badge?: number }> = [
-    { id: 'plantilla', label: 'Plantilla', icon: <Users className="size-4" />, badge: squad.length },
+    { id: 'plantilla', label: 'Plantilla', icon: <Users className="size-4" />, badge: rawSquad.length },
     { id: 'posiciones', label: 'Posiciones Liga', icon: <Award className="w-3.5 h-3.5" /> },
     { id: 'calendario', label: 'Calendario', icon: <Calendar className="w-3.5 h-3.5" /> },
     { id: 'traspasos', label: 'Movimientos', icon: <ArrowRightLeft className="w-3.5 h-3.5" /> },
@@ -101,8 +128,8 @@ export function TeamProfileView({
   ];
 
   // Group real squad by organization
-  const squadByOrg = squad.reduce<Record<string, TeamProfileSquadMember[]>>((acc, player) => {
-    const orgs = player.original_orgs && player.original_orgs.length > 0 ? player.original_orgs : ['Plantilla Base'];
+  const squadByOrg = rawSquad.reduce<Record<string, TeamProfileSquadMember[]>>((acc, player) => {
+    const orgs = player.original_orgs && player.original_orgs.length > 0 ? player.original_orgs : ['Plantilla Oficial'];
     orgs.forEach((org: string) => {
       if (!acc[org]) acc[org] = [];
       if (!acc[org].find((member) => member.user_id === player.user_id)) {

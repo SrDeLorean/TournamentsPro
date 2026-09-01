@@ -535,6 +535,90 @@ async function seed() {
     }
   }
 
+  // 5. INTEGRANTES DE PLANTILLA (TEAM MEMBERS)
+  const teamMembersToSeed = [
+    // LeguaYork eSp
+    {
+      id: 'tm-lye-pancho',
+      team_id: 'team-leguayork',
+      user_id: 'usr-pancho',
+      jersey_number: 9,
+      tactical_position: 'DC',
+      role_in_team: 'Capitan',
+      organization_name: 'Torneos Pro FC Oficial',
+    },
+    {
+      id: 'tm-lye-vhaex',
+      team_id: 'team-leguayork',
+      user_id: 'usr-vhaex',
+      jersey_number: 6,
+      tactical_position: 'MCD',
+      role_in_team: 'Jugador',
+      organization_name: 'Torneos Pro FC Oficial',
+    },
+    {
+      id: 'tm-lye-frubilar',
+      team_id: 'team-leguayork',
+      user_id: 'usr-frubilar',
+      jersey_number: 1,
+      tactical_position: 'POR',
+      role_in_team: 'Jugador',
+      organization_name: 'Torneos Pro FC Oficial',
+    },
+    // Sangre Nueva FC
+    {
+      id: 'tm-sn-caxorro',
+      team_id: 'team-sangre-nueva',
+      user_id: 'usr-caxorro',
+      jersey_number: 4,
+      tactical_position: 'DFC',
+      role_in_team: 'Capitan',
+      organization_name: 'Torneos Pro FC Oficial',
+    },
+    {
+      id: 'tm-sn-matias',
+      team_id: 'team-sangre-nueva',
+      user_id: 'usr-matias-aud',
+      jersey_number: 11,
+      tactical_position: 'EI',
+      role_in_team: 'Jugador',
+      organization_name: 'Torneos Pro FC Oficial',
+    },
+    // San Lorenzo eSp
+    {
+      id: 'tm-sle-srdelorean',
+      team_id: 'team-san-lorenzo',
+      user_id: 'usr-srdelorean',
+      jersey_number: 10,
+      tactical_position: 'MCO',
+      role_in_team: 'Capitan',
+      organization_name: 'NGL National Gaming',
+    },
+    {
+      id: 'tm-sle-diego',
+      team_id: 'team-san-lorenzo',
+      user_id: 'usr-diego-uk',
+      jersey_number: 7,
+      tactical_position: 'ED',
+      role_in_team: 'Jugador',
+      organization_name: 'NGL National Gaming',
+    },
+  ];
+
+  try {
+    const { supabase } = await import('../src/lib/db/supabase/client');
+    for (const tm of teamMembersToSeed) {
+      const { error } = await supabase.from('team_members').upsert(tm);
+      if (error) {
+        console.error(`Error al insertar team_member ${tm.id}:`, error.message);
+      } else {
+        console.log(`✓ Integrante de plantilla asignado: ${tm.user_id} -> ${tm.team_id}`);
+      }
+    }
+  } catch (e: any) {
+    console.error('Error poblando team_members:', e.message);
+  }
+
   console.log('--- ¡Seed completado exitosamente con todas las fotos e identidades reales! ---');
 }
 
