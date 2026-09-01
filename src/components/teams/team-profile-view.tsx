@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, ViewTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { TeamData } from '@/lib/data-store';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ClubManagementModal } from '@/components/teams/club-management-modal';
 import {
   Users, Calendar, ArrowRightLeft, BarChart3, History, Monitor, Award, CheckCircle2,
-  MessageSquare, Sparkles, Settings, ArrowLeft, Gamepad2, ShieldCheck
+  MessageSquare, Sparkles, Settings, Gamepad2, ShieldCheck
 } from 'lucide-react';
 
 import { getNewTeamSquadAction } from '@/app/actions/new-squads';
@@ -23,11 +23,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 
 interface TeamProfileViewProps {
   team: TeamData;
-  onBack?: () => void;
   brandColor?: string;
-  context?: 'global' | 'game';
-  backHref?: string;
-  backLabel?: string;
 }
 
 interface TeamProfileSquadMember {
@@ -50,16 +46,19 @@ interface TeamContract {
   status: string;
 }
 
-type LegacyTeamData = TeamData & { captain?: string; logo?: string };
+type LegacyTeamData = TeamData & {
+  captain?: string;
+  logo?: string;
+  logo_url?: string;
+  banner?: string;
+  banner_url?: string;
+};
 
 export type ProfileTab = 'plantilla' | 'posiciones' | 'calendario' | 'traspasos' | 'estadisticas' | 'historico';
 
 export function TeamProfileView({
   team,
   brandColor = '#00F0FF',
-  context = 'game',
-  backHref,
-  backLabel = 'Todos los equipos',
 }: TeamProfileViewProps) {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('plantilla');
@@ -86,10 +85,10 @@ export function TeamProfileView({
   }, [team.id]);
 
   const game = GAMES_CATALOG[team.gameSlug || 'eafc26'];
-  const directoryHref = backHref || (context === 'global' ? '/equipos' : `/${team.gameSlug || 'eafc26'}/equipos`);
 
   // Dynamic theme color for team profile matching the active game
   const activeColor = brandColor || team.color || '#00F0FF';
+  const legacyTeam = team as LegacyTeamData;
 
   // Resolve display squad with fallbacks if backend query is loading or empty
   const rawSquad: TeamProfileSquadMember[] = squad.length > 0
@@ -109,8 +108,8 @@ export function TeamProfileView({
           {
             id: `tm-${team.captainId || 'cap'}`,
             user_id: team.captainId || 'cap',
-            user_name: team.captainName || (team as any).captain || 'Capitán del Club',
-            gamertag: team.captainName || (team as any).captain || 'Capitán',
+            user_name: team.captainName || legacyTeam.captain || 'Capitán del Club',
+            gamertag: team.captainName || legacyTeam.captain || 'Capitán',
             tactical_position: 'DC / Capitán',
             avatar_url: '/uploads/usuarios/1Zkhgan1DNOdEdM5S9y6_1783873006.webp',
             foto: '/uploads/usuarios/1Zkhgan1DNOdEdM5S9y6_1783873006.webp',
@@ -141,8 +140,8 @@ export function TeamProfileView({
 
   const vacantPositions = team.vacantPositions || [];
 
-  const teamBanner = team?.bannerUrl || (team as any)?.banner_url || (team as any)?.banner || '/images/default/banner-default.jpg';
-  const teamLogo = team?.logoUrl || (team as any)?.logo_url || (team as any)?.logo || (team as LegacyTeamData).logo;
+  const teamBanner = team?.bannerUrl || legacyTeam.banner_url || legacyTeam.banner || '/images/default/banner-default.jpg';
+  const teamLogo = team?.logoUrl || legacyTeam.logo_url || legacyTeam.logo;
   const teamLogoText = team?.logoText || team?.tag || team?.name?.substring(0, 3)?.toUpperCase() || 'TP';
   const teamName = team?.name || 'Escuadra eSports';
   const teamTag = team?.tag || 'TP';
@@ -159,11 +158,7 @@ export function TeamProfileView({
 
   return (
     <div className="public-team-profile animate-in fade-in duration-300">
-      <div className="public-team-breadcrumb">
-        <Link href={directoryHref}><ArrowLeft className="size-4" />{backLabel}</Link>
-        <span>/</span><span>{game?.name || team.gameSlug}</span>
-      </div>
-
+      <ViewTransition name={`team-identity-${team.id}`} share="team-morph" default="none">
       <section className="public-team-hero">
         <div className="public-team-banner">
           <Image
@@ -233,12 +228,15 @@ export function TeamProfileView({
           </div>
         </div>
         <div className="public-team-metrics">
-          <div><strong>{team.membersCount}/{team.maxMembers}</strong><span>integrantes</span></div>
-          <div><strong>{occupancy}%</strong><span>ocupación</span></div>
-          <div><strong>{vacantPositions.length}</strong><span>vacantes</span></div>
-          <div><strong>{team.palmares || '—'}</strong><span>palmarés</span></div>
+          <div className="public-team-metrics-inner">
+            <div><strong>{team.membersCount}/{team.maxMembers}</strong><span>integrantes</span></div>
+            <div><strong>{occupancy}%</strong><span>ocupación</span></div>
+            <div><strong>{vacantPositions.length}</strong><span>vacantes</span></div>
+            <div><strong>{team.palmares || '—'}</strong><span>palmarés</span></div>
+          </div>
         </div>
       </section>
+      </ViewTransition>
 
       <nav className="public-team-tabs" aria-label="Secciones del perfil">
         {profileTabs.map((tab) => (

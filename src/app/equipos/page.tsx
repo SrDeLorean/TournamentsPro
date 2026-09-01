@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ViewTransition } from 'react';
 import GlobalDirectoryPage from '@/components/public/global-directory-page';
 
 export const metadata: Metadata = {
@@ -7,5 +8,13 @@ export const metadata: Metadata = {
 };
 
 export default function TeamsPage() {
-  return <GlobalDirectoryPage kind="teams" />;
+  return (
+    <ViewTransition
+      enter={{ 'nav-forward': 'team-nav-forward', 'nav-back': 'team-nav-back', default: 'none' }}
+      exit={{ 'nav-forward': 'team-nav-forward', 'nav-back': 'team-nav-back', default: 'none' }}
+      default="none"
+    >
+      <GlobalDirectoryPage kind="teams" />
+    </ViewTransition>
+  );
 }

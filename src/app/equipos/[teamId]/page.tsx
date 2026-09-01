@@ -1,18 +1,21 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, ViewTransition } from 'react';
 import Link from 'next/link';
 import { LoaderCircle, SearchX } from 'lucide-react';
 import { TeamProfileView } from '@/components/teams/team-profile-view';
 import { Button } from '@/components/ui/button';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { initialTeams, type TeamData } from '@/lib/data-store';
-import { mockTeamsList } from '@/lib/teams-data';
 
 export default function GlobalTeamProfilePage({ params }: { params: Promise<{ teamId: string }> }) {
   const { teamId } = use(params);
   const [team, setTeam] = React.useState<TeamData | null>(null);
   const [loading, setLoading] = React.useState(true);
+
+  React.useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [teamId]);
 
   React.useEffect(() => {
     let active = true;
@@ -35,7 +38,13 @@ export default function GlobalTeamProfilePage({ params }: { params: Promise<{ te
           item.name?.toLowerCase()?.replace(/\s+/g, '-') === norm
         );
         if (active) {
-          setTeam(found || localMatch || null);
+          setTeam(found ? {
+            ...localMatch,
+            ...found,
+            members: found.members?.length ? found.members : localMatch?.members || [],
+            vacantPositions: found.vacantPositions?.length ? found.vacantPositions : localMatch?.vacantPositions || [],
+            palmares: found.palmares || localMatch?.palmares || '—',
+          } : localMatch || null);
         }
       })
       .catch(() => {
@@ -50,8 +59,14 @@ export default function GlobalTeamProfilePage({ params }: { params: Promise<{ te
 
   const game = GAMES_CATALOG[team.gameSlug] || GAMES_CATALOG.eafc26;
   return (
-    <main className="public-team-page" style={{ '--profile-accent': game.brandColor, '--profile-accent-secondary': game.accentColor } as React.CSSProperties}>
-      <TeamProfileView team={team} brandColor={game.brandColor} context="global" />
-    </main>
+    <ViewTransition
+      enter={{ 'nav-forward': 'team-nav-forward', 'nav-back': 'team-nav-back', default: 'none' }}
+      exit={{ 'nav-forward': 'team-nav-forward', 'nav-back': 'team-nav-back', default: 'none' }}
+      default="none"
+    >
+      <main className="public-team-page" style={{ '--profile-accent': team.color || game.brandColor, '--profile-accent-secondary': game.accentColor } as React.CSSProperties}>
+        <TeamProfileView team={team} brandColor={team.color || game.brandColor} />
+      </main>
+    </ViewTransition>
   );
 }

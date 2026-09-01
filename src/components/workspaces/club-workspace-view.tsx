@@ -86,7 +86,7 @@ export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug:
       {!['mensajes', 'ajustes', 'ficha', 'matchday', 'fichajes'].includes(section) ? <ManagementMetrics><MetricCard label="Plantilla" value={memberCount} hint={`Capacidad: ${capacity}`} icon={Users} tone="cyan" /><MetricCard label="Vacantes" value={Math.max(capacity - memberCount, 0)} hint="Cupos disponibles" icon={UserPlus} tone="violet" /><MetricCard label="Competición" value={team.disputando || '—'} hint="Circuito vigente" icon={Trophy} tone="gold" /><MetricCard label="Palmarés" value={team.palmares || '—'} hint="Registro del club" icon={History} tone="emerald" /></ManagementMetrics> : null}
 
       {section === 'resumen' ? <ClubOverview base={base} team={team} memberCount={memberCount} /> : null}
-      {section === 'ficha' ? <div className="context-workspace-embedded"><TeamProfileView team={team} brandColor={game.brandColor} context="game" backHref={base} backLabel="Volver al panel" /></div> : null}
+      {section === 'ficha' ? <div className="context-workspace-embedded"><TeamProfileView team={team} brandColor={game.brandColor} /></div> : null}
       {section === 'plantilla' ? <ClubRoster team={team} squad={squad} loading={isLoadingSquad} onManage={() => setIsRosterOpen(true)} /> : null}
       {section === 'fichajes' ? <div className="context-workspace-embedded"><TransferMarket game={game} /></div> : null}
       {section === 'matchday' ? <div className="context-workspace-embedded"><MatchdayReportView /></div> : null}

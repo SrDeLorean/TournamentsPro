@@ -17,6 +17,7 @@ interface DirectoryRecord {
   description?: string | null;
   country?: string | null;
   status?: string | null;
+  color?: string | null;
   role?: string | null;
   position?: string | null;
   platform?: string | null;
@@ -248,6 +249,8 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
                   actionText="VER PERFIL"
                   brandColor={game.brandColor || config.accent}
                   animationDelay={index * 35}
+                  transitionName={kind === 'teams' ? `team-identity-${record.id}` : undefined}
+                  transitionTypes={kind === 'teams' ? ['nav-forward'] : undefined}
                 />
               );
             })}

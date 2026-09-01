@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { ViewTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowUpRight, Globe, MessageCircle, MessageSquare, Tv } from 'lucide-react';
@@ -52,6 +52,8 @@ export interface EsportsCardProps {
   actionText?: string;
   brandColor?: string;
   animationDelay?: number;
+  transitionName?: string;
+  transitionTypes?: React.ComponentProps<typeof Link>['transitionTypes'];
   children?: React.ReactNode;
 }
 
@@ -109,7 +111,8 @@ function normalizeSocialUrl(platform: string, value: string) {
 export function EsportsCard({
   href, onClick, entityType = 'generic', title, subtitle, description, bannerUrl, logoUrl, fallbackIcon,
   tag, country, countryCode, socials, badges = [], stats = [], progress, footerLeft,
-  actionText = 'Ver perfil', brandColor = 'var(--accent-cyan)', animationDelay = 0, children,
+  actionText = 'Ver perfil', brandColor = 'var(--accent-cyan)', animationDelay = 0,
+  transitionName, transitionTypes, children,
 }: EsportsCardProps) {
   const bannerImg = bannerUrl || '/images/default/banner-default.jpg';
   const logoImg = logoUrl || '/images/default/logo-default.png';
@@ -125,7 +128,7 @@ export function EsportsCard({
     }
   };
 
-  return (
+  const card = (
     <article
       className={`esports-entity-card is-${entityType}${isInteractive ? ' is-interactive' : ''}`}
       style={{ '--card-brand': brandColor, animationDelay: `${animationDelay}ms` } as React.CSSProperties}
@@ -134,7 +137,7 @@ export function EsportsCard({
       role={!href && onClick ? 'button' : undefined}
       tabIndex={!href && onClick ? 0 : undefined}
     >
-      {href ? <Link href={href} className="esports-entity-card-link" aria-label={`${actionText}: ${title}`} /> : null}
+      {href ? <Link href={href} transitionTypes={transitionTypes} className="esports-entity-card-link" aria-label={`${actionText}: ${title}`} /> : null}
 
       <div className="esports-entity-card-banner">
         <Image
@@ -212,4 +215,10 @@ export function EsportsCard({
       </div>
     </article>
   );
+
+  return transitionName ? (
+    <ViewTransition name={transitionName} share="team-morph" default="none">
+      {card}
+    </ViewTransition>
+  ) : card;
 }

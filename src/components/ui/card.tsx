@@ -3,13 +3,17 @@ import { cn } from '@/lib/utils';
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   is3D?: boolean;
+  variant?: 'surface' | 'subtle' | 'outline' | 'spotlight';
+  interactive?: boolean;
 }
 
-export function Card({ className, is3D = false, children, ...props }: CardProps) {
+export function Card({ className, is3D = false, variant = 'surface', interactive = false, children, ...props }: CardProps) {
   return (
     <div
       className={cn(
         is3D ? "card-3d-elevated" : "ui-card relative overflow-hidden",
+        !is3D && `ui-card-${variant}`,
+        !is3D && interactive && 'ui-card-interactive',
         className
       )}
       {...props}

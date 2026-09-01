@@ -58,6 +58,7 @@ export async function GET(request: Request) {
       membersCount: typeof (t.membersCount ?? t.members_count) === 'number' ? (t.membersCount ?? t.members_count) : 20,
       maxMembers: typeof (t.maxMembers ?? t.max_members) === 'number' ? (t.maxMembers ?? t.max_members) : 45,
       vacantPositions: t.vacantPositions || t.vacant_positions || [],
+      palmares: t.palmares || null,
       created_at: t.createdAt || t.created_at,
     }));
     

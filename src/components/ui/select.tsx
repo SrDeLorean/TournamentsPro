@@ -18,7 +18,9 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, label, error, helperText, options, children, icon, id, ...props }, ref) => {
-    const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = React.useId();
+    const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : generatedId);
+    const messageId = `${selectId}-message`;
 
     return (
       <div className="w-full flex flex-col gap-1.5 font-mono">
@@ -36,8 +38,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           <select
             id={selectId}
             ref={ref}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error || helperText ? messageId : undefined}
             className={cn(
-              "w-full h-11 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] px-3 text-xs font-bold text-[var(--text-primary)] transition-all duration-200 focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:border-[var(--border-card-hover)] cursor-pointer",
+              "ui-control w-full h-11 px-3 text-xs font-bold cursor-pointer",
               icon && "pl-9",
               error && "border-[var(--accent-crimson)] focus:border-[var(--accent-crimson)] focus:ring-[var(--accent-crimson-bg)]",
               className
@@ -46,7 +50,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           >
             {options
               ? options.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-[#0b101b] text-slate-100 font-semibold py-1">
+                  <option key={opt.value} value={opt.value} className="bg-[var(--ui-surface-solid)] text-[var(--text-primary)] font-semibold py-1">
                     {opt.label}
                   </option>
                 ))
@@ -54,9 +58,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </select>
         </div>
         {error ? (
-          <span className="text-[11px] font-bold text-[var(--accent-crimson)]">{error}</span>
+          <span id={messageId} role="alert" className="text-[11px] font-bold text-[var(--accent-crimson)]">{error}</span>
         ) : helperText ? (
-          <span className="text-[11px] text-[var(--text-muted)]">{helperText}</span>
+          <span id={messageId} className="text-[11px] text-[var(--text-muted)]">{helperText}</span>
         ) : null}
       </div>
     );
