@@ -28,7 +28,6 @@ import {
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { GoogleOAuthModal } from '@/components/auth/google-oauth-modal';
-import { CyberSpaceCanvas } from '@/components/3d/cyber-space-canvas';
 import { HologramStage3D } from '@/components/3d/hologram-stage-3d';
 import { Card3D, Card3DItem } from '@/components/3d/card-3d';
 
@@ -82,11 +81,21 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-[calc(100vh-64px)] w-full bg-[#040711] text-[var(--text-primary)] flex flex-col justify-center overflow-x-hidden py-6 sm:py-10">
       
-      {/* 🌌 FULLSCREEN 3D CYBERSPACE CANVAS BACKGROUND */}
+      {/* 🌌 Modern eSports Background (Clean 2D Gradient & Subtle Grid, without 3D canvas) */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <CyberSpaceCanvas density="high" showGrid={true} interactive={true} />
-        {/* Dark Vignette Overlay for Crisp Readability */}
-        <div className="absolute inset-0 bg-radial-[circle_at_center,transparent_0%,rgba(4,7,17,0.85)_85%]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#060919] via-[#040711] to-[#020308]" />
+        {/* Subtle Esports Grid Pattern */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]" 
+          style={{ 
+            backgroundImage: `linear-gradient(to right, #00f0ff 1px, transparent 1px), linear-gradient(to bottom, #00f0ff 1px, transparent 1px)`,
+            backgroundSize: '40px 40px' 
+          }} 
+        />
+        {/* Ambient Neon Glows */}
+        <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-cyan-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[500px] h-[500px] bg-purple-600/10 blur-[140px] rounded-full" />
+        <div className="absolute inset-0 bg-radial-[circle_at_center,transparent_0%,rgba(4,7,17,0.8)_90%]" />
       </div>
 
       {/* 🌟 MAIN 3D eSPORTS CONTENT GRID */}
