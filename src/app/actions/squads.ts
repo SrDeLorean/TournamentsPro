@@ -17,6 +17,7 @@ import {
   addPlayerToSquadService,
   removePlayerFromSquadService,
   updateSquadMemberJerseyService,
+  updateSquadMemberRoleService,
 } from '@/lib/services';
 import { getActionErrorMessage } from '@/lib/action-utils';
 
@@ -148,7 +149,7 @@ export async function addPlayerToSquadAction(
   }
 }
 
-export async function removePlayerFromSquadAction(teamId: string, userId: string) {
+export async function removePlayerFromSquadAction(teamId: string, userId: string, orgName?: string) {
   try {
     if (!teamId || !userId) {
       return { success: false, error: 'Equipo y Usuario son requeridos.', code: 'MISSING_PARAMS' };
@@ -156,11 +157,13 @@ export async function removePlayerFromSquadAction(teamId: string, userId: string
 
     await requireTeamManager(teamId);
 
-    const result = await removePlayerFromSquadService(teamId, userId);
+    const result = await removePlayerFromSquadService(teamId, userId, orgName);
 
     if (result.success) {
       revalidatePath('/equipos');
       revalidatePath('/club/plantilla');
+      revalidatePath('/dashboard/equipos');
+      return { success: true, message: 'Jugador desvinculado de la escuadra.' };
     }
 
     return result;
@@ -188,6 +191,7 @@ export async function updateSquadMemberJerseyAction(memberId: string, jerseyNumb
     if (res.success) {
       revalidatePath('/equipos');
       revalidatePath('/club/plantilla');
+      revalidatePath('/dashboard/equipos');
     }
     return res;
   } catch (error: unknown) {
@@ -195,7 +199,55 @@ export async function updateSquadMemberJerseyAction(memberId: string, jerseyNumb
   }
 }
 
-export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug: string) {
+export async function updateSquadMemberRoleAction(
+  teamId: string,
+  userId: string,
+  newRole: 'Capitan' | 'Capitán' | 'Encargado' | 'DT / Analyst' | 'Jugador'
+) {
+  try {
+    if (!teamId || !userId) {
+      return { success: false, error: 'Equipo y Usuario son requeridos.', code: 'MISSING_PARAMS' };
+    }
+
+    await requireTeamManager(teamId);
+
+    const validation = validateSchema(
+      z.object({
+        teamId: requiredIdSchema,
+        userId: requiredIdSchema,
+        newRole: z.enum(['Capitan', 'Capitán', 'Encargado', 'Jugador', 'DT / Analyst']),
+      }),
+      { teamId, userId, newRole }
+    );
+
+    if (!validation.success) {
+      return { success: false, error: validation.errors.join(', '), code: 'VALIDATION_ERROR' };
+    }
+
+    const result = await updateSquadMemberRoleService(
+      teamId,
+      userId,
+      (newRole === 'Capitan' ? 'Capitán' : newRole) as 'Capitán' | 'Encargado' | 'DT / Analyst' | 'Jugador'
+    );
+
+    if (result.success) {
+      revalidatePath('/equipos');
+      revalidatePath('/club/plantilla');
+      revalidatePath('/dashboard/equipos');
+    }
+
+    return result;
+  } catch (error: unknown) {
+    console.error('Error en updateSquadMemberRoleAction:', error);
+    return { success: false, error: getActionErrorMessage(error, 'Error al actualizar el rol en la plantilla.'), code: 'INTERNAL_ERROR' };
+  }
+}
+
+export async function transferCaptaincyAction(teamId: string, newCaptainUserId: string) {
+  return updateSquadMemberRoleAction(teamId, newCaptainUserId, 'Capitán');
+}
+
+export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug: string = 'ALL') {
   try {
     await requireTeamManager(teamId);
     const rows = await dbProvider.query<PlayerMatrixRow>(
@@ -284,7 +336,7 @@ export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug
     return { success: true, data: Object.values(userMap) };
   } catch (error: unknown) {
     console.error('Error en getPlayerInscriptionsMatrixAction:', error);
-    return { success: false, error: getActionErrorMessage(error, 'Error al obtener matriz de inscripciones.') };
+    return { success: false, data: [], error: getActionErrorMessage(error, 'Error al obtener matriz de inscripciones.') };
   }
 }
 
@@ -299,7 +351,7 @@ export async function getAllPlayersForContractOfferAction(gameSlug: string, sear
   }
 }
 
-export async function getUserEnrolledTeamsAction(userId: string, gameSlug: string) {
+export async function getUserEnrolledTeamsAction(userId: string, gameSlug: string = 'ALL') {
   try {
     await requireUserManager(userId);
     if (!userId) return { success: false, teams: [], error: 'ID de usuario requerido' };
@@ -401,6 +453,11 @@ export async function getUserEnrolledTeamsAction(userId: string, gameSlug: strin
 
     const resultTeams = Object.values(teamMap).map((team) => ({
       ...team,
+      team_id: team.id,
+      team_name: team.name,
+      team_tag: team.tag,
+      logo_url: team.logoUrl,
+      banner_url: team.bannerUrl,
       organizations: Object.values(team.organizationsMap),
     }));
 

@@ -76,11 +76,16 @@ export function NewUserMyTeamsView() {
                   <Trophy className="w-3 h-3" /> COMPETICIONES INSCRITAS:
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {team.organizations.map((org: string) => (
-                    <Badge key={org} variant="cyan" className="text-xs font-mono bg-black/50 border-white/10 text-white/70">
-                      {org}
-                    </Badge>
-                  ))}
+                  {team.organizations.map((org: unknown, idx: number) => {
+                    const orgObj = typeof org === 'object' && org !== null ? (org as { id?: string; name?: string; acronym?: string }) : null;
+                    const orgName = orgObj ? orgObj.name || orgObj.acronym || 'Organización' : String(org);
+                    const orgKey = orgObj ? orgObj.id || orgName : `${orgName}-${idx}`;
+                    return (
+                      <Badge key={orgKey} variant="cyan" className="text-xs font-mono bg-black/50 border-white/10 text-white/70">
+                        {orgName}
+                      </Badge>
+                    );
+                  })}
                 </div>
               </div>
             </CardContent>
