@@ -71,7 +71,7 @@ describe('authenticated player and captain navigation', () => {
     expect(mobileNav).toContain('<CreateTeamModal');
     expect(mobileNav).toContain("pathname.startsWith(`/${game.slug}/club`)");
     expect(topNav).toContain('authenticated-explore-menu');
-    expect(topNav).not.toContain('<NavLinks');
+    expect(topNav).toContain('<NavLinks />');
   });
 
   it('keeps every private tab under the game layout and protects it with the proxy', async () => {

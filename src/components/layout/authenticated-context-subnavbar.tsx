@@ -52,6 +52,8 @@ const iconById: Record<AuthenticatedNavItemId, React.ReactNode> = {
   'club-settings': <Settings className="h-3.5 w-3.5" />,
 };
 
+const NAV_GROUP_STARTS = new Set<AuthenticatedNavItemId>(['offers', 'messages', 'recruitment', 'club-messages']);
+
 export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }) {
   const pathname = usePathname();
   const { currentUser, userTeams, refetchTeams } = useAuth();
@@ -75,7 +77,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
 
   return (
     <div className="authenticated-context-nav border-b border-[var(--border-card)]">
-      <div className="mx-auto flex h-12 max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-12 max-w-[96rem] items-center gap-2 px-3 sm:px-4 lg:px-6">
         <div className="flex flex-shrink-0 items-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-main)] p-1" role="tablist" aria-label="Cambiar espacio de trabajo">
           <Link
             href={`/${gameSlug}/atleta`}
@@ -117,15 +119,18 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
           {items.map((item) => {
             const isActive = isAuthenticatedNavItemActive(pathname, item);
             return (
-              <Link
-                key={item.id}
-                href={item.href}
-                aria-current={isActive ? 'page' : undefined}
-                className={`authenticated-context-link ${isActive ? 'authenticated-context-link-active' : ''}`}
-              >
-                {iconById[item.id]}
-                <span>{item.shortLabel}</span>
-              </Link>
+              <React.Fragment key={item.id}>
+                {NAV_GROUP_STARTS.has(item.id) ? <span className="authenticated-context-divider" aria-hidden="true" /> : null}
+                <Link
+                  href={item.href}
+                  aria-current={isActive ? 'page' : undefined}
+                  title={item.label}
+                  className={`authenticated-context-link ${isActive ? 'authenticated-context-link-active' : ''}`}
+                >
+                  {iconById[item.id]}
+                  <span>{item.shortLabel}</span>
+                </Link>
+              </React.Fragment>
             );
           })}
         </nav>

@@ -12,8 +12,8 @@ import { GAMES_CATALOG } from '@/lib/games-data';
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 interface AdminOrganizerSidebarProps {
-  isDocked: boolean;
   isMobileOpen: boolean;
+  isDesktopCollapsed: boolean;
   onMobileOpenChange: (open: boolean) => void;
 }
 
@@ -22,7 +22,7 @@ function isNavigationItemActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AdminOrganizerSidebar({ isDocked, isMobileOpen, onMobileOpenChange }: AdminOrganizerSidebarProps) {
+export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobileOpenChange }: AdminOrganizerSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser, activeGameSlug, setActiveGameSlug } = useAuth();
@@ -40,7 +40,7 @@ export function AdminOrganizerSidebar({ isDocked, isMobileOpen, onMobileOpenChan
       if (event.key === 'Escape') onMobileOpenChange(false);
     };
     const closeAtDesktopBreakpoint = (event: MediaQueryListEvent) => {
-      if (isDocked && !event.matches) onMobileOpenChange(false);
+      if (!event.matches) onMobileOpenChange(false);
     };
 
     document.addEventListener('keydown', closeOnEscape);
@@ -49,7 +49,7 @@ export function AdminOrganizerSidebar({ isDocked, isMobileOpen, onMobileOpenChan
       document.removeEventListener('keydown', closeOnEscape);
       mobileViewport.removeEventListener('change', closeAtDesktopBreakpoint);
     };
-  }, [isDocked, isMobileOpen, onMobileOpenChange]);
+  }, [isMobileOpen, onMobileOpenChange]);
 
   // Do not render sidebar for regular players/captains.
   if (!isAdmin && !isOrganizer) {
@@ -195,7 +195,7 @@ export function AdminOrganizerSidebar({ isDocked, isMobileOpen, onMobileOpenChan
         <button
           type="button" aria-label="Cerrar menú administrativo"
           onClick={() => onMobileOpenChange(false)}
-          className={`fixed inset-0 top-14 z-30 bg-black/60 backdrop-blur-sm ${isDocked ? 'lg:hidden' : ''}`}
+          className="fixed inset-0 top-14 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
         />
       )}
 
@@ -203,7 +203,7 @@ export function AdminOrganizerSidebar({ isDocked, isMobileOpen, onMobileOpenChan
       <aside
         id="management-navigation"
         aria-label={isAdmin ? 'Navegación administrativa' : 'Navegación del organizador'}
-        className={`management-sidebar fixed bottom-0 left-0 top-14 z-40 flex w-[min(18rem,calc(100vw-1rem))] flex-col justify-between overflow-y-auto overscroll-contain border-r border-[var(--border-card)] bg-[var(--bg-nav)]/97 p-3 shadow-2xl backdrop-blur-xl transition-transform duration-300 lg:w-72 lg:p-4 ${isDocked ? 'lg:translate-x-0 lg:shadow-none' : ''} ${
+        className={`management-sidebar fixed bottom-0 left-0 top-14 z-40 flex w-[min(18rem,calc(100vw-1rem))] flex-col justify-between overflow-y-auto overscroll-contain border-r border-[var(--border-card)] bg-[var(--bg-nav)]/97 p-3 shadow-2xl backdrop-blur-xl transition-transform duration-300 lg:w-72 lg:p-4 ${isDesktopCollapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0 lg:shadow-none'} ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -268,7 +268,7 @@ export function AdminOrganizerSidebar({ isDocked, isMobileOpen, onMobileOpenChan
           </div>
 
           {/* Public shortcuts preserve the same pages an anonymous visitor sees. */}
-          <div className="space-y-2 border-t border-[var(--border-card)] pt-3">
+          <div className="management-public-shortcuts hidden space-y-2 border-t border-[var(--border-card)] pt-3 lg:block">
             <div className="space-y-1">
               <span className="text-[10px] font-black uppercase text-purple-300 tracking-wider px-2 block flex items-center gap-1">
                 <Gamepad2 className="w-3 h-3 text-purple-400" />

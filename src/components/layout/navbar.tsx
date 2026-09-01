@@ -2,10 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback, type SetStateAction } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { Trophy, Shield, Users, User, Sparkles, Settings, Info, Home, Menu, X, Flag, LogIn, UserPlus } from 'lucide-react';
+import { Trophy, Shield, Users, User, Sparkles, Settings, Info, Home, Menu, X, Flag, LogIn, UserPlus, PanelLeftClose, PanelLeftOpen, LayoutDashboard, UserRoundCog, Mail, LogOut, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 
@@ -14,12 +14,29 @@ import { NavLinks } from '@/components/layout/nav-links';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { GameLogo } from '@/components/ui/game-logo';
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
+import { NotificationCenter } from '@/components/notifications/notification-center';
+import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
-export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
+interface ManagementNavigationControl {
+  isMobileOpen: boolean;
+  isDesktopCollapsed: boolean;
+  onToggle: () => void;
+}
+
+export function Navbar({
+  forcePublic = false,
+  managementNavigation,
+}: {
+  forcePublic?: boolean;
+  managementNavigation?: ManagementNavigationControl;
+}) {
   const pathname = usePathname();
-  const { currentUser, isAuthenticated, activeGameSlug } = useAuth();
+  const router = useRouter();
+  const { currentUser, isAuthenticated, activeGameSlug, logout } = useAuth();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [mobileMenuState, setMobileMenuState] = useState({ pathname, open: false });
   const isMobileMenuOpen = mobileMenuState.pathname === pathname && mobileMenuState.open;
   const setIsMobileMenuOpen = useCallback((next: SetStateAction<boolean>) => {
@@ -31,6 +48,7 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
   useBodyScrollLock(isMobileMenuOpen, 'public-navigation');
 
   const settingsRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const routeGameSlug = pathname.split('/').filter(Boolean)[0];
   const currentGame = GAMES_CATALOG[routeGameSlug] || GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG.eafc26;
 
@@ -40,10 +58,14 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
         setIsSettingsOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     }
     function handleEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setIsSettingsOpen(false);
+        setIsUserMenuOpen(false);
         setIsMobileMenuOpen(false);
       }
     }
@@ -70,6 +92,27 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
     <header className="app-navbar sticky top-0 z-50 w-full h-14 border-b transition-colors duration-300 flex items-center">
       {/* Thin Banner Stripe (h-12 / 48px) */}
       <div className="app-navbar-inner max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full h-full flex items-center justify-between gap-2">
+        {managementNavigation ? (
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              setIsSettingsOpen(false);
+              setIsUserMenuOpen(false);
+              managementNavigation.onToggle();
+            }}
+            aria-controls="management-navigation"
+            aria-expanded={!managementNavigation.isDesktopCollapsed || managementNavigation.isMobileOpen}
+            aria-label={managementNavigation.isMobileOpen || !managementNavigation.isDesktopCollapsed ? 'Ocultar panel de gestión' : 'Abrir panel de gestión'}
+            title="Panel de gestión"
+            className="management-navbar-toggle inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--accent-cyan)] shadow-sm transition-colors hover:border-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)]"
+          >
+            {managementNavigation.isMobileOpen || !managementNavigation.isDesktopCollapsed
+              ? <PanelLeftClose className="size-4" />
+              : <PanelLeftOpen className="size-4" />}
+          </button>
+        ) : null}
+
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-600 to-amber-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform">
@@ -92,8 +135,18 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
 
         {/* Right Controls: Settings Gear & Auth Buttons */}
         <div className="flex items-center gap-1.5">
+          {isAuthenticated ? (
+            <div className="hidden sm:block">
+              <NotificationCenter onOpen={() => {
+                setIsSettingsOpen(false);
+                setIsUserMenuOpen(false);
+                setIsMobileMenuOpen(false);
+              }} />
+            </div>
+          ) : null}
+
           {/* Settings Gear Menu */}
-          <div className="relative" ref={settingsRef}>
+          <div className={`relative ${isAuthenticated ? 'hidden sm:block' : ''}`} ref={settingsRef}>
             <button
             onClick={() => setIsSettingsOpen((open) => !open)}
               title="Configuración de Plataforma (Tema e Idioma)"
@@ -127,12 +180,62 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
 
           {/* Auth Buttons / Dashboard Session Button */}
           {isAuthenticated ? (
-            <Link href="/dashboard">
-              <Button size="sm" className="text-xs font-black h-8 px-3 bg-[var(--accent-cyan)] text-slate-950 hover:opacity-90 flex items-center gap-1.5 shadow-md">
-                <User className="w-3.5 h-3.5" />
-                <span>{currentUser?.gamertag}</span>
-              </Button>
-            </Link>
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSettingsOpen(false);
+                  setIsMobileMenuOpen(false);
+                  setIsUserMenuOpen((open) => !open);
+                }}
+                aria-label="Abrir menú de usuario"
+                aria-expanded={isUserMenuOpen}
+                aria-controls="public-authenticated-user-menu"
+                className="flex h-9 items-center gap-2 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-1 pr-1.5 shadow-sm transition-colors hover:border-[var(--accent-cyan)]"
+              >
+                <Avatar fallback={currentUser?.name || currentUser?.gamertag || 'Usuario'} status="online" size="sm" />
+                <span className="hidden max-w-28 truncate text-xs font-black text-[var(--text-heading)] md:inline">{currentUser?.gamertag}</span>
+                <ChevronDown className={`hidden size-3 text-[var(--text-muted)] transition-transform md:block ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isUserMenuOpen ? (
+                <div id="public-authenticated-user-menu" className="management-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] space-y-2 overflow-y-auto rounded-2xl p-3 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80">
+                  <div className="management-profile-card space-y-3 rounded-xl p-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar fallback={currentUser?.name || 'Usuario'} status="online" size="md" />
+                      <div className="min-w-0 flex-1">
+                        <strong className="block truncate text-sm text-[var(--text-heading)]">{currentUser?.name}</strong>
+                        <span className="block truncate font-mono text-xs font-bold text-[var(--accent-cyan)]">@{currentUser?.gamertag}</span>
+                        <span className="block truncate text-[10px] text-[var(--text-muted)]">{currentUser?.email}</span>
+                      </div>
+                    </div>
+                    <Badge variant="violet">{currentUser?.role}</Badge>
+                  </div>
+                  <div className="space-y-1 text-xs font-bold">
+                    <Link href="/dashboard" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
+                      <LayoutDashboard className="size-4 text-[var(--accent-violet)]" />Panel de gestión
+                    </Link>
+                    <Link href="/cuenta/ajustes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
+                      <UserRoundCog className="size-4 text-[var(--accent-cyan)]" />Configuración de la cuenta
+                    </Link>
+                    <Link href="/mensajes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
+                      <Mail className="size-4 text-[var(--accent-emerald)]" />Centro de mensajes
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        logout();
+                        router.push('/login');
+                      }}
+                      className="management-profile-action w-full border-t border-[var(--border-card)] text-left text-[var(--accent-crimson)]"
+                    >
+                      <LogOut className="size-4" />Cerrar sesión
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           ) : (
             <>
               {/* Iniciar Sesión Link Button */}
@@ -157,11 +260,13 @@ export function Navbar({ forcePublic = false }: { forcePublic?: boolean }) {
           <button
             onClick={() => {
               setIsSettingsOpen(false);
+              setIsUserMenuOpen(false);
+              if (managementNavigation?.isMobileOpen) managementNavigation.onToggle();
               setIsMobileMenuOpen((open) => !open);
             }}
             className="app-navbar-mobile-toggle lg:hidden p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] transition-colors"
             type="button"
-            aria-label={isMobileMenuOpen ? 'Cerrar menú principal' : 'Abrir menú principal'}
+            aria-label={isMobileMenuOpen ? 'Cerrar navegación global' : 'Abrir navegación global'}
             aria-expanded={isMobileMenuOpen}
             aria-controls="public-mobile-navigation"
           >

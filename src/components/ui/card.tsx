@@ -1,11 +1,15 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-export function Card({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  is3D?: boolean;
+}
+
+export function Card({ className, is3D = false, children, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "ui-card relative overflow-hidden",
+        is3D ? "card-3d-elevated" : "ui-card relative overflow-hidden",
         className
       )}
       {...props}

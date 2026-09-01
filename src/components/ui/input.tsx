@@ -6,10 +6,11 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   error?: string;
   helperText?: string;
   icon?: React.ReactNode;
+  is3D?: boolean;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type = 'text', label, error, helperText, icon, id, ...props }, ref) => {
+  ({ className, type = 'text', label, error, helperText, icon, is3D = false, id, ...props }, ref) => {
     const generatedId = React.useId();
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : generatedId);
     const messageId = `${inputId}-message`;
@@ -30,7 +31,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={Boolean(error)}
             aria-describedby={error || helperText ? messageId : undefined}
             className={cn(
-              "ui-control w-full h-10 px-3 text-[14px] placeholder:text-[var(--text-muted)]",
+              is3D ? "input-3d px-3 text-[14px]" : "ui-control w-full h-10 px-3 text-[14px] placeholder:text-[var(--text-muted)]",
               icon && "pl-9",
               error && "!border-[var(--accent-crimson)] focus:!shadow-[0_0_0_3px_var(--accent-crimson-bg)]",
               className

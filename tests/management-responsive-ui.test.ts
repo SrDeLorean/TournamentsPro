@@ -15,26 +15,27 @@ describe('management workspace UI', () => {
     }
   });
 
-  it('uses a drawer through tablet widths and reserves the rail for desktop', async () => {
-    const [layout, header, sidebar] = await Promise.all([
+  it('keeps the manager rail visible on desktop until the user collapses it', async () => {
+    const [layout, navbar, sidebar] = await Promise.all([
       readFile('src/components/layout/app-layout-wrapper.tsx', 'utf8'),
-      readFile('src/components/layout/admin-organizer-header.tsx', 'utf8'),
+      readFile('src/components/layout/navbar.tsx', 'utf8'),
       readFile('src/components/layout/admin-organizer-sidebar.tsx', 'utf8'),
     ]);
 
-    expect(layout).toContain("showRoleAwareChrome && isManagementRoute ? 'lg:pl-72' : ''");
+    expect(layout).toContain("MANAGEMENT_SIDEBAR_STORAGE_KEY");
+    expect(layout).toContain("showRoleAwareChrome && !isManagementSidebarCollapsed ? 'lg:pl-72' : ''");
     expect(layout).toContain('showRoleAwareChrome = isAdminOrOrganizer');
-    expect(layout).toContain('isDocked={isManagementRoute}');
+    expect(layout).toContain('isDesktopCollapsed={isManagementSidebarCollapsed}');
     expect(layout).not.toContain('pt-[3.25rem]');
     expect(layout).toContain('isManagementMenuOpen');
-    expect(header).toContain('aria-controls="management-navigation"');
-    expect(header).toContain("isManagementRoute ? 'lg:w-72 lg:border-r' : 'lg:w-auto'");
-    expect(header).toContain('management-mode-switch');
-    expect(header).toContain('Vista pública');
-    expect(header).toContain('href="/cuenta/ajustes"');
+    expect(layout).toContain('<Navbar');
+    expect(layout).toContain('forcePublic');
+    expect(layout).toContain('managementNavigation=');
+    expect(navbar).toContain('aria-controls="management-navigation"');
+    expect(navbar).toContain('aria-controls="public-mobile-navigation"');
     expect(sidebar).toContain('top-14');
     expect(sidebar).not.toContain('top-[6.5rem]');
-    expect(sidebar).toContain("isDocked ? 'lg:translate-x-0 lg:shadow-none' : ''");
+    expect(sidebar).toContain("isDesktopCollapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0 lg:shadow-none'");
     expect(sidebar).toContain("event.key === 'Escape'");
     expect(sidebar).toContain('organizerNavItems');
   });
@@ -48,8 +49,8 @@ describe('management workspace UI', () => {
       readFile('src/app/globals.css', 'utf8'),
     ]);
 
-    expect(layout).toContain('<AdminOrganizerHeader');
-    expect(layout).not.toContain('<Navbar forcePublic={isAdminOrOrganizer} />');
+    expect(layout).not.toContain('<AdminOrganizerHeader');
+    expect(layout).toContain('forcePublic={showRoleAwareChrome}');
     expect(proxy).toContain('"/cuenta"');
     expect(account).toContain('<UserProfileSettingsView');
     expect(notifications).toContain('notification-center-panel');
@@ -57,6 +58,22 @@ describe('management workspace UI', () => {
     expect(styles).toContain('.management-mode-switch');
     expect(styles).toContain('.management-profile-action');
     expect(styles).toContain('.notification-center-item.is-unread');
+  });
+
+  it('shows public routes in the player desktop header and keeps mobile menus separated', async () => {
+    const [playerNavbar, publicNavbar, sidebar] = await Promise.all([
+      readFile('src/components/layout/admin-navbar.tsx', 'utf8'),
+      readFile('src/components/layout/navbar.tsx', 'utf8'),
+      readFile('src/components/layout/admin-organizer-sidebar.tsx', 'utf8'),
+    ]);
+
+    expect(playerNavbar).toContain('<NavLinks />');
+    expect(playerNavbar).toContain('authenticated-global-menu relative flex-shrink-0 xl:hidden');
+    expect(playerNavbar).toContain('max-w-[96rem]');
+    expect(publicNavbar).toContain('Abrir navegación global');
+    expect(publicNavbar).toContain('Abrir panel de gestión');
+    expect(sidebar).toContain('management-public-shortcuts hidden space-y-2');
+    expect(sidebar).toContain('lg:block');
   });
 
   it('renders table cells with labels for the phone card layout', async () => {
@@ -255,7 +272,7 @@ describe('management workspace UI', () => {
     expect(styles).toContain('.ui-crud-alert { z-index: 100100; }');
 
     expect(admin).toContain('<ConfirmModal');
-    expect(admin).toContain('<ModalForm');
+    expect(admin).toContain('<CreateOrganizationModal');
     expect(admin).toContain('requireReason={!banTarget.isBanned}');
     expect(games).toContain('<ModalForm');
 
@@ -329,7 +346,7 @@ describe('management workspace UI', () => {
     expect(modal).toContain("useBodyScrollLock(isOpen, 'modal')");
 
     expect(layout).toContain('managementMenuState.pathname === pathname');
-    expect(layout).toContain('<Navbar />');
+    expect(layout).toContain('<Navbar');
     expect(layout).not.toContain('<Navbar key={pathname} />');
     expect(navbar).toContain('mobileMenuState.pathname === pathname');
     expect(navbar).toContain("useBodyScrollLock(isMobileMenuOpen, 'public-navigation')");

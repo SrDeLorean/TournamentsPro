@@ -15,6 +15,7 @@ import { GameLogo } from '@/components/ui/game-logo';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { NotificationCenter } from '@/components/notifications/notification-center';
+import { NavLinks } from '@/components/layout/nav-links';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import type { TeamData, UserProfile } from '@/lib/data-store';
 import {
@@ -148,7 +149,7 @@ export function AdminNavbar() {
   return (
     <>
       <header className="app-navbar sticky top-0 z-50 w-full h-14 border-b transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-1 sm:gap-3">
+        <div className="max-w-[96rem] mx-auto px-2 sm:px-4 lg:px-6 h-full flex items-center justify-between gap-1 sm:gap-2.5">
           
           {/* 1. Left Brand & Admin Badge */}
           <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
@@ -171,10 +172,15 @@ export function AdminNavbar() {
             {/* Dynamic Role Badge */}
             <Badge
               variant={isOrganizer ? 'emerald' : isCaptain ? 'violet' : 'cyan'}
-              className="hidden sm:inline-flex text-[10px] uppercase font-black"
+              className="hidden 2xl:inline-flex text-[10px] uppercase font-black"
             >
               {isOrganizer ? 'Organizador' : isCaptain ? 'Capitán / DT' : 'Atleta Libre'}
             </Badge>
+          </div>
+
+          {/* Public destinations remain directly available on desktop. */}
+          <div className="hidden xl:block">
+            <NavLinks />
           </div>
 
           {/* 🛡️ SELECTOR PROTAGONISTA DE EQUIPOS Y DISCIPLINAS (Visible en Móvil y Escritorio) */}
@@ -288,7 +294,7 @@ export function AdminNavbar() {
           </div>
 
           {/* Global destinations live in one compact menu; game links stay in the subnavbar. */}
-          <div className="relative flex-shrink-0" ref={exploreRef}>
+          <div className="authenticated-global-menu relative flex-shrink-0 xl:hidden" ref={exploreRef}>
             <button
               type="button"
               onClick={() => {
