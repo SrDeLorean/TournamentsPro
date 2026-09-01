@@ -303,30 +303,23 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
   }
 
   return dbProvider.withTransaction(async (transaction) => {
-    const captains = await transaction.users.findById(captainId).then(r => r ? [{ id: r.id }] : []);
-    if (captains.length === 0) return { success: false, error: 'Capitán no encontrado', code: 'CAPTAIN_NOT_FOUND' };
+    const captain = await transaction.users.findById(captainId);
+    if (!captain) return { success: false, error: 'Capitán no encontrado', code: 'CAPTAIN_NOT_FOUND' };
 
     if (validation.data.organizationId) {
-      const organizations = await transaction.query<{ id: string }>(
-        'SELECT id FROM organizations WHERE id = ? FOR UPDATE',
-        [validation.data.organizationId],
-      );
-      if (organizations.length === 0) return { success: false, error: 'Organización no encontrada', code: 'ORG_NOT_FOUND' };
+      const org = await transaction.organizations.findById(validation.data.organizationId);
+      if (!org) return { success: false, error: 'Organización no encontrada', code: 'ORG_NOT_FOUND' };
     }
 
-    const managerIds = [...new Set(validation.data.managerIds)].filter((userId) => userId !== captainId);
+    const managerIds = [...new Set(validation.data.managerIds || [])].filter((userId) => userId !== captainId);
     if (managerIds.length > 0) {
-      const managers = await transaction.query<{ id: string }>(
-        `SELECT id FROM users WHERE id IN (${managerIds.map(() => '?').join(', ')}) FOR UPDATE`,
-        managerIds,
-      );
-      if (managers.length !== managerIds.length) return { success: false, error: 'Uno o más encargados no existen.', code: 'MANAGER_NOT_FOUND' };
+      const managers = await Promise.all(managerIds.map((id) => transaction.users.findById(id)));
+      if (managers.some((m) => !m)) {
+        return { success: false, error: 'Uno o más encargados no existen.', code: 'MANAGER_NOT_FOUND' };
+      }
     }
 
-    const existingTeams = await transaction.query<{ id: string; name: string }>(
-      'SELECT id, name FROM teams WHERE captain_id = ? AND game_slug = ? FOR UPDATE',
-      [captainId, validation.data.gameSlug],
-    );
+    const existingTeams = await transaction.teams.findByCaptain(captainId, validation.data.gameSlug);
     if (existingTeams.length > 0) {
       return {
         success: false,
@@ -336,36 +329,31 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
     }
 
     const teamId = validation.data.id || randomUUID();
-    await (transaction as any).query(
-      `INSERT INTO teams
-        (id, name, tag, game_slug, organization_id, captain_id, captain_name, platform, members_count,
-         max_members, color, logo_text, description, vacant_positions, status, club_id_ea, logo_url, banner_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 45, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        teamId, validation.data.name, validation.data.tag, validation.data.gameSlug,
-        validation.data.organizationId || null, captainId, captainName, validation.data.platform,
-        validation.data.color, validation.data.logoText, validation.data.description || null,
-        JSON.stringify(validation.data.vacantPositions || []), validation.data.status,
-        validation.data.clubIdEa || null, validation.data.logoUrl || null, validation.data.bannerUrl || null,
-      ],
-    );
-    for (const managerId of managerIds) {
-      await (transaction as any).query(
-        `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
-         VALUES (?, ?, ?, 'ENCARGADO', 'Encargado')`,
-        [randomUUID(), teamId, managerId],
-      );
-    }
-    await (transaction as any).query(
-      `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
-       VALUES (?, ?, ?, ?, 'Capitan')`,
-      [randomUUID(), teamId, captainId, validation.data.position || 'DFC'],
-    );
-    if (validation.data.organizationId) {
-      await (transaction as any).query(
-        `UPDATE users SET organization_id = ? WHERE id = ? AND (organization_id IS NULL OR organization_id = '')`,
-        [validation.data.organizationId, captainId],
-      );
+    const createdTeam = await transaction.teams.create({
+      id: teamId,
+      name: validation.data.name,
+      tag: validation.data.tag,
+      gameSlug: validation.data.gameSlug,
+      organizationId: validation.data.organizationId || null,
+      captainId,
+      captainName,
+      platform: validation.data.platform,
+      membersCount: 1,
+      maxMembers: 45,
+      color: validation.data.color,
+      logoText: validation.data.logoText,
+      description: validation.data.description || null,
+      vacantPositions: validation.data.vacantPositions || [],
+      status: validation.data.status || 'Activo',
+      clubIdEa: validation.data.clubIdEa || null,
+      logoUrl: validation.data.logoUrl || null,
+      bannerUrl: validation.data.bannerUrl || null,
+    });
+
+    await transaction.teams.syncStaff(teamId, captainId, managerIds, validation.data.position || 'DFC');
+
+    if (validation.data.organizationId && !captain.organizationId) {
+      await transaction.users.update(captainId, { organizationId: validation.data.organizationId });
     }
 
     return {

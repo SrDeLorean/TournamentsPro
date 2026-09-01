@@ -200,6 +200,30 @@ export class UserRepository extends BaseRepository<User> {
     return rows.length > 0 ? this.mapRow(rows[0]) : null;
   }
 
+  async getAvailablePlayers(options: { organizerOrgId?: string | null; searchQuery?: string } = {}): Promise<any[]> {
+    let sql = `
+      SELECT u.id, u.name, u.gamertag, u.email, u.position, u.primary_game_slug, u.organization_id, u.avatar_url, u.foto
+      FROM users u
+      WHERE u.id NOT IN (SELECT DISTINCT user_id FROM team_members)
+      AND u.is_banned = 0
+    `;
+    const params: MutableDatabaseParams = [];
+
+    if (options.organizerOrgId) {
+      sql += ` AND (u.organization_id = ? OR u.organization_id IS NULL OR u.organization_id = '')`;
+      params.push(options.organizerOrgId);
+    }
+
+    if (options.searchQuery && options.searchQuery.trim()) {
+      const q = `%${options.searchQuery.trim()}%`;
+      sql += ` AND (u.name LIKE ? OR u.gamertag LIKE ? OR u.position LIKE ? OR u.email LIKE ?)`;
+      params.push(q, q, q, q);
+    }
+
+    sql += ` ORDER BY u.name ASC LIMIT 50`;
+    return queryDB(sql, params);
+  }
+
   async create(data: Partial<User>): Promise<User> {
     const id = data.id || `usr-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -370,6 +394,32 @@ export class OrganizationRepository extends BaseRepository<Organization> {
     const result = await executeCommand('DELETE FROM organizations WHERE id = ?', [id]);
     return result.affectedRows > 0;
   }
+
+  async hasActiveCompetitions(organizationId: string): Promise<boolean> {
+    const rows = await queryDB<{ id: string }>(
+      `SELECT DISTINCT c.id
+         FROM competitions c
+         LEFT JOIN competition_teams ct ON ct.competition_id = c.id AND ct.status = 'CONFIRMADO'
+         LEFT JOIN teams t ON t.id = ct.team_id
+        WHERE c.status IN ('Activo', 'Inscripcion', 'En Curso')
+          AND (c.organization_id = ? OR t.organization_id = ?) LIMIT 1`,
+      [organizationId, organizationId]
+    );
+    return rows.length > 0;
+  }
+
+  async archiveOrganization(organizationId: string): Promise<number> {
+    const teamRows = await queryDB<{ id: string }>('SELECT id FROM teams WHERE organization_id = ?', [organizationId]);
+    const teamIds = teamRows.map((t) => t.id);
+    if (teamIds.length > 0) {
+      const placeholders = teamIds.map(() => '?').join(', ');
+      await executeCommand(`UPDATE team_vacancies SET status = 'CERRADA' WHERE team_id IN (${placeholders}) AND status = 'ABIERTA'`, teamIds);
+      await executeCommand(`UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE team_id IN (${placeholders}) AND status = 'ACTIVO'`, teamIds);
+      await executeCommand(`UPDATE teams SET status = 'Archivado', updated_at = NOW() WHERE id IN (${placeholders})`, teamIds);
+    }
+    await executeCommand("UPDATE organizations SET status = 'Archivada', updated_at = NOW() WHERE id = ?", [organizationId]);
+    return teamIds.length;
+  }
 }
 
 export class TeamRepository extends BaseRepository<Team> {
@@ -493,6 +543,124 @@ export class TeamRepository extends BaseRepository<Team> {
       'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',
       [teamId, teamId]
     );
+  }
+
+  async syncStaff(teamId: string, captainId: string, managerIds: string[] = [], captainPosition = 'DFC'): Promise<void> {
+    const { randomUUID } = await import('crypto');
+    await executeCommand(
+      "DELETE FROM team_members WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado')",
+      [teamId]
+    );
+    await executeCommand(
+      `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, ?, 'Capitán')`,
+      [randomUUID(), teamId, captainId, captainPosition || 'CAPITAN']
+    );
+    for (const managerId of managerIds) {
+      if (managerId === captainId) continue;
+      await executeCommand(
+        `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, 'ENCARGADO', 'Encargado')`,
+        [randomUUID(), teamId, managerId]
+      );
+    }
+    await this.updateMembersCount(teamId);
+  }
+
+  async hasActiveCompetitions(teamId: string): Promise<boolean> {
+    const rows = await queryDB<{ id: string }>(
+      `SELECT ct.id
+         FROM competition_teams ct
+         JOIN competitions c ON c.id = ct.competition_id
+        WHERE ct.team_id = ? AND ct.status = 'CONFIRMADO'
+          AND c.status IN ('Activo', 'Inscripcion', 'En Curso') LIMIT 1`,
+      [teamId]
+    );
+    return rows.length > 0;
+  }
+
+  async archiveTeam(teamId: string): Promise<void> {
+    await executeCommand("UPDATE team_vacancies SET status = 'CERRADA' WHERE team_id = ? AND status = 'ABIERTA'", [teamId]);
+    await executeCommand("UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE team_id = ? AND status = 'ACTIVO'", [teamId]);
+    await executeCommand("UPDATE transfer_offers SET status = 'CANCELADO' WHERE team_id = ? AND status = 'PENDIENTE'", [teamId]);
+    await executeCommand("UPDATE teams SET status = 'Archivado', updated_at = NOW() WHERE id = ?", [teamId]);
+  }
+
+  async getSquad(teamId: string): Promise<any[]> {
+    return queryDB(
+      `SELECT 
+        tm.id, tm.team_id, tm.user_id, tm.organization_name, tm.tactical_position, tm.role_in_team, tm.jersey_number, tm.joined_at,
+        u.name as user_name, u.gamertag, u.email, u.avatar_url, u.foto
+       FROM team_members tm
+       JOIN users u ON tm.user_id = u.id
+       WHERE tm.team_id = ?
+       ORDER BY tm.role_in_team ASC, u.name ASC`,
+      [teamId]
+    );
+  }
+
+  async getAcceptedOffers(teamId: string): Promise<{ player_user_id: string; pitch_message: string | null }[]> {
+    return queryDB<{ player_user_id: string; pitch_message: string | null }>(
+      `SELECT player_user_id, pitch_message FROM transfer_offers WHERE team_id = ? AND status = 'ACEPTADO'`,
+      [teamId]
+    );
+  }
+
+  async getTeamCompetitionOrganizations(teamId: string): Promise<{ org_id: string; org_name: string }[]> {
+    return queryDB<{ org_id: string; org_name: string }>(
+      `SELECT DISTINCT o.id as org_id, o.name as org_name
+       FROM competition_teams ct
+       JOIN competitions c ON ct.competition_id = c.id
+       JOIN organizations o ON c.organization_id = o.id
+       WHERE ct.team_id = ?`,
+      [teamId]
+    );
+  }
+
+  async addSquadMember(teamId: string, userId: string, tacticalPosition = 'DFC', roleInTeam = 'Jugador'): Promise<void> {
+    await executeCommand('DELETE FROM team_members WHERE team_id = ? AND user_id = ?', [teamId, userId]);
+    const memberId = `tm-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const normalizedRole = roleInTeam === 'Capitan' ? 'Capitán' : roleInTeam;
+    await executeCommand(
+      'INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, ?, ?)',
+      [memberId, teamId, userId, tacticalPosition, normalizedRole]
+    );
+    await this.updateMembersCount(teamId);
+  }
+
+  async removeSquadMember(teamId: string, userId: string, orgName?: string): Promise<void> {
+    if (orgName) {
+      await executeCommand('DELETE FROM team_members WHERE team_id = ? AND user_id = ? AND LOWER(organization_name) = LOWER(?)', [teamId, userId, orgName]);
+    } else {
+      await executeCommand('DELETE FROM team_members WHERE team_id = ? AND user_id = ?', [teamId, userId]);
+    }
+    await this.updateMembersCount(teamId);
+  }
+
+  async updateSquadMemberRole(teamId: string, userId: string, newRole: string, userName?: string): Promise<void> {
+    const isPromotingToCaptain = newRole === 'Capitán' || newRole === 'Capitan';
+    if (isPromotingToCaptain) {
+      const team = await this.findById(teamId);
+      const oldCaptainId = team?.captainId;
+      if (oldCaptainId && oldCaptainId !== userId) {
+        await executeCommand("UPDATE team_members SET role_in_team = 'Encargado' WHERE team_id = ? AND user_id = ?", [teamId, oldCaptainId]);
+      }
+      await executeCommand("UPDATE team_members SET role_in_team = 'Capitán' WHERE team_id = ? AND user_id = ?", [teamId, userId]);
+      await executeCommand("UPDATE teams SET captain_id = ?, captain_name = ?, updated_at = NOW() WHERE id = ?", [userId, userName || 'Capitán', teamId]);
+    } else {
+      await executeCommand('UPDATE team_members SET role_in_team = ? WHERE team_id = ? AND user_id = ?', [newRole, teamId, userId]);
+    }
+  }
+
+  async updateSquadMemberJersey(memberId: string, jerseyNumber: number | null): Promise<void> {
+    await executeCommand('UPDATE team_members SET jersey_number = ? WHERE id = ?', [jerseyNumber, memberId]);
+  }
+
+  async isMemberOrManager(teamId: string, userId: string): Promise<boolean> {
+    const rows = await queryDB<{ role_in_team: string }>(
+      `SELECT role_in_team FROM team_members 
+       WHERE team_id = ? AND user_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán') LIMIT 1`,
+      [teamId, userId]
+    );
+    return rows.length > 0;
   }
 }
 

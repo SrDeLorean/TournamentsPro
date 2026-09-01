@@ -142,6 +142,7 @@ export interface IUserRepository extends IRepository<User> {
   findByEmail(email: string): Promise<User | null>;
   findByGamertag(gamertag: string): Promise<User | null>;
   findByEmailOrGamertag(identifier: string): Promise<User | null>;
+  getAvailablePlayers(options?: { organizerOrgId?: string | null; searchQuery?: string }): Promise<any[]>;
 }
 
 export interface IOrganizationRepository extends IRepository<Organization> {

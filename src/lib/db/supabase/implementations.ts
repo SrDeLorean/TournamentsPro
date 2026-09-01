@@ -47,10 +47,9 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
       .from(this.tableName)
       .select('*')
       .ilike('email', escapeIlikeLiteral(email.trim()))
-      .limit(1)
       .maybeSingle();
-    if (error) throw error;
-    return data ? this.mapRow(data) : null;
+    if (error || !data) return null;
+    return this.mapRow(data);
   }
 
   async findByGamertag(gamertag: string): Promise<User | null> {
@@ -58,19 +57,33 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
       .from(this.tableName)
       .select('*')
       .ilike('gamertag', escapeIlikeLiteral(gamertag.trim()))
-      .limit(1)
       .maybeSingle();
-    if (error) throw error;
-    return data ? this.mapRow(data) : null;
+    if (error || !data) return null;
+    return this.mapRow(data);
   }
 
   async findByEmailOrGamertag(identifier: string): Promise<User | null> {
-    const normalizedIdentifier = identifier.trim();
-    const [userByEmail, userByGamertag] = await Promise.all([
-      this.findByEmail(normalizedIdentifier),
-      this.findByGamertag(normalizedIdentifier),
-    ]);
-    return userByEmail ?? userByGamertag;
+    const cleanId = escapeIlikeLiteral(identifier.trim());
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*')
+      .or(`email.ilike.${cleanId},gamertag.ilike.${cleanId}`)
+      .maybeSingle();
+    if (error || !data) return null;
+    return this.mapRow(data);
+  }
+
+  async getAvailablePlayers(options?: { organizerOrgId?: string | null; searchQuery?: string }): Promise<any[]> {
+    let query = supabase.from(this.tableName).select('*').eq('status', 'Buscando Club');
+    if (options?.organizerOrgId) {
+      query = query.or(`organization_id.eq.${options.organizerOrgId},organization_id.is.null`);
+    }
+    if (options?.searchQuery) {
+      const q = escapeIlikeLiteral(options.searchQuery.trim());
+      query = query.or(`name.ilike.%${q}%,gamertag.ilike.%${q}%,position.ilike.%${q}%`);
+    }
+    const { data } = await query.limit(50);
+    return (data || []).map((row) => this.mapRow(row));
   }
 }
 
@@ -109,6 +122,28 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
       banner_url: o.bannerUrl,
       comp_count: 0
     }));
+  }
+
+  async hasActiveCompetitions(organizationId: string): Promise<boolean> {
+    const { count, error } = await supabase
+      .from('competitions')
+      .select('*', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .in('status', ['Activo', 'Inscripcion', 'En Curso']);
+    if (error) throw error;
+    return (count || 0) > 0;
+  }
+
+  async archiveOrganization(organizationId: string): Promise<number> {
+    const { data: teams } = await supabase.from('teams').select('id').eq('organization_id', organizationId);
+    const teamIds = (teams || []).map((t) => t.id);
+    if (teamIds.length > 0) {
+      await supabase.from('team_vacancies').update({ status: 'CERRADA' }).in('team_id', teamIds).eq('status', 'ABIERTA');
+      await supabase.from('transfer_market_posts').update({ status: 'CADUCADO' }).in('team_id', teamIds).eq('status', 'ACTIVO');
+      await supabase.from('teams').update({ status: 'Archivado', updated_at: new Date().toISOString() }).in('id', teamIds);
+    }
+    await supabase.from(this.tableName).update({ status: 'Archivada', updated_at: new Date().toISOString() }).eq('id', organizationId);
+    return teamIds.length;
   }
 }
 
@@ -165,6 +200,188 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
       .eq('team_id', teamId)
       .in('role_in_team', ['Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán']);
     return (data || []).map(r => r.user_id);
+  }
+
+  async syncStaff(teamId: string, captainId: string, managerIds: string[] = [], captainPosition = 'DFC'): Promise<void> {
+    const { randomUUID } = await import('crypto');
+    await supabase.from('team_members')
+      .delete()
+      .eq('team_id', teamId)
+      .in('role_in_team', ['Capitan', 'Capitán', 'Encargado']);
+
+    const rows = [
+      {
+        id: randomUUID(),
+        team_id: teamId,
+        user_id: captainId,
+        tactical_position: captainPosition || 'CAPITAN',
+        role_in_team: 'Capitán',
+      },
+      ...managerIds
+        .filter((mId) => mId && mId !== captainId)
+        .map((mId) => ({
+          id: randomUUID(),
+          team_id: teamId,
+          user_id: mId,
+          tactical_position: 'ENCARGADO',
+          role_in_team: 'Encargado',
+        })),
+    ];
+
+    const { error } = await supabase.from('team_members').insert(rows);
+    if (error) throw error;
+    await this.updateMembersCount(teamId);
+  }
+
+  async hasActiveCompetitions(teamId: string): Promise<boolean> {
+    const { data: ctRows, error: ctError } = await supabase
+      .from('competition_teams')
+      .select('competition_id')
+      .eq('team_id', teamId)
+      .eq('status', 'CONFIRMADO');
+    if (ctError) throw ctError;
+    if (!ctRows || ctRows.length === 0) return false;
+
+    const compIds = ctRows.map((r) => r.competition_id);
+    const { count, error: compError } = await supabase
+      .from('competitions')
+      .select('*', { count: 'exact', head: true })
+      .in('id', compIds)
+      .in('status', ['Activo', 'Inscripcion', 'En Curso']);
+    if (compError) throw compError;
+    return (count || 0) > 0;
+  }
+
+  async archiveTeam(teamId: string): Promise<void> {
+    await supabase.from('team_vacancies').update({ status: 'CERRADA' }).eq('team_id', teamId).eq('status', 'ABIERTA');
+    await supabase.from('transfer_market_posts').update({ status: 'CADUCADO' }).eq('team_id', teamId).eq('status', 'ACTIVO');
+    await supabase.from('transfer_offers').update({ status: 'CANCELADO' }).eq('team_id', teamId).eq('status', 'PENDIENTE');
+    await supabase.from(this.tableName).update({ status: 'Archivado', updated_at: new Date().toISOString() }).eq('id', teamId);
+  }
+
+  async getSquad(teamId: string): Promise<any[]> {
+    const { data: members, error: memError } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('team_id', teamId)
+      .order('role_in_team', { ascending: true });
+    if (memError) throw memError;
+    if (!members || members.length === 0) return [];
+
+    const userIds = members.map((m) => m.user_id);
+    const { data: users, error: userError } = await supabase
+      .from('users')
+      .select('id, name, gamertag, email, avatar_url, foto')
+      .in('id', userIds);
+    if (userError) throw userError;
+
+    const userMap = new Map((users || []).map((u) => [u.id, u]));
+
+    return members.map((m) => {
+      const u = userMap.get(m.user_id);
+      return {
+        id: m.id,
+        team_id: m.team_id,
+        user_id: m.user_id,
+        organization_name: m.organization_name,
+        tactical_position: m.tactical_position,
+        role_in_team: m.role_in_team,
+        jersey_number: m.jersey_number,
+        joined_at: m.joined_at,
+        user_name: u?.name || 'Jugador',
+        gamertag: u?.gamertag || 'Jugador',
+        email: u?.email || '',
+        avatar_url: u?.avatar_url || null,
+        foto: u?.foto || null,
+      };
+    });
+  }
+
+  async getAcceptedOffers(teamId: string): Promise<{ player_user_id: string; pitch_message: string | null }[]> {
+    const { data, error } = await supabase
+      .from('transfer_offers')
+      .select('player_user_id, pitch_message')
+      .eq('team_id', teamId)
+      .eq('status', 'ACEPTADO');
+    if (error) return [];
+    return data || [];
+  }
+
+  async getTeamCompetitionOrganizations(teamId: string): Promise<{ org_id: string; org_name: string }[]> {
+    const { data: ctRows } = await supabase
+      .from('competition_teams')
+      .select('competition_id')
+      .eq('team_id', teamId);
+    if (!ctRows || ctRows.length === 0) return [];
+    const compIds = ctRows.map((r) => r.competition_id);
+    const { data: comps } = await supabase
+      .from('competitions')
+      .select('organization_id')
+      .in('id', compIds);
+    if (!comps || comps.length === 0) return [];
+    const orgIds = comps.map((c) => c.organization_id).filter(Boolean);
+    if (orgIds.length === 0) return [];
+    const { data: orgs } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .in('id', orgIds);
+    return (orgs || []).map((o) => ({ org_id: o.id, org_name: o.name }));
+  }
+
+  async addSquadMember(teamId: string, userId: string, tacticalPosition = 'DFC', roleInTeam = 'Jugador'): Promise<void> {
+    await supabase.from('team_members').delete().eq('team_id', teamId).eq('user_id', userId);
+    const memberId = `tm-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const normalizedRole = roleInTeam === 'Capitan' ? 'Capitán' : roleInTeam;
+    const { error } = await supabase.from('team_members').insert({
+      id: memberId,
+      team_id: teamId,
+      user_id: userId,
+      tactical_position: tacticalPosition,
+      role_in_team: normalizedRole,
+    });
+    if (error) throw error;
+    await this.updateMembersCount(teamId);
+  }
+
+  async removeSquadMember(teamId: string, userId: string, orgName?: string): Promise<void> {
+    let query = supabase.from('team_members').delete().eq('team_id', teamId).eq('user_id', userId);
+    if (orgName) {
+      query = query.ilike('organization_name', orgName);
+    }
+    const { error } = await query;
+    if (error) throw error;
+    await this.updateMembersCount(teamId);
+  }
+
+  async updateSquadMemberRole(teamId: string, userId: string, newRole: string, userName?: string): Promise<void> {
+    const isPromotingToCaptain = newRole === 'Capitán' || newRole === 'Capitan';
+    if (isPromotingToCaptain) {
+      const team = await this.findById(teamId);
+      const oldCaptainId = team?.captainId;
+      if (oldCaptainId && oldCaptainId !== userId) {
+        await supabase.from('team_members').update({ role_in_team: 'Encargado' }).eq('team_id', teamId).eq('user_id', oldCaptainId);
+      }
+      await supabase.from('team_members').update({ role_in_team: 'Capitán' }).eq('team_id', teamId).eq('user_id', userId);
+      await supabase.from(this.tableName).update({ captain_id: userId, captain_name: userName || 'Capitán', updated_at: new Date().toISOString() }).eq('id', teamId);
+    } else {
+      await supabase.from('team_members').update({ role_in_team: newRole }).eq('team_id', teamId).eq('user_id', userId);
+    }
+  }
+
+  async updateSquadMemberJersey(memberId: string, jerseyNumber: number | null): Promise<void> {
+    const { error } = await supabase.from('team_members').update({ jersey_number: jerseyNumber }).eq('id', memberId);
+    if (error) throw error;
+  }
+
+  async isMemberOrManager(teamId: string, userId: string): Promise<boolean> {
+    const { count, error } = await supabase
+      .from('team_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', teamId)
+      .eq('user_id', userId)
+      .in('role_in_team', ['Capitan', 'Capitán', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán']);
+    if (error) return false;
+    return (count || 0) > 0;
   }
 }
 
