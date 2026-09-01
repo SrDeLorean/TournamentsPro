@@ -140,6 +140,7 @@ export async function addPlayerToSquadAction(
     if (result.success) {
       revalidatePath('/equipos');
       revalidatePath('/club/plantilla');
+      revalidatePath('/dashboard/equipos');
     }
 
     return result;

@@ -17,6 +17,7 @@ export interface OwnedResource {
 export interface TeamResource extends OwnedResource {
   captainId?: string | null;
   managerIds?: string[];
+  participatingOrgIds?: string[];
 }
 
 export function normalizeRole(role: string): SystemRole | null {
@@ -86,8 +87,19 @@ export function canManageTeam(
   actor: AuthorizationActor,
   team: TeamResource,
 ): boolean {
-  if (isAdministrator(actor) || isOrganizer(actor)) return true;
-  if (team.captainId === actor.userId) return true;
+  // 1. Administrador global: Acceso total a cualquier equipo
+  if (isAdministrator(actor)) return true;
+
+  // 2. Organizador: Solo si el equipo pertenece a su organización o compite en ella
+  if (isOrganizer(actor)) {
+    if (!actor.organizationId) return false;
+    if (team.organizationId && team.organizationId === actor.organizationId) return true;
+    if (team.participatingOrgIds && team.participatingOrgIds.includes(actor.organizationId)) return true;
+    return false;
+  }
+
+  // 3. Capitán / Encargado: Acceso a su propio equipo
+  if (team.captainId && team.captainId === actor.userId) return true;
   return team.managerIds?.includes(actor.userId) ?? false;
 }
 

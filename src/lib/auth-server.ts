@@ -186,20 +186,48 @@ export async function requireUserManager(targetUserId: string): Promise<Authoriz
 
 export async function requireTeamManager(teamId: string): Promise<AuthorizationActor> {
   const actor = await requireServerActor();
-  const team = await import('./db/provider').then(m => m.dbProvider.teams.findById(teamId));
-  if (!team) throw new AuthorizationError('Equipo no encontrado', 403, 'FORBIDDEN');
+  if (actor.role === 'Administrador') return actor;
 
-  // Supabase doesn't support complex joins in dbProvider easily yet. 
-  // Let's use direct supabase client for this if we have to, or just fetch team members.
-  // Actually, we need to fetch team members which we don't have a repo for!
-  // Fallback: If actor is captain or organization owner, they can manage it.
+  const db = (await import('./db/provider')).dbProvider;
+  const team = await db.teams.findById(teamId);
+  if (!team) throw new AuthorizationError('Equipo no encontrado', 404, 'NOT_FOUND');
+
+  // Fetch managers and participating orgs for full security evaluation
+  const [managerMembers, participatingComps] = await Promise.all([
+    db.query<{ user_id: string }>(
+      `SELECT user_id FROM team_members 
+       WHERE team_id = ? AND role_in_team IN ('Capitán', 'Capitan', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán')`,
+      [teamId],
+    ).catch(() => []),
+    db.query<{ organization_id: string }>(
+      `SELECT DISTINCT c.organization_id 
+       FROM competition_teams ct 
+       JOIN competitions c ON ct.competition_id = c.id 
+       WHERE ct.team_id = ? AND c.organization_id IS NOT NULL`,
+      [teamId],
+    ).catch(() => []),
+  ]);
+
+  const managerIds = Array.from(
+    new Set([
+      team.captainId,
+      ...managerMembers.map((m) => m.user_id),
+    ].filter(Boolean) as string[]),
+  );
+
+  const participatingOrgIds = participatingComps
+    .map((c) => c.organization_id)
+    .filter(Boolean);
+
   if (!canManageTeam(actor, {
     captainId: team.captainId,
     organizationId: team.organizationId,
-    managerIds: [team.captainId], // Assuming only captain for now since we don't have team_members repo
+    managerIds,
+    participatingOrgIds,
   })) {
-    throw new AuthorizationError('No puedes administrar este equipo', 403, 'FORBIDDEN');
+    throw new AuthorizationError('No tienes autorización para administrar este equipo o su organización', 403, 'FORBIDDEN');
   }
+
   return actor;
 }
 

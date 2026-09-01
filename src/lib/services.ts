@@ -865,13 +865,23 @@ export async function addPlayerToSquadService(
     );
 
     const positionToUse = tacticalPosition || users[0].position || 'DFC';
+    let orgName = 'Organización General';
+    if (currentTeam.organization_id) {
+      try {
+        const orgs = await transaction.query<{ name: string }>(
+          'SELECT name FROM organizations WHERE id = ?',
+          [currentTeam.organization_id]
+        );
+        if (orgs[0]?.name) orgName = orgs[0].name;
+      } catch {}
+    }
     const memberId = `tm-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const normalizedRole = roleInTeam === 'Capitan' ? 'Capitán' : roleInTeam;
 
     await (transaction as any).query(
-      `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
-       VALUES (?, ?, ?, ?, ?)`,
-      [memberId, teamId, userId, positionToUse, normalizedRole],
+      `INSERT INTO team_members (id, team_id, user_id, organization_name, tactical_position, role_in_team)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [memberId, teamId, userId, orgName, positionToUse, normalizedRole],
     );
 
     if (currentTeam.organization_id) {
@@ -981,11 +991,34 @@ export async function isUserTeamManagerOrCaptainService(userId: string, teamId: 
   if (!userId || !teamId) return false;
 
   try {
-    // 1. Check if user is global Admin or Organizer
-    const userRows = await dbProvider.query<{ role: string }>('SELECT role FROM users WHERE id = ? LIMIT 1', [userId]);
+    // 1. Check user role and organization
+    const userRows = await dbProvider.query<{ role: string; organization_id: string | null }>(
+      'SELECT role, organization_id FROM users WHERE id = ? LIMIT 1',
+      [userId]
+    );
     if (userRows && userRows.length > 0) {
-      const r = userRows[0].role;
-      if (r === 'Administrador' || r === 'Organizador') return true;
+      const u = userRows[0];
+      if (u.role === 'Administrador') return true;
+      if (u.role === 'Organizador') {
+        if (!u.organization_id) return false;
+        // Check if team belongs to organizer's organization
+        const teamRows = await dbProvider.query<{ organization_id: string | null }>(
+          'SELECT organization_id FROM teams WHERE id = ? LIMIT 1',
+          [teamId]
+        );
+        if (teamRows[0]?.organization_id === u.organization_id) return true;
+
+        // Check if team participates in any competition of this organization
+        const compRows = await dbProvider.query<{ id: string }>(
+          `SELECT ct.id FROM competition_teams ct 
+           JOIN competitions c ON ct.competition_id = c.id 
+           WHERE ct.team_id = ? AND c.organization_id = ? LIMIT 1`,
+          [teamId, u.organization_id]
+        );
+        if (compRows.length > 0) return true;
+
+        return false;
+      }
     }
 
     // 2. Check if user is Official Captain or listed in encargados_json

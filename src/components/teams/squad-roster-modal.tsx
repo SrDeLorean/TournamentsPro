@@ -47,6 +47,7 @@ interface SquadRosterModalProps {
     logo_text?: string;
     logo_url?: string;
     organization_id?: string | null;
+    organization_name?: string | null;
   } | null;
   onRosterUpdated?: () => void;
 }
@@ -216,11 +217,16 @@ export function SquadRosterModal({ isOpen, onClose, team, onRosterUpdated }: Squ
             className="ring-2 ring-[var(--accent-cyan)]/40"
           />
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-lg font-black uppercase text-[var(--text-heading)] tracking-wider">{team.name}</h2>
               <Badge variant="cyan" className="text-[10px] font-mono">
                 {team.game_slug.toUpperCase()}
               </Badge>
+              {team.organization_name && (
+                <Badge variant="violet" className="text-[10px] font-mono">
+                  {team.organization_name}
+                </Badge>
+              )}
             </div>
             <p className="text-xs font-mono text-[var(--text-muted)] mt-0.5">
               Gestión Directa de Roster • {squad.length} / {team.max_members || 20} Jugadores Registrados
