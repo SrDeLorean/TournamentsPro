@@ -133,7 +133,7 @@ export function Card3D({
 
         {/* Card Content Container */}
         <div
-          className="relative z-10 w-full h-full rounded-3xl overflow-hidden bg-slate-950/85 backdrop-blur-xl border border-[var(--border-card)] hover:border-[var(--border-card-hover)] transition-colors duration-200"
+          className="relative z-10 w-full h-full rounded-3xl overflow-hidden bg-[var(--bg-card)] backdrop-blur-xl border border-[var(--border-card)] hover:border-[var(--border-card-hover)] transition-colors duration-200"
           style={{ transformStyle: 'preserve-3d' }}
         >
           {children}
