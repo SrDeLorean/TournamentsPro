@@ -6,7 +6,8 @@ import { LoaderCircle, SearchX } from 'lucide-react';
 import { TeamProfileView } from '@/components/teams/team-profile-view';
 import { Button } from '@/components/ui/button';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import type { TeamData } from '@/lib/data-store';
+import { initialTeams, type TeamData } from '@/lib/data-store';
+import { mockTeamsList } from '@/lib/teams-data';
 
 export default function GlobalTeamProfilePage({ params }: { params: Promise<{ teamId: string }> }) {
   const { teamId } = use(params);
@@ -15,11 +16,32 @@ export default function GlobalTeamProfilePage({ params }: { params: Promise<{ te
 
   React.useEffect(() => {
     let active = true;
-    fetch('/api/teams?limit=200').then((response) => response.json()).then((payload: { teams?: TeamData[]; data?: { teams?: TeamData[] } }) => {
-      const teams = payload.data?.teams ?? payload.teams ?? [];
-      const found = teams.find((item) => item.id.toLowerCase() === teamId.toLowerCase());
-      if (active) setTeam(found || null);
-    }).finally(() => { if (active) setLoading(false); });
+    const norm = teamId.toLowerCase();
+    
+    // Find instant fallback from local stores
+    const localMatch = initialTeams.find((item) =>
+      item.id?.toLowerCase() === norm ||
+      item.tag?.toLowerCase() === norm ||
+      item.name?.toLowerCase()?.replace(/\s+/g, '-') === norm
+    );
+
+    fetch('/api/teams?limit=200')
+      .then((response) => response.json())
+      .then((payload: { teams?: TeamData[]; data?: { teams?: TeamData[] } }) => {
+        const teams = payload.data?.teams ?? payload.teams ?? [];
+        const found = teams.find((item) =>
+          item.id?.toLowerCase() === norm ||
+          item.tag?.toLowerCase() === norm ||
+          item.name?.toLowerCase()?.replace(/\s+/g, '-') === norm
+        );
+        if (active) {
+          setTeam(found || localMatch || null);
+        }
+      })
+      .catch(() => {
+        if (active) setTeam(localMatch || null);
+      })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [teamId]);
 
