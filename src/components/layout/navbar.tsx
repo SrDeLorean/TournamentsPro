@@ -93,24 +93,44 @@ export function Navbar({
       {/* Thin Banner Stripe (h-12 / 48px) */}
       <div className="app-navbar-inner max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full h-full flex items-center justify-between gap-2">
         {managementNavigation ? (
-          <button
-            type="button"
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              setIsSettingsOpen(false);
-              setIsUserMenuOpen(false);
-              managementNavigation.onToggle();
-            }}
-            aria-controls="management-navigation"
-            aria-expanded={!managementNavigation.isDesktopCollapsed || managementNavigation.isMobileOpen}
-            aria-label={managementNavigation.isMobileOpen || !managementNavigation.isDesktopCollapsed ? 'Ocultar panel de gestión' : 'Abrir panel de gestión'}
-            title="Panel de gestión"
-            className="management-navbar-toggle inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--accent-cyan)] shadow-sm transition-colors hover:border-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)]"
-          >
-            {managementNavigation.isMobileOpen || !managementNavigation.isDesktopCollapsed
-              ? <PanelLeftClose className="size-4" />
-              : <PanelLeftOpen className="size-4" />}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setIsSettingsOpen(false);
+                setIsUserMenuOpen(false);
+                managementNavigation.onToggle();
+              }}
+              aria-controls="management-navigation"
+              aria-expanded={!managementNavigation.isDesktopCollapsed}
+              aria-label={managementNavigation.isDesktopCollapsed ? 'Abrir panel de gestión' : 'Ocultar panel de gestión'}
+              title="Panel de gestión"
+              className="management-navbar-toggle hidden size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--accent-cyan)] shadow-sm transition-colors hover:border-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] lg:inline-flex"
+            >
+              {managementNavigation.isDesktopCollapsed
+                ? <PanelLeftOpen className="size-4" />
+                : <PanelLeftClose className="size-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setIsSettingsOpen(false);
+                setIsUserMenuOpen(false);
+                managementNavigation.onToggle();
+              }}
+              aria-controls="management-navigation"
+              aria-expanded={managementNavigation.isMobileOpen}
+              aria-label={managementNavigation.isMobileOpen ? 'Cerrar panel de gestión' : 'Abrir panel de gestión'}
+              title="Panel de gestión"
+              className="management-navbar-toggle inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--accent-cyan)] shadow-sm transition-colors hover:border-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] lg:hidden"
+            >
+              {managementNavigation.isMobileOpen
+                ? <PanelLeftClose className="size-4" />
+                : <PanelLeftOpen className="size-4" />}
+            </button>
+          </>
         ) : null}
 
         {/* Brand Logo */}

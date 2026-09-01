@@ -32,362 +32,428 @@ import {
   Crown,
   Activity,
   CheckCircle2,
+  Gamepad2,
+  Calendar,
+  Clock,
+  TrendingUp,
+  Eye,
+  Sliders,
 } from 'lucide-react';
 
 export default function ComponentsShowcasePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [input3DValue, setInput3DValue] = useState('');
+  const [selectedThemePreview, setSelectedThemePreview] = useState<'cyan-void' | 'gold-apex' | 'mint-cyber' | 'crimson-val'>('cyan-void');
+
+  // Themes palette definitions for live testing
+  const themePresets = [
+    {
+      id: 'cyan-void',
+      name: 'Cyber Void (Recomendada)',
+      description: 'Cian Neón Eléctrico (#00f0ff) + Púrpura Profundo (#c084fc) sobre Fondo Void (#05070d)',
+      cyan: '#00f0ff',
+      violet: '#c084fc',
+      gold: '#fbbf24',
+      bg: '#05070d',
+      tag: 'Principal Recomendada',
+    },
+    {
+      id: 'gold-apex',
+      name: 'Apex Gold & Titanium',
+      description: 'Oro Radiante Champions (#fbbf24) + Cian Glacial (#38bdf8) sobre Gris Titanio (#0b0f19)',
+      cyan: '#fbbf24',
+      violet: '#38bdf8',
+      gold: '#f59e0b',
+      bg: '#0b0f19',
+      tag: 'Prestigio / Champions',
+    },
+    {
+      id: 'mint-cyber',
+      name: 'Cyber Mint & Emerald',
+      description: 'Menta Neón eSports (#34d399) + Púrpura Cyber (#a855f7) sobre Fondo Pitch (#030712)',
+      cyan: '#34d399',
+      violet: '#a855f7',
+      gold: '#fde047',
+      bg: '#030712',
+      tag: 'Moderna / VCT Style',
+    },
+    {
+      id: 'crimson-val',
+      name: 'Crimson Pulse',
+      description: 'Rojo Carmesí (#ff4655) + Oro Eléctrico (#f8ae3c) sobre Obsidiana (#060810)',
+      cyan: '#ff4655',
+      violet: '#f8ae3c',
+      gold: '#fbbf24',
+      bg: '#060810',
+      tag: 'Alta Competencia / FPS',
+    },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-14">
       
       {/* Page Header */}
       <div className="border-b border-[var(--border-card)] pb-8 relative">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/30 text-[var(--accent-cyan)] text-xs font-mono font-bold mb-4">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>eSports Design System & 3D UI Engine v3.0</span>
+          <span>eSports Design System & 3D Cards Engine v3.0</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[var(--text-heading)] uppercase font-display">
-          Catálogo UI Kit con Estilos 3D eSports
+          Catálogo UI Kit con Tarjetas 3D eSports
         </h1>
         <p className="text-sm sm:text-base text-[var(--text-secondary)] mt-2 max-w-3xl">
-          Explora la colección de componentes visuales con elevación 3D, botones táctiles con relieve físico, tarjetas con perspectiva giroscópica y paletas oficiales de juego.
+          Colección de componentes visuales impulsados por variables CSS (`var(--accent-cyan)`, `var(--bg-card)`), con tarjetas en perspectiva 3D giroscópica, reflejo holográfico y física de resorte.
         </p>
       </div>
 
-      {/* 🚀 NUEVA SECCIÓN ESTRELLA: 3D UI KIT & INTERACTIVE PLAYGROUND */}
-      <section className="space-y-6 p-6 sm:p-8 rounded-3xl bg-slate-950/80 border border-cyan-500/30 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_35px_rgba(0,240,255,0.15)] relative overflow-hidden">
-        
-        {/* Ambient Glow */}
-        <div className="absolute top-0 right-0 size-80 bg-cyan-500/10 blur-3xl pointer-events-none rounded-full" />
-        <div className="absolute bottom-0 left-0 size-80 bg-purple-500/10 blur-3xl pointer-events-none rounded-full" />
-
-        <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-500 p-0.5 shadow-lg flex items-center justify-center">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Box className="w-5 h-5 text-cyan-400" />
-              </div>
-            </div>
-            <div>
-              <span className="text-[10px] font-mono font-black text-cyan-400 uppercase tracking-widest block">
-                [ DEMOSTRACIÓN EN TIEMPO REAL ]
-              </span>
-              <h2 className="text-2xl font-black text-white uppercase tracking-tight font-display">
-                Laboratorio de Componentes 3D
-              </h2>
-            </div>
+      {/* 🎨 SECCIÓN 1: RECOMENDADOR & SIMULADOR DE PALETAS DE COLOR */}
+      <section className="space-y-6 p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] backdrop-blur-xl shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
+          <div>
+            <span className="text-[10px] font-mono font-black text-[var(--accent-cyan)] uppercase tracking-widest block">
+              [ PALETAS RECOMENDADAS PARA LA PÁGINA PRINCIPAL ]
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-[var(--text-heading)] uppercase tracking-tight font-display">
+              Estilos de Color Globales
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Las páginas de disciplinas (`/[gameSlug]`) ya usan su color específico. Para la portada global y el portal principal, elige o prueba una de estas combinaciones:
+            </p>
           </div>
 
-          <Badge variant="cyan" is3D>
-            ★ 3D Activo
-          </Badge>
-        </div>
-
-        {/* 1. Botones 3D con Extrusión Táctil */}
-        <div className="space-y-4 pt-2">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-black uppercase text-white tracking-wider">
-              1. Botones Táctiles con Relieve 3D Físico (Prensa & Profundidad)
-            </h3>
-          </div>
-          <p className="text-xs text-slate-300 font-medium">
-            Haz clic en los botones para sentir el efecto de presión física 3D con sombras dinámicas de profundidad:
-          </p>
-
-          <div className="flex flex-wrap items-center gap-4 pt-1">
-            <Button variant="3d-cyan" size="md">
-              <Zap className="w-4 h-4 mr-1.5" />
-              3D Cyan Pro
-            </Button>
-            <Button variant="3d-violet" size="md">
-              <Sparkles className="w-4 h-4 mr-1.5" />
-              3D Violet Arena
-            </Button>
-            <Button variant="3d-emerald" size="md">
-              <CheckCircle2 className="w-4 h-4 mr-1.5" />
-              3D Emerald Match
-            </Button>
-            <Button variant="3d-gold" size="md">
-              <Crown className="w-4 h-4 mr-1.5" />
-              3D Gold Champion
-            </Button>
-            <Button variant="3d-crimson" size="md">
-              <Flame className="w-4 h-4 mr-1.5" />
-              3D Crimson Danger
-            </Button>
-            <Button variant="3d-glass" size="md">
-              3D Glassmorphism
-            </Button>
+            <Sliders className="w-4 h-4 text-[var(--accent-cyan)]" />
+            <span className="text-xs font-mono font-bold text-[var(--text-muted)]">Live Preview</span>
           </div>
         </div>
 
-        {/* 2. Insignias y Badges 3D */}
-        <div className="space-y-4 pt-4 border-t border-white/10">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-purple-400" />
-            <h3 className="text-sm font-black uppercase text-white tracking-wider">
-              2. Badges e Insignias 3D con Brillo Especular
-            </h3>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge variant="cyan" is3D>
-              EA FC 26 11v11
-            </Badge>
-            <Badge variant="violet" is3D>
-              VALORANT 5v5
-            </Badge>
-            <Badge variant="emerald" is3D>
-              Torneo Verificado
-            </Badge>
-            <Badge variant="gold" is3D>
-              Premio $5,000 USD
-            </Badge>
-            <Badge variant="rose" is3D>
-              Sanción Disciplinaria
-            </Badge>
-            <Badge variant="slate" is3D>
-              Borrador Técnico
-            </Badge>
-          </div>
-        </div>
-
-        {/* 3. Tarjetas con Perspectiva 3D Interactiva & Inputs 3D */}
-        <div className="space-y-4 pt-4 border-t border-white/10">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <h3 className="text-sm font-black uppercase text-white tracking-wider">
-              3. Tarjetas con Perspectiva 3D (Gira el Cursor) & Inputs 3D Inset
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* Card 3D Interactiva 1 */}
-            <Card3D maxTilt={12} className="h-full">
-              <div className="p-6 space-y-4 h-full flex flex-col justify-between">
-                <Card3DItem depth={30} className="space-y-2">
+        {/* Preset Selector Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {themePresets.map((preset) => {
+            const isSelected = selectedThemePreview === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => setSelectedThemePreview(preset.id as any)}
+                className={`text-left p-4 rounded-2xl border transition-all duration-300 flex flex-col justify-between space-y-3 relative group ${
+                  isSelected
+                    ? 'bg-slate-900 border-[var(--accent-cyan)] shadow-[0_0_25px_rgba(0,240,255,0.25)] scale-[1.02]'
+                    : 'bg-slate-950/60 border-[var(--border-card)] hover:border-[var(--border-card-hover)] hover:bg-slate-900/60'
+                }`}
+              >
+                <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <Badge variant="cyan" is3D>Matchday #14</Badge>
-                    <span className="text-[10px] font-mono text-cyan-300 font-bold">20:30 HRS</span>
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-white">
+                      {preset.tag}
+                    </span>
+                    {isSelected && (
+                      <CheckCircle2 className="w-4 h-4 text-[var(--accent-cyan)]" />
+                    )}
                   </div>
-                  <h4 className="text-lg font-black text-white uppercase">San Lorenzo vs LeguaYork</h4>
-                  <p className="text-xs text-slate-300">
-                    Gran Final Copa de Oro 11v11 EA Sports FC 26.
-                  </p>
-                </Card3DItem>
+                  <h3 className="text-sm font-black text-white uppercase pt-1">{preset.name}</h3>
+                  <p className="text-[11px] text-slate-400 font-medium leading-relaxed">{preset.description}</p>
+                </div>
 
-                <Card3DItem depth={20} className="pt-2">
-                  <div className="p-3 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-between font-mono text-xs">
-                    <span className="font-bold text-white">SL [3]</span>
-                    <span className="text-cyan-400 font-extrabold">VS</span>
-                    <span className="font-bold text-white">[1] LY</span>
-                  </div>
-                </Card3DItem>
-
-                <Card3DItem depth={35} className="pt-2">
-                  <Button variant="3d-cyan" size="sm" className="w-full">
-                    Ver Transmisión 3D
-                  </Button>
-                </Card3DItem>
-              </div>
-            </Card3D>
-
-            {/* Card 3D Interactiva 2 */}
-            <Card3D maxTilt={12} className="h-full">
-              <div className="p-6 space-y-4 h-full flex flex-col justify-between">
-                <Card3DItem depth={30} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="gold" is3D>Fichaje Top</Badge>
-                    <span className="text-[10px] font-mono text-amber-300 font-bold">AGENCIA LIBRE</span>
-                  </div>
-                  <h4 className="text-lg font-black text-white uppercase">SrDeLorean #10</h4>
-                  <p className="text-xs text-slate-300">
-                    Mediapunta Creativo • Valor de Mercado: 1,850 Pts.
-                  </p>
-                </Card3DItem>
-
-                <Card3DItem depth={20} className="pt-2">
-                  <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-                    <div className="p-2 rounded-lg bg-slate-900/80 border border-white/10">
-                      <span className="text-slate-400 block">GOLES</span>
-                      <span className="text-emerald-400 font-bold text-xs">28 Goles</span>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-900/80 border border-white/10">
-                      <span className="text-slate-400 block">ASISTENCIAS</span>
-                      <span className="text-cyan-400 font-bold text-xs">19 Asist</span>
-                    </div>
-                  </div>
-                </Card3DItem>
-
-                <Card3DItem depth={35} className="pt-2">
-                  <Button variant="3d-gold" size="sm" className="w-full">
-                    Enviar Oferta de Club
-                  </Button>
-                </Card3DItem>
-              </div>
-            </Card3D>
-
-            {/* Formulario con Inputs 3D */}
-            <Card is3D className="p-6 space-y-4">
-              <div>
-                <Badge variant="violet" is3D className="mb-2">Formulario 3D</Badge>
-                <h4 className="text-base font-black text-white uppercase">Controles Inset 3D</h4>
-                <p className="text-xs text-slate-300">
-                  Inputs con profundidad inset de alta gama:
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <Input
-                  is3D
-                  label="Gamertag Atleta"
-                  placeholder="ej. SrDeLorean"
-                  value={input3DValue}
-                  onChange={(e) => setInput3DValue(e.target.value)}
-                  icon={<User className="w-4 h-4" />}
-                />
-                <Input
-                  is3D
-                  label="Búsqueda de Torneo"
-                  placeholder="Buscar torneos 3D..."
-                  icon={<Search className="w-4 h-4" />}
-                />
-              </div>
-
-              <Button variant="3d-violet" size="sm" className="w-full">
-                Guardar con Relieve 3D
-              </Button>
-            </Card>
-          </div>
+                {/* Color Swatch Bars */}
+                <div className="flex items-center gap-1.5 pt-2">
+                  <div className="h-6 flex-1 rounded-md shadow-sm" style={{ backgroundColor: preset.cyan }} />
+                  <div className="h-6 flex-1 rounded-md shadow-sm" style={{ backgroundColor: preset.violet }} />
+                  <div className="h-6 flex-1 rounded-md shadow-sm" style={{ backgroundColor: preset.gold }} />
+                  <div className="h-6 flex-1 rounded-md border border-white/20 shadow-sm" style={{ backgroundColor: preset.bg }} />
+                </div>
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      {/* SECCIÓN PALETAS DE COLORES OFICIALES POR JUEGO */}
+      {/* 🌟 SECCIÓN 2: SUITE DE TARJETAS 3D eSPORTS (3D CARDS SHOWCASE) */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
+          <div className="flex items-center gap-2">
+            <Box className="w-5 h-5 text-[var(--accent-cyan)]" />
+            <h2 className="text-xl font-bold text-[var(--text-heading)]">Suite de Tarjetas 3D eSports (Giroscópicas & Reflejo)</h2>
+          </div>
+          <Badge variant="cyan" is3D>Perspectiva 3D Activa</Badge>
+        </div>
+
+        <p className="text-xs text-[var(--text-secondary)]">
+          Mueve el cursor sobre las tarjetas para experimentar la inclinación giroscópica tridimensional, la profundidad de capas Z y el destello especular holográfico:
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          {/* TARJETA 3D #1: MATCHDAY & PARTIDO EN VIVO */}
+          <Card3D maxTilt={12} variant="cyan" className="h-full">
+            <div className="p-6 space-y-5 h-full flex flex-col justify-between">
+              
+              {/* Header con Z-Depth */}
+              <Card3DItem depth={35} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant="cyan" is3D>EA FC 26 • Matchday #14</Badge>
+                  <span className="text-[10px] font-mono text-[var(--accent-cyan)] font-extrabold flex items-center gap-1">
+                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    EN VIVO
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-white uppercase tracking-tight font-display">
+                  Gran Final Copa de Campeones
+                </h3>
+                <p className="text-xs text-slate-300 font-medium">
+                  Transmisión oficial del circuito sudamericano 11v11.
+                </p>
+              </Card3DItem>
+
+              {/* Scoreboard con Z-Depth */}
+              <Card3DItem depth={25}>
+                <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-white/10 flex items-center justify-between font-mono">
+                  <div className="flex items-center gap-2">
+                    <div className="size-8 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center font-black text-xs text-cyan-300">
+                      SL
+                    </div>
+                    <span className="font-bold text-xs text-white">San Lorenzo</span>
+                  </div>
+
+                  <div className="text-center px-2">
+                    <span className="text-base font-black text-cyan-400">3 - 1</span>
+                    <span className="text-[9px] text-slate-400 block font-bold">MIN 78'</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs text-white">LeguaYork</span>
+                    <div className="size-8 rounded-lg bg-purple-500/20 border border-purple-400/40 flex items-center justify-center font-black text-xs text-purple-300">
+                      LY
+                    </div>
+                  </div>
+                </div>
+              </Card3DItem>
+
+              {/* Action Button con Z-Depth */}
+              <Card3DItem depth={35} className="pt-2">
+                <Button variant="primary" size="sm" className="w-full">
+                  <Eye className="w-4 h-4 mr-1.5" />
+                  Ver Transmisión en Vivo
+                </Button>
+              </Card3DItem>
+            </div>
+          </Card3D>
+
+          {/* TARJETA 3D #2: FICHA DE ATLETA PRO & VALOR DE MERCADO */}
+          <Card3D maxTilt={12} variant="gold" className="h-full">
+            <div className="p-6 space-y-5 h-full flex flex-col justify-between">
+              
+              <Card3DItem depth={35} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant="gold" is3D>Mercado de Pases</Badge>
+                  <span className="text-[10px] font-mono text-amber-400 font-extrabold">AGENCIA LIBRE</span>
+                </div>
+                
+                <div className="flex items-center gap-3 pt-1">
+                  <Avatar size="lg" fallback="SD" status="online" className="border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)]" />
+                  <div>
+                    <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                      SrDeLorean <span className="text-amber-400 font-mono">#10</span>
+                    </h3>
+                    <span className="text-xs text-slate-300 font-semibold block">Mediapunta Táctico • 11v11</span>
+                  </div>
+                </div>
+              </Card3DItem>
+
+              {/* Stats Matrix con Z-Depth */}
+              <Card3DItem depth={20}>
+                <div className="grid grid-cols-3 gap-2 text-center font-mono text-[10px]">
+                  <div className="p-2 rounded-xl bg-slate-900/90 border border-white/10">
+                    <span className="text-slate-400 block font-bold">GOLES</span>
+                    <span className="text-emerald-400 font-black text-xs">28</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-900/90 border border-white/10">
+                    <span className="text-slate-400 block font-bold">ASIST.</span>
+                    <span className="text-cyan-400 font-black text-xs">19</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-900/90 border border-white/10">
+                    <span className="text-slate-400 block font-bold">RATING</span>
+                    <span className="text-amber-400 font-black text-xs">9.4</span>
+                  </div>
+                </div>
+              </Card3DItem>
+
+              <Card3DItem depth={35} className="pt-2">
+                <Button variant="secondary" size="sm" className="w-full">
+                  <Send className="w-4 h-4 mr-1.5" />
+                  Enviar Oferta de Contrato
+                </Button>
+              </Card3DItem>
+            </div>
+          </Card3D>
+
+          {/* TARJETA 3D #3: COPA & PRIZE POOL */}
+          <Card3D maxTilt={12} variant="violet" className="h-full">
+            <div className="p-6 space-y-5 h-full flex flex-col justify-between">
+              
+              <Card3DItem depth={35} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant="violet" is3D>Major Season 2026</Badge>
+                  <span className="text-[10px] font-mono text-purple-300 font-extrabold">32 EQUIPOS</span>
+                </div>
+
+                <h3 className="text-lg font-black text-white uppercase tracking-tight font-display">
+                  Copa Libertadores eSports
+                </h3>
+                <p className="text-xs text-slate-300 font-medium">
+                  Torneo eliminatorio con fase de grupos y brackets Upper/Lower.
+                </p>
+              </Card3DItem>
+
+              {/* Prize Pool Spotlight con Z-Depth */}
+              <Card3DItem depth={25}>
+                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-purple-950/80 to-slate-900/90 border border-purple-500/30 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Trophy className="w-5 h-5 text-amber-400 animate-bounce" style={{ animationDuration: '3s' }} />
+                    <div>
+                      <span className="text-[9px] font-mono uppercase text-slate-400 font-bold block">Bolsa de Premios</span>
+                      <span className="text-sm font-black text-white font-mono">$10,000 USD</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-purple-300 bg-purple-900/50 px-2.5 py-1 rounded-lg border border-purple-500/30">
+                    FASE FINAL
+                  </span>
+                </div>
+              </Card3DItem>
+
+              <Card3DItem depth={35} className="pt-2">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Trophy className="w-4 h-4 mr-1.5 text-purple-400" />
+                  Explorar Cuadro de Brackets
+                </Button>
+              </Card3DItem>
+            </div>
+          </Card3D>
+        </div>
+      </section>
+
+      {/* SECCIÓN 3: PALETAS DE COLORES OFICIALES POR JUEGO */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
           <Palette className="w-5 h-5 text-[var(--accent-gold)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">Paletas de Colores Oficiales por Disciplina</h2>
+          <h2 className="text-xl font-bold text-[var(--text-heading)]">Paletas de Colores por Disciplina (`/[gameSlug]`)</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Object.values(GAMES_CATALOG).map((game) => (
-            <div
+            <Card3D
               key={game.id}
-              className="p-5 rounded-2xl card-3d-elevated border border-[var(--border-card)] space-y-4"
-              style={{
-                borderColor: `${game.brandColor}40`,
-                boxShadow: `0 10px 30px -10px ${game.brandColor}20`,
-              }}
+              maxTilt={8}
+              accentColor={game.brandColor}
+              className="h-full"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{game.icon}</span>
-                  <div>
-                    <h3 className="font-extrabold text-base text-[var(--text-heading)]">{game.name}</h3>
-                    <span className="text-[10px] text-[var(--text-muted)] block">{game.category}</span>
+              <div className="p-5 space-y-4 h-full flex flex-col justify-between">
+                <Card3DItem depth={20} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{game.icon}</span>
+                      <div>
+                        <h3 className="font-extrabold text-base text-white">{game.name}</h3>
+                        <span className="text-[10px] text-slate-400 block font-mono">{game.category}</span>
+                      </div>
+                    </div>
+                    <Badge
+                      is3D
+                      style={{
+                        backgroundColor: `${game.brandColor}25`,
+                        color: game.brandColor,
+                        borderColor: `${game.brandColor}50`,
+                      }}
+                    >
+                      Oficial
+                    </Badge>
                   </div>
-                </div>
-                <Badge
-                  is3D
-                  style={{
-                    backgroundColor: `${game.brandColor}20`,
-                    color: game.brandColor,
-                    borderColor: `${game.brandColor}40`,
-                  }}
-                >
-                  Oficial
-                </Badge>
-              </div>
 
-              {/* Swatches */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] block">Muestras de Color</span>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-8 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-sm" style={{ backgroundColor: game.brandColor }}>
-                    {game.brandColor}
+                  {/* Swatches */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-mono">
+                      Muestras de Color Oficiales
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-7 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-sm" style={{ backgroundColor: game.brandColor }}>
+                        {game.brandColor}
+                      </div>
+                      <div className="flex-1 h-7 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-sm" style={{ backgroundColor: game.accentColor }}>
+                        {game.accentColor}
+                      </div>
+                      <div className="flex-1 h-7 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-sm border border-slate-700" style={{ backgroundColor: game.secondaryAccent }}>
+                        {game.secondaryAccent}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1 h-8 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-sm" style={{ backgroundColor: game.accentColor }}>
-                    {game.accentColor}
-                  </div>
-                  <div className="flex-1 h-8 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-sm border border-slate-700" style={{ backgroundColor: game.secondaryAccent }}>
-                    {game.secondaryAccent}
-                  </div>
-                </div>
-              </div>
+                </Card3DItem>
 
-              {/* Interactive Button Preview */}
-              <Button
-                variant="3d-cyan"
-                size="sm"
-                className="w-full"
-                style={{
-                  backgroundColor: game.brandColor,
-                  color: '#FFFFFF',
-                }}
-              >
-                Inscribir Equipo en {game.name}
-              </Button>
-            </div>
+                <Card3DItem depth={25} className="pt-2">
+                  <Button
+                    size="sm"
+                    className="w-full font-bold"
+                    style={{
+                      backgroundColor: game.brandColor,
+                      color: '#FFFFFF',
+                    }}
+                  >
+                    Inscribir Equipo en {game.name}
+                  </Button>
+                </Card3DItem>
+              </div>
+            </Card3D>
           ))}
         </div>
       </section>
 
-      {/* 1. SECCIÓN CONTROLES GLOBALES */}
+      {/* SECCIÓN 4: CONTROLES & FORMULARIOS */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
-          <Sparkles className="w-5 h-5 text-[var(--accent-violet)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">1. Controles Globales (Tema e Idioma)</h2>
+          <Mail className="w-5 h-5 text-[var(--accent-cyan)]" />
+          <h2 className="text-xl font-bold text-[var(--text-heading)]">Controles de Formulario & Inputs</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card is3D>
-            <CardHeader>
-              <CardTitle className="text-base">Selector de Tema (Theme Switcher)</CardTitle>
-              <CardDescription>Soporta Claro, Oscuro (Dark Space) y OLED (Pitch Black)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ThemeSwitcher />
-            </CardContent>
-          </Card>
+        <div className="p-6 rounded-2xl glass-panel grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Input
+            label="Gamertag Oficial"
+            placeholder="ej. SrDeLorean"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            helperText="Ingresa tu ID oficial dentro del juego"
+            icon={<User className="w-4 h-4 text-[var(--text-muted)]" />}
+          />
 
-          <Card is3D>
-            <CardHeader>
-              <CardTitle className="text-base">Selector de Idioma (Language Switcher)</CardTitle>
-              <CardDescription>Soporta Español (ES), Inglés (EN) y Portugués (PT)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <LanguageSwitcher />
-            </CardContent>
-          </Card>
+          <Input
+            label="Búsqueda de Torneos"
+            placeholder="Buscar ligas, copas o clubes..."
+            icon={<Search className="w-4 h-4 text-[var(--text-muted)]" />}
+          />
+
+          <Input
+            label="Correo Electrónico"
+            type="email"
+            placeholder="usuario@ejemplo.com"
+            error="El formato del correo electrónico no es válido"
+            icon={<Mail className="w-4 h-4 text-[var(--text-muted)]" />}
+          />
+
+          <Textarea
+            label="Observaciones del Partido / Acta"
+            placeholder="Detalla incidentes, MVP o acuerdos entre capitanes..."
+          />
         </div>
       </section>
 
-      {/* 2. SECCIÓN BOTONES */}
+      {/* SECCIÓN 5: BOTONES & VARIANTES */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
           <Trophy className="w-5 h-5 text-[var(--accent-cyan)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">2. Botones Estándar & 3D (Buttons)</h2>
+          <h2 className="text-xl font-bold text-[var(--text-heading)]">Botones & Acciones (Buttons)</h2>
         </div>
 
-        <div className="p-6 rounded-xl glass-panel space-y-6">
+        <div className="p-6 rounded-2xl glass-panel space-y-6">
           <div>
-            <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-3">Variantes con Profundidad 3D</h4>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button variant="3d-cyan">3D Cyan</Button>
-              <Button variant="3d-violet">3D Violet</Button>
-              <Button variant="3d-emerald">3D Emerald</Button>
-              <Button variant="3d-gold">3D Gold</Button>
-              <Button variant="3d-crimson">3D Crimson</Button>
-              <Button variant="3d-glass">3D Glass</Button>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-3">Variantes Flat Glass</h4>
+            <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-3">Variantes Estilizadas</h4>
             <div className="flex flex-wrap items-center gap-3">
               <Button variant="primary">Primary Cyan</Button>
               <Button variant="secondary">Secondary Violet</Button>
@@ -396,14 +462,23 @@ export default function ComponentsShowcasePage() {
               <Button variant="ghost">Ghost Button</Button>
             </div>
           </div>
+
+          <div>
+            <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-3">Tamaños</h4>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button size="sm">Small (sm)</Button>
+              <Button size="md">Medium (md)</Button>
+              <Button size="lg">Large (lg)</Button>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* 3. SECCIÓN TABLA DE POSICIONES */}
+      {/* SECCIÓN 6: TABLA DE POSICIONES */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
           <Trophy className="w-5 h-5 text-[var(--accent-gold)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">3. Tablas de Posiciones eSports (Data Tables)</h2>
+          <h2 className="text-xl font-bold text-[var(--text-heading)]">Tablas de Posiciones eSports</h2>
         </div>
 
         <Table>
@@ -457,22 +532,22 @@ export default function ComponentsShowcasePage() {
         </Table>
       </section>
 
-      {/* 4. SECCIÓN MODALES */}
+      {/* SECCIÓN 7: MODALES */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
           <Sparkles className="w-5 h-5 text-[var(--accent-cyan)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">4. Modales & Diálogos (Modals)</h2>
+          <h2 className="text-xl font-bold text-[var(--text-heading)]">Modales & Diálogos (Modals)</h2>
         </div>
 
-        <div className="p-6 rounded-xl glass-panel">
-          <Button variant="3d-cyan" onClick={() => setIsModalOpen(true)}>
-            Abrir Modal de Ejemplo con Botón 3D
+        <div className="p-6 rounded-2xl glass-panel">
+          <Button onClick={() => setIsModalOpen(true)}>
+            Abrir Modal de Ejemplo
           </Button>
 
           <Modal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
-            title="Confirmar Reporte de Partido 3D"
+            title="Confirmar Reporte de Partido"
             description="Revisa los datos del encuentro antes de guardar la información en Supabase."
           >
             <div className="space-y-4 text-xs text-[var(--text-secondary)]">
@@ -484,7 +559,7 @@ export default function ComponentsShowcasePage() {
               <p>Al confirmar el resultado, las estadísticas se procesarán automáticamente en la tabla de posiciones.</p>
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-                <Button variant="3d-cyan" size="sm" onClick={() => setIsModalOpen(false)}>Confirmar y Guardar</Button>
+                <Button variant="primary" size="sm" onClick={() => setIsModalOpen(false)}>Confirmar y Guardar</Button>
               </div>
             </div>
           </Modal>

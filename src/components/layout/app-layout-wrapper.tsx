@@ -10,12 +10,30 @@ import { Footer } from '@/components/layout/footer';
 // Immersive authentication pages intentionally omit the global footer.
 const HIDE_FOOTER_PATTERNS = ['/auth'];
 const MANAGEMENT_SIDEBAR_STORAGE_KEY = 'tournamentspro:management-sidebar-collapsed';
+const MANAGEMENT_SIDEBAR_CHANGE_EVENT = 'tournamentspro:management-sidebar-change';
+
+function subscribeToManagementSidebarPreference(onStoreChange: () => void) {
+  window.addEventListener('storage', onStoreChange);
+  window.addEventListener(MANAGEMENT_SIDEBAR_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener('storage', onStoreChange);
+    window.removeEventListener(MANAGEMENT_SIDEBAR_CHANGE_EVENT, onStoreChange);
+  };
+}
+
+function getManagementSidebarPreference() {
+  return window.localStorage.getItem(MANAGEMENT_SIDEBAR_STORAGE_KEY) === 'true';
+}
 
 export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAuth();
   const pathname = usePathname();
   const [managementMenuState, setManagementMenuState] = React.useState({ pathname, open: false });
-  const [isManagementSidebarCollapsed, setIsManagementSidebarCollapsed] = React.useState(false);
+  const isManagementSidebarCollapsed = React.useSyncExternalStore(
+    subscribeToManagementSidebarPreference,
+    getManagementSidebarPreference,
+    () => false,
+  );
   const isManagementMenuOpen = managementMenuState.pathname === pathname && managementMenuState.open;
   const setIsManagementMenuOpen = React.useCallback((open: boolean) => {
     setManagementMenuState({ pathname, open });
@@ -25,19 +43,13 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const isAdminOrOrganizer = roleStr === 'administrador' || roleStr === 'admin' || roleStr === 'organizador';
   const showRoleAwareChrome = isAdminOrOrganizer;
 
-  React.useEffect(() => {
-    setIsManagementSidebarCollapsed(
-      window.localStorage.getItem(MANAGEMENT_SIDEBAR_STORAGE_KEY) === 'true',
-    );
-  }, []);
-
   const toggleManagementNavigation = React.useCallback(() => {
     if (window.matchMedia('(min-width: 1024px)').matches) {
-      setIsManagementSidebarCollapsed((collapsed) => {
-        const next = !collapsed;
-        window.localStorage.setItem(MANAGEMENT_SIDEBAR_STORAGE_KEY, String(next));
-        return next;
-      });
+      window.localStorage.setItem(
+        MANAGEMENT_SIDEBAR_STORAGE_KEY,
+        String(!isManagementSidebarCollapsed),
+      );
+      window.dispatchEvent(new Event(MANAGEMENT_SIDEBAR_CHANGE_EVENT));
       return;
     }
 
@@ -45,7 +57,7 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
       pathname,
       open: current.pathname === pathname ? !current.open : true,
     }));
-  }, [pathname]);
+  }, [isManagementSidebarCollapsed, pathname]);
 
   const shouldHideFooter = HIDE_FOOTER_PATTERNS.some(pattern => pathname.startsWith(pattern));
 
