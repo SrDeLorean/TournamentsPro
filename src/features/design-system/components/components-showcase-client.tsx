@@ -1,13 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input, Textarea } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
 import { Modal } from '@/components/ui/modal';
+import { ModalForm } from '@/components/ui/modal-form';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { useCrudNotifier, CrudAlertBanner } from '@/components/ui/crud-alert';
+import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { Alert } from '@/components/ui/alert';
 import { PositionBadge } from '@/components/ui/position-badge';
+import { DataTable, type ColumnDef, type FilterOption } from '@/components/ui/data-table';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
@@ -26,6 +32,7 @@ import {
   Palette,
   CheckCircle2,
   Eye,
+  EyeOff,
   SunMoon,
   Sliders,
   Copy,
@@ -45,27 +52,74 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowRight,
-  Sparkle,
+  Plus,
+  Edit,
+  Trash2,
+  Lock,
+  UploadCloud,
+  FileText,
+  SlidersHorizontal,
+  ChevronDown,
+  X,
+  ExternalLink,
 } from 'lucide-react';
 
+interface MockTeamRow {
+  id: string;
+  name: string;
+  tag: string;
+  game: string;
+  captain: string;
+  elo: number;
+  membersCount: number;
+  status: 'Activo' | 'En Revisión' | 'Suspendido';
+  verified: boolean;
+}
+
 export default function ComponentsShowcasePage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+  // Navigation & General State
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('eafc26');
   const [selectedGlobalTheme, setSelectedGlobalTheme] = useState<string>('cyan-void');
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
-  // Interactive 3D Lab Playground State
+  // 📝 Form State Playground
+  const [inputVal, setInputVal] = useState('SrDeLorean');
+  const [searchVal, setSearchVal] = useState('');
+  const [passwordVal, setPasswordVal] = useState('AdminSecret2026!');
+  const [showPassword, setShowPassword] = useState(false);
+  const [textareaVal, setTextareaVal] = useState('El equipo solicita prórroga de 10 minutos por problemas técnicos en el servidor de partido.');
+  const [selectedGameSelect, setSelectedGameSelect] = useState('eafc26');
+  const [selectedPlatform, setSelectedPlatform] = useState('PS5');
+  const [selectedRole, setSelectedRole] = useState('MCO');
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('https://images.unsplash.com/photo-1542751371-adc38448a05e?w=300');
+  
+  // Checkboxes & Toggles State
+  const [check1, setCheck1] = useState(true);
+  const [check2, setCheck2] = useState(false);
+  const [toggle1, setToggle1] = useState(true);
+  const [toggle2, setToggle2] = useState(false);
+  const [radioFormat, setRadioFormat] = useState('11v11');
+
+  // 💬 Modals System State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [activeEditingTeam, setActiveEditingTeam] = useState<MockTeamRow | null>(null);
+
+  // CRUD Notifier Hook
+  const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
+
+  // 🎛️ Interactive 3D Lab Playground State
   const [labTilt, setLabTilt] = useState<number>(12);
   const [labGlare, setLabGlare] = useState<boolean>(true);
   const [labNeon, setLabNeon] = useState<boolean>(true);
   const [labAccent, setLabAccent] = useState<string>('#00F0FF');
-  const [labVariant, setLabVariant] = useState<'default' | 'cyan' | 'violet' | 'gold' | 'emerald' | 'crimson'>('cyan');
 
-  // Interactive Primitives Sandbox State
+  // 🧩 Interactive Primitives Sandbox State
   const [btnLoading, setBtnLoading] = useState<boolean>(false);
   const [btnDisabled, setBtnDisabled] = useState<boolean>(false);
   const [clickCount, setClickCount] = useState<number>(0);
-  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   const copyToClipboard = (text: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -75,7 +129,159 @@ export default function ComponentsShowcasePage() {
     }
   };
 
-  // Discipline specific mock showcase data
+  // 📊 Mock Data for Production DataTable
+  const mockTeamsData: MockTeamRow[] = [
+    { id: 'tm-1', name: 'LeguaYork eSports', tag: 'LY', game: 'EA FC 26', captain: 'SrDeLorean', elo: 1980, membersCount: 16, status: 'Activo', verified: true },
+    { id: 'tm-2', name: 'Sangre Nueva FC', tag: 'SN', game: 'EA FC 26', captain: 'ElTanque9', elo: 1845, membersCount: 18, status: 'Activo', verified: true },
+    { id: 'tm-3', name: 'KRÜ Tactical', tag: 'KRU', game: 'VALORANT', captain: 'KeznitPro', elo: 2450, membersCount: 5, status: 'Activo', verified: true },
+    { id: 'tm-4', name: 'Imperial CS2', tag: 'IMP', game: 'CS2 / CS:GO', captain: 'FalleN_N1', elo: 2620, membersCount: 5, status: 'Activo', verified: true },
+    { id: 'tm-5', name: 'Isurus Gaming', tag: 'ISG', game: 'League of Legends', captain: 'Seiya_Mid', elo: 2110, membersCount: 6, status: 'Activo', verified: true },
+    { id: 'tm-6', name: 'Furia Rocket', tag: 'FUR', game: 'Rocket League', captain: 'Yanxnz_RL', elo: 2150, membersCount: 3, status: 'Activo', verified: true },
+    { id: 'tm-7', name: 'Cyber Wolves eSp', tag: 'CW', game: 'VALORANT', captain: 'Shadow99', elo: 1540, membersCount: 5, status: 'En Revisión', verified: false },
+    { id: 'tm-8', name: 'Alianza Lima eSports', tag: 'AL', game: 'EA FC 26', captain: 'Goleador_PE', elo: 1720, membersCount: 14, status: 'Activo', verified: true },
+    { id: 'tm-9', name: 'Red Viper Squad', tag: 'RVS', game: 'CS2 / CS:GO', captain: 'Tox1c_Banned', elo: 1200, membersCount: 4, status: 'Suspendido', verified: false },
+  ];
+
+  // DataTable Columns Definition
+  const tableColumns: ColumnDef<MockTeamRow>[] = [
+    {
+      header: 'Equipo / Club',
+      accessorKey: 'name',
+      sortable: true,
+      cell: (row) => (
+        <div className="flex items-center gap-3">
+          <div className="size-8 rounded-xl bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/30 flex items-center justify-center font-mono font-black text-xs text-[var(--accent-cyan)]">
+            {row.tag}
+          </div>
+          <div>
+            <div className="font-bold text-[var(--text-heading)] flex items-center gap-1.5">
+              <span>{row.name}</span>
+              {row.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent-cyan)] shrink-0" />}
+            </div>
+            <div className="text-[10px] font-mono text-[var(--text-muted)]">ID: {row.id}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'Disciplina',
+      accessorKey: 'game',
+      sortable: true,
+      cell: (row) => (
+        <Badge variant="cyan" is3D className="text-[10px]">
+          {row.game}
+        </Badge>
+      ),
+    },
+    {
+      header: 'Capitán',
+      accessorKey: 'captain',
+      sortable: true,
+      cell: (row) => (
+        <div className="flex items-center gap-2 font-mono text-xs">
+          <Avatar fallback={row.captain.slice(0, 2)} size="sm" status="online" />
+          <span className="font-bold text-[var(--text-primary)]">{row.captain}</span>
+        </div>
+      ),
+    },
+    {
+      header: 'ELO',
+      accessorKey: 'elo',
+      sortable: true,
+      cell: (row) => (
+        <span className="font-mono font-black text-xs text-[var(--accent-gold)]">
+          {row.elo} PTS
+        </span>
+      ),
+    },
+    {
+      header: 'Plantilla',
+      accessorKey: 'membersCount',
+      sortable: true,
+      cell: (row) => (
+        <span className="font-mono text-xs text-[var(--text-secondary)]">
+          {row.membersCount} atletas
+        </span>
+      ),
+    },
+    {
+      header: 'Estado',
+      accessorKey: 'status',
+      sortable: true,
+      cell: (row) => {
+        if (row.status === 'Activo') return <Badge variant="emerald" is3D>Activo</Badge>;
+        if (row.status === 'En Revisión') return <Badge variant="gold" is3D>En Revisión</Badge>;
+        return <Badge variant="rose" is3D>Suspendido</Badge>;
+      },
+    },
+    {
+      header: 'Acciones',
+      cell: (row) => (
+        <div className="flex items-center gap-1.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setActiveEditingTeam(row);
+              setIsInfoModalOpen(true);
+            }}
+            title="Ver Ficha"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setActiveEditingTeam(row);
+              setIsEditModalOpen(true);
+            }}
+            title="Editar Equipo"
+          >
+            <Edit className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={() => {
+              setActiveEditingTeam(row);
+              setIsDeleteModalOpen(true);
+            }}
+            title="Eliminar Equipo"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const tableFilters: FilterOption[] = [
+    {
+      key: 'game',
+      label: 'Disciplina',
+      options: [
+        { label: 'Todas las disciplinas', value: 'ALL' },
+        { label: 'EA FC 26', value: 'EA FC 26' },
+        { label: 'VALORANT', value: 'VALORANT' },
+        { label: 'CS2 / CS:GO', value: 'CS2 / CS:GO' },
+        { label: 'League of Legends', value: 'League of Legends' },
+        { label: 'Rocket League', value: 'Rocket League' },
+      ],
+    },
+    {
+      key: 'status',
+      label: 'Estado',
+      options: [
+        { label: 'Todos los estados', value: 'ALL' },
+        { label: 'Activo', value: 'Activo' },
+        { label: 'En Revisión', value: 'En Revisión' },
+        { label: 'Suspendido', value: 'Suspendido' },
+      ],
+    },
+  ];
+
+  // Discipline mock showcase data
   const disciplineDataMap: Record<string, {
     match: { title: string; subtitle: string; teamA: string; teamB: string; score: string; status: string; format: string; modeLabel: string };
     player: { name: string; number: string; role: string; team: string; stats: { label: string; value: string; color: string }[]; rating: string; value: string };
@@ -265,18 +471,21 @@ export default function ComponentsShowcasePage() {
         </div>
       )}
 
+      {/* Global CRUD Live Notifier Notification */}
+      <CrudAlertBanner state={crudState} onClose={resetAlert} />
+
       {/* Page Header with Responsive Theme Controls */}
       <div className="border-b border-[var(--border-card)] pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
         <div className="space-y-3">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/30 text-[var(--accent-cyan)] text-xs font-mono font-bold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>TournamentsPro · App Design System Studio</span>
+            <span>TournamentsPro · Sistema de Diseño y Catálogo de Componentes</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[var(--text-heading)] uppercase font-display">
-            Sistema visual de la aplicación
+            Catálogo Integral de Componentes
           </h1>
           <p className="text-sm sm:text-base text-[var(--text-secondary)] max-w-2xl leading-relaxed">
-            Compara la evolución de los componentes globales, prueba las paletas candidatas, experimenta con las tarjetas 3D en tiempo real y revisa la respuesta táctil en dispositivos móviles.
+            Explora la suite completa de primitivas, formularios, tablas dinámicas con filtros y ordenamiento, y todos los modales interactivos (crear, editar, eliminar e informativos).
           </p>
         </div>
 
@@ -292,12 +501,21 @@ export default function ComponentsShowcasePage() {
       </div>
 
       {/* 🚀 QUICK HUD SECTION NAVIGATOR */}
-      <div className="sticky top-16 z-30 -mx-3.5 px-3.5 py-2 bg-[var(--bg-main)]/85 backdrop-blur-xl border-y border-[var(--border-card)] flex items-center gap-2 overflow-x-auto no-scrollbar">
+      <div className="sticky top-16 z-30 -mx-3.5 px-3.5 py-2.5 bg-[var(--bg-main)]/90 backdrop-blur-xl border-y border-[var(--border-card)] flex items-center gap-2 overflow-x-auto no-scrollbar shadow-md">
         <span className="text-[10px] font-mono font-extrabold text-[var(--accent-cyan)] uppercase tracking-wider pl-1 shrink-0">
-          HUD NAV:
+          HUD DIRECTORY:
         </span>
         <a href="#ui-studio" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
           ⚡ Studio UI
+        </a>
+        <a href="#forms" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--accent-cyan)] whitespace-nowrap transition-colors">
+          📝 Formularios & Uploads
+        </a>
+        <a href="#tables" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--accent-emerald)] whitespace-nowrap transition-colors">
+          📊 Tablas & DataTable
+        </a>
+        <a href="#modals" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--accent-violet)] whitespace-nowrap transition-colors">
+          💬 Modales & Diálogos
         </a>
         <a href="#lab-3d" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
           🎛️ Laboratorio 3D
@@ -306,22 +524,576 @@ export default function ComponentsShowcasePage() {
           🎮 Disciplinas
         </a>
         <a href="#primitives" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
-          🧩 Primitivas & Botones
-        </a>
-        <a href="#palettes" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
-          🎨 Paletas
-        </a>
-        <a href="#tables" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
-          📊 Tablas
+          🧩 Primitivas
         </a>
       </div>
 
-      {/* UI Studio Evolution Component */}
+      {/* ⚡ SECCIÓN 1: APPUIdesignStudio EVOLUCIÓN VISUAL */}
       <div id="ui-studio">
         <AppUiEvolutionStudio />
       </div>
 
-      {/* 🎛️ NUEVO: LABORATORIO INTERACTIVO 3D (TESTBENCH DE TARJETAS 3D) */}
+      {/* 📝 SECCIÓN 2: FORMULARIOS, INPUTS, SELECTS, CHECKS, RADIOS & UPLOADS */}
+      <section id="forms" className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
+          <div>
+            <span className="text-[10px] font-mono font-black text-[var(--accent-cyan)] uppercase tracking-widest block">
+              [ CONTROLES DE FORMULARIO COMPUESTOS ]
+            </span>
+            <h2 className="text-2xl font-black text-[var(--text-heading)] uppercase tracking-tight font-display flex items-center gap-2">
+              <FileText className="w-6 h-6 text-[var(--accent-cyan)]" />
+              Formularios, Inputs, Selectores & Subida de Archivos
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Todos los elementos de entrada con sus estados (normal, activo, error, deshabilitado, contraseña con revelador, switches, radios y upload WebP):
+            </p>
+          </div>
+
+          <Badge variant="cyan" is3D>
+            📝 Suite Completa
+          </Badge>
+        </div>
+
+        {/* Inputs & Textareas Grid */}
+        <div className="p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-6 shadow-xl">
+          <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-[var(--accent-cyan)]" />
+            1. Campos de Entrada (Inputs & Textareas)
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Input Estándar */}
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold text-[var(--text-secondary)] uppercase tracking-wider block font-display">
+                Gamertag Oficial (Con Icono)
+              </label>
+              <div className="relative group">
+                <User className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none" />
+                <input
+                  type="text"
+                  value={inputVal}
+                  onChange={(e) => setInputVal(e.target.value)}
+                  placeholder="ej. SrDeLorean"
+                  className="w-full min-h-[46px] pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all"
+                />
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)]">Identificador oficial dentro de la plataforma.</p>
+            </div>
+
+            {/* Input Buscador con Clear */}
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold text-[var(--text-secondary)] uppercase tracking-wider block font-display">
+                Buscador con Limpieza Rápida
+              </label>
+              <div className="relative group">
+                <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchVal}
+                  onChange={(e) => setSearchVal(e.target.value)}
+                  placeholder="Buscar torneos, atletas..."
+                  className="w-full min-h-[46px] pl-10 pr-10 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all"
+                />
+                {searchVal && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchVal('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-white p-1 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)]">Filtra en vivo con debounce integrado.</p>
+            </div>
+
+            {/* Password Input con Reveal */}
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold text-[var(--text-secondary)] uppercase tracking-wider block font-display">
+                Contraseña (Con Ojo de Revelación)
+              </label>
+              <div className="relative group">
+                <Lock className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={passwordVal}
+                  onChange={(e) => setPasswordVal(e.target.value)}
+                  className="w-full min-h-[46px] pl-10 pr-11 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 min-w-[36px] min-h-[36px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)]">Mínimo 10 caracteres con número.</p>
+            </div>
+
+            {/* Input Estado de Error */}
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold text-[var(--accent-crimson)] uppercase tracking-wider block font-display">
+                Input en Estado de Error
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-[var(--accent-crimson)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="email"
+                  defaultValue="correo-invalido@"
+                  className="w-full min-h-[46px] pl-10 pr-4 py-2.5 rounded-xl bg-[var(--accent-crimson-bg)] border border-[var(--accent-crimson)] text-xs font-semibold text-[var(--text-primary)] focus:outline-none ring-2 ring-[var(--accent-crimson)]/30"
+                />
+              </div>
+              <p className="text-[10px] text-[var(--accent-crimson)] font-semibold flex items-center gap-1">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                El formato del correo electrónico no es válido.
+              </p>
+            </div>
+
+            {/* Input Deshabilitado */}
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold text-[var(--text-muted)] uppercase tracking-wider block font-display">
+                Input Deshabilitado / Solo Lectura
+              </label>
+              <div className="relative opacity-60">
+                <Shield className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  disabled
+                  value="ID-SUDAMERICA-PRO-2026"
+                  className="w-full min-h-[46px] pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-mono font-bold text-[var(--text-muted)] cursor-not-allowed"
+                />
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)]">Generado automáticamente por el servidor.</p>
+            </div>
+
+            {/* Textarea con Contador */}
+            <div className="space-y-1 md:col-span-2 lg:col-span-1">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-extrabold text-[var(--text-secondary)] uppercase tracking-wider block font-display">
+                  Acta / Observaciones
+                </label>
+                <span className="text-[10px] font-mono text-[var(--text-muted)]">{textareaVal.length}/200</span>
+              </div>
+              <textarea
+                rows={2}
+                maxLength={200}
+                value={textareaVal}
+                onChange={(e) => setTextareaVal(e.target.value)}
+                className="w-full p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all resize-none"
+              />
+            </div>
+
+          </div>
+        </div>
+
+        {/* Selects, Checkboxes, Radios & Switches */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Selectores Estilizados */}
+          <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-5">
+            <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
+              <ChevronDown className="w-4 h-4 text-[var(--accent-gold)]" />
+              2. Menús Desplegables & Selects
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[11px] font-extrabold text-[var(--text-secondary)] uppercase tracking-wider block">
+                  Disciplina eSports
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedGameSelect}
+                    onChange={(e) => setSelectedGameSelect(e.target.value)}
+                    className="w-full min-h-[46px] px-3.5 pr-8 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] appearance-none cursor-pointer"
+                  >
+                    {Object.values(GAMES_CATALOG).map((g) => (
+                      <option key={g.id} value={g.slug} className="bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[var(--text-muted)] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-extrabold text-[var(--text-secondary)] uppercase tracking-wider block">
+                  Plataforma Oficial
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedPlatform}
+                    onChange={(e) => setSelectedPlatform(e.target.value)}
+                    className="w-full min-h-[46px] px-3.5 pr-8 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] appearance-none cursor-pointer"
+                  >
+                    <option value="PS5" className="bg-[var(--bg-elevated)]">PS5 (PlayStation 5)</option>
+                    <option value="PC" className="bg-[var(--bg-elevated)]">PC (Computadora)</option>
+                    <option value="XBOX" className="bg-[var(--bg-elevated)]">XBOX Series / One</option>
+                    <option value="CROSSPLAY" className="bg-[var(--bg-elevated)]">CROSSPLAY Universal</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[var(--text-muted)] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+
+            {/* Radio Group: Formato Competitivo */}
+            <div className="space-y-2 pt-2">
+              <label className="text-[11px] font-extrabold text-[var(--text-secondary)] uppercase tracking-wider block">
+                Formato de Competición (Radio Group)
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: '11v11', label: '11 vs 11', desc: 'Clubes Pro' },
+                  { id: '5v5', label: '5 vs 5', desc: 'FPS / MOBA' },
+                  { id: '3v3', label: '3 vs 3', desc: 'Vehicular' },
+                  { id: '1v1', label: '1 vs 1', desc: 'Duelo Directo' },
+                ].map((fmt) => (
+                  <button
+                    key={fmt.id}
+                    type="button"
+                    onClick={() => setRadioFormat(fmt.id)}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      radioFormat === fmt.id
+                        ? 'bg-[var(--accent-cyan-bg)] border-[var(--accent-cyan)] text-[var(--text-heading)] shadow-md'
+                        : 'bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--text-muted)] hover:border-[var(--border-card-hover)]'
+                    }`}
+                  >
+                    <div className="text-xs font-black">{fmt.label}</div>
+                    <div className="text-[9px] font-mono">{fmt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Checkboxes & Switches */}
+          <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-5">
+            <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-[var(--accent-emerald)]" />
+              3. Checkboxes & Switches Reactivos
+            </h3>
+
+            {/* Checkboxes List */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer select-none text-xs text-[var(--text-primary)] font-semibold p-2.5 rounded-xl hover:bg-[var(--bg-subtle)] transition-colors">
+                <input
+                  type="checkbox"
+                  checked={check1}
+                  onChange={(e) => setCheck1(e.target.checked)}
+                  className="size-4.5 rounded bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--accent-cyan)] focus:ring-0 cursor-pointer"
+                />
+                <span>Habilitar notificaciones de fichajes en tiempo real (Activo)</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer select-none text-xs text-[var(--text-primary)] font-semibold p-2.5 rounded-xl hover:bg-[var(--bg-subtle)] transition-colors">
+                <input
+                  type="checkbox"
+                  checked={check2}
+                  onChange={(e) => setCheck2(e.target.checked)}
+                  className="size-4.5 rounded bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--accent-cyan)] focus:ring-0 cursor-pointer"
+                />
+                <span>Auto-confirmar actas cuando el rival reporte idéntico resultado</span>
+              </label>
+
+              <label className="flex items-center gap-3 select-none text-xs text-[var(--text-muted)] font-semibold p-2.5 rounded-xl opacity-60 cursor-not-allowed">
+                <input
+                  type="checkbox"
+                  disabled
+                  checked={true}
+                  className="size-4.5 rounded bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--text-muted)] focus:ring-0 cursor-not-allowed"
+                />
+                <span>Protección anti-cheat forzada por el servidor de torneo (Bloqueado)</span>
+              </label>
+            </div>
+
+            {/* eSports Switches */}
+            <div className="pt-2 border-t border-[var(--border-card)] space-y-3">
+              <div className="flex items-center justify-between p-2 rounded-xl">
+                <div>
+                  <span className="text-xs font-bold text-[var(--text-heading)] block">Modo Transmisión en Vivo</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">Oculta datos sensibles de árbitros durante el streaming</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setToggle1(!toggle1)}
+                  className={`relative w-12 h-6.5 rounded-full transition-colors duration-300 p-1 cursor-pointer ${
+                    toggle1 ? 'bg-[var(--accent-cyan)] shadow-[0_0_15px_var(--accent-cyan-bg)]' : 'bg-[var(--bg-subtle)] border border-[var(--border-card)]'
+                  }`}
+                >
+                  <div
+                    className={`size-4.5 rounded-full bg-white transition-transform duration-300 shadow-md ${
+                      toggle1 ? 'translate-x-5.5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-2 rounded-xl">
+                <div>
+                  <span className="text-xs font-bold text-[var(--text-heading)] block">Mercado de Fichajes Abierto</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">Permite que capitanes envíen ofertas a tu plantilla</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setToggle2(!toggle2)}
+                  className={`relative w-12 h-6.5 rounded-full transition-colors duration-300 p-1 cursor-pointer ${
+                    toggle2 ? 'bg-[var(--accent-violet)] shadow-[0_0_15px_var(--accent-violet-bg)]' : 'bg-[var(--bg-subtle)] border border-[var(--border-card)]'
+                  }`}
+                >
+                  <div
+                    className={`size-4.5 rounded-full bg-white transition-transform duration-300 shadow-md ${
+                      toggle2 ? 'translate-x-5.5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* 4. Image Upload Card Demo (Live WebP Compression) */}
+        <div className="p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-5 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border-card)] pb-3">
+            <div>
+              <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
+                <UploadCloud className="w-4 h-4 text-[var(--accent-cyan)]" />
+                4. Subida y Optimización de Archivos WebP (ImageUploadCard)
+              </h3>
+              <p className="text-xs text-[var(--text-secondary)]">
+                Comprime automáticamente cualquier imagen en el navegador a WebP antes de enviarla al servidor.
+              </p>
+            </div>
+            <Badge variant="cyan" is3D>WebP Client-Side Engine</Badge>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <ImageUploadCard
+              label="Logo Oficial del Club"
+              subtitle="Optimización automática a 600x600 WebP"
+              currentUrl={uploadedImageUrl}
+              fallbackType="logo"
+              brandColor="var(--accent-cyan)"
+              entityName="Demo Club"
+              entityId="demo-1"
+              uploadType="logo"
+              onUploadSuccess={(url, stats) => {
+                setUploadedImageUrl(url);
+                endSuccess(`Logo subido exitosamente: ${stats}`);
+              }}
+            />
+
+            <div className="p-5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-card)] space-y-3 font-mono text-xs">
+              <div className="text-[10px] font-black uppercase text-[var(--accent-cyan)] tracking-wider">
+                [ CARACTERÍSTICAS DEL MOTOR DE SUBIDA ]
+              </div>
+              <ul className="space-y-2 text-[11px] text-[var(--text-secondary)]">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--accent-emerald)] shrink-0" />
+                  <span>Reducción de hasta un 85% en peso de imagen.</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--accent-emerald)] shrink-0" />
+                  <span>Prevención de desbordes con redimensión máxima inteligente.</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--accent-emerald)] shrink-0" />
+                  <span>Generación de vista previa instantánea sin recargar la página.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 📊 SECCIÓN 3: SISTEMA DE TABLAS DE GESTIÓN (DATATABLE & TABLE) */}
+      <section id="tables" className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
+          <div>
+            <span className="text-[10px] font-mono font-black text-[var(--accent-emerald)] uppercase tracking-widest block">
+              [ SISTEMA DE TABLAS EN PRODUCCIÓN ]
+            </span>
+            <h2 className="text-2xl font-black text-[var(--text-heading)] uppercase tracking-tight font-display flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-[var(--accent-gold)]" />
+              Tablas de Gestión & DataTable Oficial
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Componente <code>DataTable</code> con filtros multinivel, ordenamiento ascendente/descendente por columna, paginación integrada y acciones directas:
+            </p>
+          </div>
+
+          <Badge variant="emerald" is3D>
+            ⚡ DataTable V2 Activo
+          </Badge>
+        </div>
+
+        {/* Real Production DataTable Component */}
+        <div className="p-4 sm:p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-2xl space-y-4">
+          <DataTable
+            columns={tableColumns}
+            data={mockTeamsData}
+            searchPlaceholder="Buscar por nombre de equipo, tag o capitán..."
+            filterOptions={tableFilters}
+            defaultPageSize={5}
+            brandColor="var(--accent-cyan)"
+            ariaLabel="Tabla de equipos eSports"
+          />
+        </div>
+      </section>
+
+      {/* 💬 SECCIÓN 4: TODOS LOS MODALES & DIÁLOGOS DE CONFIRMACIÓN */}
+      <section id="modals" className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
+          <div>
+            <span className="text-[10px] font-mono font-black text-[var(--accent-violet)] uppercase tracking-widest block">
+              [ MODALES, DIÁLOGOS & ALERTAS CRUD ]
+            </span>
+            <h2 className="text-2xl font-black text-[var(--text-heading)] uppercase tracking-tight font-display flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-[var(--accent-violet)]" />
+              Sistema Integral de Modales y Diálogos
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Interactúa con los modales de Creación (ModalForm), Edición, Confirmación Destructiva (ConfirmModal) e Informativos con notificaciones en vivo:
+            </p>
+          </div>
+
+          <Badge variant="violet" is3D>
+            💬 Interactive Dialog Suite
+          </Badge>
+        </div>
+
+        {/* Modal Triggers Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          {/* 1. Trigger Modal Crear */}
+          <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--accent-cyan)] transition-all flex flex-col justify-between space-y-4 shadow-lg">
+            <div className="space-y-1.5">
+              <div className="size-10 rounded-2xl bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)] flex items-center justify-center text-[var(--accent-cyan)]">
+                <Plus className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-black text-[var(--text-heading)] uppercase font-display pt-1">Modal de Creación</h4>
+              <p className="text-xs text-[var(--text-secondary)]">Formulario completo para crear equipos con upload y validación.</p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              className="w-full"
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Abrir Modal Crear
+            </Button>
+          </div>
+
+          {/* 2. Trigger Modal Editar */}
+          <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--accent-gold)] transition-all flex flex-col justify-between space-y-4 shadow-lg">
+            <div className="space-y-1.5">
+              <div className="size-10 rounded-2xl bg-[var(--accent-gold-bg)] border border-[var(--accent-gold)] flex items-center justify-center text-[var(--accent-gold)]">
+                <Edit className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-black text-[var(--text-heading)] uppercase font-display pt-1">Modal de Edición</h4>
+              <p className="text-xs text-[var(--text-secondary)]">Formulario pre-cargado para modificar datos de una entidad.</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                setActiveEditingTeam(mockTeamsData[0]);
+                setIsEditModalOpen(true);
+              }}
+            >
+              <Edit className="w-4 h-4 mr-1.5" />
+              Abrir Modal Editar
+            </Button>
+          </div>
+
+          {/* 3. Trigger Modal Eliminar */}
+          <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--accent-crimson)] transition-all flex flex-col justify-between space-y-4 shadow-lg">
+            <div className="space-y-1.5">
+              <div className="size-10 rounded-2xl bg-[var(--accent-crimson-bg)] border border-[var(--accent-crimson)] flex items-center justify-center text-[var(--accent-crimson)]">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-black text-[var(--text-heading)] uppercase font-display pt-1">Diálogo Destructivo</h4>
+              <p className="text-xs text-[var(--text-secondary)]">Confirmación crítica con advertencia, consecuencias y motivo.</p>
+            </div>
+            <Button
+              variant="danger"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                setActiveEditingTeam(mockTeamsData[0]);
+                setIsDeleteModalOpen(true);
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-1.5" />
+              Abrir Modal Eliminar
+            </Button>
+          </div>
+
+          {/* 4. Trigger Modal Informativo */}
+          <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--accent-violet)] transition-all flex flex-col justify-between space-y-4 shadow-lg">
+            <div className="space-y-1.5">
+              <div className="size-10 rounded-2xl bg-[var(--accent-violet-bg)] border border-[var(--accent-violet)] flex items-center justify-center text-[var(--accent-violet)]">
+                <Info className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-black text-[var(--text-heading)] uppercase font-display pt-1">Modal Informativo</h4>
+              <p className="text-xs text-[var(--text-secondary)]">Acta de partido detallada con estadísticas y sellos oficiales.</p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                setActiveEditingTeam(mockTeamsData[0]);
+                setIsInfoModalOpen(true);
+              }}
+            >
+              <Eye className="w-4 h-4 mr-1.5" />
+              Abrir Información
+            </Button>
+          </div>
+
+        </div>
+
+        {/* Botones de Notificaciones CRUD en Tiempo Real */}
+        <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Activity className="w-5 h-5 text-[var(--accent-cyan)]" />
+            <div>
+              <span className="text-xs font-black text-[var(--text-heading)] uppercase block">Simulador de Alertas Notifier en Vivo</span>
+              <span className="text-[11px] text-[var(--text-muted)]">Dispara eventos con medición de milisegundos y estado global:</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                startOperation('Sincronizando fixture con Riot Games');
+                setTimeout(() => endSuccess('¡Partidas sincronizadas con éxito (38ms)!'), 1200);
+              }}
+            >
+              Simular Éxito
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => {
+                startOperation('Guardando acta');
+                setTimeout(() => endError('Fallo en la conexión: Servidor de actas ocupado'), 1000);
+              }}
+            >
+              Simular Error
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* 🎛️ SECCIÓN 5: LABORATORIO INTERACTIVO 3D */}
       <section id="lab-3d" className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
           <div>
@@ -505,7 +1277,7 @@ export default function ComponentsShowcasePage() {
                 <Card3DItem depth={30} className="pt-2">
                   <Button
                     size="sm"
-                    className="w-full font-black text-xs uppercase"
+                    className="w-full font-black text-xs uppercase cursor-pointer"
                     style={{
                       backgroundColor: labAccent,
                       color: '#031018',
@@ -522,7 +1294,7 @@ export default function ComponentsShowcasePage() {
         </div>
       </section>
 
-      {/* 🎮 SECCIÓN 1: SELECTOR INTERACTIVO DISCIPLINA POR DISCIPLINA */}
+      {/* 🎮 SECCIÓN 6: SELECTOR INTERACTIVO DISCIPLINA POR DISCIPLINA */}
       <section id="disciplines" className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
           <div>
@@ -530,7 +1302,7 @@ export default function ComponentsShowcasePage() {
               [ NAVEGACIÓN ENTRE DISCIPLINAS ]
             </span>
             <h2 className="text-2xl font-black text-[var(--text-heading)] uppercase tracking-tight font-display">
-              1. Selecciona una Disciplina eSports
+              6. Suite de Disciplinas eSports
             </h2>
             <p className="text-xs text-[var(--text-secondary)] mt-1">
               Haz clic en cualquier juego para ver cómo reaccionan las tarjetas 3D con la paleta de la disciplina y el tema actual:
@@ -604,7 +1376,7 @@ export default function ComponentsShowcasePage() {
           </div>
         </div>
 
-        {/* 🌟 VISTA EN VIVO: CÓMO QUEDA LA SUITE 3D PARA ESTA DISCIPLINA */}
+        {/* VISTA EN VIVO SUITE 3D DISCIPLINA */}
         <div
           className="p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] backdrop-blur-xl shadow-2xl space-y-8 relative overflow-hidden transition-all duration-300"
           style={{
@@ -612,13 +1384,11 @@ export default function ComponentsShowcasePage() {
             boxShadow: `0 20px 60px -20px var(--shadow-card), 0 0 40px ${activeGame.brandColor}15`,
           }}
         >
-          {/* Ambient Lighting matching discipline */}
           <div
             className="absolute top-0 right-0 size-96 blur-3xl pointer-events-none rounded-full opacity-20"
             style={{ backgroundColor: activeGame.brandColor }}
           />
 
-          {/* Discipline Banner Header */}
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
             <div className="flex items-center gap-3">
               <div
@@ -643,7 +1413,6 @@ export default function ComponentsShowcasePage() {
               </div>
             </div>
 
-            {/* Quick Actions themed */}
             <div className="flex items-center gap-2">
               <Badge
                 is3D
@@ -658,10 +1427,8 @@ export default function ComponentsShowcasePage() {
             </div>
           </div>
 
-          {/* 3D CARDS GRID ADAPTADA A LA DISCIPLINA */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-            
-            {/* 1. TARJETA 3D DE MATCHDAY ADAPTADA */}
+            {/* 1. Matchday 3D */}
             <Card3D maxTilt={12} accentColor={activeGame.brandColor} className="h-full">
               <div className="p-6 space-y-5 h-full flex flex-col justify-between">
                 <Card3DItem depth={35} className="space-y-2">
@@ -693,7 +1460,6 @@ export default function ComponentsShowcasePage() {
                   </p>
                 </Card3DItem>
 
-                {/* Scoreboard */}
                 <Card3DItem depth={25}>
                   <div className="p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-card)] flex items-center justify-between font-mono">
                     <div className="flex items-center gap-2">
@@ -712,10 +1478,7 @@ export default function ComponentsShowcasePage() {
                     </div>
 
                     <div className="text-center px-2">
-                      <span
-                        className="text-base font-black"
-                        style={{ color: activeGame.brandColor }}
-                      >
+                      <span className="text-base font-black" style={{ color: activeGame.brandColor }}>
                         {activeDisciplineData.match.score}
                       </span>
                     </div>
@@ -748,16 +1511,13 @@ export default function ComponentsShowcasePage() {
               </div>
             </Card3D>
 
-            {/* 2. TARJETA 3D DE ATLETA / JUGADOR PRO ADAPTADA */}
+            {/* 2. Athlete 3D */}
             <Card3D maxTilt={12} accentColor={activeGame.accentColor} className="h-full">
               <div className="p-6 space-y-5 h-full flex flex-col justify-between">
                 <Card3DItem depth={35} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <PositionBadge primaryPosition={activeDisciplineData.player.role.slice(0, 3)} brandColor={activeGame.accentColor} />
-                    <span
-                      className="text-[10px] font-mono font-extrabold"
-                      style={{ color: activeGame.accentColor }}
-                    >
+                    <span className="text-[10px] font-mono font-extrabold" style={{ color: activeGame.accentColor }}>
                       {activeDisciplineData.player.value}
                     </span>
                   </div>
@@ -784,7 +1544,6 @@ export default function ComponentsShowcasePage() {
                   </div>
                 </Card3DItem>
 
-                {/* Stats Grid */}
                 <Card3DItem depth={20}>
                   <div className="grid grid-cols-3 gap-2 text-center font-mono text-[10px]">
                     {activeDisciplineData.player.stats.map((st) => (
@@ -811,7 +1570,7 @@ export default function ComponentsShowcasePage() {
               </div>
             </Card3D>
 
-            {/* 3. TARJETA 3D DE COPA & TORNEO ADAPTADA */}
+            {/* 3. Tournament 3D */}
             <Card3D maxTilt={12} accentColor={activeGame.brandColor} className="h-full">
               <div className="p-6 space-y-5 h-full flex flex-col justify-between">
                 <Card3DItem depth={35} className="space-y-2">
@@ -830,7 +1589,6 @@ export default function ComponentsShowcasePage() {
                   </p>
                 </Card3DItem>
 
-                {/* Prize Pool Spotlight */}
                 <Card3DItem depth={25}>
                   <div className="p-3.5 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
@@ -874,223 +1632,15 @@ export default function ComponentsShowcasePage() {
               </div>
             </Card3D>
           </div>
-
-          {/* PALETA DE COLOR ACTIVA & CONTROLES THEMED */}
-          <div className="relative z-10 pt-4 border-t border-[var(--border-card)] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono font-bold text-[var(--text-muted)] uppercase block">Brand Primario</span>
-              <div className="flex items-center gap-2">
-                <div className="size-5 rounded-md shadow" style={{ backgroundColor: activeGame.brandColor }} />
-                <span className="font-mono font-bold text-[var(--text-heading)]">{activeGame.brandColor}</span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono font-bold text-[var(--text-muted)] uppercase block">Acento Secundario</span>
-              <div className="flex items-center gap-2">
-                <div className="size-5 rounded-md shadow" style={{ backgroundColor: activeGame.accentColor }} />
-                <span className="font-mono font-bold text-[var(--text-heading)]">{activeGame.accentColor}</span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono font-bold text-[var(--text-muted)] uppercase block">Color Dark Oficial</span>
-              <div className="flex items-center gap-2">
-                <div className="size-5 rounded-md border border-[var(--border-card)] shadow" style={{ backgroundColor: activeGame.darkBg }} />
-                <span className="font-mono font-bold text-[var(--text-heading)]">{activeGame.darkBg}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* 🧩 SECCIÓN 2: BANCO DE PRUEBAS DE PRIMITIVAS UI */}
-      <section id="primitives" className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
-          <div>
-            <span className="text-[10px] font-mono font-black text-[var(--accent-cyan)] uppercase tracking-widest block">
-              [ BOTONES, BADGES & AVATARES ]
-            </span>
-            <h2 className="text-2xl font-black text-[var(--text-heading)] uppercase tracking-tight font-display">
-              2. Banco de Pruebas de Primitivas UI
-            </h2>
-            <p className="text-xs text-[var(--text-secondary)] mt-1">
-              Interactúa con los botones, badges de posición y estados de jugador para verificar su respuesta táctil y visual:
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setBtnLoading(!btnLoading)}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer ${
-                btnLoading
-                  ? 'bg-[var(--accent-cyan-bg)] border-[var(--accent-cyan)] text-[var(--accent-cyan)]'
-                  : 'bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--text-muted)]'
-              }`}
-            >
-              Loading: {btnLoading ? 'ON' : 'OFF'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setBtnDisabled(!btnDisabled)}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer ${
-                btnDisabled
-                  ? 'bg-[var(--accent-crimson-bg)] border-[var(--accent-crimson)] text-[var(--accent-crimson)]'
-                  : 'bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--text-muted)]'
-              }`}
-            >
-              Disabled: {btnDisabled ? 'ON' : 'OFF'}
-            </button>
-          </div>
-        </div>
-
-        {/* Buttons Suite */}
-        <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-6">
-          <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
-            <Zap className="w-4 h-4 text-[var(--accent-gold)]" />
-            Variantes de Botones eSports
-          </h3>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="primary"
-              isLoading={btnLoading}
-              disabled={btnDisabled}
-              onClick={() => setClickCount((c) => c + 1)}
-            >
-              <Flame className="w-4 h-4 mr-1.5 text-[var(--accent-gold)]" />
-              Botón Primario ({clickCount})
-            </Button>
-
-            <Button
-              variant="secondary"
-              isLoading={btnLoading}
-              disabled={btnDisabled}
-              onClick={() => setClickCount((c) => c + 1)}
-            >
-              <Activity className="w-4 h-4 mr-1.5" />
-              Botón Secundario
-            </Button>
-
-            <Button
-              variant="outline"
-              isLoading={btnLoading}
-              disabled={btnDisabled}
-            >
-              <Trophy className="w-4 h-4 mr-1.5" />
-              Botón Outline
-            </Button>
-
-            <Button
-              variant="ghost"
-              isLoading={btnLoading}
-              disabled={btnDisabled}
-            >
-              Botón Fantasma
-            </Button>
-
-            <Button
-              variant="danger"
-              isLoading={btnLoading}
-              disabled={btnDisabled}
-            >
-              <AlertCircle className="w-4 h-4 mr-1.5" />
-              Acción Crítica
-            </Button>
-          </div>
-
-          <div className="pt-4 border-t border-[var(--border-card)] space-y-3">
-            <h4 className="text-xs font-black uppercase text-[var(--text-secondary)]">Tamaños de Botón</h4>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button size="sm">Small (sm · 36px)</Button>
-              <Button size="md">Medium (md · 44px)</Button>
-              <Button size="lg">Large Pro (lg · 50px)</Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Badges & Position Badges Suite */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-4">
-            <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[var(--accent-cyan)]" />
-              Insignias & Badges 3D
-            </h3>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="cyan" is3D>Cyan 3D</Badge>
-              <Badge variant="violet" is3D>Violet 3D</Badge>
-              <Badge variant="emerald" is3D>Emerald 3D</Badge>
-              <Badge variant="gold" is3D>Gold 3D</Badge>
-              <Badge variant="rose" is3D>Rose 3D</Badge>
-              <Badge variant="slate">Slate Flat</Badge>
-            </div>
-
-            <div className="pt-2 flex flex-wrap items-center gap-3 text-xs font-mono">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold">
-                <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
-                EN VIVO
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold">
-                <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                MATCHDAY
-              </span>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-4">
-            <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
-              <Crown className="w-4 h-4 text-[var(--accent-gold)]" />
-              Badges de Posición eSports
-            </h3>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              <PositionBadge primaryPosition="MCO" secondaryPosition="MC" brandColor="#00F0FF" />
-              <PositionBadge primaryPosition="DC" secondaryPosition="EI" brandColor="#34D399" />
-              <PositionBadge primaryPosition="AWP" secondaryPosition="IGL" brandColor="#F59E0B" />
-              <PositionBadge primaryPosition="DUEL" secondaryPosition="INIT" brandColor="#FF4655" />
-              <PositionBadge primaryPosition="MID" secondaryPosition="ADC" brandColor="#C084FC" />
-            </div>
-
-            <div className="pt-2 flex items-center gap-3">
-              <Avatar fallback="SL" size="sm" status="online" />
-              <Avatar fallback="LY" size="md" status="online" />
-              <Avatar fallback="SN" size="lg" status="away" />
-              <Avatar fallback="KR" size="xl" status="offline" />
-            </div>
-          </div>
-        </div>
-
-        {/* Alerts & System Notifications */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
-            <Info className="w-4 h-4 text-[var(--accent-cyan)]" />
-            Alertas del Sistema
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Alert variant="info" title="Circuito Verificado">
-              Los servidores oficiales aplican comprobación anti-trampas en cada encuentro.
-            </Alert>
-            <Alert variant="success" title="Acta de Partido Aprobada">
-              El resultado 3 - 1 fue confirmado por ambos capitanes.
-            </Alert>
-            <Alert variant="warning" title="Período de Transferencias">
-              El mercado de agentes libres cierra en 48 horas.
-            </Alert>
-            <Alert variant="danger" title="Sanción Disciplinaria">
-              Jugador no habilitado para la fecha 12 por acumulación de tarjetas.
-            </Alert>
-          </div>
-        </div>
-      </section>
-
-      {/* 🎨 SECCIÓN 3: SIMULADOR DE PALETAS PARA LA PORTADA PRINCIPAL */}
+      {/* 🎨 SECCIÓN 7: SIMULADOR DE PALETAS PARA LA PORTADA PRINCIPAL */}
       <section id="palettes" className="space-y-6">
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
           <div className="flex items-center gap-2">
             <Palette className="w-5 h-5 text-[var(--accent-gold)]" />
-            <h2 className="text-xl font-bold text-[var(--text-heading)]">3. Estilos Recomendados para la Página Principal</h2>
+            <h2 className="text-xl font-bold text-[var(--text-heading)]">7. Paletas Globales Recomendadas</h2>
           </div>
           <Badge variant="gold" is3D>Global Themes</Badge>
         </div>
@@ -1124,7 +1674,6 @@ export default function ComponentsShowcasePage() {
                   <h4 className="text-sm font-black text-[var(--text-heading)] uppercase pt-1">{theme.name}</h4>
                 </div>
 
-                {/* Swatches with click to copy */}
                 <div className="flex items-center gap-1.5 pt-2">
                   <div
                     onClick={(e) => { e.stopPropagation(); copyToClipboard(theme.token); }}
@@ -1142,137 +1691,166 @@ export default function ComponentsShowcasePage() {
         </div>
       </section>
 
-      {/* 🧩 SECCIÓN 4: CONTROLES DE FORMULARIO & INPUTS */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
-          <Mail className="w-5 h-5 text-[var(--accent-cyan)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">4. Controles de Formulario & Inputs eSports</h2>
+      {/* ═══════════════ MODALES ACTIVOS ═══════════════ */}
+
+      {/* 1. Modal de Creación (ModalForm) */}
+      <ModalForm
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Crear Nueva Escuadra eSports"
+        subtitle="Registra el club en el circuito oficial y asigna el capitán inicial"
+        brandColor="var(--accent-cyan)"
+        submitButtonText="Crear y Registrar Club"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          startOperation('Creando escuadra');
+          setIsCreateModalOpen(false);
+          setTimeout(() => endSuccess('¡Escuadra creada y capitaneada exitosamente (42ms)!'), 800);
+        }}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold uppercase">Nombre del Club</label>
+              <input required type="text" placeholder="ej. Gladiators Gaming" className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-cyan)]" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold uppercase">TAG del Club (3-4 letras)</label>
+              <input required maxLength={4} type="text" placeholder="ej. GLD" className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-mono font-bold uppercase focus:outline-none focus:border-[var(--accent-cyan)]" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold uppercase">Disciplina</label>
+              <select className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-bold focus:outline-none focus:border-[var(--accent-cyan)]">
+                <option value="eafc26">EA FC 26 (Clubes Pro)</option>
+                <option value="valorant">VALORANT</option>
+                <option value="csgo">CS2 / CS:GO</option>
+                <option value="lol">League of Legends</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold uppercase">Gamertag del Capitán</label>
+              <input required type="text" placeholder="ej. CapitanPro" className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-cyan)]" />
+            </div>
+          </div>
         </div>
+      </ModalForm>
 
-        <div className="p-6 rounded-2xl glass-panel grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Input
-            label="Gamertag Oficial"
-            placeholder="ej. SrDeLorean"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            helperText="Ingresa tu ID oficial dentro del juego"
-            icon={<User className="w-4 h-4 text-[var(--text-muted)]" />}
-          />
+      {/* 2. Modal de Edición (ModalForm) */}
+      <ModalForm
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={`Editar Club: ${activeEditingTeam?.name || 'Equipo'}`}
+        subtitle={`ID: ${activeEditingTeam?.id} · Disciplina: ${activeEditingTeam?.game}`}
+        brandColor="var(--accent-gold)"
+        submitButtonText="Guardar Cambios"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          startOperation('Actualizando club');
+          setIsEditModalOpen(false);
+          setTimeout(() => endSuccess(`¡Datos de ${activeEditingTeam?.name} actualizados en 31ms!`), 700);
+        }}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold uppercase">Nombre del Club</label>
+              <input defaultValue={activeEditingTeam?.name} type="text" className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-gold)]" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold uppercase">Capitán Designado</label>
+              <input defaultValue={activeEditingTeam?.captain} type="text" className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-semibold focus:outline-none focus:border-[var(--accent-gold)]" />
+            </div>
+          </div>
 
-          <Input
-            label="Búsqueda de Torneos"
-            placeholder="Buscar ligas, copas o clubes..."
-            icon={<Search className="w-4 h-4 text-[var(--text-muted)]" />}
-          />
-
-          <Input
-            label="Correo Electrónico"
-            type="email"
-            placeholder="usuario@ejemplo.com"
-            error="El formato del correo electrónico no es válido"
-            icon={<Mail className="w-4 h-4 text-[var(--text-muted)]" />}
-          />
-
-          <Textarea
-            label="Observaciones del Partido / Acta"
-            placeholder="Detalla incidentes, MVP o acuerdos entre capitanes..."
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold uppercase">Puntos ELO</label>
+              <input defaultValue={activeEditingTeam?.elo} type="number" className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--accent-gold)]" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-extrabold uppercase">Estado de Participación</label>
+              <select defaultValue={activeEditingTeam?.status} className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-bold focus:outline-none focus:border-[var(--accent-gold)]">
+                <option value="Activo">Activo</option>
+                <option value="En Revisión">En Revisión</option>
+                <option value="Suspendido">Suspendido</option>
+              </select>
+            </div>
+          </div>
         </div>
-      </section>
+      </ModalForm>
 
-      {/* 📊 SECCIÓN 5: TABLA DE POSICIONES ESPORTS */}
-      <section id="tables" className="space-y-6">
-        <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
-          <Trophy className="w-5 h-5 text-[var(--accent-gold)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">5. Tablas de Posiciones eSports Adaptables</h2>
-        </div>
+      {/* 3. Modal de Confirmación Destructiva (ConfirmModal) */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title={`¿Eliminar definitivamente a ${activeEditingTeam?.name}?`}
+        description="Esta acción desvinculará a los jugadores de la plantilla y revocará los cupos en torneos activos."
+        confirmText="Eliminar Club Permanentemente"
+        variant="danger"
+        requireReason={true}
+        reasonPlaceholder="Indica el motivo de la expulsión o eliminación..."
+        consequences={[
+          'Se eliminarán las estadísticas históricas y ELO del club.',
+          'Los jugadores pasarán automáticamente a la Bolsa de Agentes Libres.',
+          'Las actas de partidos anteriores se marcarán con resultado por forfeit (3-0).',
+        ]}
+        onConfirm={async (reason) => {
+          startOperation(`Eliminando ${activeEditingTeam?.name}`);
+          setTimeout(() => endSuccess(`Club ${activeEditingTeam?.name} eliminado. Motivo: ${reason || 'Sin motivo'}`), 800);
+        }}
+      />
 
-        <div className="overflow-x-auto rounded-2xl border border-[var(--border-card)]">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12 text-center">Pos</TableHead>
-                <TableHead>Equipo</TableHead>
-                <TableHead className="text-center">PJ</TableHead>
-                <TableHead className="text-center">PG</TableHead>
-                <TableHead className="text-center">PE</TableHead>
-                <TableHead className="text-center">PP</TableHead>
-                <TableHead className="text-center">GF</TableHead>
-                <TableHead className="text-center">GC</TableHead>
-                <TableHead className="text-center">DIF</TableHead>
-                <TableHead className="text-center">PTS</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow className="bg-[var(--accent-cyan-bg)]">
-                <TableCell className="text-center font-bold text-[var(--accent-cyan)]">1</TableCell>
-                <TableCell className="font-bold flex items-center gap-2 text-[var(--text-heading)]">
-                  <div className="w-6 h-6 rounded bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/30 flex items-center justify-center text-xs font-black text-[var(--accent-cyan)]">LY</div>
-                  LeguaYork eSp
-                </TableCell>
-                <TableCell className="text-center font-mono">10</TableCell>
-                <TableCell className="text-center font-mono">8</TableCell>
-                <TableCell className="text-center font-mono">1</TableCell>
-                <TableCell className="text-center font-mono">1</TableCell>
-                <TableCell className="text-center font-mono text-[var(--accent-emerald)] font-bold">24</TableCell>
-                <TableCell className="text-center font-mono text-[var(--accent-crimson)] font-bold">8</TableCell>
-                <TableCell className="text-center font-mono font-semibold">+16</TableCell>
-                <TableCell className="text-center font-bold text-[var(--accent-cyan)] text-base">25</TableCell>
-              </TableRow>
-
-              <TableRow>
-                <TableCell className="text-center font-bold text-[var(--accent-violet)]">2</TableCell>
-                <TableCell className="font-semibold flex items-center gap-2 text-[var(--text-heading)]">
-                  <div className="w-6 h-6 rounded bg-[var(--accent-violet-bg)] border border-[var(--accent-violet)]/30 flex items-center justify-center text-xs font-black text-[var(--accent-violet)]">SN</div>
-                  Sangre Nueva FC
-                </TableCell>
-                <TableCell className="text-center font-mono">10</TableCell>
-                <TableCell className="text-center font-mono">7</TableCell>
-                <TableCell className="text-center font-mono">2</TableCell>
-                <TableCell className="text-center font-mono">1</TableCell>
-                <TableCell className="text-center font-mono text-[var(--accent-emerald)] font-bold">19</TableCell>
-                <TableCell className="text-center font-mono text-[var(--accent-crimson)] font-bold">9</TableCell>
-                <TableCell className="text-center font-mono font-semibold">+10</TableCell>
-                <TableCell className="text-center font-bold text-[var(--accent-violet)] text-base">23</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-      </section>
-
-      {/* 🚀 SECCIÓN 6: MODALES & DIÁLOGOS */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
-          <Sparkles className="w-5 h-5 text-[var(--accent-cyan)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">6. Modales & Diálogos Interactivos</h2>
-        </div>
-
-        <div className="p-6 rounded-2xl glass-panel">
-          <Button onClick={() => setIsModalOpen(true)}>
-            Abrir Modal de Confirmación
-          </Button>
-
-          <Modal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            title="Confirmar Reporte de Partido"
-            description="Revisa los datos del encuentro antes de guardar la información en la base de datos."
-          >
-            <div className="space-y-4 text-xs text-[var(--text-secondary)]">
-              <div className="p-3.5 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)] flex justify-between items-center">
-                <span className="font-bold text-[var(--text-heading)]">LeguaYork eSp</span>
-                <span className="text-base font-black text-[var(--accent-cyan)] font-mono">3 - 1</span>
-                <span className="font-bold text-[var(--text-heading)]">Sangre Nueva FC</span>
+      {/* 4. Modal Informativo / Ficha de Partido (Modal) */}
+      <Modal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        title={`Ficha de Club: ${activeEditingTeam?.name || 'Equipo'}`}
+        description="Detalle oficial de rendimiento, capitán y miembros registrados en la base de datos."
+        size="lg"
+      >
+        <div className="space-y-5 text-xs text-[var(--text-secondary)]">
+          <div className="p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-card)] flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="size-12 rounded-2xl bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)] flex items-center justify-center font-mono font-black text-sm text-[var(--accent-cyan)]">
+                {activeEditingTeam?.tag}
               </div>
-              <p className="leading-relaxed">Al confirmar el resultado, las estadísticas se procesarán automáticamente en la tabla de posiciones y ranking ELO de los clubes.</p>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-                <Button variant="primary" size="sm" onClick={() => setIsModalOpen(false)}>Confirmar y Guardar</Button>
+              <div>
+                <h4 className="text-base font-black text-[var(--text-heading)] uppercase">{activeEditingTeam?.name}</h4>
+                <span className="text-[11px] font-mono text-[var(--accent-cyan)]">{activeEditingTeam?.game} · {activeEditingTeam?.status}</span>
               </div>
             </div>
-          </Modal>
+
+            <div className="text-right font-mono">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase block">Rating ELO</span>
+              <span className="text-base font-black text-[var(--accent-gold)]">{activeEditingTeam?.elo} PTS</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono text-center">
+            <div className="p-3 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)]">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase block">Capitán</span>
+              <span className="font-bold text-[var(--text-heading)]">{activeEditingTeam?.captain}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)]">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase block">Plantilla</span>
+              <span className="font-bold text-[var(--text-heading)]">{activeEditingTeam?.membersCount} Atletas</span>
+            </div>
+            <div className="p-3 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)] col-span-2 sm:col-span-1">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase block">Verificación</span>
+              <span className="font-bold text-[var(--accent-emerald)]">{activeEditingTeam?.verified ? 'Verificado' : 'No verificado'}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-card)]">
+            <Button variant="outline" size="sm" onClick={() => setIsInfoModalOpen(false)}>Cerrar Ficha</Button>
+            <Button variant="primary" size="sm" onClick={() => { setIsInfoModalOpen(false); setIsEditModalOpen(true); }}>Editar Equipo</Button>
+          </div>
         </div>
-      </section>
+      </Modal>
+
     </div>
   );
 }
