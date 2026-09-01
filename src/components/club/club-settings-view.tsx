@@ -49,24 +49,50 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
     if (type === 'logo') setLogoUrl(newUrl);
     if (type === 'banner') setBannerUrl(newUrl);
 
-    const putRes = await fetch('/api/teams', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: currentTeamId,
-        name: team?.name || currentUser?.teamName || 'Escuadra Pro',
-        tag: team?.tag || 'TP',
-        gameSlug: activeGameSlug,
-        captainId: currentUser?.id,
-        captainName: currentUser?.gamertag || currentUser?.name,
-        logoUrl: updatedLogo,
-        bannerUrl: updatedBanner,
-      }),
-    });
+    try {
+      const putRes = await fetch('/api/teams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentTeamId,
+          name: team?.name || currentUser?.teamName || 'Escuadra Pro',
+          tag: team?.tag || 'TP',
+          gameSlug: activeGameSlug,
+          captainId: currentUser?.id,
+          captainName: currentUser?.gamertag || currentUser?.name,
+          logoUrl: updatedLogo,
+          bannerUrl: updatedBanner,
+        }),
+      });
 
-    if (putRes.ok) {
-      if (updateCurrentUser) updateCurrentUser({ teamId: currentTeamId });
-      if (refetchTeams) await refetchTeams();
+      if (putRes.ok) {
+        if (updateCurrentUser) updateCurrentUser({ teamId: currentTeamId });
+        if (refetchTeams) await refetchTeams();
+      } else if (putRes.status === 404) {
+        // Team does not exist yet; create it
+        const postRes = await fetch('/api/teams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: team?.name || currentUser?.teamName || 'Escuadra Pro',
+            tag: team?.tag || 'TP',
+            gameSlug: activeGameSlug,
+            captainId: currentUser?.id,
+            captainName: currentUser?.gamertag || currentUser?.name,
+            logoUrl: updatedLogo,
+            bannerUrl: updatedBanner,
+          }),
+        });
+        if (postRes.ok) {
+          const postData = await postRes.json();
+          const newId = postData?.data?.team?.id || postData?.team?.id;
+          if (newId) setCurrentTeamId(newId);
+          if (updateCurrentUser && newId) updateCurrentUser({ teamId: newId });
+          if (refetchTeams) await refetchTeams();
+        }
+      }
+    } catch (err) {
+      console.error('Error persisting image update:', err);
     }
   };
 
@@ -78,15 +104,18 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
     const form = e.currentTarget;
     const formData = new FormData(form);
 
+    const teamName = (formData.get('name') as string) || 'Escuadra Pro';
+    const teamTag = (formData.get('tag') as string) || 'TP';
+
     const payload = {
       id: currentTeamId,
-      name: formData.get('name'),
-      tag: formData.get('tag'),
+      name: teamName,
+      tag: teamTag,
       description: formData.get('description'),
       platform: formData.get('platform'),
       clubIdEa: formData.get('clubIdEa'),
       color: brandColor,
-      logoText: formData.get('tag'),
+      logoText: teamTag,
       logoUrl: logoUrl,
       bannerUrl: bannerUrl,
       status: formData.get('status'),
@@ -103,14 +132,26 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
     };
 
     try {
-      const res = await fetch('/api/teams', {
+      let res = await fetch('/api/teams', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
+      if (!res.ok && res.status === 404) {
+        // Fallback: create team if not existing
+        res = await fetch('/api/teams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
       if (res.ok) {
-        if (updateCurrentUser) updateCurrentUser({ teamId: currentTeamId, teamName: formData.get('name') as string });
+        const resData = await res.json().catch(() => null);
+        const savedId = resData?.data?.team?.id || resData?.team?.id || currentTeamId;
+        if (savedId) setCurrentTeamId(savedId);
+        if (updateCurrentUser) updateCurrentUser({ teamId: savedId, teamName });
         if (refetchTeams) await refetchTeams();
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 4000);

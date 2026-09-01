@@ -2,7 +2,7 @@
 import { dbProvider } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { teamCreateBodySchema, teamUpdateBodySchema } from '@/lib/api-schemas';
-import { canManageTeam, isAdministrator } from '@/lib/authorization';
+import { canManageTeam, isAdministrator, isOrganizer } from '@/lib/authorization';
 import {
   TeamRow,
   mapTeamRowToData,
@@ -96,9 +96,10 @@ export async function POST(request: Request) {
       return apiError('Ya existe un equipo con ese ID', 409, 'DUPLICATE_TEAM');
     }
 
-    const effectiveCaptainId = isAdministrator(actor) && captainId ? captainId : actor.userId;
+    const canAssignCaptain = isAdministrator(actor) || isOrganizer(actor);
+    const effectiveCaptainId = canAssignCaptain && captainId ? captainId : actor.userId;
     const captainUser = await dbProvider.users.findById(effectiveCaptainId);
-    const effectiveCaptainName = isAdministrator(actor) && captainName
+    const effectiveCaptainName = canAssignCaptain && captainName
       ? captainName
       : (captainUser?.gamertag || captainUser?.name || 'Capitán');
     const allowedGames = ['eafc26', 'valorant', 'csgo', 'lol', 'rocketleague', 'fortnite'] as const;
@@ -172,9 +173,10 @@ export async function PUT(request: Request) {
     const safeLogoUrl = (logoUrl && typeof logoUrl === 'string' && logoUrl.trim() !== '') ? logoUrl : (t?.logo_url || '');
     const safeBannerUrl = (bannerUrl && typeof bannerUrl === 'string' && bannerUrl.trim() !== '') ? bannerUrl : (t?.banner_url || '');
     const safeGameSlug = (gameSlug || t?.game_slug || 'eafc26').slice(0, 50);
-    let safeCaptainId = (isAdministrator(actor) ? captainId : null) ?? t.captainId ?? actor.userId;
+    const canAssignCaptain = isAdministrator(actor) || isOrganizer(actor);
+    let safeCaptainId = (canAssignCaptain ? captainId : null) ?? t.captainId ?? actor.userId;
     safeCaptainId = safeCaptainId.slice(0, 36);
-    const safeCaptainName = ((isAdministrator(actor) ? captainName : null) ?? t.captainName ?? actor.userId).slice(0, 100);
+    const safeCaptainName = ((canAssignCaptain ? captainName : null) ?? t.captainName ?? actor.userId).slice(0, 100);
 
     // Validate captain exists
     try {
@@ -199,8 +201,8 @@ export async function PUT(request: Request) {
       clubIdEa: clubIdEa || '',
       logoUrl: safeLogoUrl,
       bannerUrl: safeBannerUrl,
-      captainId: isAdministrator(actor) && captainId !== undefined ? safeCaptainId : undefined,
-      captainName: isAdministrator(actor) && captainName !== undefined ? safeCaptainName : undefined,
+      captainId: canAssignCaptain && captainId !== undefined ? safeCaptainId : undefined,
+      captainName: canAssignCaptain && captainName !== undefined ? safeCaptainName : undefined,
       gameSlug: safeGameSlug,
     });
     if (!result.success) return apiError(result.error || 'No se pudo actualizar el equipo', 409);

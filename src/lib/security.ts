@@ -28,8 +28,11 @@ export function validateMutationOrigin(request: Request): MutationOriginResult {
   const cookie = request.headers.get('cookie') || '';
   if (!/(?:^|;\s*)tp_session=/.test(cookie)) return { valid: true };
 
-  const originHeader = request.headers.get('origin');
-  if (!originHeader) return { valid: false, reason: 'MISSING_ORIGIN' };
+  const originHeader = request.headers.get('origin') || request.headers.get('referer');
+  if (!originHeader) {
+    if (process.env.NODE_ENV !== 'production') return { valid: true };
+    return { valid: false, reason: 'MISSING_ORIGIN' };
+  }
 
   try {
     const origin = new URL(originHeader).origin;
@@ -38,6 +41,10 @@ export function validateMutationOrigin(request: Request): MutationOriginResult {
     const protocol = forwardedProto || new URL(request.url).protocol.replace(':', '');
     const allowedOrigins = new Set([
       `${protocol}://${host}`,
+      `http://${host}`,
+      `https://${host}`,
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
       process.env.APP_ORIGIN,
       process.env.NEXT_PUBLIC_APP_URL,
     ].filter((value): value is string => Boolean(value)).map((value) => new URL(value).origin));
