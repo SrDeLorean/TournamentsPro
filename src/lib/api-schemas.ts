@@ -33,11 +33,12 @@ export const fixtureRequestBodySchema = z.object({
 export const uploadRequestBodySchema = z.object({
   fileBase64: z.string().min(1),
   fileName: z.string().max(255).optional(),
-  type: z.enum(['logo', 'banner']).optional(),
-  teamId: requiredIdSchema.optional(),
+  type: z.enum(['logo', 'banner', 'avatar', 'image']).optional(),
+  teamId: z.string().max(100).optional(),
   teamName: z.string().max(150).optional(),
   teamSlug: z.string().max(150).optional(),
   oldUrl: z.string().max(2048).optional(),
+  previousUrl: z.string().max(2048).optional(),
 }).passthrough();
 
 const optionalText = (max: number) => z.string().max(max).nullable().optional();

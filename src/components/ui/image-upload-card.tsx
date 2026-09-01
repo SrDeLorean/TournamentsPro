@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Upload, ImageIcon, Shield } from 'lucide-react';
+import { Upload, ImageIcon, Shield, AlertCircle } from 'lucide-react';
 import { compressImageToWebP } from '@/lib/image-compressor';
 import { fetchJson } from '@/lib/fetch-utils';
 
@@ -38,6 +38,8 @@ export function ImageUploadCard({
 }: ImageUploadCardProps) {
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [stats, setStats] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [localPreview, setLocalPreview] = useState<string>('');
 
   const defaultButtonText = uploadType === 'banner' ? 'Subir / Cambiar Banner' : 'Subir / Cambiar Foto';
   const buttonText = uploadButtonText || defaultButtonText;
@@ -46,22 +48,39 @@ export function ImageUploadCard({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setErrorMessage('');
     try {
       setIsCompressing(true);
       const originalMB = (file.size / (1024 * 1024)).toFixed(2);
-      const compressedRes = await compressImageToWebP(file, maxDimension, quality);
-      const compressedMB = (compressedRes.compressedSize / (1024 * 1024)).toFixed(2);
-      const reduction = Math.round((1 - compressedRes.compressedSize / file.size) * 100);
+      
+      let base64Data: string;
+      let statsMsg = '';
 
-      const statsMsg = `Compreso: ${originalMB}MB ➔ ${compressedMB}MB (-${reduction}%)`;
-      setStats(statsMsg);
+      try {
+        const compressedRes = await compressImageToWebP(file, maxDimension, quality);
+        const compressedMB = (compressedRes.compressedSize / (1024 * 1024)).toFixed(2);
+        const reduction = Math.round((1 - compressedRes.compressedSize / file.size) * 100);
+        statsMsg = `Optimizado: ${originalMB}MB ➔ ${compressedMB}MB (-${reduction}%)`;
+        base64Data = compressedRes.base64;
+      } catch {
+        // Fallback to direct FileReader if canvas compression encounters issues
+        base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(file);
+        });
+        statsMsg = `Subido (${originalMB}MB)`;
+      }
+
+      setLocalPreview(base64Data);
 
       const cleanSlug = entityName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
       const data = await fetchJson<{ success?: boolean; data?: { url?: string }; url?: string }>('/api/upload', {
         method: 'POST',
         body: JSON.stringify({
-          fileBase64: compressedRes.base64,
+          fileBase64: base64Data,
           fileName: `${uploadType}-${Date.now()}.webp`,
           teamName: cleanSlug,
           teamId: entityId,
@@ -72,12 +91,20 @@ export function ImageUploadCard({
 
       const resultUrl = data.data?.url || data.url;
       if (data.success && resultUrl) {
+        setStats(statsMsg);
+        setLocalPreview(resultUrl);
         await onUploadSuccess(resultUrl, statsMsg);
+      } else {
+        throw new Error('No se recibió la URL de la imagen guardada');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`Error al procesar ${uploadType}:`, err);
+      setErrorMessage(err instanceof Error ? err.message : 'Error al subir la imagen');
+      setStats('');
     } finally {
       setIsCompressing(false);
+      // Reset input value to allow re-uploading the same file if needed
+      e.target.value = '';
     }
   };
 
@@ -92,6 +119,7 @@ export function ImageUploadCard({
   };
 
   const isBanner = fallbackType === 'banner' || uploadType === 'banner';
+  const effectiveUrl = localPreview || currentUrl;
 
   return (
     <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4 flex flex-col justify-between shadow-sm transition-all duration-300">
@@ -99,8 +127,8 @@ export function ImageUploadCard({
         {/* Preview Frame */}
         {isBanner ? (
           <div className="w-20 h-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] overflow-hidden flex items-center justify-center flex-shrink-0 relative shadow-sm">
-            {currentUrl ? (
-              <Image src={currentUrl} alt={label} fill sizes="80px" unoptimized className="object-cover" />
+            {effectiveUrl ? (
+              <Image src={effectiveUrl} alt={label} fill sizes="80px" unoptimized className="object-cover" />
             ) : (
               renderFallback()
             )}
@@ -110,18 +138,24 @@ export function ImageUploadCard({
             className="relative w-14 h-14 rounded-xl bg-[var(--bg-card)] border-2 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-sm"
             style={{ borderColor: brandColor }}
           >
-            {currentUrl ? (
-              <Image src={currentUrl} alt={label} fill sizes="56px" unoptimized className="object-cover" />
+            {effectiveUrl ? (
+              <Image src={effectiveUrl} alt={label} fill sizes="56px" unoptimized className="object-cover" />
             ) : (
               renderFallback()
             )}
           </div>
         )}
 
-        <div>
-          <span className="font-bold font-mono text-[var(--text-heading)] text-xs block uppercase tracking-wide">{label}</span>
-          <span className="text-[11px] font-mono text-[var(--text-muted)] block mt-0.5">{subtitle}</span>
+        <div className="min-w-0 flex-1">
+          <span className="font-bold font-mono text-[var(--text-heading)] text-xs block uppercase tracking-wide truncate">{label}</span>
+          <span className="text-[11px] font-mono text-[var(--text-muted)] block mt-0.5 truncate">{subtitle}</span>
           {stats && <span className="text-[11px] font-mono text-[var(--accent-emerald)] font-bold block mt-1">{stats}</span>}
+          {errorMessage && (
+            <span className="text-[11px] font-mono text-[var(--accent-crimson)] font-bold flex items-center gap-1 mt-1">
+              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{errorMessage}</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -135,8 +169,9 @@ export function ImageUploadCard({
       >
         <Upload className="w-4 h-4" />
         <span>{isCompressing ? 'Procesando...' : buttonText}</span>
-        <input type="file" accept="image/*" onChange={handleFileChange} disabled={isCompressing} className="hidden" />
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFileChange} disabled={isCompressing} className="hidden" />
       </label>
     </div>
   );
 }
+

@@ -155,7 +155,7 @@ export async function PUT(request: Request) {
     const teamScope = {
       organizationId: existingTeam.organizationId,
       captainId: existingTeam.captainId,
-      managerIds: managers.map(m => m.userId),
+      managerIds: managers,
     };
 
     if (!teamScope || !canManageTeam(actor, teamScope)) {

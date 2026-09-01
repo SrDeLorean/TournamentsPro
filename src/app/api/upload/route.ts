@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
@@ -7,7 +6,6 @@ import { validateUpload, sanitizeUploadPath } from '@/lib/auth';
 import { apiError } from '@/lib/api-types';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { canManageTeam } from '@/lib/authorization';
-
 import { consumeSecurityRateLimit } from '@/lib/security';
 import { uploadRequestBodySchema } from '@/lib/api-schemas';
 
@@ -15,48 +13,60 @@ export async function POST(request: Request) {
   try {
     // ── Authentication check ────────────────────────────────────────────
     const actor = await requireRequestActor(request);
-    const rateLimit = await consumeSecurityRateLimit('upload', actor.userId, 20, 60 * 60 * 1_000);
+    const rateLimit = await consumeSecurityRateLimit('upload', actor.userId, 100, 60 * 60 * 1_000);
     if (!rateLimit.allowed) {
-      return apiError(`Demasiadas cargas. Reintenta en ${rateLimit.retryAfter} segundos.`, 429, 'RATE_LIMITED');
+      return apiError(`Demasiadas cargas de imágenes. Reintenta en ${rateLimit.retryAfter} segundos.`, 429, 'RATE_LIMITED');
     }
 
-    const parsedBody = uploadRequestBodySchema.safeParse(await request.json());
-    if (!parsedBody.success) return apiError('Archivo o metadatos inválidos', 400, 'INVALID_FILE');
+    const jsonBody: unknown = await request.json().catch(() => null);
+    if (!jsonBody) {
+      return apiError('Cuerpo de la petición inválido', 400, 'INVALID_BODY');
+    }
+
+    const parsedBody = uploadRequestBodySchema.safeParse(jsonBody);
+    if (!parsedBody.success) {
+      return apiError('Archivo o metadatos inválidos: ' + parsedBody.error.issues.map(i => i.message).join(', '), 400, 'INVALID_FILE');
+    }
     const body = parsedBody.data;
     const { fileBase64, fileName, type } = body;
 
     if (!fileBase64) {
-      return apiError('No se recibió ningún archivo', 400);
+      return apiError('No se recibió ningún archivo', 400, 'NO_FILE');
     }
 
-    // ── Validate file content ───────────────────────────────────────────
+    // ── Validate file content & magic bytes ──────────────────────────────
     const validation = validateUpload(fileBase64);
     if (!validation.valid || !validation.buffer) {
-      return apiError(validation.error || 'Archivo inválido', 400, 'INVALID_FILE');
+      return apiError(validation.error || 'Archivo de imagen inválido o no reconocido', 400, 'INVALID_FILE');
     }
 
     const buffer = validation.buffer;
     let mayReplaceExistingFile = false;
 
-    const { dbProvider } = await import('@/lib/db/provider');
-    if (body.teamId && body.teamId !== actor.userId) {
-      const team = await dbProvider.teams.findById(body.teamId);
-      const managers = await dbProvider.teams.getManagers(body.teamId);
-      
-      if (!team || !canManageTeam(actor, {
-        captainId: team.captainId,
-        organizationId: team.organizationId,
-        managerIds: managers.map(m => m.userId),
-      })) {
-        return apiError('No puedes modificar los archivos de este equipo', 403, 'FORBIDDEN');
+    // Optional team permissions check if targeting an existing team
+    const rawTeamId = body.teamId?.trim();
+    const isSpecialId = !rawTeamId || rawTeamId === 'id' || rawTeamId === 'new-team' || rawTeamId === 'create' || rawTeamId === 'temp';
+
+    if (rawTeamId && !isSpecialId && rawTeamId !== actor.userId) {
+      const { dbProvider } = await import('@/lib/db/provider');
+      const team = await dbProvider.teams.findById(rawTeamId);
+      if (team) {
+        const managers = await dbProvider.teams.getManagers(rawTeamId);
+        if (!canManageTeam(actor, {
+          captainId: team.captainId,
+          organizationId: team.organizationId,
+          managerIds: managers,
+        })) {
+          return apiError('No tienes permisos para modificar los archivos de este equipo', 403, 'FORBIDDEN');
+        }
+        mayReplaceExistingFile = true;
       }
-      mayReplaceExistingFile = true;
-    } else if (body.teamId === actor.userId) {
+    } else if (rawTeamId === actor.userId || isSpecialId) {
       mayReplaceExistingFile = true;
     }
 
-    // Determine destination subfolder: 'logos' or 'banners'
-    const folderType = type === 'banner' ? 'banners' : 'logos';
+    // Determine destination subfolder: 'logos', 'banners', or 'avatars'
+    const folderType = type === 'banner' ? 'banners' : (type === 'avatar' ? 'avatars' : 'logos');
 
     // Physical destination directories
     const publicUploadDir = path.join(process.cwd(), 'public', 'uploads', 'teams', folderType);
@@ -66,25 +76,27 @@ export async function POST(request: Request) {
     if (!existsSync(rootUploadDir)) await fs.mkdir(rootUploadDir, { recursive: true });
 
     // Generate safe, human-readable unique filename
-    const rawClubName = body.teamName || body.teamSlug || fileName || 'club';
+    const rawClubName = body.teamName || body.teamSlug || fileName || 'media';
     const cleanClubSlug = rawClubName
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/^-|-$/g, '') || 'media';
 
-    const fileKind = type === 'banner' ? 'banner' : 'logo';
-    const entityId = typeof body.teamId === 'string' ? body.teamId : actor.userId;
+    const fileKind = type === 'banner' ? 'banner' : (type === 'avatar' ? 'avatar' : 'logo');
+    const entityId = rawTeamId && !isSpecialId ? rawTeamId : actor.userId;
     const uniqueId = entityId.toLowerCase().replace(/[^a-z0-9]/g, '-');
     const extensionByMime: Record<string, string> = {
       'image/png': 'png',
       'image/jpeg': 'jpg',
       'image/webp': 'webp',
       'image/gif': 'gif',
+      'image/svg+xml': 'svg',
     };
     const extension = extensionByMime[validation.detectedType || ''] || 'webp';
-    const uniqueFileName = `${cleanClubSlug || 'entity'}-${fileKind}-${uniqueId}.${extension}`;
+    const timestamp = Date.now();
+    const uniqueFileName = `${cleanClubSlug}-${fileKind}-${uniqueId}-${timestamp}.${extension}`;
 
     const publicFilePath = path.join(publicUploadDir, uniqueFileName);
     const rootFilePath = path.join(rootUploadDir, uniqueFileName);
@@ -96,9 +108,9 @@ export async function POST(request: Request) {
     // Direct static URL served by Next.js
     const publicUrl = `/uploads/teams/${folderType}/${uniqueFileName}`;
 
-    // ── Delete previous file safely ─────────────────────────────────────
-    const { previousUrl } = body;
-    if (mayReplaceExistingFile && previousUrl && typeof previousUrl === 'string') {
+    // ── Delete previous file safely if replacing ────────────────────────
+    const previousUrl = body.previousUrl || body.oldUrl;
+    if (mayReplaceExistingFile && previousUrl && typeof previousUrl === 'string' && !previousUrl.startsWith('http')) {
       try {
         const cleanPrev = previousUrl.replace('/api/uploads/', '').replace('/uploads/', '');
         
@@ -115,6 +127,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      url: publicUrl,
+      fileName: uniqueFileName,
       data: {
         url: publicUrl,
         fileName: uniqueFileName,
@@ -130,4 +144,3 @@ export async function POST(request: Request) {
     return apiError(message, 500);
   }
 }
-
