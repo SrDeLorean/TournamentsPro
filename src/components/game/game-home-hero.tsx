@@ -5,6 +5,7 @@ import { GameConfig } from '@/lib/games-data';
 import { GameHighlightsSection } from '@/components/game/game-highlights-section';
 import { GameLogo } from '@/components/ui/game-logo';
 import { Button } from '@/components/ui/button';
+import { ParachuteDownloadButton } from '@/components/ui/parachute-download-button';
 import {
   Trophy, Shield, Award, Calendar, Sparkles, ChevronRight, Radio, Zap, Play,
 } from 'lucide-react';
@@ -29,6 +30,14 @@ interface GameHomeHeroProps {
 }
 
 export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: GameHomeHeroProps) {
+  const identityData = JSON.stringify({
+    discipline: game.name,
+    slug: game.slug,
+    scene: game.visualTheme.scene,
+    motif: game.visualTheme.motif,
+    palette: [game.brandColor, game.accentColor, game.visualTheme.glow, game.visualTheme.highlight],
+  }, null, 2);
+
   return (
     <div className="game-home space-y-10 sm:space-y-14 pt-3 sm:pt-4">
       {/* 1. IMMERSIVE EDGE-TO-EDGE HERO OVERLAY */}
@@ -50,6 +59,9 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
             </span>
             <span className="px-3.5 py-1 rounded-full bg-[var(--bg-card)]/80 backdrop-blur-md text-[var(--text-muted)] border border-[var(--border-card)] text-xs font-mono font-bold uppercase tracking-wider shadow-md">
               {game.category}
+            </span>
+            <span className="game-home-scene-label">
+              <span /> {game.visualTheme.scene} · {game.visualTheme.motif}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-500 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/60 backdrop-blur-md px-3 py-1 rounded-full border border-emerald-500/30 shadow-md animate-pulse">
@@ -120,6 +132,11 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
             <Shield className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Directorio Escuadras
           </Button>
+          <ParachuteDownloadButton
+            data={identityData}
+            fileName={`${game.slug}-visual-identity.json`}
+            label="Descargar identidad"
+          />
         </div>
       </div>
 

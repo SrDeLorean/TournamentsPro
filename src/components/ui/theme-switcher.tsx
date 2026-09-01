@@ -1,79 +1,67 @@
 'use client';
 
-import { useTheme } from 'next-themes';
+import type { ComponentType, CSSProperties } from 'react';
 import { useSyncExternalStore } from 'react';
-import { Sun, Moon, Zap } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { Gem, Moon, Orbit, Sun, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const subscribeToHydration = () => () => {};
+
+interface ThemeOption {
+  id: 'light' | 'dark' | 'oled' | 'arena' | 'prism';
+  label: string;
+  title: string;
+  icon: ComponentType<{ className?: string }>;
+  accent: string;
+}
+
+const THEME_OPTIONS: ThemeOption[] = [
+  { id: 'light', label: 'Claro', title: 'Tema claro editorial', icon: Sun, accent: '#f59e0b' },
+  { id: 'dark', label: 'Noche', title: 'Tema oscuro equilibrado', icon: Moon, accent: '#22d3ee' },
+  { id: 'oled', label: 'OLED', title: 'Negro puro para pantallas OLED', icon: Zap, accent: '#c084fc' },
+  { id: 'arena', label: 'Arena', title: 'Arena inmersiva azul y cobre', icon: Orbit, accent: '#42e8ff' },
+  { id: 'prism', label: 'Prisma', title: 'Cristal violeta con luz espectral', icon: Gem, accent: '#ff6bd6' },
+];
 
 export function ThemeSwitcher({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(subscribeToHydration, () => true, () => false);
 
   if (!mounted) {
-    return <div className="w-[180px] h-9 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] animate-pulse" />;
+    return <div className="h-10 w-[13rem] animate-pulse rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)]" />;
   }
 
-  const handleThemeChange = (newTheme: string) => {
+  const changeTheme = (newTheme: ThemeOption['id']) => {
     if (newTheme === theme) return;
-    
-    // Fallback if View Transitions API is not supported
     if (!document.startViewTransition) {
       setTheme(newTheme);
       return;
     }
-
-    // Ultra-smooth native crossfade for theme switching (Linear/Vercel aesthetic)
-    document.startViewTransition(() => {
-      // flushSync isn't strictly necessary with next-themes, but it ensures the DOM updates instantly inside the transition
-      setTheme(newTheme);
-    });
+    document.startViewTransition(() => setTheme(newTheme));
   };
 
   return (
-    <div className={cn("inline-flex items-center p-1 rounded-xl bg-[var(--bg-card)]/60 border border-[var(--border-card)] backdrop-blur-xl shadow-sm transition-all duration-300", className)}>
-      <button
-        onClick={() => handleThemeChange('light')}
-        title="Modo Claro"
-        className={cn(
-          "px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all duration-200 flex items-center gap-1.5 relative",
-          theme === 'light'
-            ? "text-amber-600 bg-white shadow-sm border border-black/5"
-            : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-        )}
-      >
-        <Sun className="w-3.5 h-3.5 text-amber-500" />
-        <span className="hidden sm:inline">Claro</span>
-      </button>
-
-      <button
-        onClick={() => handleThemeChange('dark')}
-        title="Modo Oscuro"
-        className={cn(
-          "px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all duration-200 flex items-center gap-1.5 relative",
-          theme === 'dark'
-            ? "text-white bg-slate-800 shadow-sm border border-white/10"
-            : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-        )}
-      >
-        <Moon className="w-3.5 h-3.5 text-cyan-400" />
-        <span className="hidden sm:inline">Oscuro</span>
-      </button>
-
-      <button
-        onClick={() => handleThemeChange('oled')}
-        title="Modo OLED (Pitch Black)"
-        className={cn(
-          "px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all duration-200 flex items-center gap-1.5 relative",
-          theme === 'oled'
-            ? "text-purple-300 bg-black shadow-sm border border-purple-500/30"
-            : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-        )}
-      >
-        <Zap className="w-3.5 h-3.5 text-purple-400 fill-purple-400/20" />
-        <span className="hidden sm:inline">OLED</span>
-      </button>
+    <div className={cn('theme-switcher-v2', className)} role="group" aria-label="Tema visual">
+      {THEME_OPTIONS.map(({ id, label, title, icon: Icon, accent }) => {
+        const active = theme === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => changeTheme(id)}
+            title={title}
+            aria-label={title}
+            aria-pressed={active}
+            className={cn('theme-switcher-option', active && 'is-active')}
+            style={{ '--theme-option-accent': accent } as CSSProperties}
+          >
+            <Icon className="size-3.5" />
+            <span>{label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
+

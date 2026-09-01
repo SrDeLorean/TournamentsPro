@@ -8,6 +8,8 @@ export function getGamePortalStyle(game: GameConfig): CSSProperties {
     '--game-accent': game.accentColor,
     '--game-secondary-accent': game.secondaryAccent,
     '--game-dark-bg': game.darkBg,
+    '--game-glow': game.visualTheme.glow,
+    '--game-highlight': game.visualTheme.highlight,
     '--game-backdrop-position': game.backdropPosition || 'center top',
     '--game-backdrop-position-mobile': game.backdropPositionMobile || game.backdropPosition || 'center top',
   } as CSSProperties;
@@ -26,6 +28,9 @@ export function GamePortalBackdrop({ game }: { game: GameConfig }) {
         style={{ objectPosition: 'var(--game-backdrop-position)' }}
       />
       <div className="game-portal-backdrop-tint" />
+      <div className="game-scene-grid" />
+      <div className="game-scene-orb game-scene-orb-primary" />
+      <div className="game-scene-orb game-scene-orb-secondary" />
       <div className="game-portal-backdrop-fade" />
     </div>
   );

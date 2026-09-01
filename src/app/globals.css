@@ -19,6 +19,239 @@
   --animate-rotate-slow: rotate-slow 20s linear infinite;
 }
 
+/* ── Visual System V2: Arena / Prism themes and shared spatial primitives ── */
+html.arena {
+  color-scheme: dark;
+  --bg-main: #050a12;
+  --bg-card: rgb(8 20 32 / 0.78);
+  --bg-card-hover: rgb(14 33 49 / 0.9);
+  --bg-subtle: rgb(5 14 24 / 0.88);
+  --bg-elevated: #0b1c2b;
+  --bg-nav: rgb(4 11 20 / 0.88);
+  --border-card: rgb(104 218 240 / 0.17);
+  --border-card-hover: rgb(111 236 255 / 0.42);
+  --text-primary: #f5fbff;
+  --text-secondary: #c1d5df;
+  --text-muted: #829ba8;
+  --text-heading: #ffffff;
+  --accent-cyan: #42e8ff;
+  --accent-cyan-bg: rgb(66 232 255 / 0.12);
+  --accent-violet: #8da2ff;
+  --accent-violet-bg: rgb(141 162 255 / 0.13);
+  --accent-emerald: #52efb6;
+  --accent-emerald-bg: rgb(82 239 182 / 0.12);
+  --accent-gold: #ffae57;
+  --accent-gold-bg: rgb(255 174 87 / 0.13);
+  --accent-crimson: #ff6f83;
+  --accent-crimson-bg: rgb(255 111 131 / 0.13);
+  --accent-contrast: #031018;
+  --ui-surface-solid: #091722;
+  --shadow-card: 0 24px 70px -34px rgb(0 0 0 / 0.9), inset 0 1px rgb(255 255 255 / 0.035);
+  --shadow-soft: 0 14px 38px -26px rgb(0 0 0 / 0.85);
+}
+
+html.prism {
+  color-scheme: dark;
+  --bg-main: #0a0713;
+  --bg-card: rgb(23 13 38 / 0.76);
+  --bg-card-hover: rgb(38 20 58 / 0.88);
+  --bg-subtle: rgb(14 8 26 / 0.88);
+  --bg-elevated: #1a0f2a;
+  --bg-nav: rgb(10 6 19 / 0.88);
+  --border-card: rgb(226 173 255 / 0.16);
+  --border-card-hover: rgb(255 123 221 / 0.4);
+  --text-primary: #fff8ff;
+  --text-secondary: #ddcce8;
+  --text-muted: #a88eb8;
+  --text-heading: #ffffff;
+  --accent-cyan: #76eaff;
+  --accent-cyan-bg: rgb(118 234 255 / 0.12);
+  --accent-violet: #c789ff;
+  --accent-violet-bg: rgb(199 137 255 / 0.14);
+  --accent-emerald: #6ff5c8;
+  --accent-emerald-bg: rgb(111 245 200 / 0.12);
+  --accent-gold: #ffc96b;
+  --accent-gold-bg: rgb(255 201 107 / 0.13);
+  --accent-crimson: #ff6bd6;
+  --accent-crimson-bg: rgb(255 107 214 / 0.13);
+  --accent-contrast: #12051a;
+  --ui-surface-solid: #170d25;
+  --shadow-card: 0 24px 72px -34px rgb(3 1 8 / 0.95), inset 0 1px rgb(255 255 255 / 0.045);
+  --shadow-soft: 0 14px 38px -26px rgb(3 1 8 / 0.9);
+}
+
+.arena body {
+  background:
+    radial-gradient(circle at 8% -8%, rgb(66 232 255 / 0.14), transparent 30rem),
+    radial-gradient(circle at 94% 8%, rgb(255 174 87 / 0.09), transparent 32rem),
+    linear-gradient(180deg, #07111e, #050a12 38rem);
+}
+
+.prism body {
+  background:
+    radial-gradient(circle at 12% -6%, rgb(255 107 214 / 0.13), transparent 30rem),
+    radial-gradient(circle at 90% 5%, rgb(118 234 255 / 0.1), transparent 34rem),
+    linear-gradient(180deg, #130b20, #0a0713 38rem);
+}
+
+.theme-switcher-v2 {
+  display: inline-flex;
+  max-width: min(100%, 27rem);
+  align-items: center;
+  gap: 0.2rem;
+  overflow-x: auto;
+  padding: 0.25rem;
+  border: 1px solid var(--border-card);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--bg-card) 86%, transparent);
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.035), var(--shadow-soft);
+  backdrop-filter: blur(calc(var(--ui-blur) + 2px));
+  scrollbar-width: none;
+}
+
+.theme-switcher-v2::-webkit-scrollbar { display: none; }
+.theme-switcher-option {
+  display: inline-flex;
+  min-height: 2rem;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 850;
+  transition: color 180ms ease, border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+.theme-switcher-option svg { color: var(--theme-option-accent); }
+.theme-switcher-option:hover { transform: translateY(-1px); color: var(--text-heading); background: var(--bg-card-hover); }
+.theme-switcher-option.is-active {
+  border-color: color-mix(in srgb, var(--theme-option-accent) 42%, var(--border-card));
+  color: var(--text-heading);
+  background: color-mix(in srgb, var(--theme-option-accent) 13%, var(--bg-card));
+  box-shadow: 0 0.5rem 1.5rem -1rem var(--theme-option-accent), inset 0 1px rgb(255 255 255 / 0.06);
+}
+
+.game-scene-grid {
+  position: absolute;
+  inset: 34% -12% -12%;
+  opacity: 0.19;
+  transform: perspective(38rem) rotateX(62deg) scale(1.2);
+  transform-origin: center bottom;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--game-brand) 48%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--game-accent) 42%, transparent) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: linear-gradient(to bottom, transparent, black 36%, transparent 94%);
+}
+
+.game-scene-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(4rem);
+  mix-blend-mode: screen;
+  opacity: 0.2;
+  animation: game-scene-drift calc(11s * var(--ui-motion-factor)) ease-in-out infinite alternate;
+}
+.game-scene-orb-primary { top: 7%; right: 3%; width: 19rem; height: 19rem; background: var(--game-brand); }
+.game-scene-orb-secondary { top: 31%; left: 5%; width: 13rem; height: 13rem; background: var(--game-accent); animation-delay: -4s; }
+
+.game-identity-card { min-height: 25rem; }
+.game-identity-card.is-compact { min-height: 20rem; }
+.game-identity-card-inner { position: relative; min-height: inherit; overflow: hidden; isolation: isolate; }
+.game-identity-card-image { z-index: -3; object-fit: cover; filter: saturate(1.15) contrast(1.08) brightness(0.74); transform: scale(1.03); }
+.game-identity-card-wash { position: absolute; z-index: -2; inset: 0; background: linear-gradient(115deg, color-mix(in srgb, var(--game-dark-bg, #05070d) 94%, transparent) 4%, color-mix(in srgb, var(--identity-primary) 25%, transparent) 62%, transparent); }
+.game-identity-card-grid { position: absolute; z-index: -1; inset: 0; opacity: 0.16; background-image: linear-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.12) 1px, transparent 1px); background-size: 2.25rem 2.25rem; mask-image: linear-gradient(90deg, black, transparent 78%); }
+.game-identity-card-content { display: flex; min-height: inherit; flex-direction: column; justify-content: flex-end; gap: 1.1rem; padding: clamp(1.15rem, 3vw, 2rem); }
+.game-identity-card-heading { display: flex; min-width: 0; align-items: center; gap: 0.9rem; }
+.game-identity-card-logo { display: grid; width: 4.25rem; height: 4.25rem; flex: 0 0 auto; place-items: center; border: 1px solid color-mix(in srgb, var(--identity-glow) 48%, transparent); border-radius: 1.25rem; background: color-mix(in srgb, var(--identity-primary) 15%, rgb(5 7 13 / 0.82)); box-shadow: 0 0 2rem -0.8rem var(--identity-glow), inset 0 1px rgb(255 255 255 / 0.08); }
+.game-identity-card-heading > span:last-child { display: grid; min-width: 0; }
+.game-identity-card-heading small { color: var(--identity-glow); font: 900 0.6rem/1.2 var(--font-mono); letter-spacing: 0.15em; text-transform: uppercase; }
+.game-identity-card-heading strong { overflow: hidden; color: white; font: 950 clamp(1.35rem, 3vw, 2rem)/1 var(--font-outfit); letter-spacing: -0.04em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.game-identity-card-heading em { color: rgb(226 232 240 / 0.78); font-size: 0.7rem; font-style: normal; font-weight: 750; }
+.game-identity-card-signals { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.game-identity-card-signals span { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.34rem 0.52rem; border: 1px solid rgb(255 255 255 / 0.12); border-radius: 999px; background: rgb(2 6 23 / 0.58); color: #dbeafe; font: 800 0.56rem/1.2 var(--font-mono); text-transform: uppercase; backdrop-filter: blur(0.7rem); }
+.game-identity-card-signals svg { width: 0.75rem; height: 0.75rem; color: var(--identity-highlight); }
+.game-identity-card-swatches { display: flex; gap: 0.35rem; }
+.game-identity-card-swatches span { width: clamp(2.2rem, 8vw, 4rem); height: 0.42rem; border-radius: 999px; box-shadow: 0 0 1rem -0.25rem currentColor; }
+
+.parachute-download {
+  --drop-accent: var(--identity-glow, var(--game-brand, var(--accent-cyan)));
+  display: inline-grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  min-width: min(100%, 14.5rem);
+  min-height: 3.35rem;
+  padding: 0.4rem 0.85rem 0.4rem 0.4rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--drop-accent) 42%, var(--border-card));
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--drop-accent) 11%, rgb(3 7 18 / 0.82));
+  color: white;
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.06), 0 0.9rem 2rem -1.4rem var(--drop-accent);
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+.parachute-download:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--drop-accent); background: color-mix(in srgb, var(--drop-accent) 17%, rgb(3 7 18 / 0.86)); }
+.parachute-download-scene { position: relative; display: block; width: 3rem; height: 2.7rem; overflow: hidden; border-radius: 0.72rem; background: linear-gradient(180deg, color-mix(in srgb, var(--drop-accent) 18%, transparent), transparent); }
+.parachute-download-canopy { position: absolute; top: 0.25rem; left: 0.65rem; width: 1.7rem; height: 0.72rem; border: 2px solid var(--drop-accent); border-bottom: 0; border-radius: 1.6rem 1.6rem 0 0; filter: drop-shadow(0 0 0.35rem var(--drop-accent)); }
+.parachute-download-lines { position: absolute; top: 0.85rem; left: 1rem; width: 1rem; height: 0.75rem; border-right: 1px solid var(--drop-accent); border-left: 1px solid var(--drop-accent); transform: perspective(1rem) rotateX(-18deg); }
+.parachute-download-crate { position: absolute; top: 1.55rem; left: 1.05rem; display: grid; width: 0.9rem; height: 0.82rem; place-items: center; border: 1px solid color-mix(in srgb, var(--drop-accent) 70%, white); border-radius: 0.2rem; background: var(--drop-accent); color: #041017; box-shadow: 0 0 0.75rem -0.15rem var(--drop-accent); }
+.parachute-download-crate svg { width: 0.55rem; height: 0.55rem; stroke-width: 3; }
+.parachute-download-ground { position: absolute; right: 0.4rem; bottom: 0.18rem; left: 0.4rem; height: 1px; transform: scaleX(0); background: var(--drop-accent); box-shadow: 0 0 0.5rem var(--drop-accent); }
+.parachute-download-copy { display: grid; min-width: 0; }
+.parachute-download-copy small { color: color-mix(in srgb, var(--drop-accent) 72%, white); font: 850 0.52rem/1.2 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; }
+.parachute-download-copy strong { overflow: hidden; font-size: 0.72rem; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.parachute-download.is-preparing .parachute-download-canopy,
+.parachute-download.is-preparing .parachute-download-lines,
+.parachute-download.is-preparing .parachute-download-crate { animation: parachute-fall 900ms cubic-bezier(0.22, 0.8, 0.32, 1) both; }
+.parachute-download.is-preparing .parachute-download-canopy { animation-name: parachute-canopy; }
+.parachute-download.is-preparing .parachute-download-ground { animation: parachute-land 900ms ease-out both; }
+.parachute-download.is-complete { border-color: var(--accent-emerald); --drop-accent: var(--accent-emerald); }
+
+.game-home-hero { transform-style: preserve-3d; }
+.game-home-scene-label { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.65rem; border: 1px solid color-mix(in srgb, var(--game-highlight) 34%, var(--border-card)); border-radius: 999px; background: color-mix(in srgb, var(--game-dark-bg) 70%, transparent); color: var(--text-secondary); font: 850 0.58rem/1.2 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; backdrop-filter: blur(0.7rem); }
+.game-home-scene-label > span { width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--game-highlight); box-shadow: 0 0 0.7rem var(--game-highlight); }
+.game-home-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(115deg, color-mix(in srgb, var(--game-dark-bg) 78%, transparent), transparent 74%); }
+.game-home-hero::after { content: ''; position: absolute; z-index: -1; top: 14%; right: 5%; width: clamp(8rem, 22vw, 18rem); aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--game-accent) 38%, transparent); border-radius: 50%; box-shadow: inset 0 0 0 1.4rem color-mix(in srgb, var(--game-brand) 4%, transparent), 0 0 4rem -1.5rem var(--game-brand); transform: perspective(30rem) rotateX(68deg) rotateZ(-18deg); animation: game-orbit-spin calc(18s * var(--ui-motion-factor)) linear infinite; }
+.game-home-metric,
+.game-home-match,
+.game-home-module { transform: perspective(70rem) translateZ(0); transform-style: preserve-3d; }
+.game-home-metric:hover,
+.game-home-match:hover,
+.game-home-module:hover { transform: perspective(70rem) translateY(-0.3rem) rotateX(1.2deg) translateZ(0.2rem); }
+
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 360ms; animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+
+@keyframes game-scene-drift { to { transform: translate3d(1.5rem, -1rem, 0) scale(1.08); opacity: 0.3; } }
+@keyframes game-orbit-spin { to { transform: perspective(30rem) rotateX(68deg) rotateZ(342deg); } }
+@keyframes parachute-fall { 0% { transform: translateY(-1rem) rotate(-5deg); opacity: 0; } 55% { opacity: 1; } 85% { transform: translateY(0.26rem) rotate(3deg); } 100% { transform: translateY(0) rotate(0); } }
+@keyframes parachute-canopy { 0% { transform: translateY(-1rem) scaleX(0.6); opacity: 0; } 35% { transform: translateY(-0.35rem) scaleX(1.08); opacity: 1; } 100% { transform: translateY(0) scaleX(1); } }
+@keyframes parachute-land { 0%, 72% { transform: scaleX(0); opacity: 0; } 100% { transform: scaleX(1); opacity: 1; } }
+
+@media (max-width: 760px) {
+  .theme-switcher-option span { display: none; }
+  .theme-switcher-option { padding-inline: 0.48rem; }
+  .game-scene-grid { inset-inline: -35%; opacity: 0.13; }
+  .game-scene-orb { filter: blur(3rem); opacity: 0.14; }
+  .game-identity-card { min-height: 22rem; }
+  .game-identity-card-signals span:nth-child(2) { display: none; }
+  .parachute-download { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-scene-orb,
+  .game-home-hero::after,
+  .parachute-download.is-preparing :is(.parachute-download-canopy, .parachute-download-lines, .parachute-download-crate, .parachute-download-ground) { animation: none; }
+  .game-home-metric:hover,
+  .game-home-match:hover,
+  .game-home-module:hover,
+  .parachute-download:hover:not(:disabled) { transform: none; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 1ms; }
+}
+
 @layer base {
   :root,
   .dark {
@@ -4248,4 +4481,32 @@
   .context-team-card > a { grid-column: 1 / -1; }
   .context-team-card > a > * { width: 100%; }
   .context-workspace-embedded { margin-inline: -0.1rem; border-radius: 0.9rem; }
+}
+
+/* Final cascade for V2 portal art direction. Kept at the global entrypoint so
+   production CSS chunk order stays deterministic across dynamic game routes. */
+.dark .game-portal {
+  --game-portal-backdrop-opacity: 0.64;
+  --game-portal-backdrop-filter: saturate(1.16) contrast(1.08) brightness(0.88);
+}
+
+.arena .game-portal {
+  --game-portal-surface: color-mix(in srgb, #071724 76%, transparent);
+  --game-portal-surface-strong: color-mix(in srgb, #071724 90%, transparent);
+  --game-portal-backdrop-opacity: 0.7;
+  --game-portal-backdrop-filter: saturate(1.22) contrast(1.08) brightness(0.88);
+}
+
+.prism .game-portal {
+  --game-portal-surface: color-mix(in srgb, #160c25 76%, transparent);
+  --game-portal-surface-strong: color-mix(in srgb, #160c25 90%, transparent);
+  --game-portal-backdrop-opacity: 0.66;
+  --game-portal-backdrop-filter: saturate(1.25) contrast(1.1) brightness(0.85);
+}
+
+.game-portal .game-home-hero {
+  background:
+    linear-gradient(112deg, color-mix(in srgb, var(--game-dark-bg) 70%, transparent), color-mix(in srgb, var(--game-portal-surface) 62%, transparent) 64%, transparent),
+    radial-gradient(circle at 88% 10%, color-mix(in srgb, var(--game-glow) 18%, transparent), transparent 22rem);
+  border-color: color-mix(in srgb, var(--game-highlight) 18%, var(--border-card));
 }

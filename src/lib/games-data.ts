@@ -20,6 +20,14 @@ export interface GameConfig {
   teamTitle?: string;
   teamHighlightTitle?: string;
   teamDescription?: string;
+  visualTheme: {
+    /** Short art-direction label surfaced in UI previews. */
+    scene: string;
+    /** Small visual vocabulary used by cards and downloadable identity sheets. */
+    motif: string;
+    glow: string;
+    highlight: string;
+  };
 }
 
 export const GAMES_CATALOG: Record<string, GameConfig> = {
@@ -37,7 +45,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     darkBg: '#111823',
     bgGradient: 'from-[#FF4654]/25 via-[#111823] to-[#090D14]',
     positions: ['Duelista', 'Controlador', 'Iniciador', 'Centinela'],
-    bannerUrl: '/images/games-background/valorant.jpg',
+    bannerUrl: '/images/games-background/v2/valorant-arena.webp',
     backdropPosition: 'center top',
     backdropPositionMobile: '56% top',
     logoUrl: '/images/games/valorant.png',
@@ -45,6 +53,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'ESCUADRAS',
     teamHighlightTitle: 'TÁCTICAS 5v5.',
     teamDescription: 'Conoce todas las organizaciones, escuadras tácticas 5v5 de élite y plantillas oficiales que disputan los campeonatos de VALORANT.',
+    visualTheme: { scene: 'Corte táctico', motif: 'Láminas angulares', glow: '#ff6975', highlight: '#38d9ff' },
   },
   eafc26: {
     id: 'eafc26',
@@ -60,7 +69,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     darkBg: '#023031',
     bgGradient: 'from-[#077D7E]/30 via-[#083844] to-[#023031]',
     positions: ['POR', 'DFC', 'LD', 'LI', 'MCD', 'MC', 'MCO', 'EI', 'ED', 'DC'],
-    bannerUrl: '/images/games-background/eafc.jpg',
+    bannerUrl: '/images/games-background/v2/eafc26-arena.webp',
     backdropPosition: 'center top',
     backdropPositionMobile: '48% top',
     logoUrl: '/images/games/eafc26.png',
@@ -68,6 +77,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'DIRECTORIO DE',
     teamHighlightTitle: 'CLUBES ESPORTS.',
     teamDescription: 'Explora las fichas oficiales de los clubes eSports de EA SPORTS FC 26, sus plantillas, trofeos y capitanes asignados.',
+    visualTheme: { scene: 'Estadio orbital', motif: 'Táctica de campo', glow: '#4fffd2', highlight: '#ff9a3d' },
   },
   csgo: {
     id: 'csgo',
@@ -83,7 +93,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     darkBg: '#1A1813',
     bgGradient: 'from-[#DE9B35]/25 via-[#1A1813] to-[#0F0E0B]',
     positions: ['AWPer', 'Entry Fragger', 'IGL', 'Support', 'Lurker'],
-    bannerUrl: '/images/games-background/csgo.jpg',
+    bannerUrl: '/images/games-background/v2/csgo-arena.webp',
     backdropPosition: 'center top',
     backdropPositionMobile: '58% top',
     logoUrl: '/images/games/csgo.png',
@@ -91,6 +101,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'EQUIPOS',
     teamHighlightTitle: 'COMPETITIVOS CS2.',
     teamDescription: 'Consulta las alineaciones oficiales de Counter-Strike 2, capitanes y rendimiento en torneos eSports.',
+    visualTheme: { scene: 'Forja industrial', motif: 'Retícula de precisión', glow: '#ffba55', highlight: '#ffd98a' },
   },
   lol: {
     id: 'lol',
@@ -106,7 +117,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     darkBg: '#091428',
     bgGradient: 'from-[#0AC8B9]/25 via-[#091428] to-[#030914]',
     positions: ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'],
-    bannerUrl: '/images/games-background/lol.jpg',
+    bannerUrl: '/images/games-background/v2/lol-arena.webp',
     backdropPosition: 'center top',
     backdropPositionMobile: '52% top',
     logoUrl: '/images/games/lol.webp',
@@ -114,6 +125,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'ESCUADRAS',
     teamHighlightTitle: 'DE LA GRIETA.',
     teamDescription: 'Revisa las plantillas de League of Legends, campeonatos disputados y capitanes asignados.',
+    visualTheme: { scene: 'Nexo hextech', motif: 'Rutas arcanas', glow: '#20e0d0', highlight: '#f0cf7a' },
   },
   rocketleague: {
     id: 'rocketleague',
@@ -129,7 +141,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     darkBg: '#0B1E36',
     bgGradient: 'from-[#0084FF]/25 via-[#0B1E36] to-[#040C17]',
     positions: ['Delantero', 'Defensa', 'Rotador Global'],
-    bannerUrl: '/images/games-background/rocketleague.jpg',
+    bannerUrl: '/images/games-background/v2/rocketleague-arena.webp',
     backdropPosition: 'center top',
     backdropPositionMobile: '50% top',
     logoUrl: '/images/games/rocketleague.png',
@@ -137,6 +149,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'EQUIPOS',
     teamHighlightTitle: 'DE ALTA VELOCIDAD.',
     teamDescription: 'Directorio de clubes de Rocket League compitiendo en arenas oficiales.',
+    visualTheme: { scene: 'Órbita cinética', motif: 'Estela turbo', glow: '#33a8ff', highlight: '#ff8b32' },
   },
   fortnite: {
     id: 'fortnite',
@@ -152,7 +165,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     darkBg: '#120E29',
     bgGradient: 'from-[#9d4dbb]/30 via-[#4c51f7]/25 to-[#f3af19]/20',
     positions: ['IGL', 'Fragger', 'Support', 'Anchor'],
-    bannerUrl: '/images/games-background/fortnite.jpg',
+    bannerUrl: '/images/games-background/v2/fortnite-arena.webp',
     backdropPosition: 'center top',
     backdropPositionMobile: '54% top',
     logoUrl: '/images/games/fortnite.png',
@@ -160,6 +173,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'ESCUADRAS',
     teamHighlightTitle: 'BATTLE ROYALE.',
     teamDescription: 'Conoce las escuadras y atletas que compiten en las arenas de Fortnite.',
+    visualTheme: { scene: 'Isla suspendida', motif: 'Descenso prismático', glow: '#c66bff', highlight: '#ffc84a' },
   },
 };
 

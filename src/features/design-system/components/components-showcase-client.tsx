@@ -2,45 +2,26 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input, Textarea } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
-import { Alert } from '@/components/ui/alert';
 import { Modal } from '@/components/ui/modal';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Card3D, Card3DItem } from '@/components/3d/card-3d';
+import { GameIdentityCard } from '@/components/game/game-identity-card';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import {
   Trophy,
-  Shield,
   Search,
   Sparkles,
   Send,
   Mail,
   User,
-  Bell,
   Palette,
-  Box,
-  Layers,
-  Flame,
-  Zap,
-  Swords,
-  Crown,
-  Activity,
   CheckCircle2,
-  Gamepad2,
-  Calendar,
-  Clock,
-  TrendingUp,
   Eye,
-  Sliders,
-  Crosshair,
-  Award,
-  ArrowRight,
-  Filter,
   SunMoon,
 } from 'lucide-react';
 
@@ -237,13 +218,13 @@ export default function ComponentsShowcasePage() {
         <div className="space-y-3">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/30 text-[var(--accent-cyan)] text-xs font-mono font-bold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Theme-Adaptive 3D Design System v3.0</span>
+            <span>Arena Spatial Design System v4.0</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[var(--text-heading)] uppercase font-display">
             Catálogo UI Kit con Soporte Multitema
           </h1>
           <p className="text-sm sm:text-base text-[var(--text-secondary)] max-w-2xl">
-            Todos los componentes, tarjetas 3D e inputs responden automáticamente a los temas del sistema (<strong className="text-[var(--text-primary)]">Claro, Oscuro y OLED</strong>) utilizando variables CSS puras.
+            Todos los componentes, tarjetas 3D e inputs responden automáticamente a los cinco temas del sistema (<strong className="text-[var(--text-primary)]">Claro, Noche, OLED, Arena y Prisma</strong>) mediante tokens visuales compartidos.
           </p>
         </div>
 
@@ -321,6 +302,23 @@ export default function ComponentsShowcasePage() {
               </button>
             );
           })}
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
+          <GameIdentityCard game={activeGame} />
+          <div className="glass-panel flex flex-col justify-between gap-5 rounded-3xl p-5 sm:p-6">
+            <div>
+              <Badge variant="cyan" is3D>Visual System V2</Badge>
+              <h3 className="mt-4 text-2xl font-black uppercase tracking-tight">Una identidad, todas las vistas</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                Fondo original, profundidad, retícula, brillo y contraste se heredan desde el gameSlug sin duplicar estilos por página.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+              <span className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-3"><b className="block text-[var(--game-brand)]">ESCENA</b>{activeGame.visualTheme.scene}</span>
+              <span className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-3"><b className="block text-[var(--game-accent)]">MOTIVO</b>{activeGame.visualTheme.motif}</span>
+            </div>
+          </div>
         </div>
 
         {/* 🌟 VISTA EN VIVO: CÓMO QUEDA LA SUITE 3D PARA ESTA DISCIPLINA */}
