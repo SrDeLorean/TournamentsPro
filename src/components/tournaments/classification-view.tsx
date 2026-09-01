@@ -583,7 +583,7 @@ export function ClassificationView({
                   const compMatches = allMatches.filter(m => 
                     (m.tournament_name || '').toLowerCase() === compName.toLowerCase() ||
                     m.competition_id === compInfo.id || 
-                    m.competition_id === compInfo.id
+                    m.tournament_id === compInfo.id
                   );
                   
                   // Filter standings for this tournament

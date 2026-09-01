@@ -1,21 +1,5 @@
 import { NextResponse } from 'next/server';
 
-interface TournamentListRow {
-  id: string;
-  name: string;
-  game_slug: string;
-  organizer_id: string | null;
-  format: string | null;
-  format_type: string | null;
-  status: string;
-  created_at: string;
-  max_teams: number | null;
-  registered_teams_count: number | null;
-  organization_id: string | null;
-  organization_name: string | null;
-  organization_tag: string | null;
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const gameSlug = searchParams.get('gameSlug');

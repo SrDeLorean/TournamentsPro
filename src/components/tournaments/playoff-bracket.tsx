@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, CheckCircle2, ChevronRight, Clock3, GitBranch, Trophy } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronRight, Clock3, GitBranch } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 
 interface PlayoffMatch {
