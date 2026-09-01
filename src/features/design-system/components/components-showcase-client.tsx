@@ -6,11 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { Input, Textarea } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
 import { Modal } from '@/components/ui/modal';
+import { Alert } from '@/components/ui/alert';
+import { PositionBadge } from '@/components/ui/position-badge';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Card3D, Card3DItem } from '@/components/3d/card-3d';
+import { HologramStage3D } from '@/components/3d/hologram-stage-3d';
 import { GameIdentityCard } from '@/components/game/game-identity-card';
+import { AppUiEvolutionStudio } from '@/features/design-system/components/app-ui-evolution-studio';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import {
   Trophy,
@@ -23,6 +27,25 @@ import {
   CheckCircle2,
   Eye,
   SunMoon,
+  Sliders,
+  Copy,
+  Check,
+  Zap,
+  Flame,
+  Shield,
+  Layers,
+  Activity,
+  Code2,
+  RefreshCw,
+  Crown,
+  Swords,
+  Crosshair,
+  AlertTriangle,
+  Info,
+  CheckCircle,
+  AlertCircle,
+  ArrowRight,
+  Sparkle,
 } from 'lucide-react';
 
 export default function ComponentsShowcasePage() {
@@ -30,6 +53,27 @@ export default function ComponentsShowcasePage() {
   const [inputValue, setInputValue] = useState('');
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('eafc26');
   const [selectedGlobalTheme, setSelectedGlobalTheme] = useState<string>('cyan-void');
+
+  // Interactive 3D Lab Playground State
+  const [labTilt, setLabTilt] = useState<number>(12);
+  const [labGlare, setLabGlare] = useState<boolean>(true);
+  const [labNeon, setLabNeon] = useState<boolean>(true);
+  const [labAccent, setLabAccent] = useState<string>('#00F0FF');
+  const [labVariant, setLabVariant] = useState<'default' | 'cyan' | 'violet' | 'gold' | 'emerald' | 'crimson'>('cyan');
+
+  // Interactive Primitives Sandbox State
+  const [btnLoading, setBtnLoading] = useState<boolean>(false);
+  const [btnDisabled, setBtnDisabled] = useState<boolean>(false);
+  const [clickCount, setClickCount] = useState<number>(0);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedToken(text);
+      setTimeout(() => setCopiedToken(null), 2000);
+    }
+  };
 
   // Discipline specific mock showcase data
   const disciplineDataMap: Record<string, {
@@ -204,27 +248,35 @@ export default function ComponentsShowcasePage() {
 
   // Global Themes List
   const globalThemes = [
-    { id: 'cyan-void', name: 'Cyber Void (Recomendada)', primary: 'var(--accent-cyan)', secondary: 'var(--accent-violet)', gold: 'var(--accent-gold)', bg: 'var(--bg-main)', tag: 'Top Recomendación' },
-    { id: 'gold-apex', name: 'Apex Gold & Titanium', primary: 'var(--accent-gold)', secondary: 'var(--accent-cyan)', gold: '#f59e0b', bg: 'var(--bg-elevated)', tag: 'Champions / Lujo' },
-    { id: 'mint-cyber', name: 'Cyber Mint & Emerald', primary: 'var(--accent-emerald)', secondary: 'var(--accent-violet)', gold: 'var(--accent-gold)', bg: 'var(--bg-subtle)', tag: 'Moderna / Web3' },
-    { id: 'crimson-val', name: 'Crimson Radiant Pulse', primary: 'var(--accent-crimson)', secondary: 'var(--accent-gold)', gold: 'var(--accent-cyan)', bg: 'var(--bg-main)', tag: 'FPS Táctico' },
+    { id: 'cyan-void', name: 'Cyber Void (Recomendada)', primary: 'var(--accent-cyan)', secondary: 'var(--accent-violet)', gold: 'var(--accent-gold)', bg: 'var(--bg-main)', tag: 'Top Recomendación', token: '--accent-cyan' },
+    { id: 'gold-apex', name: 'Apex Gold & Titanium', primary: 'var(--accent-gold)', secondary: 'var(--accent-cyan)', gold: '#f59e0b', bg: 'var(--bg-elevated)', tag: 'Champions / Lujo', token: '--accent-gold' },
+    { id: 'mint-cyber', name: 'Cyber Mint & Emerald', primary: 'var(--accent-emerald)', secondary: 'var(--accent-violet)', gold: 'var(--accent-gold)', bg: 'var(--bg-subtle)', tag: 'Moderna / Web3', token: '--accent-emerald' },
+    { id: 'crimson-val', name: 'Crimson Radiant Pulse', primary: 'var(--accent-crimson)', secondary: 'var(--accent-gold)', gold: 'var(--accent-cyan)', bg: 'var(--bg-main)', tag: 'FPS Táctico', token: '--accent-crimson' },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
+    <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 sm:space-y-16">
       
+      {/* Toast Notification when token is copied */}
+      {copiedToken && (
+        <div className="fixed bottom-6 right-6 z-50 p-3.5 rounded-2xl bg-[var(--bg-elevated)] border border-[var(--accent-cyan)] text-[var(--text-primary)] text-xs font-mono font-bold flex items-center gap-2.5 shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
+          <Check className="w-4 h-4 text-[var(--accent-cyan)]" />
+          <span>¡Token <code>{copiedToken}</code> copiado al portapapeles!</span>
+        </div>
+      )}
+
       {/* Page Header with Responsive Theme Controls */}
       <div className="border-b border-[var(--border-card)] pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
         <div className="space-y-3">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/30 text-[var(--accent-cyan)] text-xs font-mono font-bold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Arena Spatial Design System v4.0</span>
+            <span>TournamentsPro · App Design System Studio</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[var(--text-heading)] uppercase font-display">
-            Catálogo UI Kit con Soporte Multitema
+            Sistema visual de la aplicación
           </h1>
-          <p className="text-sm sm:text-base text-[var(--text-secondary)] max-w-2xl">
-            Todos los componentes, tarjetas 3D e inputs responden automáticamente a los cinco temas del sistema (<strong className="text-[var(--text-primary)]">Claro, Noche, OLED, Arena y Prisma</strong>) mediante tokens visuales compartidos.
+          <p className="text-sm sm:text-base text-[var(--text-secondary)] max-w-2xl leading-relaxed">
+            Compara la evolución de los componentes globales, prueba las paletas candidatas, experimenta con las tarjetas 3D en tiempo real y revisa la respuesta táctil en dispositivos móviles.
           </p>
         </div>
 
@@ -239,8 +291,239 @@ export default function ComponentsShowcasePage() {
         </div>
       </div>
 
+      {/* 🚀 QUICK HUD SECTION NAVIGATOR */}
+      <div className="sticky top-16 z-30 -mx-3.5 px-3.5 py-2 bg-[var(--bg-main)]/85 backdrop-blur-xl border-y border-[var(--border-card)] flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <span className="text-[10px] font-mono font-extrabold text-[var(--accent-cyan)] uppercase tracking-wider pl-1 shrink-0">
+          HUD NAV:
+        </span>
+        <a href="#ui-studio" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
+          ⚡ Studio UI
+        </a>
+        <a href="#lab-3d" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
+          🎛️ Laboratorio 3D
+        </a>
+        <a href="#disciplines" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
+          🎮 Disciplinas
+        </a>
+        <a href="#primitives" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
+          🧩 Primitivas & Botones
+        </a>
+        <a href="#palettes" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
+          🎨 Paletas
+        </a>
+        <a href="#tables" className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[11px] font-bold text-[var(--text-secondary)] whitespace-nowrap transition-colors">
+          📊 Tablas
+        </a>
+      </div>
+
+      {/* UI Studio Evolution Component */}
+      <div id="ui-studio">
+        <AppUiEvolutionStudio />
+      </div>
+
+      {/* 🎛️ NUEVO: LABORATORIO INTERACTIVO 3D (TESTBENCH DE TARJETAS 3D) */}
+      <section id="lab-3d" className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
+          <div>
+            <span className="text-[10px] font-mono font-black text-[var(--accent-cyan)] uppercase tracking-widest block">
+              [ TESTBENCH & PLAYGROUND ]
+            </span>
+            <h2 className="text-2xl font-black text-[var(--text-heading)] uppercase tracking-tight font-display flex items-center gap-2">
+              <Sliders className="w-6 h-6 text-[var(--accent-cyan)]" />
+              Laboratorio Interactivo de Tarjetas 3D
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Ajusta la física de inclinación, reflejos holográficos y luces neón en tiempo real:
+            </p>
+          </div>
+
+          <Badge variant="cyan" is3D>
+            ⚡ Live Controller
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Controls Column */}
+          <div className="lg:col-span-5 p-5 sm:p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-5 shadow-xl">
+            <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[var(--accent-cyan)]" />
+              Parámetros de Física & Shader
+            </h3>
+
+            {/* Slider maxTilt */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-mono">
+                <span className="text-[var(--text-secondary)]">Inclinación Máxima (maxTilt):</span>
+                <span className="font-bold text-[var(--accent-cyan)]">{labTilt}°</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="25"
+                step="1"
+                value={labTilt}
+                onChange={(e) => setLabTilt(Number(e.target.value))}
+                className="w-full accent-[var(--accent-cyan)] bg-[var(--bg-subtle)] h-2 rounded-lg cursor-pointer"
+              />
+            </div>
+
+            {/* Glare & Neon Toggles */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setLabGlare(!labGlare)}
+                className={`p-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  labGlare
+                    ? 'bg-[var(--accent-cyan-bg)] border-[var(--accent-cyan)] text-[var(--accent-cyan)] shadow-md'
+                    : 'bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--text-muted)]'
+                }`}
+              >
+                <Eye className="w-4 h-4" />
+                <span>Reflejo Glare: {labGlare ? 'ON' : 'OFF'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLabNeon(!labNeon)}
+                className={`p-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  labNeon
+                    ? 'bg-[var(--accent-violet-bg)] border-[var(--accent-violet)] text-[var(--accent-violet)] shadow-md'
+                    : 'bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--text-muted)]'
+                }`}
+              >
+                <Zap className="w-4 h-4" />
+                <span>Borde Neón: {labNeon ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+
+            {/* Color Accent Picker */}
+            <div className="space-y-2 pt-2">
+              <span className="text-xs font-mono text-[var(--text-secondary)] block">Color Neón Activo:</span>
+              <div className="grid grid-cols-6 gap-2">
+                {[
+                  { color: '#00F0FF', name: 'Cyan' },
+                  { color: '#7C8CFF', name: 'Violet' },
+                  { color: '#34D399', name: 'Emerald' },
+                  { color: '#FF4655', name: 'Crimson' },
+                  { color: '#F59E0B', name: 'Gold' },
+                  { color: '#C084FC', name: 'Purple' },
+                ].map((item) => (
+                  <button
+                    key={item.color}
+                    type="button"
+                    onClick={() => setLabAccent(item.color)}
+                    className="size-10 rounded-xl border-2 transition-all flex items-center justify-center cursor-pointer shadow-md hover:scale-110 active:scale-95"
+                    style={{
+                      backgroundColor: item.color,
+                      borderColor: labAccent === item.color ? '#FFFFFF' : 'transparent',
+                    }}
+                    title={item.name}
+                  >
+                    {labAccent === item.color && <Check className="w-4 h-4 text-black drop-shadow" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Code Snippet */}
+            <div className="p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-card)] font-mono text-[11px] text-[var(--text-muted)] space-y-1 relative">
+              <div className="flex justify-between items-center pb-1">
+                <span className="text-[10px] uppercase font-bold text-[var(--accent-cyan)]">Código JSX resultante</span>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(`<Card3D maxTilt={${labTilt}} glareEffect={${labGlare}} neonBorder={${labNeon}} accentColor="${labAccent}">`)}
+                  className="hover:text-[var(--text-primary)] transition-colors p-1"
+                  title="Copiar código"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <code className="text-[var(--text-secondary)] block overflow-x-auto whitespace-pre">
+                {`<Card3D maxTilt={${labTilt}} glareEffect={${labGlare}} neonBorder={${labNeon}} accentColor="${labAccent}">`}
+              </code>
+            </div>
+          </div>
+
+          {/* Live Preview Card */}
+          <div className="lg:col-span-7 flex flex-col items-center justify-center p-6 sm:p-10 rounded-3xl bg-[var(--bg-main)] border border-[var(--border-card)] relative overflow-hidden min-h-[380px]">
+            {/* Ambient Back Glow */}
+            <div
+              className="absolute inset-0 blur-3xl opacity-20 pointer-events-none transition-all duration-500"
+              style={{ backgroundColor: labAccent }}
+            />
+
+            <Card3D
+              maxTilt={labTilt}
+              glareEffect={labGlare}
+              neonBorder={labNeon}
+              accentColor={labAccent}
+              className="w-full max-w-md shadow-2xl"
+            >
+              <div className="p-6 sm:p-8 space-y-5">
+                <Card3DItem depth={35}>
+                  <div className="flex items-center justify-between">
+                    <Badge
+                      is3D
+                      style={{
+                        backgroundColor: `${labAccent}20`,
+                        color: labAccent,
+                        borderColor: `${labAccent}50`,
+                      }}
+                    >
+                      ★ 3D LIVE TELEMETRY
+                    </Badge>
+                    <span className="text-[10px] font-mono font-extrabold" style={{ color: labAccent }}>
+                      PING 14MS
+                    </span>
+                  </div>
+
+                  <h4 className="text-xl font-black text-[var(--text-heading)] uppercase tracking-tight font-display mt-2">
+                    Tarjeta Reactiva eSports
+                  </h4>
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                    Mueve el cursor o toca la pantalla para experimentar el efecto giroscópico y brillo especular.
+                  </p>
+                </Card3DItem>
+
+                <Card3DItem depth={20}>
+                  <div className="grid grid-cols-3 gap-2 text-center font-mono text-[10px]">
+                    <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)]">
+                      <span className="text-[var(--text-muted)] block font-bold">TILT</span>
+                      <span className="font-black text-xs" style={{ color: labAccent }}>{labTilt}°</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)]">
+                      <span className="text-[var(--text-muted)] block font-bold">GLARE</span>
+                      <span className="font-black text-xs text-[var(--accent-emerald)]">{labGlare ? 'ACTIVO' : 'OFF'}</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)]">
+                      <span className="text-[var(--text-muted)] block font-bold">NEON</span>
+                      <span className="font-black text-xs text-[var(--accent-violet)]">{labNeon ? 'ACTIVO' : 'OFF'}</span>
+                    </div>
+                  </div>
+                </Card3DItem>
+
+                <Card3DItem depth={30} className="pt-2">
+                  <Button
+                    size="sm"
+                    className="w-full font-black text-xs uppercase"
+                    style={{
+                      backgroundColor: labAccent,
+                      color: '#031018',
+                      boxShadow: `0 0 25px ${labAccent}40`,
+                    }}
+                  >
+                    <Zap className="w-4 h-4 mr-1.5" />
+                    Probar Interacción 3D
+                  </Button>
+                </Card3DItem>
+              </div>
+            </Card3D>
+          </div>
+        </div>
+      </section>
+
       {/* 🎮 SECCIÓN 1: SELECTOR INTERACTIVO DISCIPLINA POR DISCIPLINA */}
-      <section className="space-y-6">
+      <section id="disciplines" className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
           <div>
             <span className="text-[10px] font-mono font-black text-[var(--accent-cyan)] uppercase tracking-widest block">
@@ -268,7 +551,7 @@ export default function ComponentsShowcasePage() {
                 key={slug}
                 type="button"
                 onClick={() => setSelectedDiscipline(slug)}
-                className={`p-3.5 rounded-2xl border transition-all duration-300 flex items-center gap-3 text-left relative overflow-hidden group ${
+                className={`p-3.5 rounded-2xl border transition-all duration-300 flex items-center gap-3 text-left relative overflow-hidden group cursor-pointer ${
                   isSelected
                     ? 'bg-[var(--bg-card-hover)] border-2 shadow-xl scale-[1.03]'
                     : 'bg-[var(--bg-card)] border-[var(--border-card)] hover:border-[var(--border-card-hover)] hover:bg-[var(--bg-card-hover)]'
@@ -451,7 +734,7 @@ export default function ComponentsShowcasePage() {
                 <Card3DItem depth={35} className="pt-2">
                   <Button
                     size="sm"
-                    className="w-full font-black text-xs uppercase"
+                    className="w-full font-black text-xs uppercase cursor-pointer"
                     style={{
                       backgroundColor: activeGame.brandColor,
                       color: '#FFFFFF',
@@ -470,7 +753,7 @@ export default function ComponentsShowcasePage() {
               <div className="p-6 space-y-5 h-full flex flex-col justify-between">
                 <Card3DItem depth={35} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Badge variant="gold" is3D>Ficha de Atleta</Badge>
+                    <PositionBadge primaryPosition={activeDisciplineData.player.role.slice(0, 3)} brandColor={activeGame.accentColor} />
                     <span
                       className="text-[10px] font-mono font-extrabold"
                       style={{ color: activeGame.accentColor }}
@@ -519,7 +802,7 @@ export default function ComponentsShowcasePage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full font-black text-xs uppercase"
+                    className="w-full font-black text-xs uppercase cursor-pointer"
                   >
                     <Send className="w-4 h-4 mr-1.5" />
                     Enviar Oferta de Fichaje
@@ -582,7 +865,7 @@ export default function ComponentsShowcasePage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full font-black text-xs uppercase"
+                    className="w-full font-black text-xs uppercase cursor-pointer"
                   >
                     <Trophy className="w-4 h-4 mr-1.5" />
                     Inscribir Escuadra
@@ -621,12 +904,193 @@ export default function ComponentsShowcasePage() {
         </div>
       </section>
 
-      {/* 🎨 SECCIÓN 2: SIMULADOR DE PALETAS PARA LA PORTADA PRINCIPAL */}
-      <section className="space-y-6">
+      {/* 🧩 SECCIÓN 2: BANCO DE PRUEBAS DE PRIMITIVAS UI */}
+      <section id="primitives" className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-card)] pb-4">
+          <div>
+            <span className="text-[10px] font-mono font-black text-[var(--accent-cyan)] uppercase tracking-widest block">
+              [ BOTONES, BADGES & AVATARES ]
+            </span>
+            <h2 className="text-2xl font-black text-[var(--text-heading)] uppercase tracking-tight font-display">
+              2. Banco de Pruebas de Primitivas UI
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Interactúa con los botones, badges de posición y estados de jugador para verificar su respuesta táctil y visual:
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setBtnLoading(!btnLoading)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer ${
+                btnLoading
+                  ? 'bg-[var(--accent-cyan-bg)] border-[var(--accent-cyan)] text-[var(--accent-cyan)]'
+                  : 'bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--text-muted)]'
+              }`}
+            >
+              Loading: {btnLoading ? 'ON' : 'OFF'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setBtnDisabled(!btnDisabled)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer ${
+                btnDisabled
+                  ? 'bg-[var(--accent-crimson-bg)] border-[var(--accent-crimson)] text-[var(--accent-crimson)]'
+                  : 'bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--text-muted)]'
+              }`}
+            >
+              Disabled: {btnDisabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+        </div>
+
+        {/* Buttons Suite */}
+        <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-6">
+          <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
+            <Zap className="w-4 h-4 text-[var(--accent-gold)]" />
+            Variantes de Botones eSports
+          </h3>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="primary"
+              isLoading={btnLoading}
+              disabled={btnDisabled}
+              onClick={() => setClickCount((c) => c + 1)}
+            >
+              <Flame className="w-4 h-4 mr-1.5 text-[var(--accent-gold)]" />
+              Botón Primario ({clickCount})
+            </Button>
+
+            <Button
+              variant="secondary"
+              isLoading={btnLoading}
+              disabled={btnDisabled}
+              onClick={() => setClickCount((c) => c + 1)}
+            >
+              <Activity className="w-4 h-4 mr-1.5" />
+              Botón Secundario
+            </Button>
+
+            <Button
+              variant="outline"
+              isLoading={btnLoading}
+              disabled={btnDisabled}
+            >
+              <Trophy className="w-4 h-4 mr-1.5" />
+              Botón Outline
+            </Button>
+
+            <Button
+              variant="ghost"
+              isLoading={btnLoading}
+              disabled={btnDisabled}
+            >
+              Botón Fantasma
+            </Button>
+
+            <Button
+              variant="danger"
+              isLoading={btnLoading}
+              disabled={btnDisabled}
+            >
+              <AlertCircle className="w-4 h-4 mr-1.5" />
+              Acción Crítica
+            </Button>
+          </div>
+
+          <div className="pt-4 border-t border-[var(--border-card)] space-y-3">
+            <h4 className="text-xs font-black uppercase text-[var(--text-secondary)]">Tamaños de Botón</h4>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button size="sm">Small (sm · 36px)</Button>
+              <Button size="md">Medium (md · 44px)</Button>
+              <Button size="lg">Large Pro (lg · 50px)</Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Badges & Position Badges Suite */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-4">
+            <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[var(--accent-cyan)]" />
+              Insignias & Badges 3D
+            </h3>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="cyan" is3D>Cyan 3D</Badge>
+              <Badge variant="violet" is3D>Violet 3D</Badge>
+              <Badge variant="emerald" is3D>Emerald 3D</Badge>
+              <Badge variant="gold" is3D>Gold 3D</Badge>
+              <Badge variant="rose" is3D>Rose 3D</Badge>
+              <Badge variant="slate">Slate Flat</Badge>
+            </div>
+
+            <div className="pt-2 flex flex-wrap items-center gap-3 text-xs font-mono">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold">
+                <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
+                EN VIVO
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold">
+                <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                MATCHDAY
+              </span>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-4">
+            <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
+              <Crown className="w-4 h-4 text-[var(--accent-gold)]" />
+              Badges de Posición eSports
+            </h3>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <PositionBadge primaryPosition="MCO" secondaryPosition="MC" brandColor="#00F0FF" />
+              <PositionBadge primaryPosition="DC" secondaryPosition="EI" brandColor="#34D399" />
+              <PositionBadge primaryPosition="AWP" secondaryPosition="IGL" brandColor="#F59E0B" />
+              <PositionBadge primaryPosition="DUEL" secondaryPosition="INIT" brandColor="#FF4655" />
+              <PositionBadge primaryPosition="MID" secondaryPosition="ADC" brandColor="#C084FC" />
+            </div>
+
+            <div className="pt-2 flex items-center gap-3">
+              <Avatar fallback="SL" size="sm" status="online" />
+              <Avatar fallback="LY" size="md" status="online" />
+              <Avatar fallback="SN" size="lg" status="away" />
+              <Avatar fallback="KR" size="xl" status="offline" />
+            </div>
+          </div>
+        </div>
+
+        {/* Alerts & System Notifications */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-black uppercase text-[var(--text-heading)] flex items-center gap-2">
+            <Info className="w-4 h-4 text-[var(--accent-cyan)]" />
+            Alertas del Sistema
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Alert variant="info" title="Circuito Verificado">
+              Los servidores oficiales aplican comprobación anti-trampas en cada encuentro.
+            </Alert>
+            <Alert variant="success" title="Acta de Partido Aprobada">
+              El resultado 3 - 1 fue confirmado por ambos capitanes.
+            </Alert>
+            <Alert variant="warning" title="Período de Transferencias">
+              El mercado de agentes libres cierra en 48 horas.
+            </Alert>
+            <Alert variant="danger" title="Sanción Disciplinaria">
+              Jugador no habilitado para la fecha 12 por acumulación de tarjetas.
+            </Alert>
+          </div>
+        </div>
+      </section>
+
+      {/* 🎨 SECCIÓN 3: SIMULADOR DE PALETAS PARA LA PORTADA PRINCIPAL */}
+      <section id="palettes" className="space-y-6">
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
           <div className="flex items-center gap-2">
             <Palette className="w-5 h-5 text-[var(--accent-gold)]" />
-            <h2 className="text-xl font-bold text-[var(--text-heading)]">2. Estilos Recomendados para la Página Principal</h2>
+            <h2 className="text-xl font-bold text-[var(--text-heading)]">3. Estilos Recomendados para la Página Principal</h2>
           </div>
           <Badge variant="gold" is3D>Global Themes</Badge>
         </div>
@@ -639,7 +1103,7 @@ export default function ComponentsShowcasePage() {
                 key={theme.id}
                 type="button"
                 onClick={() => setSelectedGlobalTheme(theme.id)}
-                className={`text-left p-4 rounded-2xl border transition-all duration-300 flex flex-col justify-between space-y-3 relative group ${
+                className={`text-left p-4 rounded-2xl border transition-all duration-300 flex flex-col justify-between space-y-3 relative group cursor-pointer ${
                   isSelected
                     ? 'bg-[var(--bg-card-hover)] border-2 shadow-xl scale-[1.02]'
                     : 'bg-[var(--bg-card)] border-[var(--border-card)] hover:border-[var(--border-card-hover)] hover:bg-[var(--bg-card-hover)]'
@@ -660,9 +1124,14 @@ export default function ComponentsShowcasePage() {
                   <h4 className="text-sm font-black text-[var(--text-heading)] uppercase pt-1">{theme.name}</h4>
                 </div>
 
-                {/* Swatches */}
+                {/* Swatches with click to copy */}
                 <div className="flex items-center gap-1.5 pt-2">
-                  <div className="h-6 flex-1 rounded-md shadow-sm" style={{ backgroundColor: theme.primary }} />
+                  <div
+                    onClick={(e) => { e.stopPropagation(); copyToClipboard(theme.token); }}
+                    className="h-6 flex-1 rounded-md shadow-sm hover:scale-105 transition-transform"
+                    style={{ backgroundColor: theme.primary }}
+                    title={`Copiar ${theme.token}`}
+                  />
                   <div className="h-6 flex-1 rounded-md shadow-sm" style={{ backgroundColor: theme.secondary }} />
                   <div className="h-6 flex-1 rounded-md shadow-sm" style={{ backgroundColor: theme.gold }} />
                   <div className="h-6 flex-1 rounded-md border border-[var(--border-card)] shadow-sm" style={{ backgroundColor: theme.bg }} />
@@ -673,11 +1142,11 @@ export default function ComponentsShowcasePage() {
         </div>
       </section>
 
-      {/* 🧩 SECCIÓN 3: CONTROLES DE FORMULARIO & INPUTS */}
+      {/* 🧩 SECCIÓN 4: CONTROLES DE FORMULARIO & INPUTS */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
           <Mail className="w-5 h-5 text-[var(--accent-cyan)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">3. Controles de Formulario & Inputs eSports</h2>
+          <h2 className="text-xl font-bold text-[var(--text-heading)]">4. Controles de Formulario & Inputs eSports</h2>
         </div>
 
         <div className="p-6 rounded-2xl glass-panel grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -711,89 +1180,91 @@ export default function ComponentsShowcasePage() {
         </div>
       </section>
 
-      {/* 📊 SECCIÓN 4: TABLA DE POSICIONES ESPORTS */}
-      <section className="space-y-6">
+      {/* 📊 SECCIÓN 5: TABLA DE POSICIONES ESPORTS */}
+      <section id="tables" className="space-y-6">
         <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
           <Trophy className="w-5 h-5 text-[var(--accent-gold)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">4. Tablas de Posiciones eSports Adaptables</h2>
+          <h2 className="text-xl font-bold text-[var(--text-heading)]">5. Tablas de Posiciones eSports Adaptables</h2>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12 text-center">Pos</TableHead>
-              <TableHead>Equipo</TableHead>
-              <TableHead className="text-center">PJ</TableHead>
-              <TableHead className="text-center">PG</TableHead>
-              <TableHead className="text-center">PE</TableHead>
-              <TableHead className="text-center">PP</TableHead>
-              <TableHead className="text-center">GF</TableHead>
-              <TableHead className="text-center">GC</TableHead>
-              <TableHead className="text-center">DIF</TableHead>
-              <TableHead className="text-center">PTS</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow className="bg-[var(--accent-cyan-bg)]">
-              <TableCell className="text-center font-bold text-[var(--accent-cyan)]">1</TableCell>
-              <TableCell className="font-bold flex items-center gap-2 text-[var(--text-heading)]">
-                <div className="w-6 h-6 rounded bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/30 flex items-center justify-center text-xs font-black text-[var(--accent-cyan)]">LY</div>
-                LeguaYork eSp
-              </TableCell>
-              <TableCell className="text-center font-mono">10</TableCell>
-              <TableCell className="text-center font-mono">8</TableCell>
-              <TableCell className="text-center font-mono">1</TableCell>
-              <TableCell className="text-center font-mono">1</TableCell>
-              <TableCell className="text-center font-mono text-[var(--accent-emerald)] font-bold">24</TableCell>
-              <TableCell className="text-center font-mono text-[var(--accent-crimson)] font-bold">8</TableCell>
-              <TableCell className="text-center font-mono font-semibold">+16</TableCell>
-              <TableCell className="text-center font-bold text-[var(--accent-cyan)] text-base">25</TableCell>
-            </TableRow>
+        <div className="overflow-x-auto rounded-2xl border border-[var(--border-card)]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12 text-center">Pos</TableHead>
+                <TableHead>Equipo</TableHead>
+                <TableHead className="text-center">PJ</TableHead>
+                <TableHead className="text-center">PG</TableHead>
+                <TableHead className="text-center">PE</TableHead>
+                <TableHead className="text-center">PP</TableHead>
+                <TableHead className="text-center">GF</TableHead>
+                <TableHead className="text-center">GC</TableHead>
+                <TableHead className="text-center">DIF</TableHead>
+                <TableHead className="text-center">PTS</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow className="bg-[var(--accent-cyan-bg)]">
+                <TableCell className="text-center font-bold text-[var(--accent-cyan)]">1</TableCell>
+                <TableCell className="font-bold flex items-center gap-2 text-[var(--text-heading)]">
+                  <div className="w-6 h-6 rounded bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/30 flex items-center justify-center text-xs font-black text-[var(--accent-cyan)]">LY</div>
+                  LeguaYork eSp
+                </TableCell>
+                <TableCell className="text-center font-mono">10</TableCell>
+                <TableCell className="text-center font-mono">8</TableCell>
+                <TableCell className="text-center font-mono">1</TableCell>
+                <TableCell className="text-center font-mono">1</TableCell>
+                <TableCell className="text-center font-mono text-[var(--accent-emerald)] font-bold">24</TableCell>
+                <TableCell className="text-center font-mono text-[var(--accent-crimson)] font-bold">8</TableCell>
+                <TableCell className="text-center font-mono font-semibold">+16</TableCell>
+                <TableCell className="text-center font-bold text-[var(--accent-cyan)] text-base">25</TableCell>
+              </TableRow>
 
-            <TableRow>
-              <TableCell className="text-center font-bold text-[var(--accent-violet)]">2</TableCell>
-              <TableCell className="font-semibold flex items-center gap-2 text-[var(--text-heading)]">
-                <div className="w-6 h-6 rounded bg-[var(--accent-violet-bg)] border border-[var(--accent-violet)]/30 flex items-center justify-center text-xs font-black text-[var(--accent-violet)]">SN</div>
-                Sangre Nueva FC
-              </TableCell>
-              <TableCell className="text-center font-mono">10</TableCell>
-              <TableCell className="text-center font-mono">7</TableCell>
-              <TableCell className="text-center font-mono">2</TableCell>
-              <TableCell className="text-center font-mono">1</TableCell>
-              <TableCell className="text-center font-mono text-[var(--accent-emerald)] font-bold">19</TableCell>
-              <TableCell className="text-center font-mono text-[var(--accent-crimson)] font-bold">9</TableCell>
-              <TableCell className="text-center font-mono font-semibold">+10</TableCell>
-              <TableCell className="text-center font-bold text-[var(--accent-violet)] text-base">23</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+              <TableRow>
+                <TableCell className="text-center font-bold text-[var(--accent-violet)]">2</TableCell>
+                <TableCell className="font-semibold flex items-center gap-2 text-[var(--text-heading)]">
+                  <div className="w-6 h-6 rounded bg-[var(--accent-violet-bg)] border border-[var(--accent-violet)]/30 flex items-center justify-center text-xs font-black text-[var(--accent-violet)]">SN</div>
+                  Sangre Nueva FC
+                </TableCell>
+                <TableCell className="text-center font-mono">10</TableCell>
+                <TableCell className="text-center font-mono">7</TableCell>
+                <TableCell className="text-center font-mono">2</TableCell>
+                <TableCell className="text-center font-mono">1</TableCell>
+                <TableCell className="text-center font-mono text-[var(--accent-emerald)] font-bold">19</TableCell>
+                <TableCell className="text-center font-mono text-[var(--accent-crimson)] font-bold">9</TableCell>
+                <TableCell className="text-center font-mono font-semibold">+10</TableCell>
+                <TableCell className="text-center font-bold text-[var(--accent-violet)] text-base">23</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
       </section>
 
-      {/* 🚀 SECCIÓN 5: MODALES & DIÁLOGOS */}
+      {/* 🚀 SECCIÓN 6: MODALES & DIÁLOGOS */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 border-b border-[var(--border-card)] pb-3">
           <Sparkles className="w-5 h-5 text-[var(--accent-cyan)]" />
-          <h2 className="text-xl font-bold text-[var(--text-heading)]">5. Modales & Diálogos</h2>
+          <h2 className="text-xl font-bold text-[var(--text-heading)]">6. Modales & Diálogos Interactivos</h2>
         </div>
 
         <div className="p-6 rounded-2xl glass-panel">
           <Button onClick={() => setIsModalOpen(true)}>
-            Abrir Modal de Ejemplo
+            Abrir Modal de Confirmación
           </Button>
 
           <Modal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
             title="Confirmar Reporte de Partido"
-            description="Revisa los datos del encuentro antes de guardar la información en Supabase."
+            description="Revisa los datos del encuentro antes de guardar la información en la base de datos."
           >
             <div className="space-y-4 text-xs text-[var(--text-secondary)]">
-              <div className="p-3 rounded-lg bg-[var(--bg-card-hover)] border border-[var(--border-card)] flex justify-between items-center">
+              <div className="p-3.5 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)] flex justify-between items-center">
                 <span className="font-bold text-[var(--text-heading)]">LeguaYork eSp</span>
-                <span className="text-base font-bold text-[var(--accent-cyan)]">3 - 1</span>
+                <span className="text-base font-black text-[var(--accent-cyan)] font-mono">3 - 1</span>
                 <span className="font-bold text-[var(--text-heading)]">Sangre Nueva FC</span>
               </div>
-              <p>Al confirmar el resultado, las estadísticas se procesarán automáticamente en la tabla de posiciones.</p>
+              <p className="leading-relaxed">Al confirmar el resultado, las estadísticas se procesarán automáticamente en la tabla de posiciones y ranking ELO de los clubes.</p>
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
                 <Button variant="primary" size="sm" onClick={() => setIsModalOpen(false)}>Confirmar y Guardar</Button>
