@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { TeamDirectory } from '@/components/teams/team-directory';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Shield, ShieldAlert, Unlock, Edit, Plus, UserPlus, X, Activity, Trophy } from 'lucide-react';
@@ -309,30 +310,15 @@ export default function TeamsModulePage() {
       header: 'Escuadra / Tag',
       sortable: true,
       accessorKey: 'name',
-      cell: (r) => {
-        return (
-          <div className="flex items-center gap-3">
-            {r.logo_url ? (
-              <Image
-                src={r.logo_url}
-                alt={r.name}
-                width={32}
-                height={32}
-                unoptimized={shouldBypassImageOptimization(r.logo_url)}
-                className="w-8 h-8 rounded-lg object-cover border border-white/10"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-lg bg-slate-900 border border-purple-400/40 flex items-center justify-center font-black text-[10px] text-purple-400">
-                {r.tag}
-              </div>
-            )}
-            <div>
-              <div className="font-black text-[var(--table-cell-heading)] text-xs">{r.name}</div>
-              <div className="text-[10px] font-mono text-[var(--accent-cyan)]">[{r.tag}]</div>
-            </div>
+      cell: (r) => (
+        <div className="flex items-center gap-3">
+          <Avatar fallback={r.tag || r.name} src={r.logo_url || r.logoUrl} size="sm" alt={r.name} />
+          <div>
+            <div className="font-bold text-[var(--text-heading)] text-xs">{r.name}</div>
+            <div className="text-[10px] font-mono text-[var(--accent-cyan)]">[{r.tag}]</div>
           </div>
-        );
-      },
+        </div>
+      ),
     },
     {
       header: 'Disciplina eSports',
