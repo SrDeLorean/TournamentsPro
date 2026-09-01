@@ -3,16 +3,17 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
-export interface AvatarProps {
+export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: string;
   alt?: string;
   fallback?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   status?: 'online' | 'offline' | 'away';
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', status, className }: AvatarProps) {
+export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', status, className, style, ...props }: AvatarProps) {
   const sizes = {
     sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-sm',
@@ -28,7 +29,7 @@ export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', statu
   const pixels = { sm: 32, md: 40, lg: 48, xl: 64 }[size];
 
   return (
-    <div className={cn("relative inline-flex flex-shrink-0", className)}>
+    <div className={cn("relative inline-flex flex-shrink-0", className)} style={style} {...props}>
       {src ? (
         <Image
           src={src}
