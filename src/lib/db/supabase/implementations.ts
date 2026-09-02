@@ -27,6 +27,10 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
   protected tableName = 'users';
   protected primaryKey = 'id';
 
+  protected override generateId(): string {
+    return `usr-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
   protected mapRow(row: any): User {
     return {
       id: row.id, email: row.email, passwordHash: row.password_hash, googleId: row.google_id,
@@ -91,6 +95,10 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
   protected tableName = 'organizations';
   protected primaryKey = 'id';
 
+  protected override generateId(): string {
+    return `org-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
   protected mapRow(row: any): Organization {
     return {
       id: row.id, name: row.name, tag: row.tag, ownerId: row.owner_id, logoUrl: row.logo_url,
@@ -150,6 +158,10 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
 export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> implements ITeamRepository {
   protected tableName = 'teams';
   protected primaryKey = 'id';
+
+  protected override generateId(): string {
+    return `team-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
 
   protected mapRow(row: any): Team {
     return {
@@ -389,6 +401,10 @@ export class SupabaseCompetitionRepository extends SupabaseBaseRepository<Compet
   protected tableName = 'competitions';
   protected primaryKey = 'id';
 
+  protected override generateId(): string {
+    return `comp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
   protected mapRow(row: any): Competition {
     return {
       id: row.id, name: row.name, gameSlug: row.game_slug, organizerId: row.organizer_id,
@@ -481,6 +497,10 @@ export class SupabaseSeasonRepository extends SupabaseBaseRepository<Season> imp
   protected tableName = 'seasons';
   protected primaryKey = 'id';
 
+  protected override generateId(): string {
+    return `seas-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
   protected mapRow(row: any): Season {
     return {
       id: row.id, name: row.name, organizationId: row.organization_id, startDate: row.start_date,
@@ -501,6 +521,10 @@ export class SupabaseSeasonRepository extends SupabaseBaseRepository<Season> imp
 export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> implements IMatchRepository {
   protected primaryKey = 'id';
   protected tableName = 'matches';
+
+  protected override generateId(): string {
+    return `match-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
 
   protected mapRow(row: any): Match {
     return {

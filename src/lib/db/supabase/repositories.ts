@@ -70,8 +70,15 @@ export abstract class SupabaseBaseRepository<T> implements IRepository<T> {
     return count || 0;
   }
 
+  protected generateId(): string {
+    return `${this.tableName.slice(0, 4)}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
   async create(data: Partial<T>): Promise<T> {
     const dbData = this.mapToDb(data);
+    if (this.primaryKey === 'id' && !dbData.id) {
+      dbData.id = this.generateId();
+    }
     const { data: result, error } = await supabase
       .from(this.tableName)
       .insert([dbData])

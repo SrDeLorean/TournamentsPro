@@ -1,7 +1,7 @@
 'use server';
 
 import { dbProvider } from '@/lib/db/provider';
-import { Organization } from '@/lib/repositories';
+import type { Organization } from '@/lib/db/interfaces';
 
 export interface OrgWithStats extends Organization {
   comp_count: number;

@@ -3,7 +3,7 @@
 // TournamentsPro — Service Layer (Business Logic)
 // =============================================================================
 
-import type { Competition, Team, User } from '@/lib/repositories';
+import type { Competition, Team, User } from '@/lib/db/interfaces';
 import { executeCas, type DatabaseExecutor, type DatabaseParams } from '@/lib/db';
 import { dbProvider } from '@/lib/db/provider';
 import { validateSchema, uuidSchema } from '@/lib/validation';

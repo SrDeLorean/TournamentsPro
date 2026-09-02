@@ -7,7 +7,6 @@ import { canManageOrganization } from '@/lib/authorization';
 import { validateSchema, uuidSchema, flexDatetimeSchema } from '@/lib/validation';
 import { z } from 'zod';
 import { createSeasonService } from '@/lib/services';
-import { seasonRepository } from '@/lib/repositories';
 import { getActionErrorMessage } from '@/lib/action-utils';
 
 export interface SeasonData {
@@ -108,7 +107,7 @@ export async function updateSeasonAction(
   try {
     const actor = await requireServerActor(['Administrador', 'Organizador']);
     const session = await getServerUserSession();
-    const season = await seasonRepository.findById(id);
+    const season = await dbProvider.seasons.findById(id);
     if (!season || !season.organizationId || !canManageOrganization(actor, season.organizationId)) {
       return { success: false, error: 'No autorizado para modificar esta temporada.', code: 'FORBIDDEN' };
     }
@@ -118,7 +117,7 @@ export async function updateSeasonAction(
       }
     }
 
-    await seasonRepository.update(id, data);
+    await dbProvider.seasons.update(id, data);
     revalidatePath('/dashboard/competencias');
     return { success: true, message: 'Temporada actualizada.' };
   } catch (error: unknown) {
@@ -131,7 +130,7 @@ export async function deleteSeasonAction(id: string) {
   try {
     await requireServerActor(['Administrador']);
 
-    await seasonRepository.delete(id);
+    await dbProvider.seasons.delete(id);
     revalidatePath('/dashboard/competencias');
     return { success: true, message: 'Temporada eliminada.' };
   } catch (error: unknown) {

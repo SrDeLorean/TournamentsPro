@@ -12,7 +12,6 @@ import {
 import { validateSchema, createCompetitionSchema } from '@/lib/validation';
 import { z } from 'zod';
 import { createCompetitionService, generateFixtureService } from '@/lib/services';
-import { competitionRepository } from '@/lib/repositories';
 import { getActionErrorMessage, stringFormValue } from '@/lib/action-utils';
 
 export type CompetitionStatus = 'Borrador' | 'Inscripcion' | 'En Curso' | 'Finalizada' | 'Eliminada' | 'Activo' | 'Finalizado' | 'Deshabilitado';
@@ -128,7 +127,7 @@ export async function updateCompetitionStatusAction(id: string, newStatus: Compe
 
     const session = await getServerUserSession();
     if (session?.role !== 'Administrador') {
-      const comp = await competitionRepository.findById(id);
+      const comp = await dbProvider.competitions.findById(id);
       if (comp) {
         const isOwner = (session?.organizationId && comp.organizationId === session.organizationId) || comp.organizerId === session?.userId;
         if (!isOwner) {
@@ -137,7 +136,7 @@ export async function updateCompetitionStatusAction(id: string, newStatus: Compe
       }
     }
 
-    await competitionRepository.update(id, { status: newStatus });
+    await dbProvider.competitions.update(id, { status: newStatus });
 
     revalidatePath('/dashboard/competencias');
     revalidatePath(`/dashboard/competencias/${id}`);
@@ -161,10 +160,9 @@ export async function enrollTeamAction(competitionId: string, teamId: string, te
       await requireCompetitionManager(competitionId);
     }
 
-    const { competitionRepository, teamRepository } = await import('@/lib/repositories');
     const [comp, team] = await Promise.all([
-      competitionRepository.findById(competitionId),
-      teamRepository.findById(teamId),
+      dbProvider.competitions.findById(competitionId),
+      dbProvider.teams.findById(teamId),
     ]);
 
     if (comp && team && comp.gameSlug !== team.gameSlug) {

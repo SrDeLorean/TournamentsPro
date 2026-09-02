@@ -36,4 +36,80 @@ describe('repository row mapping', () => {
     }));
     expect(team.vacantPositions).toEqual(['Duelista']);
   });
+
+  it('generates proper prefix IDs for Supabase repositories', async () => {
+    const { 
+      SupabaseCompetitionRepository,
+      SupabaseUserRepository,
+      SupabaseOrganizationRepository,
+      SupabaseTeamRepository,
+      SupabaseSeasonRepository,
+      SupabaseMatchRepository
+    } = await import('../src/lib/db/supabase/implementations');
+
+    class TestCompRepo extends SupabaseCompetitionRepository {
+      getId() { return this.generateId(); }
+    }
+    class TestUserRepo extends SupabaseUserRepository {
+      getId() { return this.generateId(); }
+    }
+    class TestOrgRepo extends SupabaseOrganizationRepository {
+      getId() { return this.generateId(); }
+    }
+    class TestTeamRepo extends SupabaseTeamRepository {
+      getId() { return this.generateId(); }
+    }
+    class TestSeasonRepo extends SupabaseSeasonRepository {
+      getId() { return this.generateId(); }
+    }
+    class TestMatchRepo extends SupabaseMatchRepository {
+      getId() { return this.generateId(); }
+    }
+
+    expect(new TestCompRepo().getId()).toMatch(/^comp-\d+-[a-z0-9]+$/);
+    expect(new TestUserRepo().getId()).toMatch(/^usr-\d+-[a-z0-9]+$/);
+    expect(new TestOrgRepo().getId()).toMatch(/^org-\d+-[a-z0-9]+$/);
+    expect(new TestTeamRepo().getId()).toMatch(/^team-\d+-[a-z0-9]+$/);
+    expect(new TestSeasonRepo().getId()).toMatch(/^seas-\d+-[a-z0-9]+$/);
+    expect(new TestMatchRepo().getId()).toMatch(/^match-\d+-[a-z0-9]+$/);
+  });
+
+  it('verifies competition mapping and db conversion', async () => {
+    const { SupabaseCompetitionRepository } = await import('../src/lib/db/supabase/implementations');
+    class TestCompRepo extends SupabaseCompetitionRepository {
+      toDb(entity: any) { return this.mapToDb(entity); }
+      fromRow(row: any) { return this.mapRow(row); }
+    }
+
+    const repo = new TestCompRepo();
+    const dbObj = repo.toDb({
+      name: 'Torneo Test',
+      gameSlug: 'eafc26',
+      organizerId: 'usr-1',
+      organizerName: 'Admin',
+      organizationId: 'org-1',
+      seasonId: 'seas-1',
+      prizePool: '1000',
+      transferMarketMode: 'ABIERTO',
+      modeFormat: '11v11',
+      status: 'Inscripcion',
+      fechaInicio: '2026-09-01 10:00:00',
+      description: 'Desc',
+    });
+
+    expect(dbObj).toEqual({
+      name: 'Torneo Test',
+      game_slug: 'eafc26',
+      organizer_id: 'usr-1',
+      organizer_name: 'Admin',
+      organization_id: 'org-1',
+      season_id: 'seas-1',
+      prize_pool: '1000',
+      transfer_market_mode: 'ABIERTO',
+      mode_format: '11v11',
+      status: 'Inscripcion',
+      fecha_inicio: '2026-09-01 10:00:00',
+      description: 'Desc',
+    });
+  });
 });
