@@ -115,7 +115,7 @@ export async function addPlayerToSquadAction(
   teamId: string,
   userId: string,
   tacticalPosition?: string,
-  roleInTeam: 'Capitan' | 'Jugador' | 'DT / Analyst' = 'Jugador'
+  roleInTeam: 'Capitan' | 'Capitán' | 'Encargado' | 'Jugador' | 'DT / Analyst' = 'Jugador'
 ) {
   try {
     if (!teamId || !userId) {
