@@ -81,6 +81,13 @@ describe('team and competition policy', () => {
     expect(canManageTeam(captain, { captainId: 'captain-2' })).toBe(false);
   });
 
+  it('allows organizers to manage their organization teams, independent teams, and participating teams', () => {
+    expect(canManageTeam(organizer, { organizationId: 'org-1' })).toBe(true);
+    expect(canManageTeam(organizer, { organizationId: null })).toBe(true);
+    expect(canManageTeam(organizer, { organizationId: 'org-2', participatingOrgIds: ['org-1'] })).toBe(true);
+    expect(canManageTeam(organizer, { organizationId: 'org-2', participatingOrgIds: ['org-3'] })).toBe(false);
+  });
+
   it('scopes organizers to owned competitions', () => {
     expect(canManageCompetition(organizer, { organizationId: 'org-1' })).toBe(true);
     expect(canApproveMatch(organizer, { organizerId: 'org-user-1' })).toBe(true);
