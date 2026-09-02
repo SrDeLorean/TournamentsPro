@@ -345,6 +345,17 @@ export default function TeamsModulePage() {
     { header: 'Capitán Oficial', accessorKey: 'captain_name', sortable: true, className: 'font-bold text-[var(--table-cell-text)] text-xs' },
     { header: 'Plataforma', accessorKey: 'platform', sortable: true, className: 'font-mono text-[var(--accent-cyan)] text-xs' },
     {
+      header: 'Plantilla',
+      accessorKey: 'members_count',
+      sortable: true,
+      className: 'font-mono text-xs text-[var(--table-cell-text)]',
+      cell: (r) => (
+        <span className="font-bold text-cyan-400">
+          {r.members_count || 0} / {r.max_members || 45}
+        </span>
+      ),
+    },
+    {
       header: 'Estado',
       sortable: true,
       accessorKey: 'status',
@@ -428,37 +439,56 @@ export default function TeamsModulePage() {
             data={teams}
             searchPlaceholder="Buscar por escuadra, capitán o tag..."
             brandColor="#A855F7"
-            actions={(row) => (
-              <div className="flex items-center gap-1 justify-end">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setManagingRosterTeam(row)}
-                  className="text-xs text-[var(--accent-violet)] hover:bg-[var(--accent-violet-bg)] p-2 rounded-xl transition-colors"
-                  title="Gestionar Plantilla / Agregar Jugadores"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => openEditModal(row)}
-                  className="text-xs text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan-bg)] p-2 rounded-xl transition-colors"
-                  title="Editar Escuadra"
-                >
-                  <Edit className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setBanConfirmTeam(row)}
-                  className="text-xs text-[var(--accent-crimson)] hover:bg-[var(--accent-crimson-bg)] p-2 rounded-xl transition-colors"
-                  title={row.is_banned ? 'Desbanear Escuadra' : 'Banear Escuadra'}
-                >
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            )}
+            actions={(row) => {
+              const isAdmin = currentUser?.role === 'Administrador';
+              const organizerOrgId = currentUser?.organizationId;
+              const isMyOrgTeam = !row.organization_id || !organizerOrgId || row.organization_id === organizerOrgId;
+              const canManageRoster = isAdmin || isMyOrgTeam;
+
+              return (
+                <div className="flex items-center gap-1 justify-end">
+                  {canManageRoster ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setManagingRosterTeam(row)}
+                      className="text-xs text-[var(--accent-violet)] hover:bg-[var(--accent-violet-bg)] p-2 rounded-xl transition-colors"
+                      title={isAdmin ? 'Gestionar Plantilla Global (Acceso Administrador)' : 'Gestionar Plantilla (Tu Organización)'}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled
+                      className="text-xs text-slate-600 opacity-40 cursor-not-allowed p-2 rounded-xl"
+                      title="Solo lectura: Esta escuadra pertenece a otra organización"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => openEditModal(row)}
+                    className="text-xs text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan-bg)] p-2 rounded-xl transition-colors"
+                    title="Editar Escuadra"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setBanConfirmTeam(row)}
+                    className="text-xs text-[var(--accent-crimson)] hover:bg-[var(--accent-crimson-bg)] p-2 rounded-xl transition-colors"
+                    title={row.is_banned ? 'Desbanear Escuadra' : 'Banear Escuadra'}
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              );
+            }}
           />
         </div>
       )}

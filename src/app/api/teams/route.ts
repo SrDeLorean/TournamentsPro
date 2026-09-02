@@ -151,12 +151,13 @@ export async function PUT(request: Request) {
     }
     const t = existingTeam;
     
-    // Instead of loadTeamScope with queryDB, use our new repo method
     const managers = await dbProvider.teams.getManagers(teamId);
+    const compOrgs = await dbProvider.teams.getTeamCompetitionOrganizations(teamId);
     const teamScope = {
       organizationId: existingTeam.organizationId,
       captainId: existingTeam.captainId,
       managerIds: managers,
+      participatingOrgIds: compOrgs.map((c) => c.org_id).filter(Boolean),
     };
 
     if (!teamScope || !canManageTeam(actor, teamScope)) {

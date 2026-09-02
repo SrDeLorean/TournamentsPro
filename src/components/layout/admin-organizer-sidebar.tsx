@@ -90,10 +90,10 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
       badge: 'Directorio',
     },
     {
-      title: 'Equipos / Clubes',
+      title: 'Clubes & Plantillas',
       href: '/dashboard/equipos',
       icon: <Shield className="w-4 h-4 text-amber-400" />,
-      badge: 'Escuadras',
+      badge: 'Todas las Orgs',
     },
     {
       title: 'Reportar Encuentros',
@@ -113,7 +113,7 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
     { title: 'Centro operativo', href: '/dashboard', icon: <LayoutDashboard className="w-4 h-4 text-[var(--accent-cyan)]" />, badge: 'Inicio' },
     { title: 'Mis competencias', href: '/dashboard/competencias', icon: <Swords className="w-4 h-4 text-[var(--accent-violet)]" />, badge: 'Ligas' },
     { title: 'Usuarios / Atletas', href: '/dashboard/usuarios', icon: <Users className="w-4 h-4 text-[var(--accent-cyan)]" />, badge: 'Directorio' },
-    { title: 'Clubes / Equipos', href: '/dashboard/equipos', icon: <Shield className="w-4 h-4 text-[var(--accent-gold)]" />, badge: 'Clubes' },
+    { title: 'Clubes & Plantillas', href: '/dashboard/equipos', icon: <Shield className="w-4 h-4 text-[var(--accent-gold)]" />, badge: 'Mi Organización' },
     { title: 'Operación matchday', href: '/dashboard/matchday', icon: <CheckCircle2 className="w-4 h-4 text-[var(--accent-crimson)]" />, badge: 'Partidos' },
     { title: 'Moderación & Chat', href: '/dashboard/moderacion', icon: <MessageSquare className="w-4 h-4 text-orange-400" />, badge: 'Bans/Chat' },
   ];

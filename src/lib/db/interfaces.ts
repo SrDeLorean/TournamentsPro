@@ -148,6 +148,8 @@ export interface IUserRepository extends IRepository<User> {
 export interface IOrganizationRepository extends IRepository<Organization> {
   findByOwnerId(ownerId: string): Promise<Organization | null>;
   getOrganizationsWithStats(gameSlug?: string): Promise<any[]>;
+  hasActiveCompetitions(organizationId: string): Promise<boolean>;
+  archiveOrganization(organizationId: string): Promise<number>;
 }
 
 export interface ITeamRepository extends IRepository<Team> {
@@ -156,6 +158,17 @@ export interface ITeamRepository extends IRepository<Team> {
   findByGameSlug(gameSlug: string): Promise<Team[]>;
   updateMembersCount(teamId: string): Promise<void>;
   getManagers(teamId: string): Promise<string[]>;
+  syncStaff(teamId: string, captainId: string, managerIds: string[], position?: string): Promise<void>;
+  hasActiveCompetitions(teamId: string): Promise<boolean>;
+  archiveTeam(teamId: string): Promise<void>;
+  getSquad(teamId: string): Promise<any[]>;
+  getAcceptedOffers(teamId: string): Promise<any[]>;
+  getTeamCompetitionOrganizations(teamId: string): Promise<Array<{ org_id: string; org_name: string }>>;
+  addSquadMember(teamId: string, userId: string, position: string, role: string): Promise<void>;
+  removeSquadMember(teamId: string, userId: string, orgName?: string): Promise<void>;
+  updateSquadMemberRole(teamId: string, userId: string, newRole: string, userName?: string): Promise<void>;
+  updateSquadMemberJersey(memberId: string, jerseyNumber: number | null): Promise<void>;
+  isMemberOrManager(teamId: string, userId: string): Promise<boolean>;
 }
 
 export interface ICompetitionRepository extends IRepository<Competition> {
