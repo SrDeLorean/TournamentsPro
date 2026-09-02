@@ -33,6 +33,9 @@ export interface SquadMemberData {
   jersey_number?: number | null;
   avatar_url?: string | null;
   foto?: string | null;
+  organization_name?: string | null;
+  organization_names?: string | null;
+  organization_ids?: string | null;
   joined_at: string;
 }
 

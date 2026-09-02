@@ -303,30 +303,23 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
   }
 
   return dbProvider.withTransaction(async (transaction) => {
-    const captains = await transaction.users.findById(captainId).then(r => r ? [{ id: r.id }] : []);
-    if (captains.length === 0) return { success: false, error: 'Capitán no encontrado', code: 'CAPTAIN_NOT_FOUND' };
+    const captain = await transaction.users.findById(captainId);
+    if (!captain) return { success: false, error: 'Capitán no encontrado', code: 'CAPTAIN_NOT_FOUND' };
 
     if (validation.data.organizationId) {
-      const organizations = await transaction.query<{ id: string }>(
-        'SELECT id FROM organizations WHERE id = ? FOR UPDATE',
-        [validation.data.organizationId],
-      );
-      if (organizations.length === 0) return { success: false, error: 'Organización no encontrada', code: 'ORG_NOT_FOUND' };
+      const org = await transaction.organizations.findById(validation.data.organizationId);
+      if (!org) return { success: false, error: 'Organización no encontrada', code: 'ORG_NOT_FOUND' };
     }
 
-    const managerIds = [...new Set(validation.data.managerIds)].filter((userId) => userId !== captainId);
+    const managerIds = [...new Set(validation.data.managerIds || [])].filter((userId) => userId !== captainId);
     if (managerIds.length > 0) {
-      const managers = await transaction.query<{ id: string }>(
-        `SELECT id FROM users WHERE id IN (${managerIds.map(() => '?').join(', ')}) FOR UPDATE`,
-        managerIds,
-      );
-      if (managers.length !== managerIds.length) return { success: false, error: 'Uno o más encargados no existen.', code: 'MANAGER_NOT_FOUND' };
+      const managers = await Promise.all(managerIds.map((id) => transaction.users.findById(id)));
+      if (managers.some((m) => !m)) {
+        return { success: false, error: 'Uno o más encargados no existen.', code: 'MANAGER_NOT_FOUND' };
+      }
     }
 
-    const existingTeams = await transaction.query<{ id: string; name: string }>(
-      'SELECT id, name FROM teams WHERE captain_id = ? AND game_slug = ? FOR UPDATE',
-      [captainId, validation.data.gameSlug],
-    );
+    const existingTeams = await transaction.teams.findByCaptain(captainId, validation.data.gameSlug);
     if (existingTeams.length > 0) {
       return {
         success: false,
@@ -336,41 +329,36 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
     }
 
     const teamId = validation.data.id || randomUUID();
-    await (transaction as any).query(
-      `INSERT INTO teams
-        (id, name, tag, game_slug, organization_id, captain_id, captain_name, platform, members_count,
-         max_members, color, logo_text, description, vacant_positions, status, club_id_ea, logo_url, banner_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 45, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        teamId, validation.data.name, validation.data.tag, validation.data.gameSlug,
-        validation.data.organizationId || null, captainId, captainName, validation.data.platform,
-        validation.data.color, validation.data.logoText, validation.data.description || null,
-        JSON.stringify(validation.data.vacantPositions || []), validation.data.status,
-        validation.data.clubIdEa || null, validation.data.logoUrl || null, validation.data.bannerUrl || null,
-      ],
-    );
-    for (const managerId of managerIds) {
-      await (transaction as any).query(
-        `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
-         VALUES (?, ?, ?, 'ENCARGADO', 'Encargado')`,
-        [randomUUID(), teamId, managerId],
-      );
-    }
-    await (transaction as any).query(
-      `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team)
-       VALUES (?, ?, ?, ?, 'Capitan')`,
-      [randomUUID(), teamId, captainId, validation.data.position || 'DFC'],
-    );
-    if (validation.data.organizationId) {
-      await (transaction as any).query(
-        `UPDATE users SET organization_id = ? WHERE id = ? AND (organization_id IS NULL OR organization_id = '')`,
-        [validation.data.organizationId, captainId],
-      );
+    const createdTeam = await transaction.teams.create({
+      id: teamId,
+      name: validation.data.name,
+      tag: validation.data.tag,
+      gameSlug: validation.data.gameSlug,
+      organizationId: validation.data.organizationId || null,
+      captainId,
+      captainName,
+      platform: validation.data.platform,
+      membersCount: 1,
+      maxMembers: 45,
+      color: validation.data.color,
+      logoText: validation.data.logoText,
+      description: validation.data.description || null,
+      vacantPositions: validation.data.vacantPositions || [],
+      status: validation.data.status || 'Activo',
+      clubIdEa: validation.data.clubIdEa || null,
+      logoUrl: validation.data.logoUrl || null,
+      bannerUrl: validation.data.bannerUrl || null,
+    });
+
+    await transaction.teams.syncStaff(teamId, captainId, managerIds, validation.data.position || 'DFC');
+
+    if (validation.data.organizationId && !captain.organizationId) {
+      await transaction.users.update(captainId, { organizationId: validation.data.organizationId });
     }
 
     return {
       success: true,
-      team: { id: teamId, ...validation.data, captainId, captainName, membersCount: 1, maxMembers: 45 },
+      team: { ...createdTeam, id: teamId, ...validation.data, captainId, captainName, membersCount: 1, maxMembers: 45 },
     };
   });
 }
@@ -393,36 +381,36 @@ export interface ManagedOrganizationInput {
 
 export async function createManagedOrganizationService(data: ManagedOrganizationInput) {
   return dbProvider.withTransaction(async (transaction) => {
-    const owners = await transaction.users.findById(data.ownerId).then(r => r ? [{ id: r.id }] : []);
-    if (owners.length === 0) return { success: false, error: 'Propietario no encontrado.' };
     const organizerIds = [...new Set(data.organizerIds || [])];
     if (organizerIds.length > 0) {
-      const organizers = await transaction.query<{ id: string }>(
-        `SELECT id FROM users WHERE id IN (${organizerIds.map(() => '?').join(', ')}) AND role = 'Organizador' FOR UPDATE`,
-        organizerIds,
-      );
-      if (organizers.length !== organizerIds.length) return { success: false, error: 'Uno o más organizadores no son válidos.' };
+      const organizers = await Promise.all(organizerIds.map((id) => transaction.users.findById(id)));
+      if (organizers.some((u) => !u || u.role !== 'Organizador')) {
+        return { success: false, error: 'Uno o más organizadores no son válidos.' };
+      }
     }
-    const duplicates = await transaction.query<{ id: string }>(
-      'SELECT id FROM organizations WHERE name = ? OR tag = ? FOR UPDATE',
-      [data.name, data.tag],
-    );
-    if (duplicates.length > 0) return { success: false, error: 'Ya existe una organización con ese nombre o tag.' };
+    const duplicateByName = await transaction.organizations.findAll({ where: { name: data.name }, limit: 1 });
+    const duplicateByTag = await transaction.organizations.findAll({ where: { tag: data.tag }, limit: 1 });
+    if (duplicateByName.length > 0 || duplicateByTag.length > 0) {
+      return { success: false, error: 'Ya existe una organización con ese nombre o tag.' };
+    }
 
     const organizationId = randomUUID();
-    await (transaction as any).query(
-      `INSERT INTO organizations
-        (id, name, tag, owner_id, allowed_games, logo_url, banner_url, country, founded_year, rating, website, redes_sociales, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        organizationId, data.name, data.tag, data.ownerId, JSON.stringify(data.allowedGames || ['eafc26', 'valorant']),
-        data.logoUrl || '/images/default/logo-default.png', data.bannerUrl || '/images/default/banner-default.jpg',
-        data.country || 'Venezuela', data.foundedYear || '2020', data.rating || '4.95', data.website || null,
-        JSON.stringify(data.socialMedia || {}), data.status || 'Activa',
-      ],
-    );
+    await transaction.organizations.create({
+      id: organizationId,
+      name: data.name,
+      tag: data.tag,
+      ownerId: data.ownerId,
+      allowedGames: data.allowedGames || ['eafc26', 'valorant'],
+      logoUrl: data.logoUrl || '/images/default/logo-default.png',
+      bannerUrl: data.bannerUrl || '/images/default/banner-default.jpg',
+      country: data.country || 'Venezuela',
+      status: data.status || 'Activa',
+      socialMedia: data.socialMedia || {},
+      createdAt: new Date().toISOString(),
+    });
+
     for (const organizerId of organizerIds) {
-      await (transaction as any).query('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
+      await transaction.users.update(organizerId, { organizationId });
     }
     return { success: true, organizationId };
   });
@@ -433,49 +421,40 @@ export async function updateManagedOrganizationService(
   data: Partial<ManagedOrganizationInput>,
 ) {
   return dbProvider.withTransaction(async (transaction) => {
-    const organizations = await transaction.query<{ id: string }>(
-      'SELECT id FROM organizations WHERE id = ? FOR UPDATE',
-      [organizationId],
-    );
-    if (organizations.length === 0) return { success: false, error: 'Organización no encontrada.' };
+    const org = await transaction.organizations.findById(organizationId);
+    if (!org) return { success: false, error: 'Organización no encontrada.' };
+
     const organizerIds = data.organizerIds === undefined ? undefined : [...new Set(data.organizerIds)];
     if (organizerIds && organizerIds.length > 0) {
-      const organizers = await transaction.query<{ id: string }>(
-        `SELECT id FROM users WHERE id IN (${organizerIds.map(() => '?').join(', ')}) AND role = 'Organizador' FOR UPDATE`,
-        organizerIds,
-      );
-      if (organizers.length !== organizerIds.length) return { success: false, error: 'Uno o más organizadores no son válidos.' };
+      const organizers = await Promise.all(organizerIds.map((id) => transaction.users.findById(id)));
+      if (organizers.some((u) => !u || u.role !== 'Organizador')) {
+        return { success: false, error: 'Uno o más organizadores no son válidos.' };
+      }
     }
     if (data.ownerId) {
-      const owners = await transaction.users.findById(data.ownerId).then(r => r ? [{ id: r.id }] : []);
-      if (owners.length === 0) return { success: false, error: 'Propietario no encontrado.' };
+      const owner = await transaction.users.findById(data.ownerId);
+      if (!owner) return { success: false, error: 'Propietario no encontrado.' };
     }
 
-    await (transaction as any).query(
-      `UPDATE organizations SET
-        name = COALESCE(?, name), tag = COALESCE(?, tag), owner_id = COALESCE(?, owner_id),
-        allowed_games = COALESCE(?, allowed_games), logo_url = COALESCE(?, logo_url), banner_url = COALESCE(?, banner_url),
-        country = COALESCE(?, country), founded_year = COALESCE(?, founded_year), rating = COALESCE(?, rating),
-        website = COALESCE(?, website), redes_sociales = COALESCE(?, redes_sociales), status = COALESCE(?, status)
-       WHERE id = ?`,
-      [
-        data.name || null, data.tag || null, data.ownerId || null,
-        data.allowedGames ? JSON.stringify(data.allowedGames) : null, data.logoUrl ?? null, data.bannerUrl ?? null,
-        data.country ?? null, data.foundedYear ?? null, data.rating ?? null, data.website ?? null,
-        data.socialMedia ? JSON.stringify(data.socialMedia) : null, data.status ?? null, organizationId,
-      ],
-    );
+    await transaction.organizations.update(organizationId, {
+      name: data.name ?? org.name,
+      tag: data.tag ?? org.tag,
+      ownerId: data.ownerId ?? org.ownerId,
+      allowedGames: data.allowedGames ?? org.allowedGames,
+      logoUrl: data.logoUrl !== undefined ? data.logoUrl : org.logoUrl,
+      bannerUrl: data.bannerUrl !== undefined ? data.bannerUrl : org.bannerUrl,
+      country: data.country !== undefined ? (data.country || 'Venezuela') : org.country,
+      status: data.status !== undefined ? (data.status || 'Activa') : org.status,
+      socialMedia: data.socialMedia !== undefined ? data.socialMedia : org.socialMedia,
+    });
+
     if (organizerIds) {
-      await transaction.query(
-        "SELECT id FROM users WHERE organization_id = ? AND role = 'Organizador' FOR UPDATE",
-        [organizationId],
-      );
-      await (transaction as any).query(
-        "UPDATE users SET organization_id = NULL WHERE organization_id = ? AND role = 'Organizador'",
-        [organizationId],
-      );
+      const existingUsers = await transaction.users.findAll({ where: { organization_id: organizationId, role: 'Organizador' } });
+      for (const u of existingUsers) {
+        await transaction.users.update(u.id, { organizationId: null });
+      }
       for (const organizerId of organizerIds) {
-        await (transaction as any).query('UPDATE users SET organization_id = ? WHERE id = ?', [organizationId, organizerId]);
+        await transaction.users.update(organizerId, { organizationId });
       }
     }
     return { success: true };
@@ -484,51 +463,16 @@ export async function updateManagedOrganizationService(
 
 export async function archiveManagedOrganizationService(organizationId: string) {
   return dbProvider.withTransaction(async (transaction) => {
-    const organizations = await transaction.query<{ id: string; status: string }>(
-      'SELECT id, status FROM organizations WHERE id = ? FOR UPDATE',
-      [organizationId],
-    );
-    if (organizations.length === 0) return { success: false, error: 'Organización no encontrada.' };
+    const org = await transaction.organizations.findById(organizationId);
+    if (!org) return { success: false, error: 'Organización no encontrada.' };
 
-    const activeDependencies = await transaction.query<{ id: string }>(
-      `SELECT DISTINCT c.id
-         FROM competitions c
-         LEFT JOIN competition_teams ct ON ct.competition_id = c.id AND ct.status = 'CONFIRMADO'
-         LEFT JOIN teams t ON t.id = ct.team_id
-        WHERE c.status IN ('Activo', 'Inscripcion', 'En Curso')
-          AND (c.organization_id = ? OR t.organization_id = ?)
-        FOR UPDATE`,
-      [organizationId, organizationId],
-    );
-    if (activeDependencies.length > 0) {
+    const hasActive = await transaction.organizations.hasActiveCompetitions(organizationId);
+    if (hasActive) {
       return { success: false, error: 'No se puede archivar mientras existan competencias activas asociadas.' };
     }
 
-    const teamRows = await transaction.query<{ id: string }>(
-      'SELECT id FROM teams WHERE organization_id = ? FOR UPDATE',
-      [organizationId],
-    );
-    const teamIds = teamRows.map((team) => team.id);
-    if (teamIds.length > 0) {
-      const placeholders = teamIds.map(() => '?').join(', ');
-      await (transaction as any).query(
-        `UPDATE team_vacancies SET status = 'CERRADA' WHERE team_id IN (${placeholders}) AND status = 'ABIERTA'`,
-        teamIds,
-      );
-      await (transaction as any).query(
-        `UPDATE transfer_market_posts SET status = 'CADUCADO' WHERE team_id IN (${placeholders}) AND status = 'ACTIVO'`,
-        teamIds,
-      );
-      await (transaction as any).query(
-        `UPDATE teams SET status = 'Archivado', updated_at = NOW() WHERE id IN (${placeholders})`,
-        teamIds,
-      );
-    }
-    await (transaction as any).query(
-      "UPDATE organizations SET status = 'Archivada', updated_at = NOW() WHERE id = ?",
-      [organizationId],
-    );
-    return { success: true, archivedTeams: teamIds.length };
+    const archivedTeams = await transaction.organizations.archiveOrganization(organizationId);
+    return { success: true, archivedTeams };
   });
 }
 

@@ -22,6 +22,7 @@ async function loadTeamScope(teamId: string) {
   if (!team) return null;
 
   const members = await dbProvider.teams.getManagers(teamId);
+  const compOrgs = await dbProvider.teams.getTeamCompetitionOrganizations(teamId);
   let configuredManagers: string[] = [];
   try {
     const encargadosJson = (team as any).encargados_json || '[]';
@@ -41,6 +42,7 @@ async function loadTeamScope(teamId: string) {
     organizationId: team.organizationId,
     captainId: team.captainId,
     managerIds: [...members, ...configuredManagers],
+    participatingOrgIds: compOrgs.map((c) => c.org_id).filter(Boolean),
   };
 }
 
@@ -50,7 +52,7 @@ async function canAssignTeamStaff(
   userIds: string[],
 ): Promise<boolean> {
   if (isAdministrator(actor) || isOrganizer(actor) || userIds.length === 0) return true;
-  if (!organizationId || organizationId !== actor.organizationId) return false;
+  if (organizationId && actor.organizationId && organizationId !== actor.organizationId) return false;
 
   const { dbProvider } = await import('@/lib/db/provider');
   const uniqueIds = [...new Set(userIds)];
@@ -58,7 +60,11 @@ async function canAssignTeamStaff(
   let allValid = true;
   for (const uid of uniqueIds) {
     const user = await dbProvider.users.findById(uid);
-    if (!user || (user.organizationId !== null && user.organizationId !== organizationId)) {
+    if (!user) {
+      allValid = false;
+      break;
+    }
+    if (organizationId && user.organizationId && user.organizationId !== organizationId) {
       allValid = false;
       break;
     }

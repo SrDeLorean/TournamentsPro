@@ -66,11 +66,15 @@ export function canManageUser(
   if (actor.userId === target.userId) return true;
 
   const targetRole = normalizeRole(target.role);
-  return Boolean(
-    isOrganizer(actor) &&
-      targetRole !== 'Administrador' &&
-      targetRole !== 'Organizador'
-  );
+  if (!isOrganizer(actor) || targetRole === 'Administrador' || targetRole === 'Organizador') {
+    return false;
+  }
+
+  if (target.organizationId && actor.organizationId && target.organizationId !== actor.organizationId) {
+    return false;
+  }
+
+  return true;
 }
 
 export function canAssignRole(
@@ -90,11 +94,12 @@ export function canManageTeam(
   // 1. Administrador global: Acceso total a cualquier equipo
   if (isAdministrator(actor)) return true;
 
-  // 2. Organizador: Solo si el equipo pertenece a su organización o compite en ella
+  // 2. Organizador: Acceso a equipos de su organización, equipos que compiten en sus torneos, o equipos independientes/generales
   if (isOrganizer(actor)) {
-    if (!actor.organizationId) return false;
-    if (team.organizationId && team.organizationId === actor.organizationId) return true;
-    if (team.participatingOrgIds && team.participatingOrgIds.includes(actor.organizationId)) return true;
+    if (!team.organizationId) return true;
+    if (actor.organizationId && team.organizationId === actor.organizationId) return true;
+    if (actor.organizationId && team.participatingOrgIds && team.participatingOrgIds.includes(actor.organizationId)) return true;
+    if (!actor.organizationId) return true;
     return false;
   }
 
