@@ -57,8 +57,8 @@ export default function GlobalUserProfilePage({ params }: { params: Promise<{ us
   };
 
   return (
-    <main className="public-team-page" style={{ '--profile-accent': game.brandColor } as React.CSSProperties}>
-      <PlayerProfileView player={player} brandColor={game.brandColor} context="global" />
+    <main className="public-team-page" style={{ '--profile-accent': 'var(--app-accent)' } as React.CSSProperties}>
+      <PlayerProfileView player={player} brandColor="var(--app-accent)" context="global" />
     </main>
   );
 }

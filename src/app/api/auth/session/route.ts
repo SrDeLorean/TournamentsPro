@@ -12,7 +12,14 @@ export async function GET(request: Request) {
 
     // dbProvider returns mapped User object, need to map to UserRow for mapUserRowToProfile?
     // Wait, mapUserRowToProfile expects UserRow. Let's just use it or map the User object back.
-    // Actually, `user` is already a structured object.
+    let orgId = user.organizationId || session.organizationId;
+    if (!orgId && dbProvider.organizations?.findAll) {
+      const ownedOrgs = await dbProvider.organizations.findAll({ where: { owner_id: user.id }, limit: 1 });
+      if (ownedOrgs.length > 0) {
+        orgId = ownedOrgs[0].id;
+      }
+    }
+
     const userRow: UserRow = {
       id: user.id,
       email: user.email,
@@ -28,7 +35,7 @@ export async function GET(request: Request) {
       status: user.status,
       avatar_url: user.avatarUrl,
       banner_url: user.bannerUrl || null,
-      organization_id: user.organizationId,
+      organization_id: orgId,
       is_banned: user.isBanned ? 1 : 0,
       ban_reason: user.banReason,
       last_login_at: user.lastLoginAt,

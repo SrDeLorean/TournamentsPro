@@ -106,7 +106,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
 
   return (
     <div
-      className="game-portal-mobile-nav block md:hidden w-full border-b border-[var(--border-card)] shadow-lg"
+      className="game-portal-mobile-nav ui-navigation-tier block w-full md:hidden"
       style={{ '--game-brand': game.brandColor } as React.CSSProperties}
     >
       {/* 1. Top Mobile Segmented Controller (1 Row) */}
@@ -159,7 +159,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
                 : 'text-[var(--text-muted)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)]'
             }`}
           >
-            <Shield className="w-3.5 h-3.5 text-purple-400" />
+            <Shield className="w-3.5 h-3.5 text-[var(--navigation-brand)]" />
             <span>Club</span>
           </Link>
         )}
@@ -188,6 +188,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
                 key={sec.id}
                 href={sec.href}
                 data-active={isActive}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => onSelectSection && onSelectSection(sec.id as GameSection)}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
@@ -210,6 +211,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
                 key={opt.id}
                 href={opt.href}
                 data-active={isActive}
+                aria-current={isActive ? 'page' : undefined}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
                     ? 'game-portal-mobile-link-active shadow-md font-black'
@@ -231,6 +233,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
                 key={opt.id}
                 href={opt.href}
                 data-active={isActive}
+                aria-current={isActive ? 'page' : undefined}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
                   isActive
                     ? 'game-portal-mobile-link-active shadow-md font-black'

@@ -57,11 +57,14 @@ export function CompetitionDirectory({ gameSlug, gameConfig }: CompetitionDirect
   const currentComps = filteredComps.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="animate-in fade-in duration-300">
+    <div
+      className="animate-in fade-in duration-300"
+      style={{ '--ui-dynamic-brand': gameConfig.brandColor } as React.CSSProperties}
+    >
       <div className="pt-4 sm:pt-6">
         <PageHeader
           badgeText="CIRCUITO COMPETITIVO OFICIAL"
-          badgeIcon={<Trophy className="w-3.5 h-3.5" style={{ color: gameConfig.brandColor, fill: gameConfig.brandColor }} />}
+          badgeIcon={<Trophy className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
           title="COMPETENCIAS POR"
           highlightTitle="DISCIPLINA"
           description={`Explora todas las competencias activas en ${gameConfig.name} de todas las organizaciones y comunidades.`}
@@ -93,12 +96,12 @@ export function CompetitionDirectory({ gameSlug, gameConfig }: CompetitionDirect
               {currentComps.map((comp, idx) => (
                 <EsportsCard
                   key={comp.id}
-                  entityType="generic"
+                  entityType="competition"
+                  gameSlug={gameSlug}
                   title={comp.name}
                   subtitle={comp.organizer_name || 'Organizador'}
                   description={comp.description || 'Torneo de eSports competitivo'}
                   fallbackIcon={<Trophy className="w-12 h-12 text-[var(--text-muted)]" />}
-                  brandColor={gameConfig.brandColor}
                   animationDelay={idx * 50}
                   onClick={() => {
                      if (comp.organization_id) {
@@ -116,12 +119,12 @@ export function CompetitionDirectory({ gameSlug, gameConfig }: CompetitionDirect
                     { text: comp.mode_format, variant: 'slate' }
                   ]}
                   stats={[
-                    { icon: <Sword className="w-4 h-4 text-emerald-400" />, label: 'Formato', value: comp.mode_format },
-                    { icon: <CalendarDays className="w-4 h-4 text-cyan-400" />, label: 'Inicio', value: new Date(comp.fecha_inicio).toLocaleDateString() },
+                    { icon: <Sword className="w-4 h-4 text-[var(--app-positive)]" />, label: 'Formato', value: comp.mode_format },
+                    { icon: <CalendarDays className="w-4 h-4 text-[var(--app-accent)]" />, label: 'Inicio', value: new Date(comp.fecha_inicio).toLocaleDateString() },
                   ]}
                   footerLeft={
                     <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">
-                      <Trophy className="w-3.5 h-3.5" style={{ color: gameConfig.brandColor }} />
+                      <Trophy className="ui-dynamic-brand-ink w-3.5 h-3.5" />
                       <span>{comp.prize_pool || 'Sin premio'}</span>
                     </div>
                   }

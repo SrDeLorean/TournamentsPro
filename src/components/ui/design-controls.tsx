@@ -1,11 +1,10 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useDesign } from '@/components/providers/design-provider';
 import { Button } from '@/components/ui/button';
-import type { DesignDensity, DesignMotion, DesignRadius } from '@/lib/design-system';
-
-const ACCENTS = ['#22d3ee', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#ff4655'];
+import { DESIGN_ACCENT_PRESETS, type DesignDensity, type DesignMotion, type DesignRadius } from '@/lib/design-system';
 
 interface ChoiceProps<T extends string> {
   label: string;
@@ -74,15 +73,15 @@ export function DesignControls() {
       <fieldset className="space-y-2">
         <legend className="text-xs font-semibold text-[var(--text-secondary)]">Color global de interacción</legend>
         <div className="flex flex-wrap gap-2">
-          {ACCENTS.map((accentColor) => (
+          {DESIGN_ACCENT_PRESETS.map((accentColor) => (
             <button
               key={accentColor}
               type="button"
               aria-label={`Usar color ${accentColor}`}
               aria-pressed={preferences.accentColor === accentColor}
               onClick={() => setPreferences({ accentColor })}
-              className="h-10 w-10 rounded-full border-2 transition-transform hover:scale-110 aria-pressed:scale-110 aria-pressed:border-white"
-              style={{ backgroundColor: accentColor, borderColor: preferences.accentColor === accentColor ? 'white' : 'transparent' }}
+              className="design-accent-swatch h-10 w-10 rounded-full border-2 transition-transform hover:scale-110 aria-pressed:scale-110"
+              style={{ '--design-accent-swatch': accentColor } as CSSProperties}
             />
           ))}
           <input
@@ -102,7 +101,7 @@ function Range({ label, value, min, max, suffix, onChange }: { label: string; va
   return (
     <label className="space-y-2 text-xs font-semibold text-[var(--text-secondary)]">
       <span className="flex justify-between"><span>{label}</span><output>{value}{suffix}</output></span>
-      <input className="w-full accent-[var(--accent-cyan)]" type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} />
+      <input className="min-h-10 w-full accent-[var(--app-accent)]" type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} />
     </label>
   );
 }

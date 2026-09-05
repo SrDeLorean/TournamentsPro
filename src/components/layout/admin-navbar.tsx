@@ -7,8 +7,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
-import { CreateTeamModal } from '@/components/teams/create-team-modal';
-import { ClubManagementModal } from '@/components/teams/club-management-modal';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { GameLogo } from '@/components/ui/game-logo';
@@ -16,10 +14,12 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { NotificationCenter } from '@/components/notifications/notification-center';
 import { NavLinks } from '@/components/layout/nav-links';
+import { canManageTeam, findActiveManagedTeam, getExploreLinks } from '@/components/layout/admin-navbar-model';
+import { AdminNavbarTeamModals } from '@/components/layout/admin-navbar-team-modals';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
-import type { TeamData, UserProfile } from '@/lib/data-store';
+import type { TeamData } from '@/lib/data-store';
 import {
-  Trophy, Shield, LogOut, Settings, Plus, Sparkles, ChevronDown, LayoutDashboard, CheckCircle2, Home, Gamepad2, Flag, Users, Info, Compass, UserRoundCog, Mail, SlidersHorizontal
+  Trophy, Shield, LogOut, Settings, Plus, Sparkles, ChevronDown, LayoutDashboard, CheckCircle2, Compass, UserRoundCog, Mail, SlidersHorizontal
 } from 'lucide-react';
 
 export function AdminNavbar() {
@@ -75,95 +75,36 @@ export function AdminNavbar() {
   }, []);
 
   const teamsPool = userTeams && userTeams.length > 0 ? userTeams : initialTeams;
-  type ManagedTeam = TeamData & {
-    game_slug?: string;
-    captain_id?: string;
-    captain_name?: string;
-    encargados?: unknown;
-    encargados_json?: unknown;
-  };
-
-  const disciplineFilteredTeams = (teamsPool as ManagedTeam[]).filter((t) => {
-    const slug = t.game_slug || t.gameSlug || 'eafc26';
-    return slug === activeGameSlug || activeGameSlug === 'ALL';
-  });
-
-  const isUserTeamManager = (team: ManagedTeam, user: UserProfile | null, strictSpecific = false) => {
-    if (!team || !user) return false;
-
-    const uId = user.id;
-    const uName = user.name?.toLowerCase();
-    const uGamer = user.gamertag?.toLowerCase();
-
-    const cId = team.captain_id || team.captainId;
-    const cName = (team.captain_name || team.captainName || '').toLowerCase();
-
-    if (cId && cId === uId) return true;
-    if (cName && (cName === uName || cName === uGamer)) return true;
-    if (user.teamId && team.id === user.teamId) return true;
-
-    const encs = team.encargados || team.encargados_json;
-    if (encs) {
-      try {
-        const arr = typeof encs === 'string' ? JSON.parse(encs) : encs;
-        if (Array.isArray(arr)) {
-          const isEnc = arr.some((enc: unknown) => {
-            if (typeof enc === 'string') return enc === uId || enc.toLowerCase() === uName || enc.toLowerCase() === uGamer;
-            if (!enc || typeof enc !== 'object') return false;
-            const manager = enc as { id?: string; name?: string; gamertag?: string };
-            return (
-              manager.id === uId ||
-              (manager.name && uName && manager.name.toLowerCase() === uName) ||
-              (manager.gamertag && uGamer && manager.gamertag.toLowerCase() === uGamer)
-            );
-          });
-          if (isEnc) return true;
-        }
-      } catch {}
-    }
-
-    if (!strictSpecific && (user.role === 'Administrador' || user.role === 'Organizador')) {
-      return true;
-    }
-
-    return false;
-  };
-
-  let myTeamInActiveDiscipline = disciplineFilteredTeams.find((t) => isUserTeamManager(t, currentUser, true));
-  if (!myTeamInActiveDiscipline && (isAdmin || isOrganizer)) {
-    myTeamInActiveDiscipline = disciplineFilteredTeams[0] || teamsPool[0];
-  }
+  const myTeamInActiveDiscipline = findActiveManagedTeam(
+    teamsPool,
+    activeGameSlug,
+    currentUser,
+    isAdmin || isOrganizer,
+  );
 
   const isCaptain = userRoleStr === 'capitán' || userRoleStr === 'capitan' || userRoleStr === 'encargado' || Boolean(myTeamInActiveDiscipline);
   const activeTeamLogo = myTeamInActiveDiscipline?.logoUrl || (myTeamInActiveDiscipline as TeamData & { logo?: string } | undefined)?.logo;
   const athleteProfileHref = `/${activeGameSlug}/jugadores/${currentUser?.id || ''}`;
-  const exploreLinks = [
-    { href: '/', label: 'Inicio', description: 'Portada general', icon: Home },
-    { href: `/${activeGameSlug}`, label: currentGameObj.name, description: 'Portal competitivo', icon: Gamepad2 },
-    { href: '/equipos', label: 'Equipos', description: 'Directorio de clubes', icon: Shield },
-    { href: '/organizaciones', label: 'Organizaciones', description: 'Ligas y organizadores', icon: Flag },
-    { href: '/usuarios', label: 'Jugadores', description: 'Directorio de atletas', icon: Users },
-    { href: '/informacion', label: 'Información', description: 'Ayuda y plataforma', icon: Info },
-  ];
+  const exploreLinks = getExploreLinks(activeGameSlug, currentGameObj.name);
 
   return (
     <>
-      <header className="app-navbar sticky top-0 z-50 w-full h-14 border-b transition-all duration-300">
-        <div className="max-w-[96rem] mx-auto px-2 sm:px-4 lg:px-6 h-full flex items-center justify-between gap-1 sm:gap-2.5">
+      <header className="app-navbar ui-navigation-bar sticky top-0 z-50 h-14 w-full">
+        <div className="ui-navigation-frame max-w-[96rem] h-full gap-1 sm:gap-2.5">
           
           {/* 1. Left Brand & Admin Badge */}
           <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
             <Link href={`/${activeGameSlug}`} className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-600 to-amber-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform">
-                <div className="w-full h-full bg-slate-950 rounded-[9px] flex items-center justify-center">
-                  <Trophy className="w-4 h-4 text-cyan-400" />
+              <div className="ui-navigation-brand-mark">
+                <div>
+                  <Trophy className="size-4" />
                 </div>
               </div>
               <div className="hidden md:flex flex-col text-left">
                 <span className="text-base font-black tracking-tight text-[var(--text-heading)] uppercase leading-none">
-                  TOURNAMENTS<span className="text-cyan-400">PRO</span>
+                  TOURNAMENTS<span className="text-[var(--app-accent)]">PRO</span>
                 </span>
-                <span className="text-[9px] text-[var(--text-muted)] font-mono font-bold uppercase">
+                <span className="text-[9px] text-[var(--text-muted)] font-[family-name:var(--font-active)] font-bold uppercase">
                   {isCaptain ? 'Portal de capitán' : 'Portal del atleta'}
                 </span>
               </div>
@@ -178,12 +119,10 @@ export function AdminNavbar() {
             </Badge>
           </div>
 
-          {/* Public destinations remain directly available on desktop. */}
           <div className="hidden xl:block">
             <NavLinks />
           </div>
 
-          {/* 🛡️ SELECTOR PROTAGONISTA DE EQUIPOS Y DISCIPLINAS (Visible en Móvil y Escritorio) */}
           <div className="relative min-w-0 flex-1 sm:flex-none" ref={teamsRef}>
             <button
               type="button"
@@ -226,11 +165,11 @@ export function AdminNavbar() {
             </button>
 
             {isTeamsOpen && (
-              <div id="player-team-switcher-menu" className="management-popover player-team-switcher-menu fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:mt-1 sm:w-[22rem] max-h-[85vh] overflow-y-auto rounded-2xl p-3 space-y-3 z-50 animate-in fade-in zoom-in-95">
+              <div id="player-team-switcher-menu" className="management-popover ui-navigation-popover player-team-switcher-menu fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:mt-2 sm:w-[22rem] max-h-[85vh] overflow-y-auto p-3 space-y-3 z-50 animate-in fade-in zoom-in-95">
                 <div className="pb-2 border-b border-[var(--border-card)] flex items-center justify-between">
                   <span className="min-w-0">
                     <span className="text-xs font-black text-[var(--text-heading)] flex items-center gap-1.5">
-                      <Shield className="w-4 h-4 text-[var(--accent-violet)]" />
+                      <Shield className="w-4 h-4 text-[var(--navigation-brand)]" />
                       Club y disciplina
                     </span>
                     <small className="mt-0.5 block text-[9px] text-[var(--text-muted)]">Cambia tu contexto competitivo activo</small>
@@ -241,7 +180,7 @@ export function AdminNavbar() {
                       setIsTeamsOpen(false);
                       setIsCreateTeamOpen(true);
                     }}
-                    className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] px-2 py-1.5 text-[10px] font-bold text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)]"
+                    className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] px-2 py-1.5 text-[10px] font-bold text-[var(--app-accent)] hover:bg-[var(--bg-card-hover)]"
                   >
                     <Plus className="w-3 h-3" />
                     Crear Club
@@ -252,7 +191,7 @@ export function AdminNavbar() {
                 <div className="space-y-1.5">
                   {Object.values(GAMES_CATALOG).map((gameItem) => {
                     const teamForGame = teamsPool.find(
-                      (t) => t.gameSlug === gameItem.slug && isUserTeamManager(t, currentUser)
+                      (team) => team.gameSlug === gameItem.slug && canManageTeam(team, currentUser)
                     );
 
                     const isSelected = activeGameSlug === gameItem.slug;
@@ -278,7 +217,7 @@ export function AdminNavbar() {
                             <span className="font-extrabold text-xs text-[var(--text-heading)] block">
                               {teamForGame ? teamForGame.name : `Agencia Libre`}
                             </span>
-                            <span className="text-[10px] text-[var(--text-muted)] font-mono font-bold">
+                            <span className="text-[10px] text-[var(--text-muted)] font-[family-name:var(--font-active)] font-bold">
                               {gameItem.name} {teamForGame ? '• Club registrado' : '• Sin club'}
                             </span>
                           </div>
@@ -305,7 +244,7 @@ export function AdminNavbar() {
               }}
               aria-expanded={isExploreOpen}
               aria-controls="authenticated-explore-menu"
-              className="flex items-center gap-1.5 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] p-1.5 text-xs font-extrabold text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-cyan)] hover:text-[var(--accent-cyan)] sm:px-2.5"
+              className="ui-navigation-link"
             >
               <Compass className="h-4 w-4" />
               <span className="hidden lg:inline">Explorar</span>
@@ -313,7 +252,7 @@ export function AdminNavbar() {
             </button>
 
             {isExploreOpen ? (
-              <div id="authenticated-explore-menu" className="fixed inset-x-2 top-14 z-50 grid grid-cols-2 gap-1 rounded-2xl border border-[var(--border-card)] p-2 shadow-2xl glass-panel sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80">
+              <div id="authenticated-explore-menu" className="ui-navigation-popover fixed inset-x-2 top-14 z-50 grid grid-cols-2 gap-1 p-2 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80">
                 {exploreLinks.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
@@ -325,7 +264,7 @@ export function AdminNavbar() {
                       aria-current={isActive ? 'page' : undefined}
                       className={`flex min-w-0 items-center gap-2 rounded-xl border p-2.5 transition-colors ${
                         isActive
-                          ? 'border-[var(--accent-cyan)] bg-[var(--accent-cyan-bg)] text-[var(--accent-cyan)]'
+                          ? 'border-[var(--app-accent)] bg-[var(--app-accent-soft)] text-[var(--app-accent)]'
                           : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-heading)]'
                       }`}
                     >
@@ -365,25 +304,25 @@ export function AdminNavbar() {
                 aria-label="Abrir preferencias rápidas"
                 aria-expanded={isSettingsOpen}
                 aria-controls="player-preferences-menu"
-                className="p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] transition-all shadow-sm"
+                className="ui-navigation-icon-button"
                 title="Configuración de Tema e Idioma"
               >
-                <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-[var(--accent-cyan)]' : ''}`} />
+                <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-[var(--app-accent)]' : ''}`} />
               </button>
 
               {isSettingsOpen && (
-                <div id="player-preferences-menu" className="management-popover fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-1 sm:w-80 max-h-[85vh] overflow-y-auto rounded-2xl p-4 space-y-4 z-50 animate-in fade-in zoom-in-95">
+                <div id="player-preferences-menu" className="management-popover ui-navigation-popover fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 max-h-[85vh] overflow-y-auto p-4 space-y-4 z-50 animate-in fade-in zoom-in-95">
                   <div className="pb-2.5 border-b border-[var(--border-card)] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/40 text-[var(--accent-cyan)]">
+                      <div className="p-1.5 rounded-lg bg-[var(--app-accent-soft)] border border-[var(--app-accent)]/40 text-[var(--app-accent)]">
                         <Settings className="w-4 h-4" />
                       </div>
                       <div>
                         <span className="text-xs font-black text-[var(--text-heading)] tracking-wide block leading-none">Preferencias rápidas</span>
-                        <span className="text-[9px] font-mono text-[var(--text-muted)] font-bold">Apariencia e idioma</span>
+                        <span className="text-[9px] font-[family-name:var(--font-active)] text-[var(--text-muted)] font-bold">Apariencia e idioma</span>
                       </div>
                     </div>
-                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <Sparkles className="w-4 h-4 text-[var(--navigation-brand)]" />
                   </div>
 
                   {/* Theme Switcher Box */}
@@ -407,7 +346,7 @@ export function AdminNavbar() {
                     onClick={() => setIsSettingsOpen(false)}
                     className="management-profile-action border-[var(--border-card)] bg-[var(--bg-card)] text-xs font-bold"
                   >
-                    <UserRoundCog className="w-4 h-4 text-[var(--accent-cyan)]" />
+                    <UserRoundCog className="w-4 h-4 text-[var(--app-accent)]" />
                     <span className="min-w-0 flex-1">
                       <strong className="block text-[var(--text-heading)]">Configuración de la cuenta</strong>
                       <small className="block truncate font-medium text-[var(--text-muted)]">Perfil, seguridad y datos personales</small>
@@ -430,22 +369,22 @@ export function AdminNavbar() {
                 aria-label="Abrir menú de usuario"
                 aria-expanded={isUserMenuOpen}
                 aria-controls="player-user-menu"
-                className="flex items-center gap-2 p-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--accent-cyan)] transition-all shadow-sm"
+                className="flex items-center gap-2 p-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--app-accent)] transition-all shadow-sm"
               >
                 <Avatar fallback={currentUser?.name || 'User'} size="sm" status="online" />
                 <div className="text-left hidden md:block leading-none">
                   <span className="text-xs font-black text-[var(--text-heading)] block truncate max-w-[110px]">
                     {currentUser?.gamertag}
                   </span>
-                  <span className="text-[9px] text-[var(--accent-cyan)] font-mono font-bold">
+                  <span className="text-[9px] text-[var(--app-accent)] font-[family-name:var(--font-active)] font-bold">
                     ★ {currentUser?.rating || '9.8'}
                   </span>
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] hidden md:block transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180 text-[var(--accent-cyan)]' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] hidden md:block transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180 text-[var(--app-accent)]' : ''}`} />
               </button>
 
               {isUserMenuOpen && (
-                <div id="player-user-menu" className="management-popover fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-1 sm:w-80 max-h-[85vh] overflow-y-auto rounded-2xl p-3 space-y-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div id="player-user-menu" className="management-popover ui-navigation-popover fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 max-h-[85vh] overflow-y-auto p-3 space-y-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                   
                   {/* Profile Header Box */}
                   <div className="management-profile-card p-3 rounded-xl space-y-3">
@@ -455,7 +394,7 @@ export function AdminNavbar() {
                         <span className="font-black text-sm text-[var(--text-heading)] block truncate">
                           {currentUser?.name}
                         </span>
-                        <span className="text-xs text-[var(--accent-cyan)] font-mono font-bold block truncate">
+                        <span className="text-xs text-[var(--app-accent)] font-[family-name:var(--font-active)] font-bold block truncate">
                           @{currentUser?.gamertag}
                         </span>
                         <span className="mt-0.5 block truncate text-[10px] text-[var(--text-muted)]">{currentUser?.email}</span>
@@ -467,7 +406,7 @@ export function AdminNavbar() {
                         {currentUser?.role}
                       </Badge>
 
-                      <span className="truncate text-right text-[var(--text-muted)] font-mono">
+                      <span className="truncate text-right text-[var(--text-muted)] font-[family-name:var(--font-active)]">
                         {currentUser?.platform} • {currentGameObj.name}
                       </span>
                     </div>
@@ -486,7 +425,7 @@ export function AdminNavbar() {
                       onClick={() => setIsUserMenuOpen(false)}
                       className="management-profile-action"
                     >
-                      <UserRoundCog className="w-4 h-4 text-[var(--accent-cyan)]" />
+                      <UserRoundCog className="w-4 h-4 text-[var(--app-accent)]" />
                       Configuración de la cuenta
                     </Link>
 
@@ -495,7 +434,7 @@ export function AdminNavbar() {
                       onClick={() => setIsUserMenuOpen(false)}
                       className="management-profile-action"
                     >
-                      <LayoutDashboard className="w-4 h-4 text-[var(--accent-violet)]" />
+                      <LayoutDashboard className="w-4 h-4 text-[var(--navigation-brand)]" />
                       Mi Ficha de Atleta
                     </Link>
 
@@ -504,7 +443,7 @@ export function AdminNavbar() {
                       onClick={() => setIsUserMenuOpen(false)}
                       className="management-profile-action"
                     >
-                      <Mail className="w-4 h-4 text-[var(--accent-emerald)]" />
+                      <Mail className="w-4 h-4 text-[var(--navigation-brand)]" />
                       Centro de Mensajes
                     </Link>
 
@@ -516,7 +455,7 @@ export function AdminNavbar() {
                         }}
                         className="management-profile-action w-full text-left"
                       >
-                        <SlidersHorizontal className="w-4 h-4 text-[var(--accent-violet)]" />
+                        <SlidersHorizontal className="w-4 h-4 text-[var(--navigation-brand)]" />
                         <span>Gestión rápida del club</span>
                       </button>
                     )}
@@ -527,7 +466,7 @@ export function AdminNavbar() {
                         logout();
                         router.push('/login');
                       }}
-                      className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors border-t border-[var(--border-card)] mt-1"
+                      className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-xl text-[var(--app-danger)] hover:bg-[var(--app-danger)]/10 transition-colors border-t border-[var(--border-card)] mt-1"
                     >
                       <LogOut className="w-4 h-4" />
                       Cerrar Sesión
@@ -540,24 +479,14 @@ export function AdminNavbar() {
         </div>
       </header>
 
-      {/* Create Team Modal Dialog */}
-      <CreateTeamModal
-        isOpen={isCreateTeamOpen}
-        defaultGameSlug={activeGameSlug}
-        onClose={() => setIsCreateTeamOpen(false)}
-        onSuccess={(team) => {
-          router.push(`/${team.gameSlug}/equipos/${team.id}`);
-        }}
+      <AdminNavbarTeamModals
+        activeGameSlug={activeGameSlug}
+        activeTeam={myTeamInActiveDiscipline}
+        isCreateTeamOpen={isCreateTeamOpen}
+        isClubManageOpen={isClubManageOpen}
+        onCreateTeamClose={() => setIsCreateTeamOpen(false)}
+        onClubManageClose={() => setIsClubManageOpen(false)}
       />
-
-      {/* Club Management Modal Dialog Pre-Filtered for Active Discipline */}
-      {myTeamInActiveDiscipline && (
-        <ClubManagementModal
-          team={myTeamInActiveDiscipline}
-          isOpen={isClubManageOpen}
-          onClose={() => setIsClubManageOpen(false)}
-        />
-      )}
     </>
   );
 }

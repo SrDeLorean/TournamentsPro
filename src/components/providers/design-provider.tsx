@@ -58,6 +58,7 @@ function applyPreferences(preferences: DesignPreferences) {
   root.dataset.uiDensity = preferences.density;
   root.dataset.uiRadius = preferences.radius;
   root.dataset.uiMotion = preferences.motion;
+  root.dataset.uiFont = preferences.font;
 
   for (const [property, value] of Object.entries(designPreferencesToCss(preferences))) {
     root.style.setProperty(property, value);

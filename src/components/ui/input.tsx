@@ -16,14 +16,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const messageId = `${inputId}-message`;
 
     return (
-      <div className="w-full flex flex-col gap-1.5">
+      <div className="w-full flex flex-col gap-1.5 font-[family-name:var(--font-active)]">
         {label && (
-          <label htmlFor={inputId} className="text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
+          <label htmlFor={inputId} className="text-[12px] font-bold uppercase tracking-wider text-[var(--text-secondary)] font-[family-name:var(--font-active)]">
             {label}
           </label>
         )}
-        <div className="relative flex items-center group">
-          {icon && <div className="absolute left-3 text-[var(--text-muted)] group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none">{icon}</div>}
+        <div className="relative flex items-center group font-[family-name:var(--font-active)]">
+          {icon && <div className="absolute left-3 text-[var(--text-muted)] group-focus-within:text-[var(--app-accent)] transition-colors pointer-events-none">{icon}</div>}
           <input
             id={inputId}
             type={type}
@@ -31,16 +31,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={Boolean(error)}
             aria-describedby={error || helperText ? messageId : undefined}
             className={cn(
-              is3D ? "input-3d px-3 text-[14px]" : "ui-control w-full h-10 px-3 text-[14px] placeholder:text-[var(--text-muted)]",
+              is3D ? "input-3d px-3.5 text-sm rounded-[var(--radius-control)] font-[family-name:var(--font-active)]" : "ui-control w-full h-10 px-3.5 text-sm rounded-[var(--radius-control)] font-[family-name:var(--font-active)] placeholder:text-[var(--text-muted)]",
               icon && "pl-9",
-              error && "!border-[var(--accent-crimson)] focus:!shadow-[0_0_0_3px_var(--accent-crimson-bg)]",
+              error && "!border-[var(--app-danger)] focus:!shadow-[0_0_0_3px_var(--app-danger-soft)]",
               className
             )}
             {...props}
           />
         </div>
         {(error || helperText) && (
-          <span id={messageId} role={error ? 'alert' : undefined} className={cn("animate-fade-up text-[12px]", error ? "font-medium text-[var(--accent-crimson)]" : "text-[var(--text-muted)]")}>
+          <span id={messageId} role={error ? 'alert' : undefined} className={cn("animate-fade-up text-[12px] font-[family-name:var(--font-active)]", error ? "font-medium text-[var(--app-danger)]" : "text-[var(--text-muted)]")}>
             {error || helperText}
           </span>
         )}
@@ -64,9 +64,9 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const messageId = `${inputId}-message`;
 
     return (
-      <div className="w-full flex flex-col gap-1.5">
+      <div className="w-full flex flex-col gap-1.5 font-[family-name:var(--font-active)]">
         {label && (
-          <label htmlFor={inputId} className="text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
+          <label htmlFor={inputId} className="text-[12px] font-bold uppercase tracking-wider text-[var(--text-secondary)] font-[family-name:var(--font-active)]">
             {label}
           </label>
         )}
@@ -76,14 +76,14 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           aria-invalid={Boolean(error)}
           aria-describedby={error || helperText ? messageId : undefined}
           className={cn(
-            "ui-control w-full min-h-[100px] p-3 text-[14px] placeholder:text-[var(--text-muted)] resize-y",
-            error && "!border-[var(--accent-crimson)] focus:!shadow-[0_0_0_3px_var(--accent-crimson-bg)]",
+            "ui-control w-full min-h-[100px] p-3 text-sm rounded-[var(--radius-control)] font-[family-name:var(--font-active)] placeholder:text-[var(--text-muted)] resize-y",
+            error && "!border-[var(--app-danger)] focus:!shadow-[0_0_0_3px_var(--app-danger-soft)]",
             className
           )}
           {...props}
         />
         {(error || helperText) && (
-          <span id={messageId} role={error ? 'alert' : undefined} className={cn("animate-fade-up text-[12px]", error ? "font-medium text-[var(--accent-crimson)]" : "text-[var(--text-muted)]")}>
+          <span id={messageId} role={error ? 'alert' : undefined} className={cn("animate-fade-up text-[12px]", error ? "font-medium text-[var(--app-danger)]" : "text-[var(--text-muted)]")}>
             {error || helperText}
           </span>
         )}

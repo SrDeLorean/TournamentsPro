@@ -36,8 +36,8 @@ export function NewUserMyTeamsView() {
 
   if (teams.length === 0) {
     return (
-      <Card className="glass-card border-white/5 bg-black/40 text-center py-16">
-        <Shield className="w-12 h-12 text-white/20 mx-auto mb-4" />
+      <Card className="glass-card border-[var(--border-card)] bg-[var(--bg-card)] text-center py-16">
+        <Shield className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
         <p className="text-[var(--text-muted)] text-sm">No perteneces a ningún equipo actualmente.</p>
         <Button className="mt-4" variant="secondary">
           <Link href="/eafc26/reclutamiento">Buscar Club</Link>
@@ -56,19 +56,19 @@ export function NewUserMyTeamsView() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {teams.map(team => (
-          <Card key={team.team_id} className="glass-card border-white/5 bg-black/40 hover:border-[var(--primary)]/50 transition-all overflow-hidden group">
-            <div className="h-24 bg-gradient-to-br from-black/80 to-[var(--primary)]/20 relative">
+          <Card key={team.team_id} className="glass-card border-[var(--border-card)] bg-[var(--bg-card)] hover:border-[var(--primary)]/50 transition-all overflow-hidden group">
+            <div className="h-24 bg-[var(--app-accent-soft)] relative">
               <div className="absolute inset-0 bg-[url('/images/ui/grid-pattern.svg')] opacity-20 mix-blend-overlay"></div>
             </div>
             
             <div className="relative px-6 -mt-12 mb-4">
-              <Avatar src={team.logo_url || undefined} fallback={team.team_name} className="w-24 h-24 border-4 border-black bg-black rounded-xl shadow-xl" />
+              <Avatar src={team.logo_url || undefined} fallback={team.team_name} className="w-24 h-24 border-4 border-[var(--border-card)] bg-[var(--bg-main)] rounded-xl shadow-xl" />
             </div>
 
             <CardContent className="space-y-4">
               <div>
                 <CardTitle className="text-xl font-black">{team.team_name}</CardTitle>
-                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-mono">[{team.team_tag}]</p>
+                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider ">[{team.team_tag}]</p>
               </div>
 
               <div className="space-y-2">
@@ -81,7 +81,7 @@ export function NewUserMyTeamsView() {
                     const orgName = orgObj ? orgObj.name || orgObj.acronym || 'Organización' : String(org);
                     const orgKey = orgObj ? orgObj.id || orgName : `${orgName}-${idx}`;
                     return (
-                      <Badge key={orgKey} variant="cyan" className="text-xs font-mono bg-black/50 border-white/10 text-white/70">
+                      <Badge key={orgKey} variant="cyan" className="text-xs  bg-[var(--bg-elevated)] border-[var(--border-card)] text-[var(--text-secondary)]">
                         {orgName}
                       </Badge>
                     );
@@ -91,7 +91,7 @@ export function NewUserMyTeamsView() {
             </CardContent>
 
             <CardFooter className="pt-2 pb-6 px-6">
-              <Button className="w-full bg-white/5 hover:bg-[var(--primary)] hover:text-white transition-colors border border-white/10" variant="outline">
+              <Button className="w-full bg-[var(--app-surface-2)] hover:bg-[var(--primary)] hover:text-[var(--text-heading)] transition-colors border border-[var(--border-card)]" variant="outline">
                 <Link href={`/eafc26/equipos/${team.team_id}`} className="w-full flex items-center justify-center">
                   Ver Ficha del Club <ExternalLink className="w-4 h-4 ml-2" />
                 </Link>

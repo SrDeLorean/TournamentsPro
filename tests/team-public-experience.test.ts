@@ -18,10 +18,11 @@ describe('public team experience', () => {
 
   it('uses a full-bleed detail cover without the directory breadcrumb', () => {
     const profile = readFileSync(join(root, 'src/components/teams/team-profile-view.tsx'), 'utf8');
+    const shell = readFileSync(join(root, 'src/components/public/public-profile-shell.tsx'), 'utf8');
     const css = readFileSync(join(root, 'src/app/globals.css'), 'utf8');
 
-    expect(profile).toContain('ViewTransition');
-    expect(profile).toContain('team-identity-');
+    expect(profile).toContain('PublicProfileShell');
+    expect(shell).toContain('ViewTransition');
     expect(profile).not.toContain('public-team-breadcrumb');
     expect(css).toContain('.public-team-page { padding: 0;');
     expect(css).toContain('min-height: min(52rem, 100svh)');

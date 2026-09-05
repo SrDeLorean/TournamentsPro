@@ -22,7 +22,12 @@ import {
   Hash,
 } from 'lucide-react';
 import { getUserEnrolledTeamsAction, getTeamSquadAction, updateSquadMemberRoleAction, updateSquadMemberJerseyAction, removePlayerFromSquadAction, SquadMemberData } from '@/app/actions/squads';
-import { SquadRosterModal } from '@/components/teams/squad-roster-modal';
+import dynamic from 'next/dynamic';
+
+const SquadRosterModal = dynamic(
+  () => import('@/components/teams/squad-roster-modal').then((m) => m.SquadRosterModal),
+  { ssr: false }
+);
 
 interface ManagedTeam {
   id: string;

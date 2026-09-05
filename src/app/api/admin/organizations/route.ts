@@ -5,7 +5,7 @@ import { isAdministrator } from '@/lib/authorization';
 
 export async function GET(request: Request) {
   try {
-    const actor = await requireRequestActor(request, ['Administrador']);
+    const actor = await requireRequestActor(request, ['Administrador', 'Organizador']);
     const { searchParams } = new URL(request.url);
     const isBanned = searchParams.get('isBanned');
 

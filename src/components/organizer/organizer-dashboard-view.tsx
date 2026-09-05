@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Avatar } from '@/components/ui/avatar';
 import {
   Trophy,
   Calendar,
@@ -15,18 +13,22 @@ import {
   Check,
   FileCheck,
   ImageIcon,
-  Gamepad2,
-  Building2,
-  MapPin,
-  Swords,
-  Layers,
+  Fingerprint,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
-import { shouldBypassImageOptimization } from '@/lib/image-utils';
+import { OrganizerDashboardHero } from '@/components/organizer/organizer-dashboard-hero';
+import { getOrganizerOrganizationAction } from '@/app/actions/organizations';
+import {
+  GAME_MODES,
+  type EnrolledTeam,
+  type OrganizerMatch,
+  type OrganizerOrganization,
+  type OrganizerTournament,
+} from '@/components/organizer/organizer-dashboard-model';
 import {
   ManagementPage,
   ManagementMetrics,
@@ -35,86 +37,9 @@ import {
   MetricCard,
   type ManagementTab,
 } from '@/components/dashboard/management-ui';
+import { DashboardInsightMetrics, IdentityWarningsPanel, useDashboardInsights } from '@/components/dashboard/dashboard-insights';
 
-// Catalog of Game Modes (Modalidades de Juego) per eSports Game
-export const GAME_MODES: Record<string, { id: string; name: string; format: string; description: string }[]> = {
-  eafc26: [
-    { id: '11v11', name: 'Clubes Pro 11v11', format: '11 VS 11', description: 'Formato plantilla completa con posiciones fijas eSports' },
-    { id: '1v1', name: 'Ultimate Team 1v1', format: '1 VS 1', description: 'Formato individual competitivo de cara a cara' },
-    { id: '2v2', name: 'Parejas Co-Op 2v2', format: '2 VS 2', description: 'Formato de duos en línea' },
-  ],
-  valorant: [
-    { id: '5v5_comp', name: 'Competitivo 5v5', format: '5 VS 5', description: 'Modo de torneo estándar al mejor de 24 rondas con prórroga' },
-    { id: '5v5_swift', name: 'Swiftplay 5v5', format: '5 VS 5', description: 'Modo rápido al mejor de 9 rondas' },
-    { id: 'spikerush', name: 'Spike Rush 5v5', format: '5 VS 5', description: 'Modo dinámico de ritmo acelerado' },
-  ],
-  csgo: [
-    { id: '5v5_match', name: 'Competitivo 5v5', format: '5 VS 5', description: 'Matchmaking MR12 estándar competitivo oficial CS2' },
-    { id: '2v2_wingman', name: 'Wingman 2v2', format: '2 VS 2', description: 'Modo compañero en bombsite único' },
-  ],
-  lol: [
-    { id: '5v5_rift', name: 'Grieta del Invocador 5v5', format: '5 VS 5', description: 'Modo competitivo en el mapa principal 5v5' },
-    { id: '5v5_aram', name: 'ARAM 5v5', format: '5 VS 5', description: 'Abismo de los Lamentables selección aleatoria' },
-  ],
-  rocketleague: [
-    { id: '3v3_std', name: 'Estándar 3v3', format: '3 VS 3', description: 'Modo de torneo oficial principal Rocket League' },
-    { id: '2v2_duo', name: 'Duos 2v2', format: '2 VS 2', description: 'Parejas competitivas en arena' },
-    { id: '1v1_solo', name: 'Individual 1v1', format: '1 VS 1', description: 'Duelo individual técnico de control de balón' },
-  ],
-};
-
-interface OrganizationUser {
-  id: string;
-  name: string;
-  gamertag?: string;
-  avatar_url?: string;
-  foto?: string;
-}
-
-interface OrganizerOrganization {
-  id: string;
-  name: string;
-  tag: string;
-  banner_url?: string;
-  logo_url?: string;
-  country?: string;
-  founded_year?: string | number;
-  rating?: string | number;
-  organizers?: OrganizationUser[];
-}
-
-interface OrganizerTournament {
-  id: string;
-  name: string;
-  game_slug?: string;
-  primary_game_slug?: string;
-  status?: string;
-}
-
-interface OrganizerMatch {
-  id: string;
-  matchday?: number;
-  home_team_name: string;
-  away_team_name: string;
-  reported_score_home?: number | null;
-  reported_score_away?: number | null;
-  proof_url?: string | null;
-  match_date?: string;
-  score_home?: number | null;
-  score_away?: number | null;
-  status: string;
-}
-
-interface EnrolledTeam {
-  id: string;
-  name: string;
-  tag: string;
-  game_slug?: string;
-  captain_name?: string;
-  status?: string;
-}
-
-type OrganizerTab = 'approvals' | 'fixture' | 'enrolled' | 'seasons';
+type OrganizerTab = 'approvals' | 'fixture' | 'enrolled' | 'seasons' | 'identity';
 
 export function OrganizerDashboardView() {
   const { currentUser, activeGameSlug, setActiveGameSlug } = useAuth();
@@ -149,6 +74,7 @@ export function OrganizerDashboardView() {
   const [selectedMatchForApproval, setSelectedMatchForApproval] = useState<OrganizerMatch | null>(null);
   const [isFixtureConfirmOpen, setIsFixtureConfirmOpen] = useState(false);
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
+  const { insights, loading: insightsLoading } = useDashboardInsights();
 
   const fetchSeasonsAndTournaments = useCallback(async () => {
     try {
@@ -168,18 +94,36 @@ export function OrganizerDashboardView() {
 
   const fetchUserOrganization = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/organizations');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.organizations)) {
-        const found = (data.organizations as OrganizerOrganization[]).find(
-          (o) => o.id === currentUser?.organizationId || o.organizers?.some((orgUser) => orgUser.id === currentUser?.id)
-        ) || data.organizations[0];
-        setUserOrg(found);
+      // 1. Try server action first (authenticated and multi-provider)
+      const actionRes = await getOrganizerOrganizationAction();
+      if (actionRes.success && actionRes.organization) {
+        setUserOrg(actionRes.organization);
+        return;
+      }
+
+      // 2. Fallback to API route
+      const res = await fetch('/api/organizer/organization');
+      const data = await res.json().catch(() => ({}));
+      if (data.success && data.organization) {
+        setUserOrg(data.organization);
+        return;
+      }
+
+      // 3. Fallback to public organizations if necessary
+      const publicRes = await fetch('/api/organizations');
+      const publicData = await publicRes.json().catch(() => ({}));
+      if (publicData.success && Array.isArray(publicData.organizations)) {
+        const found = (publicData.organizations as OrganizerOrganization[]).find(
+          (o) => o.id === currentUser?.organizationId
+        );
+        if (found) {
+          setUserOrg(found);
+        }
       }
     } catch (e) {
       console.error('Error cargando organización del usuario:', e);
     }
-  }, [currentUser?.id, currentUser?.organizationId]);
+  }, [currentUser?.organizationId]);
 
   const fetchFixtureData = useCallback(async () => {
     if (!selectedTournamentId) return;
@@ -284,154 +228,22 @@ export function OrganizerDashboardView() {
     { id: 'fixture', label: `Fixtures ${activeGameMode.format}`, shortLabel: 'Fixtures', count: matches.length, icon: Clock, tone: 'cyan' },
     { id: 'enrolled', label: 'Escuadras inscritas', shortLabel: 'Escuadras', count: filteredEnrolledTeams.length, icon: Shield, tone: 'emerald' },
     { id: 'seasons', label: 'Competencias', count: filteredTournaments.length, icon: Calendar, tone: 'violet' },
+    { id: 'identity', label: 'IDs similares', shortLabel: 'Alertas ID', count: insights?.identityWarnings.length ?? 0, icon: Fingerprint, tone: 'crimson' },
   ];
 
   return (
     <ManagementPage>
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
-      {/* Header Banner with Organization Identity & Game / Mode Selectors */}
-      <section className="overflow-hidden rounded-[var(--ui-radius-panel)] border border-[var(--border-card)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
-        {/* Banner Image */}
-        {userOrg?.banner_url && (
-          <div className="relative h-28 w-full overflow-hidden bg-[var(--bg-subtle)] sm:h-36">
-            <Image
-              src={userOrg.banner_url}
-              alt={userOrg.name}
-              fill
-              sizes="100vw"
-              unoptimized={shouldBypassImageOptimization(userOrg.banner_url)}
-              className="object-cover opacity-50"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] via-[var(--bg-card)]/40 to-transparent" />
-          </div>
-        )}
+      <OrganizerDashboardHero
+        organization={userOrg}
+        selectedGameSlug={selectedGameSlug}
+        onGameChange={setSelectedGameSlug}
+        gameModes={availableGameModes}
+        selectedGameModeId={selectedGameModeId}
+        onGameModeChange={setSelectedGameModeId}
+      />
 
-        <div className="space-y-5 p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--accent-violet)]/40 bg-[var(--bg-subtle)] shadow-lg sm:size-16">
-                {userOrg?.logo_url ? (
-                  <Image
-                    src={userOrg.logo_url}
-                    alt={userOrg.name}
-                    fill
-                    sizes="64px"
-                    unoptimized={shouldBypassImageOptimization(userOrg.logo_url)}
-                    className="object-cover"
-                  />
-                ) : (
-                    <Building2 className="w-8 h-8 text-[var(--accent-violet)]" />
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-black uppercase text-[var(--text-heading)] tracking-wider">
-                    {userOrg ? userOrg.name : 'Panel del Organizador eSports'}
-                  </h1>
-                  <Badge variant="violet" className="font-mono text-[10px] uppercase">
-                    {userOrg ? `[${userOrg.tag}]` : 'Organizador'}
-                  </Badge>
-                </div>
-                {userOrg && (
-                  <p className="mt-1 flex flex-wrap items-center gap-2 font-mono text-xs font-bold text-[var(--accent-violet)]">
-                    <span><MapPin className="w-3 h-3 inline mr-0.5" />{userOrg.country || 'Venezuela'}</span>
-                    <span>• Est. {userOrg.founded_year || '2019'}</span>
-                    <span>• ★ {userOrg.rating || '4.98'} Rating</span>
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Assigned Organizers List */}
-            {userOrg?.organizers && userOrg.organizers.length > 0 && (
-              <div className="max-w-full space-y-1 rounded-xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-3">
-                <span className="block font-mono text-[10px] font-black uppercase text-[var(--text-muted)]">Equipo organizador</span>
-                <div className="flex max-w-full flex-wrap items-center gap-2">
-                  {userOrg.organizers.map((oUser) => (
-                    <div key={oUser.id} className="flex items-center gap-1 text-[11px] font-bold text-[var(--accent-cyan)]">
-                      <Avatar fallback={oUser.name} src={oUser.avatar_url || oUser.foto} size="sm" />
-                      <span>@{oUser.gamertag || oUser.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* GAME SELECTOR IN ORGANIZER PANEL */}
-          <div className="space-y-4 border-t border-[var(--border-card)] pt-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-mono uppercase font-black tracking-widest text-cyan-400 block">
-                ● 1. SELECCIONAR DISCIPLINA ESPORTS:
-              </label>
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
-                {Object.values(GAMES_CATALOG).map((g) => {
-                  const isSelected = g.slug === selectedGameSlug;
-                  return (
-                    <button
-                      key={g.id}
-                      onClick={() => setSelectedGameSlug(g.slug)}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 border flex-shrink-0 ${
-                        isSelected
-                          ? 'shadow-lg text-slate-950 scale-105 font-black'
-                          : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:border-[var(--border-card-hover)]'
-                      }`}
-                      style={
-                        isSelected
-                          ? {
-                              backgroundColor: g.brandColor,
-                              borderColor: g.brandColor,
-                              boxShadow: `0 4px 20px color-mix(in srgb, ${g.brandColor} 50%, transparent)`,
-                            }
-                          : {}
-                      }
-                    >
-                      <Gamepad2 className="w-4 h-4" />
-                      <span>{g.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* MODALIDAD DE JUEGO SELECTOR IN ORGANIZER PANEL */}
-            <div className="space-y-2 border-t border-[var(--border-card)] pt-3">
-              <label className="text-[10px] font-mono uppercase font-black tracking-widest text-purple-400 block flex items-center gap-1.5">
-                <Swords className="w-3.5 h-3.5 text-purple-400" />
-                ● 2. SELECCIONAR MODALIDAD DE JUEGO A GESTIONAR ({activeGame.name}):
-              </label>
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
-                {availableGameModes.map((mode) => {
-                  const isSelected = mode.id === selectedGameModeId;
-                  return (
-                    <button
-                      key={mode.id}
-                      onClick={() => setSelectedGameModeId(mode.id)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border flex-shrink-0 ${
-                        isSelected
-                          ? 'bg-[var(--accent-violet-bg)] text-[var(--accent-violet)] border-[var(--accent-violet)]/40 shadow-sm'
-                          : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:border-[var(--border-card-hover)]'
-                      }`}
-                    >
-                      <Layers className="w-3.5 h-3.5 text-[var(--accent-violet)]" />
-                      <span>{mode.name}</span>
-                      <span className="rounded bg-black/10 px-1.5 py-0.5 font-mono text-[9px] text-inherit dark:bg-white/10">
-                        {mode.format}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {activeGameMode && (
-                <div className="flex flex-col gap-2 rounded-xl border border-[var(--accent-violet)]/20 bg-[var(--accent-violet-bg)] p-3 font-mono text-[11px] text-[var(--text-secondary)] sm:flex-row sm:items-center sm:justify-between">
-                  <span>Modo Activo: <strong>{activeGameMode.name}</strong> ({activeGameMode.format}) — {activeGameMode.description}</span>
-                  <Badge variant="cyan" className="font-mono text-[9px]">COMPETENCIA VIGENTE</Badge>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
+      <DashboardInsightMetrics insights={insights} loading={insightsLoading} />
 
       <ManagementMetrics>
         <MetricCard label="Por revisar" value={pendingApprovals.length} hint="Partidos reportados" icon={FileCheck} tone="gold" />
@@ -442,6 +254,8 @@ export function OrganizerDashboardView() {
 
       <ManagementTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} label="Módulos de operación del organizador" />
 
+      {activeTab === 'identity' ? <IdentityWarningsPanel warnings={insights?.identityWarnings ?? []} selectedGameSlug={selectedGameSlug} /> : null}
+
       {/* TAB 1: VISTO BUENO */}
       {activeTab === 'approvals' && (
         <ManagementSection
@@ -449,13 +263,13 @@ export function OrganizerDashboardView() {
           description="Revisa comprobantes y homologa resultados antes de actualizar la clasificación."
           icon={FileCheck}
           tone="gold"
-          action={<Badge variant="gold" className="w-fit font-mono text-[10px]">
+          action={<Badge variant="gold" className="w-fit font-[family-name:var(--font-active)] text-[10px]">
               {pendingApprovals.length} En Espera de Homologación
             </Badge>}
         >
           {pendingApprovals.length === 0 ? (
             <div className="space-y-2 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-8 text-center">
-              <CheckCircle2 className="mx-auto w-8 h-8 text-[var(--accent-emerald)]" />
+              <CheckCircle2 className="mx-auto w-8 h-8 text-[var(--app-positive)]" />
               <p className="text-xs font-bold uppercase text-[var(--text-secondary)]">No hay partidos pendientes de visto bueno</p>
             </div>
           ) : (
@@ -466,14 +280,14 @@ export function OrganizerDashboardView() {
                   cell: (r) => (
                     <div>
                       <div className="text-xs font-bold text-[var(--text-heading)]">{r.home_team_name} VS {r.away_team_name}</div>
-                      <div className="font-mono text-[10px] text-[var(--accent-cyan)]">Jornada #{r.matchday}</div>
+                      <div className="font-[family-name:var(--font-active)] text-[10px] text-[var(--app-accent)]">Jornada #{r.matchday}</div>
                     </div>
                   ),
                 },
                 {
                   header: 'Marcador Enviado',
                   cell: (r) => (
-                    <span className="rounded-lg border border-[var(--accent-gold)]/30 bg-[var(--accent-gold-bg)] px-3 py-1 font-mono text-sm font-black text-[var(--accent-gold)]">
+                    <span className="rounded-lg border border-[var(--app-warning)]/30 bg-[var(--app-warning-soft)] px-3 py-1 font-[family-name:var(--font-active)] text-sm font-black text-[var(--app-warning)]">
                       {r.reported_score_home} - {r.reported_score_away}
                     </span>
                   ),
@@ -482,7 +296,7 @@ export function OrganizerDashboardView() {
                   header: 'Comprobante',
                   cell: (r) =>
                     r.proof_url ? (
-                      <a href={r.proof_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs font-bold text-[var(--accent-cyan)] hover:underline">
+                      <a href={r.proof_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs font-bold text-[var(--app-accent)] hover:underline">
                         <ImageIcon className="w-3.5 h-3.5" /> Captura WebP
                       </a>
                     ) : (
@@ -496,12 +310,12 @@ export function OrganizerDashboardView() {
               ]}
               data={pendingApprovals}
               searchPlaceholder="Buscar por equipo..."
-              brandColor="#F59E0B"
+              brandColor="var(--app-accent)"
               actions={(row) => (
                 <Button
                   size="sm"
                   onClick={() => setSelectedMatchForApproval(row)}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg flex items-center gap-1"
+                  className="bg-[var(--app-positive)] hover:bg-[var(--app-positive)] text-[var(--accent-contrast)] font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg flex items-center gap-1"
                 >
                   <Check className="w-3.5 h-3.5" />
                   Dar Visto Bueno
@@ -522,8 +336,8 @@ export function OrganizerDashboardView() {
           action={<Button
               onClick={() => setIsFixtureConfirmOpen(true)}
               disabled={isGeneratingFixture}
-              className="font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
-              style={{ backgroundColor: activeGame.brandColor, color: '#020617' }}
+              className="ui-dynamic-brand-button font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
+              style={{ '--ui-dynamic-brand': 'var(--app-accent)' } as React.CSSProperties}
             >
               <Sparkles className="w-4 h-4" />
               <span>{isGeneratingFixture ? 'Generando...' : `Generar Fixture (${activeGameMode.format})`}</span>
@@ -531,13 +345,13 @@ export function OrganizerDashboardView() {
         >
           <DataTable
             columns={[
-              { header: 'Jornada', cell: (r) => <span className="font-mono font-bold text-[var(--accent-cyan)]">Jornada #{r.matchday}</span> },
+              { header: 'Jornada', cell: (r) => <span className="font-[family-name:var(--font-active)] font-bold text-[var(--app-accent)]">Jornada #{r.matchday}</span> },
               { header: 'Local VS Visitante', cell: (r) => <span className="font-bold text-[var(--text-heading)]">{r.home_team_name} VS {r.away_team_name}</span> },
-              { header: 'Horario Simultáneo', accessorKey: 'match_date', className: 'font-mono text-[var(--text-secondary)]' },
+              { header: 'Horario Simultáneo', accessorKey: 'match_date', className: 'font-[family-name:var(--font-active)] text-[var(--text-secondary)]' },
               {
                 header: 'Resultado Final',
                 cell: (r) => (
-                  <span className="font-mono font-bold text-[var(--text-primary)]">
+                  <span className="font-[family-name:var(--font-active)] font-bold text-[var(--text-primary)]">
                     {r.score_home !== null ? `${r.score_home} - ${r.score_away}` : 'Pendiente'}
                   </span>
                 ),
@@ -548,10 +362,10 @@ export function OrganizerDashboardView() {
                   <Badge
                     className={`text-[10px] uppercase ${
                       r.status === 'TERMINADO'
-                        ? 'bg-emerald-950 text-emerald-300'
+                        ? 'bg-[var(--app-positive-soft)] text-[var(--app-positive)]'
                         : r.status === 'POR_REVISAR'
-                        ? 'bg-amber-950 text-amber-300'
-                        : 'bg-slate-900 text-slate-400'
+                        ? 'bg-[var(--app-warning-soft)] text-[var(--app-warning)]'
+                        : 'bg-[var(--app-surface-2)] text-[var(--text-muted)]'
                     }`}
                   >
                     {r.status}
@@ -561,7 +375,7 @@ export function OrganizerDashboardView() {
             ]}
             data={matches}
             searchPlaceholder="Buscar por equipo en fixture..."
-            brandColor={activeGame.brandColor}
+            brandColor="var(--app-accent)"
           />
         </ManagementSection>
       )}
@@ -577,13 +391,13 @@ export function OrganizerDashboardView() {
           <DataTable
             columns={[
               { header: 'Nombre del Club', cell: (r) => <span className="font-black text-[var(--text-heading)]">{r.name} [{r.tag}]</span> },
-              { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-mono text-[var(--accent-cyan)] uppercase font-bold' },
+              { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-[family-name:var(--font-active)] text-[var(--app-accent)] uppercase font-bold' },
               { header: 'Capitán', accessorKey: 'captain_name', className: 'font-bold text-[var(--text-secondary)]' },
               { header: 'Estado', cell: (r) => <Badge variant="emerald">{r.status || 'Inscrito'}</Badge> },
             ]}
             data={filteredEnrolledTeams}
             searchPlaceholder="Buscar club inscrito..."
-            brandColor="#00FF87"
+            brandColor="var(--app-accent)"
           />
         </ManagementSection>
       )}
@@ -601,10 +415,10 @@ export function OrganizerDashboardView() {
               <div key={t.id} className="space-y-2 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-black uppercase text-[var(--text-heading)]">{t.name}</span>
-                  <Badge variant="cyan" className="font-mono text-[10px]">{t.status || 'ACTIVO'}</Badge>
+                  <Badge variant="cyan" className="font-[family-name:var(--font-active)] text-[10px]">{t.status || 'ACTIVO'}</Badge>
                 </div>
-                <p className="font-mono text-xs text-[var(--text-secondary)]">
-                  Disciplina: <strong className="uppercase text-[var(--accent-violet)]">{t.game_slug || selectedGameSlug}</strong> • Modalidad: <strong className="text-[var(--accent-cyan)]">{activeGameMode.format}</strong>
+                <p className="font-[family-name:var(--font-active)] text-xs text-[var(--text-secondary)]">
+                  Disciplina: <strong className="uppercase text-[var(--app-accent-2)]">{t.game_slug || selectedGameSlug}</strong> • Modalidad: <strong className="text-[var(--app-accent)]">{activeGameMode.format}</strong>
                 </p>
               </div>
             ))}

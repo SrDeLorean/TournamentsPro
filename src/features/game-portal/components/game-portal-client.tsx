@@ -17,6 +17,7 @@ import { Flame, LoaderCircle, Trophy, Users } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useGamePlayers } from '@/features/game-portal/hooks/use-game-players';
 import { NewUserMyTeamsView as UserMyTeamsView } from '@/components/user/new-user-my-teams';
+import type { PublicPortalSummary } from '@/lib/public-home-summary';
 
 // ── Extracted Components ────────────────────────────────────────────────────
 import { GameHomeHero } from '@/components/game/game-home-hero';
@@ -66,11 +67,12 @@ const PlayerProfileView = dynamic(() => import('@/components/players/player-prof
 interface GamePortalClientProps {
   gameSlug: string;
   initialSection?: string;
+  initialOverview?: PublicPortalSummary;
 }
 
 // ── Main Page Component ─────────────────────────────────────────────────────
 
-export default function GamePortalClient({ gameSlug, initialSection }: GamePortalClientProps) {
+export default function GamePortalClient({ gameSlug, initialSection, initialOverview }: GamePortalClientProps) {
   const router = useRouter();
   const { currentUser, userTeams, refetchTeams } = useAuth();
   const game = GAMES_CATALOG[gameSlug];
@@ -106,12 +108,6 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
   const meta = getSectionMetadata(game, activeSection);
   const brandColor = game.brandColor;
 
-  // Mock data (to be replaced by API data)
-  const mockMatches = [
-    { id: 1, home: 'LeguaYork eSp', homeTag: 'LYK', away: 'Sangre Nueva FC', awayTag: 'SNF', date: 'Hoy - 21:00 hrs', jornada: 'Jornada 11', status: 'EN VIVO', score: '2 - 1' },
-    { id: 2, home: 'Highfield XX', homeTag: 'HFX', away: 'Torneos Pro Gaming', awayTag: 'TPG', date: 'Hoy - 22:30 hrs', jornada: 'Jornada 11', status: 'ESTELAR', score: 'VS' },
-  ];
-
   // ── Section Change Handler ────────────────────────────────────────────────
 
   const handleSectionChange = (sec: GameSection) => {
@@ -130,7 +126,7 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
               <div key={`header-${activeSection}`} className="pt-4 sm:pt-6">
                 <PageHeader
                   badgeText={meta.badgeText}
-                  badgeIcon={<Flame className="w-3.5 h-3.5" style={{ color: brandColor, fill: brandColor }} />}
+                  badgeIcon={<Flame className="w-3.5 h-3.5 text-[var(--app-accent)] fill-[var(--app-accent)]" />}
                   title={meta.title}
                   highlightTitle={meta.highlightTitle}
                   description={meta.description}
@@ -141,7 +137,7 @@ export default function GamePortalClient({ gameSlug, initialSection }: GamePorta
 
           {/* ── HOME ──────────────────────────────────────────────────── */}
           {activeSection === 'home' && (
-            <GameHomeHero game={game} brandColor={brandColor} mockMatches={mockMatches} onNavigate={(s) => handleSectionChange(s as GameSection)} />
+            <GameHomeHero game={game} summary={initialOverview} onNavigate={(s) => handleSectionChange(s as GameSection)} />
           )}
 
           {/* ── PARTIDOS (Fixture & Calendario) ────────────────────────── */}

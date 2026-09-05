@@ -4,5 +4,6 @@
  * dynamic and cannot be safely allow-listed globally.
  */
 export function shouldBypassImageOptimization(src: string): boolean {
-  return true;
+  const normalizedSource = src.trim();
+  return /^(?:https?:\/\/|\/\/|data:|blob:)/i.test(normalizedSource);
 }

@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { GAMES_CATALOG, GameConfig } from '@/lib/games-data';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
+import { cn } from '@/lib/utils';
 import { GameSubNavbar } from '@/components/layout/game-sub-navbar';
 import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
 import { DateCarousel, CalendarDayItem } from '@/components/tournaments/date-carousel';
@@ -212,27 +213,33 @@ export default function GameUIShowcaseClient({ gameSlug }: GameUIShowcaseClientP
                 <div className="flex items-center gap-1 bg-[var(--bg-main)] p-1 rounded-2xl border border-[var(--border-card)] text-xs">
                   <button
                     onClick={() => setActiveTab('LIVE')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
-                      activeTab === 'LIVE' ? 'bg-red-500 text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                    }`}
+                    className={cn(
+                      'px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5',
+                      activeTab === 'LIVE' ? 'text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    )}
+                    style={activeTab === 'LIVE' ? { backgroundColor: brandColor } : {}}
                   >
                     <Zap className="w-3.5 h-3.5" />
                     <span>VISTA EN VIVO</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('PLAN')}
-                    className={`px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
-                      activeTab === 'PLAN' ? 'bg-red-500 text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                    }`}
+                    className={cn(
+                      'px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5',
+                      activeTab === 'PLAN' ? 'text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    )}
+                    style={activeTab === 'PLAN' ? { backgroundColor: brandColor } : {}}
                   >
                     <Layers className="w-3.5 h-3.5" />
                     <span>PLAN COMPLETO</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('DESIGN_SYSTEM')}
-                    className={`px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
-                      activeTab === 'DESIGN_SYSTEM' ? 'bg-red-500 text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                    }`}
+                    className={cn(
+                      'px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5',
+                      activeTab === 'DESIGN_SYSTEM' ? 'text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    )}
+                    style={activeTab === 'DESIGN_SYSTEM' ? { backgroundColor: brandColor } : {}}
                   >
                     <Sliders className="w-3.5 h-3.5" />
                     <span>SISTEMA DE COMPONENTES</span>
@@ -246,11 +253,11 @@ export default function GameUIShowcaseClient({ gameSlug }: GameUIShowcaseClientP
 
             <div className="space-y-1">
               <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-[var(--text-heading)] flex items-center gap-3">
-                <span className="text-red-500">{game.name}</span>
-                <span>MATCHDAY & ENCUENTROS TÁCTICOS 5v5</span>
+                <span style={{ color: brandColor }}>{game.name}</span>
+                <span>MATCHDAY & ENCUENTROS TÁCTICOS</span>
               </h1>
               <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-sans max-w-3xl leading-relaxed">
-                Demostración interactiva en tiempo real adaptada a los temas <strong>Claro</strong>, <strong>Oscuro</strong> y <strong>OLED (Pitch Black)</strong>, animaciones de carga con el logo oficial de VALORANT y carrusel con navegación lateral.
+                Demostración interactiva en tiempo real adaptada a los temas <strong>Claro</strong>, <strong>Oscuro</strong> y <strong>OLED (Pitch Black)</strong>, animaciones de carga con el logo oficial de {game.name} y carrusel con navegación lateral.
               </p>
             </div>
 

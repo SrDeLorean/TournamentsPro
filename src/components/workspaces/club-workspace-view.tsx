@@ -13,7 +13,7 @@ import { ManagementHero, ManagementMetrics, ManagementPage, ManagementSection, M
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getTeamSquadAction, type SquadMemberData } from '@/app/actions/squads';
+import { getCaptainDashboardDataAction, getTeamSquadAction, type SquadMemberData } from '@/app/actions/squads';
 import type { ClubWorkspaceSection } from '@/lib/workspace-sections';
 
 const ChatSystem = dynamic(() => import('@/components/chat/chat-system').then((module) => module.ChatSystem), {
@@ -45,6 +45,23 @@ const sectionCopy: Record<ClubWorkspaceSection, { eyebrow: string; title: string
   ajustes: { eyebrow: 'Administración', title: 'Configuración del club', description: 'Actualiza identidad, imágenes, datos institucionales y presencia digital.' },
 };
 
+interface ClubMatchSummary {
+  id: string;
+  teamHomeId?: string | null;
+  homeTeamId?: string | null;
+  teamAwayId?: string | null;
+  awayTeamId?: string | null;
+  home_team_name: string;
+  away_team_name: string;
+  scoreHome?: number | null;
+  scoreAway?: number | null;
+  scheduled_at?: string | null;
+  status: string;
+}
+
+interface CaptainRequestSummary { id: string; applicant_name?: string; applicant_gamertag?: string; position?: string; status?: string }
+interface CompetitionEntrySummary { id: string; competition_name?: string; status?: string }
+
 export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug: string; section?: ClubWorkspaceSection }) {
   const { currentUser, userTeams, refetchTeams } = useAuth();
   const game = GAMES_CATALOG[gameSlug] || GAMES_CATALOG.eafc26;
@@ -54,6 +71,9 @@ export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug:
   const [squad, setSquad] = useState<SquadMemberData[]>([]);
   const [isLoadingSquad, setIsLoadingSquad] = useState(true);
   const [isRosterOpen, setIsRosterOpen] = useState(false);
+  const [matches, setMatches] = useState<ClubMatchSummary[]>([]);
+  const [transferRequests, setTransferRequests] = useState<CaptainRequestSummary[]>([]);
+  const [competitionEntries, setCompetitionEntries] = useState<CompetitionEntrySummary[]>([]);
 
   const loadSquad = useCallback(async () => {
     if (!team?.id) return;
@@ -69,6 +89,24 @@ export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug:
     if (['resumen', 'plantilla', 'estadisticas'].includes(section)) void loadSquad();
   }, [loadSquad, section]);
 
+  useEffect(() => {
+    if (!team?.id || section !== 'resumen') return;
+    let active = true;
+    Promise.all([
+      getCaptainDashboardDataAction(team.id),
+      fetch(`/api/matches?gameSlug=${encodeURIComponent(game.slug)}`).then((response) => response.json()),
+    ]).then(([dashboard, matchPayload]) => {
+      if (!active) return;
+      if (dashboard.success) {
+        setTransferRequests((dashboard.transferRequests || []) as CaptainRequestSummary[]);
+        setCompetitionEntries((dashboard.competitionEntries || []) as CompetitionEntrySummary[]);
+      }
+      const allMatches = (matchPayload?.matches || []) as ClubMatchSummary[];
+      setMatches(allMatches.filter((match) => (match.teamHomeId || match.homeTeamId) === team.id || (match.teamAwayId || match.awayTeamId) === team.id));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [game.slug, section, team?.id]);
+
   if (!team) {
     return <ManagementPage className="context-workspace"><ManagementHero eyebrow="Espacio de club" title="Aún no administras un club" description="El panel del club se habilita cuando eres capitán o encargado de una escuadra en esta disciplina." icon={Shield} tone="violet" badge={game.name} /><ManagementSection title="Continúa desde tu espacio de atleta" description="Puedes revisar ofertas, tu ficha o equipos asociados mientras se confirma la vinculación." icon={Sparkles} tone="cyan"><WorkspaceEmpty icon={Shield} title={`Sin club administrable en ${game.name}`} description="Si ya perteneces a uno, solicita al capitán que te registre como encargado." action={<Link href={`/${game.slug}/atleta`}><Button>Ir a mi panel de atleta<ArrowRight className="size-4" /></Button></Link>} /></ManagementSection></ManagementPage>;
   }
@@ -83,9 +121,9 @@ export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug:
         <div className="context-workspace-identity"><Avatar fallback={team.tag || team.name} src={team.logoUrl} status="online" size="lg" /><div><strong>{team.name}</strong><span>{team.tag} · {team.platform}</span></div><Badge variant={team.status === 'ACTIVO' ? 'emerald' : 'slate'}>{team.status}</Badge></div>
       </ManagementHero>
 
-      {!['mensajes', 'ajustes', 'ficha', 'matchday', 'fichajes'].includes(section) ? <ManagementMetrics><MetricCard label="Plantilla" value={memberCount} hint={`Capacidad: ${capacity}`} icon={Users} tone="cyan" /><MetricCard label="Vacantes" value={Math.max(capacity - memberCount, 0)} hint="Cupos disponibles" icon={UserPlus} tone="violet" /><MetricCard label="Competición" value={team.disputando || '—'} hint="Circuito vigente" icon={Trophy} tone="gold" /><MetricCard label="Palmarés" value={team.palmares || '—'} hint="Registro del club" icon={History} tone="emerald" /></ManagementMetrics> : null}
+      {!['mensajes', 'ajustes', 'ficha', 'matchday', 'fichajes'].includes(section) ? <ManagementMetrics><MetricCard label="Plantilla" value={memberCount} hint={`Capacidad: ${capacity}`} icon={Users} tone="cyan" /><MetricCard label="Solicitudes" value={transferRequests.length} hint="Pendientes de respuesta" icon={UserPlus} tone="violet" /><MetricCard label="Competencias" value={competitionEntries.length} hint="Inscripciones del club" icon={Trophy} tone="gold" /><MetricCard label="Próximos" value={matches.filter((match) => !match.status.toUpperCase().includes('FINAL')).length} hint="Partidos programados" icon={CalendarCheck} tone="cyan" /></ManagementMetrics> : null}
 
-      {section === 'resumen' ? <ClubOverview base={base} team={team} memberCount={memberCount} /> : null}
+      {section === 'resumen' ? <ClubOverview base={base} team={team} memberCount={memberCount} matches={matches} transferRequests={transferRequests} competitionEntries={competitionEntries} /> : null}
       {section === 'ficha' ? <div className="context-workspace-embedded"><TeamProfileView team={team} brandColor={game.brandColor} /></div> : null}
       {section === 'plantilla' ? <ClubRoster team={team} squad={squad} loading={isLoadingSquad} onManage={() => setIsRosterOpen(true)} /> : null}
       {section === 'fichajes' ? <div className="context-workspace-embedded"><TransferMarket game={game} /></div> : null}
@@ -100,9 +138,15 @@ export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug:
   );
 }
 
-function ClubOverview({ base, team, memberCount }: { base: string; team: TeamData; memberCount: number }) {
+function ClubOverview({ base, team, memberCount, matches, transferRequests, competitionEntries }: { base: string; team: TeamData; memberCount: number; matches: ClubMatchSummary[]; transferRequests: CaptainRequestSummary[]; competitionEntries: CompetitionEntrySummary[] }) {
   const shortcuts: Array<{ href: string; label: string; detail: string; icon: LucideIcon }> = [{ href: `${base}/plantilla`, label: 'Plantilla', detail: `${memberCount} integrantes registrados`, icon: Shirt }, { href: `${base}/fichajes`, label: 'Fichajes', detail: 'Vacantes y mercado', icon: UserPlus }, { href: `${base}/matchday`, label: 'Matchday', detail: 'Partidos y reportes', icon: CalendarCheck }, { href: `${base}/mensajes`, label: 'Chat del club', detail: 'Coordina la escuadra', icon: MessageSquare }];
-  return <div className="context-workspace-grid">{shortcuts.map(({ href, label, detail, icon: Icon }) => <Link key={href} href={href} className="context-workspace-shortcut"><Icon /><div><strong>{label}</strong><span>{detail}</span></div><ArrowRight /></Link>)}<ManagementSection title="Estado institucional" description="Información esencial de la escuadra." icon={Shield} tone="violet" className="context-workspace-wide"><div className="context-workspace-facts"><div><span>Capitán</span><strong>{team.captainName || 'Sin asignar'}</strong></div><div><span>Disciplina</span><strong>{team.gameSlug}</strong></div><div><span>Plataforma</span><strong>{team.platform}</strong></div><div><span>Estado</span><strong>{team.status}</strong></div></div></ManagementSection></div>;
+  const finished = matches.filter((match) => match.status.toUpperCase().includes('FINAL')).slice(0, 3);
+  const upcoming = matches.filter((match) => !['FINALIZADO', 'FINALIZADA', 'CANCELADO'].includes(match.status.toUpperCase())).sort((a, b) => new Date(a.scheduled_at || 0).getTime() - new Date(b.scheduled_at || 0).getTime()).slice(0, 3);
+  return <div className="context-workspace-grid">{shortcuts.map(({ href, label, detail, icon: Icon }) => <Link key={href} href={href} className="context-workspace-shortcut"><Icon /><div><strong>{label}</strong><span>{detail}</span></div><ArrowRight /></Link>)}<ManagementSection title="Estado institucional" description="Información esencial de la escuadra." icon={Shield} tone="violet" className="context-workspace-wide"><div className="context-workspace-facts"><div><span>Capitán</span><strong>{team.captainName || 'Sin asignar'}</strong></div><div><span>Solicitudes de plantilla</span><strong>{transferRequests.length}</strong></div><div><span>Competencias vinculadas</span><strong>{competitionEntries.length}</strong></div><div><span>Estado</span><strong>{team.status}</strong></div></div></ManagementSection><ClubMatchSummarySection title="Últimos resultados" matches={finished} empty="Aún no hay resultados cerrados." /><ClubMatchSummarySection title="Próximos partidos" matches={upcoming} empty="No hay partidos próximos programados." />{competitionEntries.length ? <ManagementSection title="Solicitudes e inscripciones de competencia" description="Estado informado por cada organización para este club." icon={Trophy} tone="gold" className="context-workspace-wide"><div className="context-record-list">{competitionEntries.slice(0, 5).map((entry) => <article key={entry.id}><div className="context-record-icon"><Trophy /></div><div><strong>{entry.competition_name || 'Competencia'}</strong><span>Inscripción del equipo</span></div><Badge variant={entry.status === 'CONFIRMADO' ? 'cyan' : 'gold'}>{entry.status || 'Pendiente'}</Badge></article>)}</div></ManagementSection> : null}{transferRequests.length ? <ManagementSection title="Solicitudes pendientes" description="Jugadores que esperan una respuesta del club." icon={UserPlus} tone="violet" className="context-workspace-wide"><div className="context-record-list">{transferRequests.slice(0, 4).map((request) => <article key={request.id}><div className="context-record-icon"><UserPlus /></div><div><strong>@{request.applicant_gamertag || request.applicant_name}</strong><span>{request.position || 'Posición sin indicar'}</span></div><Badge variant="gold">Pendiente</Badge></article>)}</div></ManagementSection> : null}</div>;
+}
+
+function ClubMatchSummarySection({ title, matches, empty }: { title: string; matches: ClubMatchSummary[]; empty: string }) {
+  return <ManagementSection title={title} description="Actividad oficial del equipo." icon={CalendarCheck} tone="cyan" className="context-workspace-wide">{matches.length ? <div className="context-record-list">{matches.map((match) => <article key={match.id}><div className="context-record-icon"><Trophy /></div><div><strong>{match.home_team_name} vs {match.away_team_name}</strong><span>{match.scheduled_at ? new Date(match.scheduled_at).toLocaleString('es-CL') : 'Fecha por confirmar'}</span></div><Badge variant={match.status.toUpperCase().includes('FINAL') ? 'slate' : 'cyan'}>{match.scoreHome ?? '—'} - {match.scoreAway ?? '—'}</Badge></article>)}</div> : <WorkspaceEmpty icon={CalendarCheck} title={empty} description="La información aparecerá cuando la organización actualice el calendario." />}</ManagementSection>;
 }
 
 function ClubRoster({ team, squad, loading, onManage }: { team: TeamData; squad: SquadMemberData[]; loading: boolean; onManage: () => void }) {

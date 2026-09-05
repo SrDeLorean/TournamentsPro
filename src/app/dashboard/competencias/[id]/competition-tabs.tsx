@@ -426,7 +426,7 @@ export function CompetitionTabs({
               emptyMessage="Aún no existen participantes inscritos en esta competencia."
               defaultPageSize={10}
               ariaLabel="Participantes inscritos en la competencia"
-              actions={(row) => <Button size="sm" variant="ghost" onClick={() => setTeamToRemove(row)} className="gap-1.5 text-[var(--accent-crimson)]" title="Retirar participante"><Trash2 className="size-3.5" /><span className="hidden sm:inline">Retirar</span></Button>}
+              actions={(row) => <Button size="sm" variant="ghost" onClick={() => setTeamToRemove(row)} className="gap-1.5 text-[var(--app-danger)]" title="Retirar participante"><Trash2 className="size-3.5" /><span className="hidden sm:inline">Retirar</span></Button>}
             />
           </ManagementSection>
         </div>

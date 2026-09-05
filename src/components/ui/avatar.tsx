@@ -23,9 +23,9 @@ export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', statu
   };
 
   const statusColors = {
-    online: 'bg-emerald-500',
-    offline: 'bg-slate-500',
-    away: 'bg-amber-500',
+    online: 'bg-[var(--app-positive)]',
+    offline: 'bg-[var(--app-surface-2)]',
+    away: 'bg-[var(--app-warning)]',
   };
   const pixels = { sm: 32, md: 40, lg: 48, xl: 64 }[size];
 
@@ -45,7 +45,7 @@ export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', statu
       ) : (
         <div
           className={cn(
-            "rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-[var(--accent-violet)] flex items-center justify-center font-bold text-white shadow-sm border border-[var(--border-card)] uppercase",
+            "rounded-xl bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-2)] flex items-center justify-center font-bold text-[var(--text-heading)] shadow-sm border border-[var(--border-card)] uppercase",
             sizes[size]
           )}
         >
@@ -56,7 +56,7 @@ export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', statu
       {status && (
         <span
           className={cn(
-            "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-950",
+            "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--border-card)]",
             statusColors[status]
           )}
         />

@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import {
+  CUP_RINGS,
+  ORBITAL_RINGS,
+  createHologramSparks,
+  createTrophyHandles,
+  project3D,
+  rotate3D,
+  type Point3D,
+} from './hologram-stage-model';
 
 interface HologramStage3DProps {
   className?: string;
   glowColor?: string;
   accentColor?: string;
   size?: number;
-}
-
-interface Point3D {
-  x: number;
-  y: number;
-  z: number;
 }
 
 export function HologramStage3D({
@@ -30,8 +33,8 @@ export function HologramStage3D({
     if (!ctx) return;
 
     let animationFrameId: number;
-    let width = (canvas.width = canvas.offsetWidth * window.devicePixelRatio || size);
-    let height = (canvas.height = canvas.offsetHeight * window.devicePixelRatio || size);
+    const width = (canvas.width = canvas.offsetWidth * window.devicePixelRatio || size);
+    const height = (canvas.height = canvas.offsetHeight * window.devicePixelRatio || size);
 
     const mouse = {
       x: 0,
@@ -53,84 +56,16 @@ export function HologramStage3D({
       mouse.targetY = 0;
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('pointermove', handleMouseMove);
     canvas.addEventListener('mouseleave', handleMouseLeave);
-
-    // 3D Math Helper
-    function rotate3D(p: Point3D, rotX: number, rotY: number, rotZ: number): Point3D {
-      let y1 = p.y * Math.cos(rotX) - p.z * Math.sin(rotX);
-      let z1 = p.y * Math.sin(rotX) + p.z * Math.cos(rotX);
-      let x1 = p.x;
-
-      let x2 = x1 * Math.cos(rotY) + z1 * Math.sin(rotY);
-      let z2 = -x1 * Math.sin(rotY) + z1 * Math.cos(rotY);
-      let y2 = y1;
-
-      let x3 = x2 * Math.cos(rotZ) - y2 * Math.sin(rotZ);
-      let y3 = x2 * Math.sin(rotZ) + y2 * Math.cos(rotZ);
-      let z3 = z2;
-
-      return { x: x3, y: y3, z: z3 };
-    }
-
-    function project3D(p: Point3D, camDist: number, fov: number, cx: number, cy: number) {
-      const zOffset = p.z + camDist;
-      if (zOffset <= 1) return null;
-      const scale = fov / zOffset;
-      return {
-        x: p.x * scale + cx,
-        y: p.y * scale + cy,
-        scale,
-      };
-    }
-
-    // Build Trophy 3D Wireframe Model
-    const cupRings = [
-      { y: -90, r: 50, segments: 16 },
-      { y: -70, r: 44, segments: 16 },
-      { y: -45, r: 35, segments: 16 },
-      { y: -20, r: 24, segments: 12 },
-      { y: 0, r: 12, segments: 10 },   // Stem top
-      { y: 25, r: 10, segments: 10 },  // Stem middle
-      { y: 45, r: 18, segments: 12 },  // Stem base
-      { y: 65, r: 38, segments: 16 },  // Base tier 1
-      { y: 80, r: 48, segments: 16 },  // Base tier 2
-    ];
-
-    // Trophy Handles (Left & Right arches)
-    const handleLeft: Point3D[] = [];
-    const handleRight: Point3D[] = [];
-    for (let i = 0; i <= 10; i++) {
-      const t = (i / 10) * Math.PI;
-      const hy = -80 + (i / 10) * 60;
-      const hx = 42 + Math.sin(t) * 28;
-      handleRight.push({ x: hx, y: hy, z: 0 });
-      handleLeft.push({ x: -hx, y: hy, z: 0 });
-    }
-
-    // 3D Orbital Rings around the Trophy
-    const orbitalRings = [
-      { radius: 85, tiltX: 0.6, tiltY: 0.2, speed: 0.025, color: '#00f0ff' },
-      { radius: 110, tiltX: -0.4, tiltY: 0.7, speed: -0.018, color: '#c084fc' },
-      { radius: 135, tiltX: 0.8, tiltY: -0.5, speed: 0.012, color: '#fbbf24' },
-    ];
-
-    // Floating Holographic Sparkle Nodes
-    const sparks: { angle: number; y: number; radius: number; speed: number; size: number; color: string }[] = [];
-    for (let i = 0; i < 28; i++) {
-      sparks.push({
-        angle: Math.random() * Math.PI * 2,
-        y: (Math.random() - 0.5) * 180,
-        radius: 30 + Math.random() * 85,
-        speed: (Math.random() * 0.02 + 0.01) * (Math.random() > 0.5 ? 1 : -1),
-        size: Math.random() * 2 + 1,
-        color: i % 2 === 0 ? '#00f0ff' : '#c084fc',
-      });
-    }
+    const { left: handleLeft, right: handleRight } = createTrophyHandles();
+    const sparks = createHologramSparks();
 
     let time = 0;
     let currentTiltX = 0;
     let currentTiltY = 0;
+    let isVisible = true;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     const render = () => {
       time += 0.02;
@@ -170,8 +105,8 @@ export function HologramStage3D({
 
       const projectedRingPoints: { x: number; y: number }[][] = [];
 
-      for (let rIdx = 0; rIdx < cupRings.length; rIdx++) {
-        const ring = cupRings[rIdx];
+      for (let rIdx = 0; rIdx < CUP_RINGS.length; rIdx++) {
+        const ring = CUP_RINGS[rIdx];
         const ringPoints: { x: number; y: number }[] = [];
 
         ctx.beginPath();
@@ -199,8 +134,8 @@ export function HologramStage3D({
       const ribCount = 8;
       for (let rib = 0; rib < ribCount; rib++) {
         ctx.beginPath();
-        for (let rIdx = 0; rIdx < cupRings.length; rIdx++) {
-          const ring = cupRings[rIdx];
+        for (let rIdx = 0; rIdx < CUP_RINGS.length; rIdx++) {
+          const ring = CUP_RINGS[rIdx];
           const angle = (rib / ribCount) * Math.PI * 2;
           const p: Point3D = {
             x: Math.cos(angle) * ring.r,
@@ -241,8 +176,8 @@ export function HologramStage3D({
       ctx.restore();
 
       // 3. Draw 3D Orbital League Rings
-      for (let i = 0; i < orbitalRings.length; i++) {
-        const ring = orbitalRings[i];
+      for (let i = 0; i < ORBITAL_RINGS.length; i++) {
+        const ring = ORBITAL_RINGS[i];
         const ringAngle = time * (i % 2 === 0 ? 1 : -1) * 0.8;
 
         ctx.save();
@@ -253,8 +188,6 @@ export function HologramStage3D({
 
         ctx.beginPath();
         const segments = 32;
-        let firstProj: { x: number; y: number } | null = null;
-
         for (let s = 0; s <= segments; s++) {
           const a = (s / segments) * Math.PI * 2;
           const p: Point3D = {
@@ -270,7 +203,6 @@ export function HologramStage3D({
           if (proj) {
             if (s === 0) {
               ctx.moveTo(proj.x, proj.y);
-              firstProj = { x: proj.x, y: proj.y };
             } else {
               ctx.lineTo(proj.x, proj.y);
             }
@@ -323,14 +255,29 @@ export function HologramStage3D({
         }
       }
 
-      animationFrameId = requestAnimationFrame(render);
+      if (!reducedMotion.matches && isVisible && !document.hidden) {
+        animationFrameId = requestAnimationFrame(render);
+      }
     };
 
+    const restart = () => {
+      cancelAnimationFrame(animationFrameId);
+      if (isVisible && !document.hidden) render();
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisible = entry.isIntersecting;
+      restart();
+    }, { rootMargin: '120px' });
+    const handleVisibilityChange = () => restart();
+    observer.observe(canvas);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     render();
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('mousemove', handleMouseMove);
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      canvas.removeEventListener('pointermove', handleMouseMove);
       canvas.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, [glowColor, accentColor, size]);

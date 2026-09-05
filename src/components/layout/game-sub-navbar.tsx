@@ -107,7 +107,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
       <div className="game-portal-navigation hidden md:block">
         {/* 🎮 SUB-NAVBAR NIVEL 2: SECCIONES DEL JUEGO */}
         <div
-          className="game-portal-navbar w-full z-40 transition-all duration-300"
+          className="game-portal-navbar ui-navigation-tier w-full z-40"
         >
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-11 flex items-center justify-between gap-2 relative">
             {/* Game Identifier Badge on Left */}
@@ -144,13 +144,14 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
                   <Link
                     key={sec.id}
                     href={href}
+                    aria-current={isActive ? 'page' : undefined}
                     onClick={(event) => {
                       if (onSelectSection) {
                         event.preventDefault();
                         onSelectSection(sec.id);
                       }
                     }}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border ${
+                    className={`ui-navigation-link ui-navigation-link-compact ${
                       isActive
                         ? 'game-portal-nav-item-active shadow-md font-extrabold'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)] border-transparent'

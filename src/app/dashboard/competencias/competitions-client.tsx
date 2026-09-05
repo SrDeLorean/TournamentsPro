@@ -129,12 +129,12 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
       accessorKey: 'name',
       cell: (r) => {
         const gameConfig = GAMES_CATALOG[r.game_slug];
-        const brandColor = gameConfig?.brandColor || '#00F0FF';
+        const brandColor = gameConfig?.brandColor || 'var(--app-accent)';
         return (
           <div className="flex items-center gap-3">
             <div
-              className="w-9 h-9 rounded-xl bg-[var(--bg-main)] border flex items-center justify-center font-black text-sm shadow-md"
-              style={{ borderColor: brandColor, color: brandColor }}
+              className="ui-dynamic-brand-tile w-9 h-9 rounded-xl border flex items-center justify-center font-black text-sm"
+              style={{ '--ui-dynamic-brand': brandColor } as React.CSSProperties}
             >
               {gameConfig?.icon || '🏆'}
             </div>
@@ -142,8 +142,8 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
               <Link href={`/dashboard/competencias/${r.id}`} className="font-black text-[var(--table-cell-heading)] text-xs hover:underline block">
                 {r.name}
               </Link>
-              <div className="text-[10px] font-mono text-[var(--table-cell-muted)]">
-                Formato: <strong className="text-[var(--accent-cyan)]">{r.mode_format}</strong>
+              <div className="text-[10px] font-[family-name:var(--font-active)] text-[var(--table-cell-muted)]">
+                Formato: <strong className="text-[var(--app-accent)]">{r.mode_format}</strong>
               </div>
             </div>
           </div>
@@ -157,15 +157,11 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
       cell: (r) => {
         const gameConfig = GAMES_CATALOG[r.game_slug];
         const gName = gameConfig?.name || r.game_slug;
-        const gColor = gameConfig?.brandColor || '#A855F7';
+        const gColor = gameConfig?.brandColor || 'var(--app-accent-2)';
         return (
           <span
-            className="px-2.5 py-1 rounded-md text-[10px] font-mono font-black uppercase border"
-            style={{
-              backgroundColor: `color-mix(in srgb, ${gColor} 15%, transparent)`,
-              borderColor: `color-mix(in srgb, ${gColor} 40%, transparent)`,
-              color: gColor,
-            }}
+            className="ui-dynamic-brand-chip px-2.5 py-1 rounded-md text-[10px] font-[family-name:var(--font-active)] font-black uppercase border"
+            style={{ '--ui-dynamic-brand': gColor } as React.CSSProperties}
           >
             {gName}
           </span>
@@ -177,8 +173,8 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
       sortable: true,
       accessorKey: 'fecha_inicio',
       cell: (r) => (
-        <div className="text-[11px] font-mono text-[var(--table-cell-text)]">
-          <div>Inicio: <strong className="text-emerald-400">{new Date(r.fecha_inicio).toLocaleDateString('es-ES')}</strong></div>
+        <div className="text-[11px] font-[family-name:var(--font-active)] text-[var(--table-cell-text)]">
+          <div>Inicio: <strong className="text-[var(--app-positive)]">{new Date(r.fecha_inicio).toLocaleDateString('es-ES')}</strong></div>
           <div className="text-[var(--table-cell-muted)] text-[10px]">
             Término: {r.fecha_termino ? new Date(r.fecha_termino).toLocaleDateString('es-ES') : 'TBD (Al concluir)'}
           </div>
@@ -211,7 +207,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
         }
 
         return (
-          <Badge variant={variant} className="text-[10px] font-mono font-black uppercase">
+          <Badge variant={variant} className="text-[10px] font-[family-name:var(--font-active)] font-black uppercase">
             {label}
           </Badge>
         );
@@ -300,40 +296,40 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
       />
 
       {/* Selector de Filtros y Antigüedad */}
-      <div className="management-toolbar font-mono">
+      <div className="management-toolbar font-[family-name:var(--font-active)]">
         <div className="flex items-center gap-2 flex-1">
           <select
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value as CompetitionFilter)}
             className="bg-[var(--bg-main)] border border-[var(--border-card)] px-3.5 py-2 rounded-xl text-xs font-bold text-[var(--text-heading)] focus:outline-none cursor-pointer focus:border-[var(--border-card-hover)] transition-colors"
           >
-            <option value="all" className="bg-[#0b101b] text-slate-100 font-semibold">🔍 Filtro: Todas las Competencias</option>
-            <option value="Borrador" className="bg-[#0b101b] text-slate-100 font-semibold">📝 Filtro: Borrador</option>
-            <option value="Inscripcion" className="bg-[#0b101b] text-slate-100 font-semibold">📝 Filtro: Inscripción</option>
-            <option value="En Curso" className="bg-[#0b101b] text-slate-100 font-semibold">⚡ Filtro: En Curso</option>
-            <option value="Finalizada" className="bg-[#0b101b] text-slate-100 font-semibold">🏆 Filtro: Finalizada</option>
-            <option value="Eliminada" className="bg-[#0b101b] text-slate-100 font-semibold">🔴 Filtro: Eliminada</option>
+            <option value="all" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🔍 Filtro: Todas las Competencias</option>
+            <option value="Borrador" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">📝 Filtro: Borrador</option>
+            <option value="Inscripcion" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">📝 Filtro: Inscripción</option>
+            <option value="En Curso" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">⚡ Filtro: En Curso</option>
+            <option value="Finalizada" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🏆 Filtro: Finalizada</option>
+            <option value="Eliminada" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🔴 Filtro: Eliminada</option>
           </select>
 
           <div className="flex items-center gap-1.5 border-l border-[var(--border-card)] pl-3">
-            <Calendar className="w-4 h-4 shrink-0 text-[var(--accent-violet)]" />
+            <Calendar className="w-4 h-4 shrink-0 text-[var(--app-accent-2)]" />
             <span className="text-xs font-bold text-[var(--text-muted)] uppercase shrink-0 hidden md:inline">Antigüedad:</span>
             <select
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
               className="bg-[var(--bg-main)] border border-[var(--border-card)] px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-heading)] focus:outline-none cursor-pointer focus:border-[var(--border-card-hover)] transition-colors"
             >
-              <option value="NEWEST" className="bg-[#0b101b] text-slate-100 font-semibold">⏱️ Más recientes primero</option>
-              <option value="OLDEST" className="bg-[#0b101b] text-slate-100 font-semibold">⌛ Más antiguas primero</option>
-              <option value="NAME_ASC" className="bg-[#0b101b] text-slate-100 font-semibold">🔤 Nombre A-Z</option>
-              <option value="NAME_DESC" className="bg-[#0b101b] text-slate-100 font-semibold">🔤 Nombre Z-A</option>
+              <option value="NEWEST" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">⏱️ Más recientes primero</option>
+              <option value="OLDEST" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">⌛ Más antiguas primero</option>
+              <option value="NAME_ASC" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🔤 Nombre A-Z</option>
+              <option value="NAME_DESC" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🔤 Nombre Z-A</option>
             </select>
           </div>
         </div>
 
         <Button
           onClick={() => setIsModalOpen(true)}
-          className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 shrink-0"
+          className="bg-[var(--app-accent-2)] hover:bg-[var(--app-accent-2)] text-[var(--text-heading)] font-black text-xs px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Crear Nueva Competencia</span>
@@ -344,11 +340,11 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
         columns={columns}
         data={processedCompetitions}
         searchPlaceholder="Buscar por torneo, juego o estado..."
-        brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
         actions={(row) => (
-          <div className="flex items-center gap-1 justify-end font-mono">
+          <div className="flex items-center gap-1 justify-end font-[family-name:var(--font-active)]">
             <Link href={`/dashboard/competencias/${row.id}`}>
-              <Button size="sm" variant="ghost" className="text-xs text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan-bg)] p-2 rounded-xl transition-colors" title="Ver / Administrar Competencia">
+              <Button size="sm" variant="ghost" className="text-xs text-[var(--app-accent)] hover:bg-[var(--app-accent-soft)] p-2 rounded-xl transition-colors" title="Ver / Administrar Competencia">
                 <Eye className="w-3.5 h-3.5" />
               </Button>
             </Link>
@@ -363,11 +359,11 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
               }}
               className="bg-[var(--bg-main)] border border-[var(--border-card)] px-2 py-1 rounded-lg text-[11px] font-bold text-[var(--text-heading)] focus:outline-none cursor-pointer hover:border-[var(--border-card-hover)] transition-colors"
             >
-              <option value="Borrador" className="bg-[#0b101b] text-slate-100">📝 Borrador</option>
-              <option value="Inscripcion" className="bg-[#0b101b] text-slate-100">📝 Inscripción</option>
-              <option value="En Curso" className="bg-[#0b101b] text-slate-100">⚡ En Curso</option>
-              <option value="Finalizada" className="bg-[#0b101b] text-slate-100">🏆 Finalizada</option>
-              <option value="Eliminada" className="bg-[#0b101b] text-rose-300">🔴 Eliminada</option>
+              <option value="Borrador" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">📝 Borrador</option>
+              <option value="Inscripcion" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">📝 Inscripción</option>
+              <option value="En Curso" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">⚡ En Curso</option>
+              <option value="Finalizada" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">🏆 Finalizada</option>
+              <option value="Eliminada" className="bg-[var(--app-surface-2)] text-[var(--app-danger)]">🔴 Eliminada</option>
             </select>
 
             {row.status !== 'Eliminada' && row.status !== 'Deshabilitado' && (
@@ -375,7 +371,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
                 size="sm"
                 variant="ghost"
                 onClick={() => setDeletingCompetition(row)}
-                className="text-xs text-[var(--accent-crimson)] hover:bg-[var(--accent-crimson-bg)] p-2 rounded-xl transition-colors"
+                className="text-xs text-[var(--app-danger)] hover:bg-[var(--app-danger-soft)] p-2 rounded-xl transition-colors"
                 title="Eliminar Competencia (Alerta de Peligro)"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -393,28 +389,28 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
         subtitle="Módulo del Organizador • TournamentsPro"
         onSubmit={handleCreateSubmit}
         isSubmitting={isPending}
-        brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
       >
         <div className="space-y-4 text-xs font-bold">
           <div className="space-y-1">
-            <label className="text-slate-300 uppercase block">Nombre de la Competencia / Torneo:</label>
+            <label className="text-[var(--text-secondary)] uppercase block">Nombre de la Competencia / Torneo:</label>
             <input
               type="text"
               name="name"
               required
               placeholder="Ej: Liga Apertura eSports FC 26"
-              className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white outline-none focus:border-purple-500"
+              className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] outline-none focus:border-[var(--app-accent-2)]"
             />
           </div>
 
           {/* Selección y Creación de Temporada */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-slate-300 uppercase block">Temporada de la Organización:</label>
+              <label className="text-[var(--text-secondary)] uppercase block">Temporada de la Organización:</label>
               <button
                 type="button"
                 onClick={() => setIsCreatingNewSeason(!isCreatingNewSeason)}
-                className="text-[10px] font-mono text-purple-300 hover:underline font-bold"
+                className="text-[10px] font-[family-name:var(--font-active)] text-[var(--app-accent-2)] hover:underline font-bold"
               >
                 {isCreatingNewSeason ? '← Seleccionar Temporada Existente' : '➕ Crear Nueva Temporada'}
               </button>
@@ -426,7 +422,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
                 name="newSeasonName"
                 required={isCreatingNewSeason}
                 placeholder="Ej: Temporada Apertura 2026"
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-purple-500/50 text-purple-200 outline-none font-mono"
+                className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/50 text-[var(--app-accent-2)] outline-none font-[family-name:var(--font-active)]"
               />
             ) : (
               <select
@@ -439,7 +435,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
                     setSelectedSeasonId(e.target.value);
                   }
                 }}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-purple-300 font-mono"
+                className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--app-accent-2)] font-[family-name:var(--font-active)]"
               >
                 {seasons.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -453,12 +449,12 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Disciplina eSports Autorizada:</label>
+              <label className="text-[var(--text-secondary)] uppercase block">Disciplina eSports Autorizada:</label>
               <select
                 name="gameSlug"
                 value={currentSelectedGame}
                 onChange={(e) => setSelectedGameSlug(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-cyan-300 font-mono"
+                className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--app-accent)] font-[family-name:var(--font-active)]"
               >
                 {availableGames.map(([slug, g]) => (
                   <option key={slug} value={slug}>
@@ -469,11 +465,11 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Modalidad de Juego:</label>
+              <label className="text-[var(--text-secondary)] uppercase block">Modalidad de Juego:</label>
               <select
                 name="modeFormat"
                 defaultValue={activeModes[0]?.value || '11v11'}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-purple-500/40 text-purple-300 font-mono"
+                className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/40 text-[var(--app-accent-2)] font-[family-name:var(--font-active)]"
               >
                 {activeModes.map((m) => (
                   <option key={m.value} value={m.value}>
@@ -486,29 +482,29 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block text-[11px]">Estado Inicial:</label>
-              <select name="status" defaultValue="Inscripcion" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-cyan-300 font-mono text-xs">
-                <option value="Borrador" className="bg-[#0b101b] text-slate-100">📝 Borrador (Configuración)</option>
-                <option value="Inscripcion" className="bg-[#0b101b] text-slate-100">📝 Inscripción (Abierta)</option>
-                <option value="En Curso" className="bg-[#0b101b] text-slate-100">⚡ En Curso (Activa)</option>
-                <option value="Finalizada" className="bg-[#0b101b] text-slate-100">🏆 Finalizada (Concluida)</option>
-                <option value="Eliminada" className="bg-[#0b101b] text-rose-300">🔴 Eliminada (Archivada)</option>
+              <label className="text-[var(--text-secondary)] uppercase block text-[11px]">Estado Inicial:</label>
+              <select name="status" defaultValue="Inscripcion" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--app-accent)] font-[family-name:var(--font-active)] text-xs">
+                <option value="Borrador" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">📝 Borrador (Configuración)</option>
+                <option value="Inscripcion" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">📝 Inscripción (Abierta)</option>
+                <option value="En Curso" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">⚡ En Curso (Activa)</option>
+                <option value="Finalizada" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">🏆 Finalizada (Concluida)</option>
+                <option value="Eliminada" className="bg-[var(--app-surface-2)] text-[var(--app-danger)]">🔴 Eliminada (Archivada)</option>
               </select>
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block text-[11px]">Bolsa de Premios:</label>
+              <label className="text-[var(--text-secondary)] uppercase block text-[11px]">Bolsa de Premios:</label>
               <input
                 type="text"
                 name="prizePool"
                 placeholder="Ej: $500,000 CLP + Trofeo"
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-amber-300 font-mono text-xs"
+                className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--app-warning)] font-[family-name:var(--font-active)] text-xs"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block text-[11px]">Mercado de Fichajes:</label>
-              <select name="transferMarketMode" defaultValue="ABIERTO" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-emerald-300 font-mono text-xs">
+              <label className="text-[var(--text-secondary)] uppercase block text-[11px]">Mercado de Fichajes:</label>
+              <select name="transferMarketMode" defaultValue="ABIERTO" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--app-positive)] font-[family-name:var(--font-active)] text-xs">
                 <option value="ABIERTO">🔓 ABIERTO (Libre)</option>
                 <option value="CERRADO">🔒 CERRADO (Limitado)</option>
                 <option value="SIN_MERCADO">🚫 SIN MERCADO (Fijo)</option>
@@ -519,44 +515,44 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
           {/* 3 Fechas Oficiales de la Competencia */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block text-[10px]">1. Límite Inscripción:</label>
+              <label className="text-[var(--text-secondary)] uppercase block text-[10px]">1. Límite Inscripción:</label>
               <input
                 type="datetime-local"
                 name="fechaLimiteInscripcion"
                 defaultValue={defaultDates.registration}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-amber-500/40 text-amber-300 font-mono text-xs"
+                className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--app-warning)]/40 text-[var(--app-warning)] font-[family-name:var(--font-active)] text-xs"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block text-[10px]">2. Inicio de Torneo:</label>
+              <label className="text-[var(--text-secondary)] uppercase block text-[10px]">2. Inicio de Torneo:</label>
               <input
                 type="datetime-local"
                 name="fechaInicio"
                 required
                 defaultValue={defaultDates.start}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 font-mono text-xs"
+                className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--app-accent)]/40 text-[var(--app-accent)] font-[family-name:var(--font-active)] text-xs"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block text-[10px]">3. Término Estimado:</label>
+              <label className="text-[var(--text-secondary)] uppercase block text-[10px]">3. Término Estimado:</label>
               <input
                 type="datetime-local"
                 name="fechaTermino"
                 defaultValue={defaultDates.end}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 font-mono text-xs"
+                className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-secondary)] font-[family-name:var(--font-active)] text-xs"
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-slate-300 uppercase block">Descripción y Reglamento:</label>
+            <label className="text-[var(--text-secondary)] uppercase block">Descripción y Reglamento:</label>
             <textarea
               name="description"
               rows={3}
               placeholder="Escribe los detalles del formato, premios y reglas eSports..."
-              className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-normal"
+              className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-normal"
             />
           </div>
         </div>

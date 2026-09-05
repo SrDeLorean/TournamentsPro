@@ -1,3 +1,27 @@
+export interface GameSemanticPalette {
+  brandPrimary: string;    // --app-accent
+  brandSecondary: string;  // --app-accent-2
+  brandDeep: string;       // --brand-900
+  success: string;         // --accent-success
+  warning: string;         // --accent-warning
+  danger: string;          // --accent-crimson
+  canvas: string;          // --bg-main
+  surface: string;         // --bg-card
+  border: string;          // --border-card
+}
+
+export const SYSTEM_SEMANTIC_PALETTE: GameSemanticPalette = {
+  brandPrimary: '#DC2011',
+  brandSecondary: '#8F0B13',
+  brandDeep: '#380F17',
+  success: '#5F8F72',
+  warning: '#D9A441',
+  danger: '#DC2011',
+  canvas: '#111414',
+  surface: '#252B2B',
+  border: '#4C4F54',
+};
+
 export interface GameConfig {
   id: string;
   slug: string;
@@ -11,6 +35,8 @@ export interface GameConfig {
   secondaryAccent: string; // Complementary Accent Color
   darkBg: string;          // Official Dark Theme Background
   bgGradient: string;
+  palette: string[];       // Official 5-color palette
+  semanticPalette: GameSemanticPalette; // 9 balanced semantic colors matching system roles
   positions: string[];
   bannerUrl: string;
   backdropPosition?: string;
@@ -39,13 +65,25 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     icon: '🎯',
     tagline: 'Precisión táctica y habilidades definitivas',
     description: 'El shooter táctico 5v5 de Riot Games donde la puntería y las habilidades cambian la partida.',
-    brandColor: '#FF4654',       // Official Valorant Crimson Red
-    accentColor: '#BA3A46',      // Dark Crimson Accent
-    secondaryAccent: '#111823',  // Official Tactical Dark
-    darkBg: '#111823',
-    bgGradient: 'from-[#FF4654]/25 via-[#111823] to-[#090D14]',
+    brandColor: '#ff4654',       // Valorant Crimson Red
+    accentColor: '#ba3a46',      // Dark Crimson Accent
+    secondaryAccent: '#111823',  // Tactical Dark
+    darkBg: '#111823',           // Official Tactical Dark
+    bgGradient: 'from-[#ff4654]/25 via-[#ba3a46]/20 to-[#111823]',
+    palette: ['#ff4654', '#ba3a46', '#111823', '#ffffff', '#111823'],
+    semanticPalette: {
+      brandPrimary: '#ff4654',
+      brandSecondary: '#ba3a46',
+      brandDeep: '#381419',
+      success: '#46c291',
+      warning: '#ffb84d',
+      danger: '#ff4654',
+      canvas: '#0f141c',
+      surface: '#1a2230',
+      border: '#354256',
+    },
     positions: ['Duelista', 'Controlador', 'Iniciador', 'Centinela'],
-    bannerUrl: '/images/games-background/v2/valorant-arena.webp',
+    bannerUrl: '/images/games-background/valorant.jpg',
     backdropPosition: 'center top',
     backdropPositionMobile: '56% top',
     logoUrl: '/images/games/valorant.png',
@@ -53,7 +91,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'ESCUADRAS',
     teamHighlightTitle: 'TÁCTICAS 5v5.',
     teamDescription: 'Conoce todas las organizaciones, escuadras tácticas 5v5 de élite y plantillas oficiales que disputan los campeonatos de VALORANT.',
-    visualTheme: { scene: 'Corte táctico', motif: 'Láminas angulares', glow: '#ff6975', highlight: '#38d9ff' },
+    visualTheme: { scene: 'Corte táctico', motif: 'Láminas angulares', glow: '#ff4654', highlight: '#ffffff' },
   },
   eafc26: {
     id: 'eafc26',
@@ -63,13 +101,25 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     icon: '⚽',
     tagline: 'La liga definitiva de Clubes Pro 11v11 y 1v1',
     description: 'Compite en la simulación de fútbol más importante del mundo eSports. Torneos 11v11 y 1v1.',
-    brandColor: '#077D7E',       // Official EA FC Teal Accent
-    accentColor: '#C35B0D',      // Official EA FC Copper-Orange
-    secondaryAccent: '#083844',  // Deep EA Navy Teal
-    darkBg: '#023031',
-    bgGradient: 'from-[#077D7E]/30 via-[#083844] to-[#023031]',
+    brandColor: '#077d7e',       // EA FC Vibrant Teal Accent
+    accentColor: '#c35b0d',      // Copper Orange Accent
+    secondaryAccent: '#a64607',  // Deep Rust Amber
+    darkBg: '#023031',           // Deep Pitch Dark Teal
+    bgGradient: 'from-[#077d7e]/30 via-[#083844] to-[#023031]',
+    palette: ['#023031', '#083844', '#077d7e', '#a64607', '#c35b0d'],
+    semanticPalette: {
+      brandPrimary: '#077d7e',
+      brandSecondary: '#055859',
+      brandDeep: '#032627',
+      success: '#10b981',
+      warning: '#c35b0d',
+      danger: '#dc2011',
+      canvas: '#0b1314',
+      surface: '#162223',
+      border: '#2d4244',
+    },
     positions: ['POR', 'DFC', 'LD', 'LI', 'MCD', 'MC', 'MCO', 'EI', 'ED', 'DC'],
-    bannerUrl: '/images/games-background/v2/eafc26-arena.webp',
+    bannerUrl: '/images/games-background/eafc.jpg',
     backdropPosition: 'center top',
     backdropPositionMobile: '48% top',
     logoUrl: '/images/games/eafc26.png',
@@ -77,7 +127,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'DIRECTORIO DE',
     teamHighlightTitle: 'CLUBES ESPORTS.',
     teamDescription: 'Explora las fichas oficiales de los clubes eSports de EA SPORTS FC 26, sus plantillas, trofeos y capitanes asignados.',
-    visualTheme: { scene: 'Estadio orbital', motif: 'Táctica de campo', glow: '#4fffd2', highlight: '#ff9a3d' },
+    visualTheme: { scene: 'Estadio orbital', motif: 'Táctica de campo', glow: '#077d7e', highlight: '#c35b0d' },
   },
   csgo: {
     id: 'csgo',
@@ -87,13 +137,25 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     icon: '🔫',
     tagline: 'Estrategia de precisión y rondas decisivas',
     description: 'El shooter competitivo de Valve por excelencia. Torneos 5v5 y duelos 2v2.',
-    brandColor: '#DE9B35',       // CS Gold Accent
-    accentColor: '#B57416',
-    secondaryAccent: '#1A1813',
-    darkBg: '#1A1813',
-    bgGradient: 'from-[#DE9B35]/25 via-[#1A1813] to-[#0F0E0B]',
+    brandColor: '#de9b35',       // T-Side Amber Gold Accent
+    accentColor: '#5d79ae',      // CT Tactical Blue
+    secondaryAccent: '#413a27',  // Dark Khaki / Olive
+    darkBg: '#0c0f12',           // Steel Dark Charcoal
+    bgGradient: 'from-[#de9b35]/25 via-[#5d79ae]/20 to-[#0c0f12]',
+    palette: ['#5d79ae', '#0c0f12', '#ccba7c', '#413a27', '#de9b35'],
+    semanticPalette: {
+      brandPrimary: '#de9b35',
+      brandSecondary: '#a86e1b',
+      brandDeep: '#332107',
+      success: '#4bb543',
+      warning: '#de9b35',
+      danger: '#e24b4b',
+      canvas: '#0e1115',
+      surface: '#1a2027',
+      border: '#364250',
+    },
     positions: ['AWPer', 'Entry Fragger', 'IGL', 'Support', 'Lurker'],
-    bannerUrl: '/images/games-background/v2/csgo-arena.webp',
+    bannerUrl: '/images/games-background/csgo.jpg',
     backdropPosition: 'center top',
     backdropPositionMobile: '58% top',
     logoUrl: '/images/games/csgo.png',
@@ -101,7 +163,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'EQUIPOS',
     teamHighlightTitle: 'COMPETITIVOS CS2.',
     teamDescription: 'Consulta las alineaciones oficiales de Counter-Strike 2, capitanes y rendimiento en torneos eSports.',
-    visualTheme: { scene: 'Forja industrial', motif: 'Retícula de precisión', glow: '#ffba55', highlight: '#ffd98a' },
+    visualTheme: { scene: 'Forja industrial', motif: 'Retícula de precisión', glow: '#ccba7c', highlight: '#5d79ae' },
   },
   lol: {
     id: 'lol',
@@ -111,13 +173,25 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     icon: '⚔️',
     tagline: 'Estrategia en la Grieta del Invocador',
     description: 'El MOBA más popular de Riot Games. Competencia en equipo 5v5.',
-    brandColor: '#0AC8B9',       // LoL Hextech Cyan
-    accentColor: '#C8AA6E',      // LoL Gold Accent
-    secondaryAccent: '#091428',
-    darkBg: '#091428',
-    bgGradient: 'from-[#0AC8B9]/25 via-[#091428] to-[#030914]',
+    brandColor: '#d39542',       // Warm Gold / Amber Accent
+    accentColor: '#783f04',      // Deep Bronze
+    secondaryAccent: '#221f40',  // Deep Violet Shadow
+    darkBg: '#221f40',           // Deep Violet Void
+    bgGradient: 'from-[#d39542]/30 via-[#783f04]/25 to-[#221f40]',
+    palette: ['#783f04', '#d39542', '#fff4bf', '#221f40', '#c4c4a5'],
+    semanticPalette: {
+      brandPrimary: '#d39542',
+      brandSecondary: '#8c5a1e',
+      brandDeep: '#2b1905',
+      success: '#3cd070',
+      warning: '#e0b354',
+      danger: '#e84057',
+      canvas: '#0b0c15',
+      surface: '#161726',
+      border: '#343652',
+    },
     positions: ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'],
-    bannerUrl: '/images/games-background/v2/lol-arena.webp',
+    bannerUrl: '/images/games-background/lol.jpg',
     backdropPosition: 'center top',
     backdropPositionMobile: '52% top',
     logoUrl: '/images/games/lol.webp',
@@ -125,7 +199,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'ESCUADRAS',
     teamHighlightTitle: 'DE LA GRIETA.',
     teamDescription: 'Revisa las plantillas de League of Legends, campeonatos disputados y capitanes asignados.',
-    visualTheme: { scene: 'Nexo hextech', motif: 'Rutas arcanas', glow: '#20e0d0', highlight: '#f0cf7a' },
+    visualTheme: { scene: 'Nexo hextech', motif: 'Rutas arcanas', glow: '#fff4bf', highlight: '#c4c4a5' },
   },
   rocketleague: {
     id: 'rocketleague',
@@ -135,13 +209,25 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     icon: '🏎️',
     tagline: 'Fútbol de alta velocidad en vehículos impulsados',
     description: 'El deporte de acción vehicular definitivo de Psyonix. Torneos 3v3, 2v2 y 1v1.',
-    brandColor: '#0084FF',       // Rocket League Bright Blue
-    accentColor: '#FF6C00',      // Rocket League Orange
-    secondaryAccent: '#0B1E36',
-    darkBg: '#0B1E36',
-    bgGradient: 'from-[#0084FF]/25 via-[#0B1E36] to-[#040C17]',
+    brandColor: '#00bbff',       // Vivid Cyan-Blue
+    accentColor: '#0060ff',      // Deep Royal Blue
+    secondaryAccent: '#068efc',  // Vivid Cerulean
+    darkBg: '#071526',           // Deep Kinetic Blue Dark
+    bgGradient: 'from-[#00bbff]/30 via-[#0060ff]/20 to-[#071526]',
+    palette: ['#00bbff', '#f6faff', '#0060ff', '#43f8f0', '#068efc'],
+    semanticPalette: {
+      brandPrimary: '#00bbff',
+      brandSecondary: '#0060ff',
+      brandDeep: '#051a3b',
+      success: '#22c55e',
+      warning: '#f59e0b',
+      danger: '#ef4444',
+      canvas: '#0a0f17',
+      surface: '#131f2e',
+      border: '#2a3f5b',
+    },
     positions: ['Delantero', 'Defensa', 'Rotador Global'],
-    bannerUrl: '/images/games-background/v2/rocketleague-arena.webp',
+    bannerUrl: '/images/games-background/rocketleague.jpg',
     backdropPosition: 'center top',
     backdropPositionMobile: '50% top',
     logoUrl: '/images/games/rocketleague.png',
@@ -149,7 +235,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'EQUIPOS',
     teamHighlightTitle: 'DE ALTA VELOCIDAD.',
     teamDescription: 'Directorio de clubes de Rocket League compitiendo en arenas oficiales.',
-    visualTheme: { scene: 'Órbita cinética', motif: 'Estela turbo', glow: '#33a8ff', highlight: '#ff8b32' },
+    visualTheme: { scene: 'Órbita cinética', motif: 'Estela turbo', glow: '#43f8f0', highlight: '#f6faff' },
   },
   fortnite: {
     id: 'fortnite',
@@ -162,10 +248,22 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     brandColor: '#9d4dbb',       // Fortnite Epic Purple (#9d4dbb)
     accentColor: '#f3af19',      // Fortnite Legendary Gold (#f3af19)
     secondaryAccent: '#4c51f7',  // Fortnite Rare Blue (#4c51f7)
-    darkBg: '#120E29',
+    darkBg: '#120e29',           // Storm Violet Dark
     bgGradient: 'from-[#9d4dbb]/30 via-[#4c51f7]/25 to-[#f3af19]/20',
+    palette: ['#ffffff', '#319236', '#4c51f7', '#9d4dbb', '#f3af19'],
+    semanticPalette: {
+      brandPrimary: '#9d4dbb',
+      brandSecondary: '#6a2e82',
+      brandDeep: '#2d0f38',
+      success: '#319236',
+      warning: '#f3af19',
+      danger: '#e11d48',
+      canvas: '#0e0b16',
+      surface: '#1a1526',
+      border: '#3e3255',
+    },
     positions: ['IGL', 'Fragger', 'Support', 'Anchor'],
-    bannerUrl: '/images/games-background/v2/fortnite-arena.webp',
+    bannerUrl: '/images/games-background/fortnite.jpg',
     backdropPosition: 'center top',
     backdropPositionMobile: '54% top',
     logoUrl: '/images/games/fortnite.png',
@@ -173,7 +271,7 @@ export const GAMES_CATALOG: Record<string, GameConfig> = {
     teamTitle: 'ESCUADRAS',
     teamHighlightTitle: 'BATTLE ROYALE.',
     teamDescription: 'Conoce las escuadras y atletas que compiten en las arenas de Fortnite.',
-    visualTheme: { scene: 'Isla suspendida', motif: 'Descenso prismático', glow: '#c66bff', highlight: '#ffc84a' },
+    visualTheme: { scene: 'Isla suspendida', motif: 'Descenso prismático', glow: '#f3af19', highlight: '#319236' },
   },
 };
 

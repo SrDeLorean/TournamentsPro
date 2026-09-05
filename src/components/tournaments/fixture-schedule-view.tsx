@@ -29,7 +29,12 @@ import {
   SlidersHorizontal,
   RotateCcw,
 } from 'lucide-react';
-import { MatchReportModal } from '@/components/matches/match-report-modal';
+import dynamic from 'next/dynamic';
+
+const MatchReportModal = dynamic(
+  () => import('@/components/matches/match-report-modal').then((m) => m.MatchReportModal),
+  { ssr: false }
+);
 import { CountryFlag } from '@/components/ui/country-flag';
 import { Modal } from '@/components/ui/modal';
 import { TacticalLoadingSkeleton } from './tactical-loading-skeleton';
@@ -71,7 +76,7 @@ export function FixtureScheduleView({
   hideHeader = false,
   targetTeamName,
 }: FixtureScheduleViewProps) {
-  const brandColor = game?.brandColor || 'var(--accent-cyan)';
+  const brandColor = game?.brandColor || 'var(--app-accent)';
   const meta = getSectionMetadata(game, 'partidos');
   const { currentUser } = useAuth();
 
@@ -575,12 +580,12 @@ export function FixtureScheduleView({
   const emptyState = getEmptyStateMessage();
 
   return (
-    <div className="fixture-schedule-view w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-16">
+    <div className="fixture-schedule-view w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-16" style={{ '--ui-dynamic-brand': brandColor } as React.CSSProperties}>
       {/* ── 1. ENCABEZADO PRINCIPAL (PageHeader) - PERMANENTE EN DOM ────────── */}
       {!hideHeader && (
         <PageHeader
           badgeText={meta.badgeText}
-          badgeIcon={<Flame className="w-3.5 h-3.5" style={{ color: brandColor, fill: brandColor }} />}
+          badgeIcon={<Flame className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
           title={meta.title}
           highlightTitle={meta.highlightTitle}
           description={meta.description}
@@ -649,7 +654,7 @@ export function FixtureScheduleView({
         )}
 
       {/* ── 3. BOTONES DE FILTRO DE ESTADO (CON BRANDCOLOR DE DISCIPLINA) ───────────── */}
-      <div className="game-segmented-filter mobile-scroll-row flex items-center gap-2 overflow-x-auto pb-1 font-mono">
+      <div className="game-segmented-filter mobile-scroll-row flex items-center gap-2 overflow-x-auto pb-1 font-[family-name:var(--font-active)]">
         <button
           onClick={() => {
             setStatusFilter('TODOS');
@@ -708,7 +713,7 @@ export function FixtureScheduleView({
               : undefined
           }
         >
-          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
+          <span className="w-2 h-2 rounded-full bg-[var(--app-danger)] animate-ping inline-block" />
           <span>EN VIVO</span>
           <span
             className="text-[10px] px-2 py-0.5 rounded-full font-bold"
@@ -780,7 +785,7 @@ export function FixtureScheduleView({
               : undefined
           }
         >
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+          <CheckCircle2 className="w-3.5 h-3.5 text-[var(--app-positive)]" />
           <span>FINALIZADOS</span>
           <span
             className="text-[10px] px-2 py-0.5 rounded-full font-bold"
@@ -797,10 +802,10 @@ export function FixtureScheduleView({
       <div className="game-filter-grid">
       {/* ── 4. ORGANIZACIONES / MADRE EN BD LOCAL ──────────────────────────── */}
       {!hideOrgFilter && availableOrganizations.length > 0 && (
-        <div className="game-filter-section game-filter-group font-mono">
+        <div className="game-filter-section game-filter-group font-[family-name:var(--font-active)]">
           <div className="game-filter-label">
             <span className="flex min-w-0 items-center gap-2">
-              <Building2 className="w-3.5 h-3.5 shrink-0" style={{ color: brandColor }} />
+              <Building2 className="ui-dynamic-brand-ink w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Organizaciones</span>
             </span>
             <span className="game-filter-count">{availableOrganizations.length}</span>
@@ -880,10 +885,10 @@ export function FixtureScheduleView({
 
       {/* ── 5. COMPETENCIAS EN BD LOCAL FILTRADAS EN CASCADA ────────────────── */}
       {!hideCompFilter && availableTournaments.length > 0 && (
-        <div className="game-filter-section game-filter-group font-mono">
+        <div className="game-filter-section game-filter-group font-[family-name:var(--font-active)]">
           <div className="game-filter-label">
             <span className="flex min-w-0 items-center gap-2">
-            <Trophy className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+            <Trophy className="w-3.5 h-3.5 shrink-0 text-[var(--app-warning)]" />
             <span className="truncate">
               {targetTeamName 
                 ? 'Competencias del equipo'
@@ -913,7 +918,7 @@ export function FixtureScheduleView({
                   : undefined
               }
             >
-              <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <Trophy className="w-3.5 h-3.5 text-[var(--app-warning)] shrink-0" />
               <span>TODAS LAS COMPETENCIAS</span>
             </button>
 
@@ -954,7 +959,7 @@ export function FixtureScheduleView({
                       }}
                     />
                   ) : (
-                    <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <Trophy className="w-3.5 h-3.5 text-[var(--app-warning)] shrink-0" />
                   )}
                   <span>{comp.name}</span>
                 </button>
@@ -974,12 +979,12 @@ export function FixtureScheduleView({
         <>
       {/* ── 6. CARRUSEL DE FECHAS EN CALENDARIO CON BOTONES < > A LOS COSTADOS ────────────────── */}
       {calendarDays.length > 0 && (
-        <div className="game-calendar-panel space-y-4 bg-[var(--bg-card)] p-4 sm:p-5 rounded-3xl border border-[var(--border-card)] shadow-xl text-center backdrop-blur-md font-mono">
+        <div className="game-calendar-panel space-y-4 bg-[var(--bg-card)] p-4 sm:p-5 rounded-3xl border border-[var(--border-card)] shadow-xl text-center backdrop-blur-md font-[family-name:var(--font-active)]">
           
           {/* Header centered */}
           <div className="game-calendar-heading flex items-center justify-between gap-3 text-left">
             <div className="flex min-w-0 items-center gap-2">
-              <Calendar className="w-5 h-5 shrink-0" style={{ color: brandColor }} />
+              <Calendar className="ui-dynamic-brand-ink w-5 h-5 shrink-0" />
               <span className="truncate text-xs sm:text-sm font-black text-[var(--text-heading)] uppercase tracking-wider">
               FECHAS DISPONIBLES EN CALENDARIO
               </span>
@@ -1062,7 +1067,7 @@ export function FixtureScheduleView({
                     <span
                       className={`text-[9px] font-bold py-0.5 px-2.5 rounded-full uppercase mt-1 transition-colors ${
                         isActive
-                          ? 'bg-black/25 text-[var(--game-on-brand)] font-black'
+                          ? 'bg-[var(--app-overlay)] text-[var(--game-on-brand)] font-black'
                           : 'bg-[var(--bg-card)] text-[var(--text-muted)] border border-[var(--border-card)]'
                       }`}
                     >
@@ -1090,7 +1095,7 @@ export function FixtureScheduleView({
           {availableTimeSlots.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 mt-2 border-t border-[var(--border-card)] w-full">
               <div className="flex items-center gap-2 shrink-0">
-                <Clock className="w-4 h-4 text-amber-400" />
+                <Clock className="w-4 h-4 text-[var(--app-warning)]" />
                 <span className="text-[11px] sm:text-xs font-black uppercase text-[var(--text-heading)] tracking-wider">
                   HORARIOS
                 </span>
@@ -1168,7 +1173,7 @@ export function FixtureScheduleView({
           /* EMPTY STATE SI NO HAY REGISTROS EN BD LOCAL */
           <div className="p-12 text-center rounded-3xl glass-panel border border-[var(--border-card)] space-y-4">
             <Database className="w-12 h-12 mx-auto text-[var(--text-muted)] opacity-60" />
-            <h3 className="text-xl font-bold font-display text-[var(--text-heading)]">
+            <h3 className="text-xl font-bold font-[family-name:var(--font-active)] text-[var(--text-heading)]">
               {emptyState.title}
             </h3>
             <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
@@ -1193,8 +1198,8 @@ export function FixtureScheduleView({
                 {/* Header de la Organización desde BD Local */}
                 <div className="fixture-organization-heading flex items-center justify-between border-b border-[var(--border-card)] pb-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <Building2 className="w-6 h-6" style={{ color: brandColor }} />
-                    <h2 className="text-xl sm:text-2xl font-extrabold font-display text-[var(--text-heading)] tracking-wider uppercase truncate">
+                    <Building2 className="ui-dynamic-brand-ink w-6 h-6" />
+                    <h2 className="text-xl sm:text-2xl font-extrabold font-[family-name:var(--font-active)] text-[var(--text-heading)] tracking-wider uppercase truncate">
                       {circuitName}
                     </h2>
                   </div>
@@ -1209,7 +1214,7 @@ export function FixtureScheduleView({
                     {/* Header de Competencia */}
                     <div className="fixture-competition-heading flex items-center justify-between px-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl shadow-sm mb-2">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                        <div className="p-1.5 rounded-lg bg-[var(--app-warning-soft)] border border-[var(--app-warning)] text-[var(--app-warning)]">
                           <Trophy className="w-4 h-4" />
                         </div>
                         <span className="font-black uppercase text-[var(--text-heading)] tracking-wider text-sm truncate">
@@ -1248,10 +1253,10 @@ export function FixtureScheduleView({
                     </div>
 
                     {/* TABLA HIGH-TECH ORDENADA POR HORA DE 00:01 A 23:59 */}
-                    <div className="fixture-match-table game-data-surface w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl font-mono">
+                    <div className="fixture-match-table game-data-surface w-full overflow-x-auto rounded-2xl border border-[var(--border-card)] glass-panel shadow-xl font-[family-name:var(--font-active)]">
                       <table className="w-full text-left border-collapse min-w-[720px]">
                         <thead>
-                          <tr className="bg-[var(--bg-card)] border-b border-[var(--border-card)] text-[10px] font-black uppercase tracking-wider" style={{ color: brandColor }}>
+                          <tr className="ui-dynamic-brand-ink bg-[var(--bg-card)] border-b border-[var(--border-card)] text-[10px] font-black uppercase tracking-wider">
                             <th className="p-3.5 w-44">
                               <div className="flex items-center gap-1.5">
                                 <span>Día / Hora</span>
@@ -1260,8 +1265,7 @@ export function FixtureScheduleView({
                                     setSelectedMatchForTimezone('22:00');
                                     setIsTimezoneModalOpen(true);
                                   }}
-                                  className="p-0.5 rounded transition-colors"
-                                  style={{ color: brandColor }}
+                                  className="ui-dynamic-brand-ink p-0.5 rounded transition-colors"
                                   title="Ver equivalencias por país (ℹ️)"
                                 >
                                   <Info className="w-3.5 h-3.5" />
@@ -1290,11 +1294,11 @@ export function FixtureScheduleView({
                                 {/* 1. DÍA Y HORA POR SEPARADO + ICONO INFO DE HORARIO REGIONAL */}
                                 <td className="p-3.5 whitespace-nowrap">
                                   <div className="flex flex-col">
-                                    <span className="text-xs font-black capitalize tracking-tight" style={{ color: brandColor }}>
+                                    <span className="ui-dynamic-brand-ink text-xs font-black capitalize tracking-tight">
                                       {formatMatchDayDateLabel(match.matchDate)}
                                     </span>
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                      <span className="text-xs font-black text-amber-400">
+                                      <span className="text-xs font-black text-[var(--app-warning)]">
                                         {match.transmissionTime}
                                       </span>
                                       <CountryFlag code="cl" name="Chile" size="sm" />
@@ -1303,8 +1307,7 @@ export function FixtureScheduleView({
                                           setSelectedMatchForTimezone(match.transmissionTime);
                                           setIsTimezoneModalOpen(true);
                                         }}
-                                        className="transition-colors ml-0.5"
-                                        style={{ color: brandColor }}
+                                        className="ui-dynamic-brand-ink transition-colors ml-0.5"
                                         title="Ver horario por país LATAM (ℹ️)"
                                       >
                                         <Info className="w-3.5 h-3.5" />
@@ -1318,7 +1321,7 @@ export function FixtureScheduleView({
                                   <div className="flex items-center justify-center gap-3 w-full">
                                     {/* Equipo Local */}
                                     <div className="flex items-center gap-2.5 flex-1 justify-end text-right">
-                                      <span className="font-extrabold font-display text-xs sm:text-sm text-[var(--text-heading)] transition-colors truncate max-w-[150px]" style={{ color: undefined }}>
+                                      <span className="font-extrabold font-[family-name:var(--font-active)] text-xs sm:text-sm text-[var(--text-heading)] transition-colors truncate max-w-[150px]">
                                         {match.homeTeam}
                                       </span>
                                       <Avatar
@@ -1331,15 +1334,12 @@ export function FixtureScheduleView({
 
                                     {/* Marcador Central */}
                                     <div
-                                      className="px-3.5 py-1.5 rounded-xl bg-[var(--bg-main)] border flex items-center justify-center min-w-[70px] shrink-0 shadow-inner"
-                                      style={{
-                                        borderColor: `color-mix(in srgb, ${brandColor} 30%, transparent)`,
-                                      }}
+                                      className="ui-dynamic-brand-border px-3.5 py-1.5 rounded-xl bg-[var(--bg-main)] border flex items-center justify-center min-w-[70px] shrink-0 shadow-inner"
                                     >
                                       <span className="font-black text-xs sm:text-sm tracking-tight text-[var(--text-primary)]">
                                         {match.homeScore !== null ? match.homeScore : '-'}
                                       </span>
-                                      <span className="px-1.5 font-black text-xs" style={{ color: brandColor }}>VS</span>
+                                      <span className="ui-dynamic-brand-ink px-1.5 font-black text-xs">VS</span>
                                       <span className="font-black text-xs sm:text-sm tracking-tight text-[var(--text-primary)]">
                                         {match.awayScore !== null ? match.awayScore : '-'}
                                       </span>
@@ -1353,7 +1353,7 @@ export function FixtureScheduleView({
                                         size="sm"
                                         className="ring-1 ring-[var(--border-card)] shrink-0 shadow-md"
                                       />
-                                      <span className="font-extrabold font-display text-xs sm:text-sm text-[var(--text-heading)] transition-colors truncate max-w-[150px]">
+                                      <span className="font-extrabold font-[family-name:var(--font-active)] text-xs sm:text-sm text-[var(--text-heading)] transition-colors truncate max-w-[150px]">
                                         {match.awayTeam}
                                       </span>
                                     </div>
@@ -1415,7 +1415,7 @@ export function FixtureScheduleView({
                                         setSelectedMatchForReport(match);
                                         setIsReportModalOpen(true);
                                       }}
-                                      className="text-xs font-bold py-1 px-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow"
+                                      className="text-xs font-bold py-1 px-3 bg-gradient-to-r from-[var(--app-warning)] to-[var(--app-warning)] hover:from-[var(--app-warning)] hover:to-[var(--app-warning)] text-[var(--text-heading)] shadow"
                                     >
                                       REPORTAR FICHA
                                     </Button>
@@ -1423,7 +1423,7 @@ export function FixtureScheduleView({
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="text-xs font-bold py-1 px-3 border-cyan-500/30 text-cyan-300 hover:bg-cyan-950/40"
+                                      className="text-xs font-bold py-1 px-3 border-[var(--app-accent)] text-[var(--app-accent)] hover:bg-[var(--app-accent-soft)]"
                                     >
                                       ANALIZAR
                                     </Button>
@@ -1469,7 +1469,7 @@ export function FixtureScheduleView({
             
             <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
               <div className="flex items-center gap-2">
-                <Globe2 className="w-5 h-5 text-cyan-400" />
+                <Globe2 className="w-5 h-5 text-[var(--app-accent)]" />
                 <h3 className="text-sm font-black text-[var(--text-heading)] uppercase tracking-wider">
                   Horarios por País LATAM ({selectedMatchForTimezone} Chile)
                 </h3>
@@ -1490,7 +1490,7 @@ export function FixtureScheduleView({
               {getRegionalTimes(selectedMatchForTimezone).map((item) => (
                 <div
                   key={item.country}
-                  className="flex items-center justify-between p-2.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs hover:border-cyan-500/40 transition-colors"
+                  className="flex items-center justify-between p-2.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs hover:border-[var(--app-accent)] transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <CountryFlag code={item.code} name={item.country} size="md" />
@@ -1506,8 +1506,8 @@ export function FixtureScheduleView({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="font-black text-amber-400 text-sm">{item.time} hrs</span>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 font-bold">
+                    <span className="font-black text-[var(--app-warning)] text-sm">{item.time} hrs</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--app-accent-soft)] text-[var(--app-accent)] border border-[var(--app-accent)] font-bold">
                       {item.note}
                     </span>
                   </div>

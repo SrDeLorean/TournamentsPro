@@ -47,11 +47,11 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const color = '#00F0FF';
+  const selectedGameObj = GAMES_CATALOG[gameSlug] || GAMES_CATALOG.eafc26;
+  const color = selectedGameObj.brandColor;
 
   if (!isOpen) return null;
 
-  const selectedGameObj = GAMES_CATALOG[gameSlug] || GAMES_CATALOG['eafc26'];
   const logoTextPreview = tag.trim() ? tag.trim().substring(0, 3).toUpperCase() : 'TP';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,26 +131,26 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Fundar nueva escuadra" size="lg" showCloseButton={false} closeDisabled={isSubmitting} className="bg-slate-950 border-purple-500/40 p-5 sm:p-7 space-y-6 shadow-[0_0_50px_rgba(168,85,247,0.2)] relative overflow-y-auto overflow-x-hidden">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Fundar nueva escuadra" size="lg" showCloseButton={false} closeDisabled={isSubmitting} className="create-team-modal bg-[var(--app-canvas)] border-[var(--app-accent-2)]/40 p-5 sm:p-7 space-y-6 relative overflow-y-auto overflow-x-hidden">
         
         {/* Glowing Background Accent Circle */}
-        <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-purple-600/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-cyan-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-[var(--app-accent-2)]/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-[var(--app-accent)]/20 blur-3xl pointer-events-none" />
 
         {/* Header Bar */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-4 relative z-10">
+        <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500 via-purple-600 to-pink-500 p-0.5 shadow-lg">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Shield className="w-5 h-5 text-cyan-400" />
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[var(--app-accent)] via-[var(--app-accent-2)] to-[var(--app-accent-2)] p-0.5 shadow-lg">
+              <div className="w-full h-full bg-[var(--app-canvas)] rounded-[14px] flex items-center justify-center">
+                <Shield className="w-5 h-5 text-[var(--app-accent)]" />
               </div>
             </div>
             <div>
-              <h3 className="text-xl font-black uppercase text-white tracking-tight leading-none flex items-center gap-2">
+              <h3 className="text-xl font-black uppercase text-[var(--text-heading)] tracking-tight leading-none flex items-center gap-2">
                 Fundar Nueva Escuadra
-                <Sparkles className="w-4 h-4 text-amber-400" />
+                <Sparkles className="w-4 h-4 text-[var(--app-warning)]" />
               </h3>
-              <span className="text-[11px] text-cyan-400 font-bold uppercase tracking-wider mt-1 block">
+              <span className="text-[11px] text-[var(--app-accent)] font-bold uppercase tracking-wider mt-1 block">
                 Asciende a Capitán & Director Técnico
               </span>
             </div>
@@ -158,18 +158,18 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-900 border border-white/10 text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+            className="p-2 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-heading)] hover:bg-[var(--app-surface-2)] transition-all"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Live Crest Card Preview */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/60 via-slate-950 to-slate-900 border border-purple-500/30 flex items-center justify-between gap-4 relative z-10 shadow-inner">
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-[var(--app-accent-2)]/60 via-[var(--app-canvas)] to-[var(--app-surface-1)] border border-[var(--app-accent-2)]/30 flex items-center justify-between gap-4 relative z-10 shadow-inner">
           <div className="flex items-center gap-3.5">
             <div
-              className="w-14 h-14 rounded-2xl bg-slate-950 border-2 flex items-center justify-center font-black text-xl shadow-xl flex-shrink-0 transition-all overflow-hidden"
-              style={{ borderColor: color, color: color, boxShadow: `0 0 20px ${color}33` }}
+              className="ui-dynamic-brand-tile w-14 h-14 rounded-2xl border-2 flex items-center justify-center font-black text-xl flex-shrink-0 transition-all overflow-hidden"
+              style={{ '--ui-dynamic-brand': color } as React.CSSProperties}
             >
               {logoUrl ? (
                 <Image
@@ -185,13 +185,13 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
               )}
             </div>
             <div>
-              <span className="text-xs font-mono font-bold text-slate-400 block uppercase">VISTA PREVIA ESCUDO:</span>
-              <h4 className="text-lg font-black text-white uppercase tracking-tight line-clamp-1">
+              <span className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--text-muted)] block uppercase">VISTA PREVIA ESCUDO:</span>
+              <h4 className="text-lg font-black text-[var(--text-heading)] uppercase tracking-tight line-clamp-1">
                 {teamName.trim() || 'NOMBRE DE TU CLUB'}
               </h4>
               <div className="flex items-center gap-2 mt-0.5">
-                <Badge variant="cyan" className="bg-cyan-950 text-cyan-300 border-cyan-400/30 text-[9px] uppercase font-mono font-bold">{selectedGameObj.name}</Badge>
-                <span className="text-[10px] text-purple-300 font-mono font-bold">Capitán: {currentUser?.name || 'Tú'}</span>
+                <Badge variant="cyan" className="bg-[var(--app-accent-soft)] text-[var(--app-accent)] border-[var(--app-accent)]/30 text-[9px] uppercase font-[family-name:var(--font-active)] font-bold">{selectedGameObj.name}</Badge>
+                <span className="text-[10px] text-[var(--app-accent-2)] font-[family-name:var(--font-active)] font-bold">Capitán: {currentUser?.name || 'Tú'}</span>
               </div>
             </div>
           </div>
@@ -199,8 +199,8 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
 
         {/* Validation Error Alert */}
         {errorMsg && (
-          <div className="p-3.5 rounded-2xl bg-rose-950/90 border border-rose-500/60 text-rose-200 text-xs font-bold flex items-start gap-2.5 relative z-10 shadow-lg">
-            <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+          <div className="p-3.5 rounded-2xl bg-[var(--app-danger-soft)] border border-[var(--app-danger)]/60 text-[var(--app-danger)] text-xs font-bold flex items-start gap-2.5 relative z-10 shadow-lg">
+            <AlertCircle className="w-4 h-4 text-[var(--app-danger)] flex-shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -209,7 +209,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
           
           {/* 1. Game Selector */}
           <div className="space-y-2">
-            <label className="text-xs font-black uppercase text-slate-300 tracking-wider block">
+            <label className="text-xs font-black uppercase text-[var(--text-secondary)] tracking-wider block">
               1. Disciplina eSports Principal:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -232,8 +232,8 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
                     }}
                     className={`p-2.5 rounded-xl border text-xs font-extrabold flex flex-col items-start gap-1 transition-all ${
                       gameSlug === g.slug
-                        ? 'bg-purple-950 border-purple-500 text-purple-300 shadow-md font-black'
-                        : 'bg-slate-900/80 border-white/10 text-slate-400 hover:text-white hover:bg-slate-800'
+                        ? 'bg-[var(--app-accent-2-soft)] border-[var(--app-accent-2)] text-[var(--app-accent-2)] shadow-md font-black'
+                        : 'bg-[var(--app-surface-2)] border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-heading)] hover:bg-[var(--app-surface-2)]'
                     }`}
                   >
                     <div className="flex items-center gap-2 w-full">
@@ -241,7 +241,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
                       <span className="truncate">{g.name}</span>
                     </div>
                     {userHasTeamInThisGame && (
-                      <span className="text-[9px] text-amber-400 font-mono font-bold uppercase">
+                      <span className="text-[9px] text-[var(--app-warning)] font-[family-name:var(--font-active)] font-bold uppercase">
                         ● Ya tienes club
                       </span>
                     )}
@@ -254,7 +254,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
           {/* 2. Team Name, Tag & Brand Color */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2 space-y-1.5">
-              <label className="text-xs font-black uppercase text-slate-300 tracking-wider block">
+              <label className="text-xs font-black uppercase text-[var(--text-secondary)] tracking-wider block">
                 2. Nombre Oficial del Club:
               </label>
               <input
@@ -266,7 +266,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
                   setTeamName(e.target.value);
                   setErrorMsg('');
                 }}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:border-purple-400 shadow-inner"
+                className="w-full px-4 py-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-heading)] placeholder-slate-500 focus:outline-none focus:border-[var(--app-accent-2)] shadow-inner"
               />
             </div>
 
@@ -290,11 +290,11 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             {/* Logo Picker */}
             <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase text-slate-300 tracking-wider block flex items-center justify-between">
+              <label className="text-xs font-black uppercase text-[var(--text-secondary)] tracking-wider block flex items-center justify-between">
                 <span>Escudo / Logo:</span>
-                <span className="text-[10px] text-cyan-400 font-mono font-bold">Auto-WebP</span>
+                <span className="text-[10px] text-[var(--app-accent)] font-[family-name:var(--font-active)] font-bold">Auto-WebP</span>
               </label>
-              <div className="relative border border-dashed border-white/20 rounded-xl p-3 bg-slate-900/90 text-center hover:border-cyan-400/60 transition-colors cursor-pointer group">
+              <div className="relative border border-dashed border-[var(--border-card)] rounded-xl p-3 bg-[var(--app-surface-2)] text-center hover:border-[var(--app-accent)]/60 transition-colors cursor-pointer group">
                 <input
                   type="file"
                   accept="image/*"
@@ -333,12 +333,12 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                 />
                 <div className="flex flex-col items-center gap-1">
-                  <Upload className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[10px] font-bold text-slate-300">
+                  <Upload className="w-4 h-4 text-[var(--app-accent)] group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-bold text-[var(--text-secondary)]">
                     {isCompressingLogo ? 'Comprimiendo...' : logoUrl ? '✔ Logo Cargado' : 'Subir Logo (ej. PNG 8MB)'}
                   </span>
                   {logoStats && (
-                    <span className="text-[9px] font-mono text-emerald-400 font-bold">{logoStats}</span>
+                    <span className="text-[9px] font-[family-name:var(--font-active)] text-[var(--app-positive)] font-bold">{logoStats}</span>
                   )}
                 </div>
               </div>
@@ -346,11 +346,11 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
 
             {/* Banner Picker */}
             <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase text-slate-300 tracking-wider block flex items-center justify-between">
+              <label className="text-xs font-black uppercase text-[var(--text-secondary)] tracking-wider block flex items-center justify-between">
                 <span>Banner de Portada:</span>
-                <span className="text-[10px] text-purple-400 font-mono font-bold">Auto-WebP</span>
+                <span className="text-[10px] text-[var(--app-accent-2)] font-[family-name:var(--font-active)] font-bold">Auto-WebP</span>
               </label>
-              <div className="relative border border-dashed border-white/20 rounded-xl p-3 bg-slate-900/90 text-center hover:border-purple-400/60 transition-colors cursor-pointer group">
+              <div className="relative border border-dashed border-[var(--border-card)] rounded-xl p-3 bg-[var(--app-surface-2)] text-center hover:border-[var(--app-accent-2)]/60 transition-colors cursor-pointer group">
                 <input
                   type="file"
                   accept="image/*"
@@ -389,12 +389,12 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                 />
                 <div className="flex flex-col items-center gap-1">
-                  <ImageIcon className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[10px] font-bold text-slate-300">
+                  <ImageIcon className="w-4 h-4 text-[var(--app-accent-2)] group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-bold text-[var(--text-secondary)]">
                     {isCompressingBanner ? 'Comprimiendo...' : bannerUrl ? '✔ Banner Cargado' : 'Subir Banner de Portada'}
                   </span>
                   {bannerStats && (
-                    <span className="text-[9px] font-mono text-emerald-400 font-bold">{bannerStats}</span>
+                    <span className="text-[9px] font-[family-name:var(--font-active)] text-[var(--app-positive)] font-bold">{bannerStats}</span>
                   )}
                 </div>
               </div>
@@ -441,7 +441,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
               type="checkbox"
               checked={includeSelfAsPlayer}
               onChange={(e) => setIncludeSelfAsPlayer(e.target.checked)}
-              className="rounded border-[var(--border-card)] text-[var(--accent-cyan)] focus:ring-0"
+              className="rounded border-[var(--border-card)] text-[var(--app-accent)] focus:ring-0"
             />
           </div>
 
@@ -453,7 +453,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="font-bold text-xs bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-xl"
+              className="font-bold text-xs bg-gradient-to-r from-[var(--app-accent)] to-[var(--app-accent-2)] hover:from-[var(--app-accent)] hover:to-[var(--app-accent-2)] text-[var(--text-heading)] shadow-xl"
             >
               {isSubmitting ? 'Creando Club...' : 'Crear Club & Ascender a Capitán'}
             </Button>

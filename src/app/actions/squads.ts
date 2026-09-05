@@ -47,8 +47,13 @@ export interface AvailablePlayerData {
   position: string;
   primary_game_slug: string;
   organization_id?: string | null;
+  organization_name?: string | null;
+  current_team_id?: string | null;
+  current_team_name?: string | null;
   avatar_url?: string | null;
   foto?: string | null;
+  role?: string;
+  status?: string;
 }
 
 interface OrganizationEntry { id: string; name: string; acronym: string; competitionName: string | null }
@@ -115,14 +120,29 @@ export async function addPlayerToSquadAction(
   teamId: string,
   userId: string,
   tacticalPosition?: string,
-  roleInTeam: 'Capitan' | 'Capitán' | 'Encargado' | 'Jugador' | 'DT / Analyst' = 'Jugador'
+  roleInTeam: 'Capitan' | 'Capitán' | 'Encargado' | 'Jugador' | 'DT / Analyst' = 'Jugador',
+  targetOrganizationId?: string | null
 ) {
   try {
     if (!teamId || !userId) {
       return { success: false, error: 'Equipo y Usuario son requeridos.', code: 'MISSING_PARAMS' };
     }
 
-    await requireTeamManager(teamId);
+    const actor = await requireTeamManager(teamId);
+    const session = await getServerUserSession();
+
+    // Si el actor es Organizador, validar que el equipo pertenezca a su organización
+    if (actor.role === 'Organizador') {
+      const organizerOrgId = session?.organizationId || actor.organizationId;
+      const team = await dbProvider.teams.findById(teamId);
+      if (team?.organizationId && organizerOrgId && team.organizationId !== organizerOrgId) {
+        return {
+          success: false,
+          error: 'Como organizador, solamente puedes agregar jugadores a plantillas de tu propia organización.',
+          code: 'FORBIDDEN',
+        };
+      }
+    }
 
     const validation = validateSchema(
       z.object({
@@ -130,15 +150,27 @@ export async function addPlayerToSquadAction(
         userId: requiredIdSchema,
         tacticalPosition: z.string().min(1).max(30).optional(),
         roleInTeam: z.enum(['Capitan', 'Capitán', 'Encargado', 'Jugador', 'DT / Analyst']).default('Jugador'),
+        targetOrganizationId: z.string().nullable().optional(),
       }),
-      { teamId, userId, tacticalPosition, roleInTeam }
+      { teamId, userId, tacticalPosition, roleInTeam, targetOrganizationId }
     );
 
     if (!validation.success) {
       return { success: false, error: validation.errors.join(', '), code: 'VALIDATION_ERROR' };
     }
 
-    const result = await addPlayerToSquadService(teamId, userId, tacticalPosition, roleInTeam);
+    const effectiveOrgId = actor.role === 'Organizador'
+      ? (session?.organizationId || actor.organizationId)
+      : targetOrganizationId;
+
+    const result = await addPlayerToSquadService(
+      teamId,
+      userId,
+      tacticalPosition,
+      roleInTeam,
+      effectiveOrgId,
+      actor.userId
+    );
 
     if (result.success) {
       revalidatePath('/equipos');
@@ -254,35 +286,35 @@ export async function transferCaptaincyAction(teamId: string, newCaptainUserId: 
 export async function getPlayerInscriptionsMatrixAction(teamId: string, gameSlug: string = 'ALL') {
   try {
     await requireTeamManager(teamId);
-    const rows = await dbProvider.query<PlayerMatrixRow>(
-      `SELECT 
-        u.id as user_id,
-        u.name as user_name,
-        u.gamertag,
-        t.id as team_id,
-        t.name as team_name,
-        tm.jersey_number,
-        tm.tactical_position,
-        tm.organization_name as member_org_name,
-        o.id as organization_id,
-        o.name as organization_name,
-        o.acronym as organization_acronym,
-        c.name as competition_name
-       FROM team_members tm
-       JOIN users u ON tm.user_id = u.id
-       JOIN teams t ON tm.team_id = t.id
-       LEFT JOIN competition_teams ct ON ct.team_id = t.id
-       LEFT JOIN competitions c ON ct.competition_id = c.id
-       LEFT JOIN organizations o ON c.organization_id = o.id
-       WHERE tm.team_id = ? AND (t.game_slug = ? OR ? = 'ALL')`,
-      [teamId, gameSlug, gameSlug]
-    );
-
-    // Fetch accepted contract offers for this team
-    const acceptedOffers = await dbProvider.query<AcceptedPlayerOffer>(
-      `SELECT player_user_id, pitch_message FROM transfer_offers WHERE team_id = ? AND status = 'ACEPTADO'`,
-      [teamId]
-    );
+    const [rows, acceptedOffers] = await Promise.all([
+      dbProvider.query<PlayerMatrixRow>(
+        `SELECT 
+          u.id as user_id,
+          u.name as user_name,
+          u.gamertag,
+          t.id as team_id,
+          t.name as team_name,
+          tm.jersey_number,
+          tm.tactical_position,
+          tm.organization_name as member_org_name,
+          o.id as organization_id,
+          o.name as organization_name,
+          o.acronym as organization_acronym,
+          c.name as competition_name
+         FROM team_members tm
+         JOIN users u ON tm.user_id = u.id
+         JOIN teams t ON tm.team_id = t.id
+         LEFT JOIN competition_teams ct ON ct.team_id = t.id
+         LEFT JOIN competitions c ON ct.competition_id = c.id
+         LEFT JOIN organizations o ON c.organization_id = o.id
+         WHERE tm.team_id = ? AND (t.game_slug = ? OR ? = 'ALL')`,
+        [teamId, gameSlug, gameSlug]
+      ),
+      dbProvider.query<AcceptedPlayerOffer>(
+        `SELECT player_user_id, pitch_message FROM transfer_offers WHERE team_id = ? AND status = 'ACEPTADO'`,
+        [teamId]
+      ),
+    ]);
 
     const userMap: Record<string, PlayerMatrixEntry> = {};
     for (const r of rows) {
@@ -364,40 +396,40 @@ export async function getUserEnrolledTeamsAction(userId: string, gameSlug: strin
     const uName = user?.name || '';
     const uGamertag = user?.gamertag || uName;
 
-    const rows = await dbProvider.query<EnrolledTeamRow>(
-      `SELECT 
-        t.id as team_id,
-        t.name as team_name,
-        t.tag as team_tag,
-        t.logo_url,
-        t.banner_url,
-        t.captain_id,
-        t.captain_name,
-        t.game_slug,
-        tm.jersey_number,
-        tm.tactical_position,
-        tm.role_in_team,
-        c.id as competition_id,
-        c.name as competition_name,
-        o.id as organization_id,
-        o.name as organization_name,
-        o.acronym as organization_acronym
-       FROM teams t
-       LEFT JOIN team_members tm ON tm.team_id = t.id AND tm.user_id = ?
-       LEFT JOIN competition_teams ct ON ct.team_id = t.id
-       LEFT JOIN competitions c ON ct.competition_id = c.id
-       LEFT JOIN organizations o ON c.organization_id = o.id
-       WHERE (tm.user_id = ? OR t.captain_id = ? OR LOWER(t.captain_name) = LOWER(?) OR LOWER(t.captain_name) = LOWER(?))
-         AND (t.game_slug = ? OR ? = 'ALL')
-       ORDER BY t.name ASC`,
-      [userId, userId, userId, uName, uGamertag, gameSlug, gameSlug]
-    );
-
-    // Also fetch accepted contract offers for this user
-    const acceptedOffers = await dbProvider.query<AcceptedTeamOffer>(
-      `SELECT team_id, pitch_message FROM transfer_offers WHERE player_user_id = ? AND status = 'ACEPTADO'`,
-      [userId]
-    );
+    const [rows, acceptedOffers] = await Promise.all([
+      dbProvider.query<EnrolledTeamRow>(
+        `SELECT 
+          t.id as team_id,
+          t.name as team_name,
+          t.tag as team_tag,
+          t.logo_url,
+          t.banner_url,
+          t.captain_id,
+          t.captain_name,
+          t.game_slug,
+          tm.jersey_number,
+          tm.tactical_position,
+          tm.role_in_team,
+          c.id as competition_id,
+          c.name as competition_name,
+          o.id as organization_id,
+          o.name as organization_name,
+          o.acronym as organization_acronym
+         FROM teams t
+         LEFT JOIN team_members tm ON tm.team_id = t.id AND tm.user_id = ?
+         LEFT JOIN competition_teams ct ON ct.team_id = t.id
+         LEFT JOIN competitions c ON ct.competition_id = c.id
+         LEFT JOIN organizations o ON c.organization_id = o.id
+         WHERE (tm.user_id = ? OR t.captain_id = ? OR LOWER(t.captain_name) = LOWER(?) OR LOWER(t.captain_name) = LOWER(?))
+           AND (t.game_slug = ? OR ? = 'ALL')
+         ORDER BY t.name ASC`,
+        [userId, userId, userId, uName, uGamertag, gameSlug, gameSlug]
+      ),
+      dbProvider.query<AcceptedTeamOffer>(
+        `SELECT team_id, pitch_message FROM transfer_offers WHERE player_user_id = ? AND status = 'ACEPTADO'`,
+        [userId]
+      ),
+    ]);
 
     const teamMap: Record<string, EnrolledTeamEntry> = {};
     for (const r of rows) {
@@ -469,5 +501,32 @@ export async function getUserEnrolledTeamsAction(userId: string, gameSlug: strin
   } catch (error: unknown) {
     console.error('Error en getUserEnrolledTeamsAction:', error);
     return { success: false, teams: [], error: getActionErrorMessage(error, 'Error al obtener equipos del usuario.') };
+  }
+}
+
+export async function getCaptainDashboardDataAction(teamId: string) {
+  try {
+    await requireTeamManager(teamId);
+    const [transferRequests, competitionEntries] = await Promise.all([
+      dbProvider.query<Record<string, unknown>>(
+        `SELECT ta.id, ta.status, ta.position, ta.created_at, u.name AS applicant_name, u.gamertag AS applicant_gamertag
+         FROM transfer_applications ta
+         JOIN users u ON u.id = ta.applicant_user_id
+         WHERE ta.team_id = ? AND ta.status = 'PENDIENTE'
+         ORDER BY ta.created_at DESC`,
+        [teamId],
+      ),
+      dbProvider.query<Record<string, unknown>>(
+        `SELECT ct.id, ct.status, c.id AS competition_id, c.name AS competition_name, c.game_slug
+         FROM competition_teams ct
+         JOIN competitions c ON c.id = ct.competition_id
+         WHERE ct.team_id = ?
+         ORDER BY c.fecha_inicio DESC`,
+        [teamId],
+      ),
+    ]);
+    return { success: true, transferRequests, competitionEntries };
+  } catch (error: unknown) {
+    return { success: false, transferRequests: [], competitionEntries: [], error: getActionErrorMessage(error, 'Error al cargar el resumen del capitán.') };
   }
 }

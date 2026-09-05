@@ -24,7 +24,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
             className={cn(
               "px-2 py-0.5 rounded text-xs font-bold transition-all",
               language === opt.code
-                ? "bg-[var(--accent-cyan-bg)] text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/30 shadow-sm"
+                ? "bg-[var(--app-accent-soft)] text-[var(--app-accent)] border border-[var(--app-accent)]/30 shadow-sm"
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             )}
           >

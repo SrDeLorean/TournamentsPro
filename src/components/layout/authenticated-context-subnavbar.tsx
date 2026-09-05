@@ -76,7 +76,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
   const items = context === 'club' && myTeam ? clubItems : athleteItems;
 
   return (
-    <div className="authenticated-context-nav border-b border-[var(--border-card)]">
+    <div className="authenticated-context-nav ui-navigation-tier">
       <div className="mx-auto flex h-12 max-w-[96rem] items-center gap-2 px-3 sm:px-4 lg:px-6">
         <div className="flex flex-shrink-0 items-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-main)] p-1" role="tablist" aria-label="Cambiar espacio de trabajo">
           <Link

@@ -4,20 +4,25 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
-import { UserProfile } from '@/lib/data-store';
+import type { UserProfile } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { compressImageToWebP } from '@/lib/image-compressor';
 import { getAuthHeaders } from '@/lib/fetch-utils';
-import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import { ManagementTabs, type ManagementTab } from '@/components/dashboard/management-ui';
 import {
-  User, Shield, Settings, Upload, Image as ImageIcon, CheckCircle2, AlertCircle, Sparkles, Globe, Share2, Video, Tv, MessageSquare, Phone, Hash, Tag, Save, ArrowLeft, Gamepad2, Key
+  User, Settings, Upload, CheckCircle2, AlertCircle, Sparkles, Globe, Save, ArrowLeft, Gamepad2,
 } from 'lucide-react';
+import {
+  ProfileGameTab,
+  ProfileGamertagsTab,
+  ProfileAccountTab,
+  ProfileSocialTab,
+  type GameProfileEntry,
+} from './settings';
 
 interface UserProfileSettingsViewProps {
   onBack?: () => void;
@@ -34,7 +39,7 @@ const PROFILE_SETTINGS_TABS: ManagementTab<ProfileSettingsTab>[] = [
   { id: 'redes_contacto', label: 'Contacto y redes', shortLabel: 'Contacto', icon: Globe, tone: 'gold' },
 ];
 
-export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedded = false }: UserProfileSettingsViewProps) {
+export function UserProfileSettingsView({ onBack, brandColor = 'var(--app-accent)', embedded = false }: UserProfileSettingsViewProps) {
   const router = useRouter();
   const { currentUser, updateCurrentUser, refetchUser } = useAuth();
 
@@ -53,8 +58,8 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedd
 
   // 2. Gamertags, IDs y Posiciones por Juego
   const [gamertag, setGamertag] = useState(currentUser?.gamertag || '');
-  const [gameProfiles, setGameProfiles] = useState<Record<string, { gamertag: string; gameId: string; position?: string; secondaryPosition?: string }>>(() => {
-    const initialProfiles: Record<string, { gamertag: string; gameId: string; position?: string; secondaryPosition?: string }> = {};
+  const [gameProfiles, setGameProfiles] = useState<Record<string, GameProfileEntry>>(() => {
+    const initialProfiles: Record<string, GameProfileEntry> = {};
     Object.keys(GAMES_CATALOG).forEach((slug) => {
       const defaultGamePos = GAMES_CATALOG[slug]?.positions?.[0] || '';
       initialProfiles[slug] = {
@@ -118,9 +123,6 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedd
       setStatus(currentUser.status || 'Buscando Club');
       setTelefono(currentUser.telefono || '');
       setWhatsapp(currentUser.whatsapp || '');
-      setBiografia(currentUser.biografia || '');
-      setAvatarUrl(currentUser.avatarUrl || currentUser.foto || '');
-      setBannerUrl(currentUser.bannerUrl || '');
       setInstagram(currentUser.instagram || '');
       setFacebook(currentUser.facebook || '');
       setTwitch(currentUser.twitch || '');
@@ -129,144 +131,132 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedd
       setDiscord(currentUser.discord || '');
       setTwitter(currentUser.twitter || '');
       setWebsite(currentUser.website || '');
+      setBiografia(currentUser.biografia || '');
+      setAvatarUrl(currentUser.avatarUrl || currentUser.foto || '');
+      setBannerUrl(currentUser.bannerUrl || '');
 
-      const updatedGameProfiles: Record<string, { gamertag: string; gameId: string; position?: string; secondaryPosition?: string }> = {};
-      Object.keys(GAMES_CATALOG).forEach((slug) => {
-        const defaultGamePos = GAMES_CATALOG[slug]?.positions?.[0] || '';
-        updatedGameProfiles[slug] = {
-          gamertag: currentUser.gameProfiles?.[slug]?.gamertag || currentUser.gamertag || '',
-          gameId: currentUser.gameProfiles?.[slug]?.gameId || '',
-          position: currentUser.gameProfiles?.[slug]?.position || (slug === currentUser.primaryGame ? currentUser.position : defaultGamePos),
-          secondaryPosition: currentUser.gameProfiles?.[slug]?.secondaryPosition || (slug === currentUser.primaryGame ? currentUser.secondaryPosition : ''),
-        };
-      });
-      setGameProfiles(updatedGameProfiles);
+      if (currentUser.gameProfiles) {
+        setGameProfiles((prev) => ({
+          ...prev,
+          ...currentUser.gameProfiles,
+        }));
+      }
     }, 0);
+
     return () => window.clearTimeout(timer);
   }, [currentUser]);
 
-  // Position change handlers per game
-  const handleGamePositionChange = (gameSlug: string, pos: string) => {
+  // Handle Position Change per Game
+  const handleGamePositionChange = (gameSlug: string, newPosition: string) => {
     setGameProfiles((prev) => ({
       ...prev,
       [gameSlug]: {
         ...prev[gameSlug],
-        position: pos,
+        position: newPosition,
       },
     }));
     if (gameSlug === primaryGame) {
-      setPosition(pos);
+      setPosition(newPosition);
     }
   };
 
-  const handleGameSecondaryPositionChange = (gameSlug: string, secPos: string) => {
+  // Handle Secondary Position Change per Game
+  const handleGameSecondaryPositionChange = (gameSlug: string, newSecondaryPos: string) => {
     setGameProfiles((prev) => ({
       ...prev,
       [gameSlug]: {
         ...prev[gameSlug],
-        secondaryPosition: secPos,
+        secondaryPosition: newSecondaryPos,
       },
     }));
     if (gameSlug === primaryGame) {
-      setSecondaryPosition(secPos);
+      setSecondaryPosition(newSecondaryPos);
     }
   };
 
-  // Handle Logo/Avatar Upload with instant preview, compression & MySQL persistence
+  // Handle Image Upload & Fast WebP Compression
   const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       setIsCompressingAvatar(true);
-      const originalMB = (file.size / (1024 * 1024)).toFixed(2);
-      const compressedRes = await compressImageToWebP(file, 400, 0.85);
-      const compressedMB = (compressedRes.compressedSize / (1024 * 1024)).toFixed(2);
-      const reduction = Math.round((1 - compressedRes.compressedSize / file.size) * 100);
+      setAvatarStats('Optimizando foto a WebP...');
+      const result = await compressImageToWebP(file, 400, 0.85);
 
-      setAvatarStats(`Compreso: ${originalMB}MB ➔ ${compressedMB}MB (-${reduction}%)`);
-
-      const cleanUserSlug = (gamertag || name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const formData = new FormData();
+      formData.append('file', result.file);
+      formData.append('type', 'logo');
+      formData.append('entityName', gamertag || name || 'user');
+      if (currentUser?.id) {
+        formData.append('entityId', currentUser.id);
+      }
 
       const res = await fetch('/api/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileBase64: compressedRes.base64,
-          fileName: `avatar-${Date.now()}.webp`,
-          teamName: cleanUserSlug,
-          teamId: currentUser?.id,
-          type: 'logo',
-          previousUrl: avatarUrl,
-        }),
+        headers: getAuthHeaders(),
+        body: formData,
       });
 
       const data = await res.json();
-
-      const uploadUrl = data.data?.url || data.url;
-      if (data.success && uploadUrl) {
-        setAvatarUrl(uploadUrl);
-        // Persist immediately in MySQL & AuthProvider
+      if (data.url) {
+        const savedPct = Math.round(((result.originalSize - result.compressedSize) / result.originalSize) * 100);
+        setAvatarUrl(data.url);
+        setAvatarStats(`${savedPct}% menos peso (${(result.compressedSize / 1024).toFixed(0)}KB)`);
         if (currentUser?.id) {
           const payload = {
             id: currentUser.id,
             name,
             gamertag,
-            avatarUrl: uploadUrl,
-            foto: uploadUrl,
+            avatarUrl: data.url,
+            foto: data.url,
             bannerUrl: bannerUrl || currentUser.bannerUrl || '',
           };
           await fetch('/api/users', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(payload),
           });
-          updateCurrentUser({ avatarUrl: uploadUrl, foto: uploadUrl });
+          updateCurrentUser({ avatarUrl: data.url, foto: data.url });
           await refetchUser();
         }
       }
-    } catch (err) {
-      console.error('Error procesando avatar:', err);
+    } catch (err: unknown) {
+      console.error(err);
+      setAvatarStats('Error al subir foto');
     } finally {
       setIsCompressingAvatar(false);
     }
   };
 
-  // Handle Banner Upload with instant preview, compression & MySQL persistence
   const handleBannerFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       setIsCompressingBanner(true);
-      const originalMB = (file.size / (1024 * 1024)).toFixed(2);
-      const compressedRes = await compressImageToWebP(file, 1200, 0.85);
-      const compressedMB = (compressedRes.compressedSize / (1024 * 1024)).toFixed(2);
-      const reduction = Math.round((1 - compressedRes.compressedSize / file.size) * 100);
+      setBannerStats('Optimizando portada a WebP HD...');
+      const result = await compressImageToWebP(file, 1200, 0.85);
 
-      setBannerStats(`Compreso: ${originalMB}MB ➔ ${compressedMB}MB (-${reduction}%)`);
-
-      const cleanUserSlug = (gamertag || name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const formData = new FormData();
+      formData.append('file', result.file);
+      formData.append('type', 'banner');
+      formData.append('entityName', gamertag || name || 'user');
+      if (currentUser?.id) {
+        formData.append('entityId', currentUser.id);
+      }
 
       const res = await fetch('/api/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileBase64: compressedRes.base64,
-          fileName: `banner-${Date.now()}.webp`,
-          teamName: cleanUserSlug,
-          teamId: currentUser?.id,
-          type: 'banner',
-          previousUrl: bannerUrl,
-        }),
+        headers: getAuthHeaders(),
+        body: formData,
       });
 
       const data = await res.json();
-
-      const bannerUploadUrl = data.data?.url || data.url;
-      if (data.success && bannerUploadUrl) {
-        setBannerUrl(bannerUploadUrl);
-        // Persist immediately in MySQL & AuthProvider
+      if (data.url) {
+        const savedPct = Math.round(((result.originalSize - result.compressedSize) / result.originalSize) * 100);
+        setBannerUrl(data.url);
+        setBannerStats(`${savedPct}% optimizado`);
         if (currentUser?.id) {
           const payload = {
             id: currentUser.id,
@@ -274,49 +264,45 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedd
             gamertag,
             avatarUrl: avatarUrl || currentUser.avatarUrl || '',
             foto: avatarUrl || currentUser.avatarUrl || '',
-            bannerUrl: bannerUploadUrl,
+            bannerUrl: data.url,
           };
           await fetch('/api/users', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(payload),
           });
-          updateCurrentUser({ bannerUrl: bannerUploadUrl });
+          updateCurrentUser({ bannerUrl: data.url });
           await refetchUser();
         }
       }
-    } catch (err) {
-      console.error('Error procesando banner:', err);
+    } catch (err: unknown) {
+      console.error(err);
+      setBannerStats('Error al subir portada');
     } finally {
       setIsCompressingBanner(false);
     }
   };
 
-  // Save changes to MySQL & update AuthProvider state
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser?.id) return;
+    setIsSubmitting(true);
+    setSavingMsg(null);
 
     try {
-      setIsSubmitting(true);
-      setSavingMsg(null);
-
-      if (newPassword.trim()) {
-        if (newPassword.trim().length < 4) {
-          setSavingMsg({ type: 'error', text: 'La nueva contraseña debe tener al menos 4 caracteres.' });
-          setIsSubmitting(false);
-          return;
-        }
-        if (newPassword !== confirmPassword) {
-          setSavingMsg({ type: 'error', text: 'Las contraseñas no coinciden.' });
-          setIsSubmitting(false);
-          return;
-        }
+      if (newPassword && newPassword !== confirmPassword) {
+        setSavingMsg({ type: 'error', text: 'Las nuevas contraseñas no coinciden.' });
+        setIsSubmitting(false);
+        return;
       }
 
-      // Ensure position for configured primary game is updated
-      const activePosition = gameProfiles[primaryGame]?.position || position;
-      const activeSecondaryPosition = gameProfiles[primaryGame]?.secondaryPosition || secondaryPosition;
+      if (!currentUser?.id) {
+        setSavingMsg({ type: 'error', text: 'No hay una sesión activa de usuario.' });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const activePosition = gameProfiles[primaryGame]?.position || position || 'DFC';
+      const activeSecondaryPosition = gameProfiles[primaryGame]?.secondaryPosition || secondaryPosition || undefined;
 
       const payload = {
         id: currentUser.id,
@@ -359,8 +345,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedd
 
       if (data.success) {
         setSavingMsg({ type: 'success', text: 'Perfil y preferencias actualizados correctamente.' });
-        // Synchronize in-memory session, local storage and trigger real-time route refresh
-        const updatedUser = { ...currentUser, ...payload };
+        const updatedUser = { ...currentUser, ...payload, secondaryPosition: activeSecondaryPosition };
         updateCurrentUser({ ...updatedUser, primaryGame: primaryGame as UserProfile['primaryGame'] });
         await refetchUser();
         router.refresh();
@@ -375,99 +360,97 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedd
   };
 
   return (
-    <div className="account-settings-view space-y-5 sm:space-y-6 animate-in fade-in duration-300">
+    <div
+      className="account-settings-view space-y-5 sm:space-y-6 animate-in fade-in duration-300"
+      style={{ '--ui-dynamic-brand': brandColor } as React.CSSProperties}
+    >
       {/* 1. Header Banner & Avatar Edit Preview */}
       {!embedded ? (
-      <div className="account-settings-cover relative w-full bg-slate-950 border border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[240px] sm:min-h-[300px] flex flex-col justify-end">
-        {/* Full Bleed Banner Image Graphic */}
-        <div className="absolute inset-0 z-0 group">
-          <Image
-            src={bannerUrl || '/images/default/banner-default.jpg'}
-            alt="Portada"
-            fill
-            sizes="100vw"
-            loading="eager"
-            unoptimized={shouldBypassImageOptimization(bannerUrl)}
-            onError={(e) => {
-              e.currentTarget.src = '/images/default/banner-default.jpg';
-            }}
-            className="object-cover opacity-90"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
-          
-          {/* Banner Upload Trigger Overlay */}
-          <label className="absolute top-4 right-4 z-20 cursor-pointer px-3 py-1.5 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-white/20 text-xs font-bold text-white shadow-xl flex items-center gap-1.5 backdrop-blur-md transition-all">
-            <Upload className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{isCompressingBanner ? 'Procesando...' : 'Cambiar Portada'}</span>
-            <input type="file" accept="image/*" className="hidden" onChange={handleBannerFileSelect} disabled={isCompressingBanner} />
-          </label>
-          {bannerStats && <span className="absolute top-14 right-4 z-20 text-[10px] font-mono font-bold text-cyan-300 bg-slate-950/90 px-2 py-0.5 rounded border border-cyan-500/30">{bannerStats}</span>}
-        </div>
+        <div className="account-settings-cover relative w-full bg-[var(--bg-card)] border border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[240px] sm:min-h-[300px] flex flex-col justify-end">
+          <div className="absolute inset-0 z-0 group">
+            <Image
+              src={bannerUrl || '/images/default/banner-default.jpg'}
+              alt="Portada"
+              fill
+              sizes="100vw"
+              loading="eager"
+              unoptimized={shouldBypassImageOptimization(bannerUrl)}
+              onError={(e) => {
+                e.currentTarget.src = '/images/default/banner-default.jpg';
+              }}
+              className="object-cover opacity-90"
+            />
+            <div className="absolute inset-0 account-settings-cover-scrim" />
 
-        {/* Content Box Over Banner */}
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div className="flex flex-row items-center gap-4 sm:gap-6">
-            {/* Avatar Shield Box */}
-            <div className="relative group">
-              <div
-                className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-slate-950 border-4 flex items-center justify-center font-black text-2xl shadow-2xl overflow-hidden relative"
-                style={{ borderColor: brandColor, boxShadow: `0 0 25px ${brandColor}44` }}
-              >
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
-                    alt={name}
-                    fill
-                    sizes="112px"
-                    unoptimized={shouldBypassImageOptimization(avatarUrl)}
-                    onError={(e) => {
-                      e.currentTarget.src = '/images/default/logo-default.png';
-                    }}
-                    className="object-cover"
-                  />
-                ) : (
-                  <Avatar fallback={name} size="lg" status="online" />
-                )}
-              </div>
-              <label className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center cursor-pointer text-white font-bold text-[10px]">
-                <Upload className="w-4 h-4 mb-1 text-cyan-400" />
-                <span>{isCompressingAvatar ? 'Procesando...' : 'Cambiar Foto'}</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarFileSelect} disabled={isCompressingAvatar} />
-              </label>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight uppercase flex items-center gap-2">
-                  Ajustes de Perfil Atleta
-                  <Settings className="w-5 h-5 text-cyan-400" />
-                </h1>
-                <Badge variant="cyan" className="font-mono font-bold text-xs uppercase">
-                  @{gamertag || 'Gamertag'}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-300 font-semibold flex items-center gap-2">
-                <span>{name || 'Nombre Usuario'}</span>
-                <span>•</span>
-                <span className="text-cyan-300">
-                  {gameProfiles[configuredGame]?.position || position || 'DFC'} ({platform})
-                </span>
-              </p>
-              {avatarStats && <p className="text-[10px] font-mono text-emerald-400">{avatarStats}</p>}
-            </div>
+            <label className="absolute top-4 right-4 z-20 cursor-pointer px-3 py-1.5 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-elevated)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-heading)] shadow-xl flex items-center gap-1.5 backdrop-blur-md transition-all">
+              <Upload className="w-3.5 h-3.5 text-[var(--app-accent)]" />
+              <span>{isCompressingBanner ? 'Procesando...' : 'Cambiar Portada'}</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleBannerFileSelect} disabled={isCompressingBanner} />
+            </label>
+            {bannerStats && <span className="absolute top-14 right-4 z-20 text-[10px]  font-bold text-[var(--app-accent)] bg-[var(--bg-card)] px-2 py-0.5 rounded border border-[var(--app-accent)]">{bannerStats}</span>}
           </div>
 
-          {onBack && (
-            <Button onClick={onBack} variant="ghost" className="text-xs font-bold text-slate-300 hover:text-white border border-white/10 rounded-xl">
-              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-              Volver
-            </Button>
-          )}
+          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div className="flex flex-row items-center gap-4 sm:gap-6">
+              <div className="relative group">
+                <div
+                  className="account-settings-avatar w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-[var(--bg-card)] border-4 flex items-center justify-center font-black text-2xl overflow-hidden relative"
+                >
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt={name}
+                      fill
+                      sizes="112px"
+                      unoptimized={shouldBypassImageOptimization(avatarUrl)}
+                      onError={(e) => {
+                        e.currentTarget.src = '/images/default/logo-default.png';
+                      }}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <Avatar fallback={name} size="lg" status="online" />
+                  )}
+                </div>
+                <label className="absolute inset-0 bg-[var(--bg-card)] opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center cursor-pointer text-[var(--text-heading)] font-bold text-[10px]">
+                  <Upload className="w-4 h-4 mb-1 text-[var(--app-accent)]" />
+                  <span>{isCompressingAvatar ? 'Procesando...' : 'Cambiar Foto'}</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarFileSelect} disabled={isCompressingAvatar} />
+                </label>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl sm:text-3xl font-black text-[var(--text-heading)] tracking-tight uppercase flex items-center gap-2">
+                    Ajustes de Perfil Atleta
+                    <Settings className="w-5 h-5 text-[var(--app-accent)]" />
+                  </h1>
+                  <Badge variant="cyan" className=" font-bold text-xs uppercase">
+                    @{gamertag || 'Gamertag'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-[var(--text-secondary)] font-semibold flex items-center gap-2">
+                  <span>{name || 'Nombre Usuario'}</span>
+                  <span>•</span>
+                  <span className="text-[var(--app-accent)]">
+                    {gameProfiles[configuredGame]?.position || position || 'DFC'} ({platform})
+                  </span>
+                </p>
+                {avatarStats && <p className="text-[10px]  text-[var(--app-positive)]">{avatarStats}</p>}
+              </div>
+            </div>
+
+            {onBack && (
+              <Button onClick={onBack} variant="ghost" className="text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-heading)] border border-[var(--border-card)] rounded-xl">
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                Volver
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
       ) : null}
 
-      {/* 2. TAB SECTIONS ORDERED BY USER SPECIFICATION */}
+      {/* 2. TAB SECTIONS */}
       <div className={embedded ? 'account-settings-content space-y-5' : 'account-settings-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5'}>
         <ManagementTabs
           tabs={PROFILE_SETTINGS_TABS}
@@ -479,645 +462,90 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedd
         {/* Toast Notification */}
         {savingMsg && (
           <div className={`p-4 rounded-xl border flex items-center gap-3 text-xs font-bold ${
-            savingMsg.type === 'success' ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-rose-950/80 border-rose-500/40 text-rose-300'
+            savingMsg.type === 'success' ? 'bg-[var(--app-positive-soft)] border-[var(--app-positive)] text-[var(--app-positive)]' : 'bg-[var(--app-danger-soft)] border-[var(--app-danger)] text-[var(--app-danger)]'
           }`}>
-            {savingMsg.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <AlertCircle className="w-5 h-5 text-rose-400" />}
+            {savingMsg.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-[var(--app-positive)]" /> : <AlertCircle className="w-5 h-5 text-[var(--app-danger)]" />}
             <span>{savingMsg.text}</span>
           </div>
         )}
 
         <form onSubmit={handleSaveProfile} className="account-settings-form space-y-5">
-
-          {/* TAB 1: INFORMACIÓN BÁSICA DEL JUEGO (ESTILIZADA DINÁMICAMENTE SEGÚN EL JUEGO SELECCIONADO) */}
           {activeTab === 'juego_basico' && (
-            <Card
-              className="account-settings-card p-4 sm:p-6 space-y-6 bg-slate-950 transition-all duration-500 shadow-2xl"
-              style={{
-                borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 50%, transparent)`,
-                boxShadow: `0 0 35px ${(GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF')}20`,
-              }}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                <div>
-                  <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-2">
-                    <Gamepad2 className="w-4 h-4" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }} />
-                    1. Información Básica del Juego:
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Selecciona una disciplina para configurar sus <strong>posiciones específicas exclusivas</strong>.
-                  </p>
-                </div>
-
-                {/* Game Selector for Position Configuration */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-300 uppercase">Juego a Configurar:</span>
-                  <select
-                    value={configuredGame}
-                    onChange={(e) => setConfiguredGame(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-900 font-bold text-xs focus:outline-none transition-all"
-                    style={{
-                      borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 60%, transparent)`,
-                      color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF',
-                    }}
-                  >
-                    {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
-                      <option key={slug} value={slug}>{g.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Game Badge Banner Indicator (Dynamic Theme Color) */}
-              <div
-                className="p-3.5 rounded-xl bg-slate-900/90 border flex items-center justify-between text-xs transition-all"
-                style={{
-                  borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 40%, transparent)`,
-                  backgroundColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 8%, transparent)`,
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full animate-pulse" style={{ backgroundColor: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }} />
-                  <span className="font-black text-white uppercase">{GAMES_CATALOG[configuredGame]?.name}</span>
-                  <span
-                    className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase"
-                    style={{
-                      backgroundColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 25%, transparent)`,
-                      color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF',
-                    }}
-                  >
-                    {GAMES_CATALOG[configuredGame]?.category}
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-300 font-semibold">
-                  Mostrando únicamente posiciones correspondientes a <strong style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }}>{GAMES_CATALOG[configuredGame]?.name}</strong>
-                </span>
-              </div>
-
-              {/* Sección de Subida de Foto de Perfil & Banner de Portada (Dynamic Color) */}
-              <div
-                className="p-5 rounded-2xl bg-slate-900/90 border space-y-4 transition-all"
-                style={{ borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 35%, transparent)` }}
-              >
-                <h4
-                  className="text-xs font-black uppercase tracking-wider flex items-center gap-2"
-                  style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }}
-                >
-                  <ImageIcon className="w-4 h-4" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }} />
-                  Imágenes del Atleta (Foto de Perfil & Banner de Portada):
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Foto de Perfil */}
-                  <ImageUploadCard
-                    label="Foto de Perfil / Logo"
-                    subtitle="Formato WebP optimizado"
-                    currentUrl={avatarUrl}
-                    fallbackType="avatar"
-                    uploadType="logo"
-                    maxDimension={400}
-                    brandColor={GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'}
-                    uploadButtonText="Subir / Cambiar Foto de Perfil"
-                    entityName={gamertag || name || 'user'}
-                    entityId={currentUser?.id}
-                    onUploadSuccess={async (url) => {
-                      setAvatarUrl(url);
-                      if (currentUser?.id) {
-                        const payload = {
-                          id: currentUser.id,
-                          name,
-                          gamertag,
-                          avatarUrl: url,
-                          foto: url,
-                          bannerUrl: bannerUrl || currentUser.bannerUrl || '',
-                        };
-                        await fetch('/api/users', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(payload),
-                        });
-                        updateCurrentUser({ avatarUrl: url, foto: url });
-                        await refetchUser();
-                      }
-                    }}
-                  />
-
-                  {/* Banner de Portada */}
-                  <ImageUploadCard
-                    label="Banner de Portada"
-                    subtitle="Formato HD WebP panorámico"
-                    currentUrl={bannerUrl}
-                    fallbackType="banner"
-                    uploadType="banner"
-                    maxDimension={1200}
-                    brandColor={GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'}
-                    uploadButtonText="Subir / Cambiar Banner Portada"
-                    entityName={gamertag || name || 'user'}
-                    entityId={currentUser?.id}
-                    onUploadSuccess={async (url) => {
-                      setBannerUrl(url);
-                      if (currentUser?.id) {
-                        const payload = {
-                          id: currentUser.id,
-                          name,
-                          gamertag,
-                          avatarUrl: avatarUrl || currentUser.avatarUrl || '',
-                          foto: avatarUrl || currentUser.avatarUrl || '',
-                          bannerUrl: url,
-                        };
-                        await fetch('/api/users', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(payload),
-                        });
-                        updateCurrentUser({ bannerUrl: url });
-                        await refetchUser();
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                {/* Posición Principal Exclusiva del Juego Configurado */}
-                <div className="space-y-1">
-                  <label className="font-bold uppercase block flex items-center gap-1" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }}>
-                    <Tag className="w-3.5 h-3.5" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }} />
-                    Posición Principal ({GAMES_CATALOG[configuredGame]?.name}) *
-                  </label>
-                  <select
-                    value={gameProfiles[configuredGame]?.position || GAMES_CATALOG[configuredGame]?.positions?.[0] || ''}
-                    onChange={(e) => handleGamePositionChange(configuredGame, e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border text-white focus:outline-none font-bold transition-all"
-                    style={{ borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 50%, transparent)` }}
-                  >
-                    {(GAMES_CATALOG[configuredGame]?.positions || []).map((pos) => (
-                      <option key={pos} value={pos}>
-                        {pos}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Posición Secundaria Exclusiva del Juego Configurado */}
-                <div className="space-y-1">
-                  <label className="font-bold uppercase block flex items-center gap-1" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }}>
-                    <Tag className="w-3.5 h-3.5" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }} />
-                    Posición Secundaria ({GAMES_CATALOG[configuredGame]?.name})
-                  </label>
-                  <select
-                    value={gameProfiles[configuredGame]?.secondaryPosition || ''}
-                    onChange={(e) => handleGameSecondaryPositionChange(configuredGame, e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border text-white focus:outline-none font-bold transition-all"
-                    style={{ borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 50%, transparent)` }}
-                  >
-                    <option value="">-- Sin Posición Secundaria --</option>
-                    {(GAMES_CATALOG[configuredGame]?.positions || []).map((pos) => (
-                      <option key={pos} value={pos}>
-                        {pos}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Gamertag Específico del Juego Configurado */}
-                <div className="space-y-1">
-                  <label className="font-bold uppercase block flex items-center gap-1" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }}>
-                    <Sparkles className="w-3.5 h-3.5" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }} />
-                    Gamertag en {GAMES_CATALOG[configuredGame]?.name}
-                  </label>
-                  <input
-                    type="text"
-                    value={gameProfiles[configuredGame]?.gamertag || ''}
-                    onChange={(e) =>
-                      setGameProfiles((prev) => ({
-                        ...prev,
-                        [configuredGame]: { ...prev[configuredGame], gamertag: e.target.value },
-                      }))
-                    }
-                    placeholder={`Ej. @${gamertag || 'Gamertag'}`}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border text-white focus:outline-none font-mono font-bold transition-all"
-                    style={{ borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 50%, transparent)` }}
-                  />
-                </div>
-
-                {/* ID Juego para API del Juego Configurado */}
-                <div className="space-y-1">
-                  <label className="font-bold uppercase block flex items-center gap-1" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }}>
-                    <Hash className="w-3.5 h-3.5" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }} />
-                    ID Juego para API ({GAMES_CATALOG[configuredGame]?.name})
-                  </label>
-                  <input
-                    type="text"
-                    value={gameProfiles[configuredGame]?.gameId || ''}
-                    onChange={(e) =>
-                      setGameProfiles((prev) => ({
-                        ...prev,
-                        [configuredGame]: { ...prev[configuredGame], gameId: e.target.value },
-                      }))
-                    }
-                    placeholder="Ej. EA-ID #1234, Riot Tag, SteamID"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border text-white focus:outline-none font-mono font-bold transition-all"
-                    style={{ borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 50%, transparent)` }}
-                  />
-                </div>
-
-                {/* Plataforma de Juego */}
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block">Plataforma Principal de Juego</label>
-                  <select
-                    value={platform}
-                    onChange={(e) => setPlatform(e.target.value as typeof platform)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none font-semibold"
-                  >
-                    <option value="CROSSPLAY">CROSSPLAY (Todas las Plataformas)</option>
-                    <option value="PS5">PlayStation 5 (PS5)</option>
-                    <option value="PS4">PlayStation 4 (PS4)</option>
-                    <option value="XBOX">Xbox Series X|S / One</option>
-                    <option value="PC">PC Gaming</option>
-                  </select>
-                </div>
-
-                {/* Marcador de Disciplina Principal */}
-                <div className="space-y-1">
-                  <label className="font-bold text-amber-300 uppercase block">Disciplina eSports Principal</label>
-                  {primaryGame === configuredGame ? (
-                    <div
-                      className="p-2.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all"
-                      style={{
-                        backgroundColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 15%, transparent)`,
-                        borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 50%, transparent)`,
-                        color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF',
-                      }}
-                    >
-                      <span className="flex items-center gap-1.5">⭐ {GAMES_CATALOG[configuredGame]?.name} es tu Disciplina Principal</span>
-                      <Badge variant="gold" className="text-[10px]">ACTIVA ⭐</Badge>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setPrimaryGame(configuredGame)}
-                      className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-2"
-                    >
-                      <span>⭐ Establecer {GAMES_CATALOG[configuredGame]?.name} como Disciplina Principal</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1 text-xs">
-                <label className="font-bold uppercase block" style={{ color: GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF' }}>
-                  Biografía & Perfil Competitivo ({GAMES_CATALOG[configuredGame]?.name})
-                </label>
-                <textarea
-                  rows={4}
-                  value={biografia}
-                  onChange={(e) => setBiografia(e.target.value)}
-                  placeholder={`Describe tu trayectoria deportiva, estilo de juego, rol en la escuadra y palmarés eSports en ${GAMES_CATALOG[configuredGame]?.name}...`}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border text-white focus:outline-none font-semibold leading-relaxed transition-all"
-                  style={{ borderColor: `color-mix(in srgb, ${GAMES_CATALOG[configuredGame]?.brandColor || '#00F0FF'} 40%, transparent)` }}
-                />
-              </div>
-            </Card>
+            <ProfileGameTab
+              configuredGame={configuredGame}
+              setConfiguredGame={setConfiguredGame}
+              avatarUrl={avatarUrl}
+              setAvatarUrl={setAvatarUrl}
+              bannerUrl={bannerUrl}
+              setBannerUrl={setBannerUrl}
+              gamertag={gamertag}
+              name={name}
+              currentUser={currentUser}
+              updateCurrentUser={updateCurrentUser}
+              refetchUser={refetchUser}
+              gameProfiles={gameProfiles}
+              setGameProfiles={setGameProfiles}
+              handleGamePositionChange={handleGamePositionChange}
+              handleGameSecondaryPositionChange={handleGameSecondaryPositionChange}
+              platform={platform}
+              setPlatform={setPlatform}
+              primaryGame={primaryGame}
+              setPrimaryGame={setPrimaryGame}
+              biografia={biografia}
+              setBiografia={setBiografia}
+            />
           )}
 
-          {/* TAB 2: GAMERTAGS Y ID DE LOS JUEGOS */}
           {activeTab === 'gamertags' && (
-            <Card className="account-settings-card p-4 sm:p-6 space-y-6 border-purple-500/30 bg-slate-950">
-              <div>
-                <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
-                  2. Gamertags e IDs de los Juegos:
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Configura tu <strong>Gamertag universal</strong> y los identificadores (<strong>ID Juego</strong>) con los cuales las APIs oficiales de cada título consultan tus estadísticas eSports.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/30 text-xs space-y-1">
-                <label className="font-bold text-cyan-300 uppercase block">Gamertag Principal del Usuario *</label>
-                <input
-                  type="text"
-                  value={gamertag}
-                  onChange={(e) => setGamertag(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-cyan-400/40 text-cyan-300 focus:outline-none focus:border-cyan-400 font-mono font-bold"
-                />
-              </div>
-
-              <div className="space-y-4">
-                <span className="text-xs font-bold text-slate-300 uppercase block">Configuración por Disciplina eSports:</span>
-
-                {Object.entries(GAMES_CATALOG).map(([slug, g]) => {
-                  const p = gameProfiles[slug] || { gamertag: '', gameId: '', position: '', secondaryPosition: '' };
-                  return (
-                    <div key={slug} className="p-4 rounded-xl bg-slate-900 border border-white/10 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: g.brandColor }} />
-                          <h4 className="font-black text-sm uppercase text-white">{g.name}</h4>
-                          <Badge variant="cyan" className="text-[10px] font-mono">{g.category}</Badge>
-                        </div>
-                        {p.position && (
-                          <Badge variant="violet" className="text-[10px] font-mono font-bold">
-                            Posición: {p.position}
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div className="space-y-1">
-                          <label className="font-bold text-slate-300 uppercase block">Gamertag ({g.name}):</label>
-                          <input
-                            type="text"
-                            value={p.gamertag}
-                            onChange={(e) =>
-                              setGameProfiles({
-                                ...gameProfiles,
-                                [slug]: { ...p, gamertag: e.target.value },
-                              })
-                            }
-                            placeholder={`Ej. ${gamertag || 'Gamertag'}`}
-                            className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-white/10 text-white focus:outline-none focus:border-cyan-400 font-mono font-semibold"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="font-bold text-cyan-300 uppercase block flex items-center gap-1">
-                            <Tag className="w-3 h-3 text-cyan-400" />
-                            ID Juego para API ({g.name}):
-                          </label>
-                          <input
-                            type="text"
-                            value={p.gameId}
-                            onChange={(e) =>
-                              setGameProfiles({
-                                ...gameProfiles,
-                                [slug]: { ...p, gameId: e.target.value },
-                              })
-                            }
-                            placeholder="Ej. EA-ID #1234, SteamID64, Riot Tag"
-                            className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-cyan-500/30 text-cyan-300 focus:outline-none focus:border-cyan-400 font-mono font-bold"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
+            <ProfileGamertagsTab
+              gamertag={gamertag}
+              setGamertag={setGamertag}
+              gameProfiles={gameProfiles}
+              setGameProfiles={setGameProfiles}
+            />
           )}
 
-          {/* TAB 3: INFORMACIÓN GENERAL DEL SISTEMA */}
           {activeTab === 'sistema_general' && (
-            <Card className="account-settings-card p-4 sm:p-6 space-y-6 border-emerald-500/30 bg-slate-950">
-              <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-2">
-                <User className="w-4 h-4 text-emerald-400" />
-                3. Información General del Sistema:
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block">Nombre Completo del Usuario *</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-emerald-400 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-400 uppercase block flex items-center gap-1">
-                    Correo Electrónico (No Modificable)
-                  </label>
-                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-between">
-                    <span className="font-semibold text-slate-300 font-mono">{email || currentUser?.email || 'email@tournamentspro.com'}</span>
-                    <Badge variant="slate" className="text-[10px] font-mono">Correo Registrado 🔒</Badge>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block">Nacionalidad / País</label>
-                  <input
-                    type="text"
-                    value={nacionalidad}
-                    onChange={(e) => setNacionalidad(e.target.value)}
-                    placeholder="Ej. Chile, Argentina, México"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-emerald-400 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block">Fecha de Nacimiento</label>
-                  <input
-                    type="date"
-                    value={fechaNacimiento}
-                    onChange={(e) => setFechaNacimiento(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-emerald-400 font-semibold"
-                  />
-                </div>
-
-                {/* Rol en el Sistema (Solo editable por Organizador y Administrador) */}
-                {isAdminOrOrganizer ? (
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-300 uppercase block flex items-center gap-1">
-                      <Shield className="w-3.5 h-3.5 text-amber-400" />
-                      Rol en el Sistema (Gestión Organizador/Admin)
-                    </label>
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as UserProfile['role'])}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-amber-500/40 text-amber-300 font-bold focus:outline-none"
-                    >
-                      <option value="Jugador">Jugador / Atleta</option>
-                      <option value="Capitán">Capitán de Club</option>
-                      <option value="Organizador">Organizador de Torneos</option>
-                      <option value="Administrador">Administrador</option>
-                    </select>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-400 uppercase block flex items-center gap-1">
-                      <Shield className="w-3.5 h-3.5 text-slate-400" />
-                      Rol en el Sistema
-                    </label>
-                    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-between">
-                      <span className="font-bold text-slate-200 uppercase">{currentUser?.role || role || 'Jugador'}</span>
-                      <Badge variant="cyan" className="text-[10px] font-mono">Rol Protegido 🔒</Badge>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block">Estado en el Sistema</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-emerald-400 font-semibold"
-                  >
-                    <option value="Buscando Club">Buscando Club (Agente Libre)</option>
-                    <option value="En Escuadra">En Escuadra / Firmado</option>
-                    <option value="Organizador">Organizador Oficial</option>
-                  </select>
-                </div>
-
-                {/* Sección Cambiar Contraseña */}
-                <div className="pt-4 border-t border-white/10 col-span-1 sm:col-span-2 space-y-3">
-                  <h4 className="text-xs font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5 text-amber-400" />
-                    Cambiar Contraseña de Acceso:
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="font-bold text-slate-300 uppercase block">Nueva Contraseña</label>
-                      <input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Mínimo 4 caracteres (Dejar en blanco si no cambia)"
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-mono"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-bold text-slate-300 uppercase block">Confirmar Nueva Contraseña</label>
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Repite la nueva contraseña"
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-mono"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
+            <ProfileAccountTab
+              name={name}
+              setName={setName}
+              email={email}
+              currentUser={currentUser}
+              nacionalidad={nacionalidad}
+              setNacionalidad={setNacionalidad}
+              fechaNacimiento={fechaNacimiento}
+              setFechaNacimiento={setFechaNacimiento}
+              isAdminOrOrganizer={isAdminOrOrganizer}
+              role={role}
+              setRole={setRole}
+              status={status}
+              setStatus={setStatus}
+              newPassword={newPassword}
+              setNewPassword={setNewPassword}
+              confirmPassword={confirmPassword}
+              setConfirmPassword={setConfirmPassword}
+            />
           )}
 
-          {/* TAB 4: REDES SOCIALES Y CONTACTO */}
           {activeTab === 'redes_contacto' && (
-            <Card className="account-settings-card p-4 sm:p-6 space-y-6 border-amber-500/30 bg-slate-950">
-              <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-2">
-                <Globe className="w-4 h-4 text-amber-400" />
-                4. Redes Sociales y Contacto:
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                    Teléfono de Contacto
-                  </label>
-                  <input
-                    type="text"
-                    value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
-                    placeholder="+56 9 1234 5678"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                    WhatsApp
-                  </label>
-                  <input
-                    type="text"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    placeholder="+56912345678"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block flex items-center gap-1">
-                    <Share2 className="w-3.5 h-3.5 text-pink-400" />
-                    Instagram
-                  </label>
-                  <input
-                    type="text"
-                    value={instagram}
-                    onChange={(e) => setInstagram(e.target.value)}
-                    placeholder="@usuario"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block flex items-center gap-1">
-                    <Tv className="w-3.5 h-3.5 text-purple-400" />
-                    Twitch TV
-                  </label>
-                  <input
-                    type="text"
-                    value={twitch}
-                    onChange={(e) => setTwitch(e.target.value)}
-                    placeholder="twitch.tv/canal"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block flex items-center gap-1">
-                    <Video className="w-3.5 h-3.5 text-rose-400" />
-                    YouTube Channel
-                  </label>
-                  <input
-                    type="text"
-                    value={youtube}
-                    onChange={(e) => setYoutube(e.target.value)}
-                    placeholder="youtube.com/@canal"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block flex items-center gap-1">
-                    <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-                    Discord Username
-                  </label>
-                  <input
-                    type="text"
-                    value={discord}
-                    onChange={(e) => setDiscord(e.target.value)}
-                    placeholder="usuario#1234 o usuario"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300 uppercase block flex items-center gap-1">
-                    <Share2 className="w-3.5 h-3.5 text-blue-400" />
-                    Facebook
-                  </label>
-                  <input
-                    type="text"
-                    value={facebook}
-                    onChange={(e) => setFacebook(e.target.value)}
-                    placeholder="facebook.com/pagina"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="font-bold text-slate-300 uppercase block flex items-center gap-1">
-                    <Globe className="w-3.5 h-3.5 text-amber-400" />
-                    Sitio Web Personal / Portfolio
-                  </label>
-                  <input
-                    type="text"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    placeholder="https://micontenido.com"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white focus:outline-none focus:border-amber-400 font-semibold"
-                  />
-                </div>
-              </div>
-            </Card>
+            <ProfileSocialTab
+              telefono={telefono}
+              setTelefono={setTelefono}
+              whatsapp={whatsapp}
+              setWhatsapp={setWhatsapp}
+              instagram={instagram}
+              setInstagram={setInstagram}
+              twitch={twitch}
+              setTwitch={setTwitch}
+              youtube={youtube}
+              setYoutube={setYoutube}
+              discord={discord}
+              setDiscord={setDiscord}
+              facebook={facebook}
+              setFacebook={setFacebook}
+              website={website}
+              setWebsite={setWebsite}
+            />
           )}
 
           {/* Submit Action Button */}
@@ -1125,7 +553,7 @@ export function UserProfileSettingsView({ onBack, brandColor = '#00F0FF', embedd
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black text-xs px-6 py-3 rounded-xl shadow-xl flex items-center gap-2 uppercase tracking-wider"
+              className="bg-[var(--app-accent)] hover:bg-[var(--app-accent-2)] text-[var(--accent-contrast)] font-black text-xs px-6 py-3 rounded-xl shadow-xl flex items-center gap-2 uppercase tracking-wider"
             >
               <Save className="w-4 h-4" />
               {isSubmitting ? 'Guardando cambios...' : 'Guardar cambios'}

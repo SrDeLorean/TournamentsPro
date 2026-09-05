@@ -125,14 +125,14 @@ export function OrganizerTransferReviewModal({
         {/* Header Bar */}
         <div className="px-6 py-4 border-b border-[var(--border-card)] bg-[var(--bg-main)]/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="w-9 h-9 rounded-xl bg-[var(--app-warning-soft)] border border-[var(--app-warning)] flex items-center justify-center text-[var(--app-warning)]">
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold font-display text-base text-[var(--text-heading)] uppercase tracking-tight">
+              <h3 className="font-bold font-[family-name:var(--font-active)] text-base text-[var(--text-heading)] uppercase tracking-tight">
                 Evaluación de Traspaso Extraordinario
               </h3>
-              <span className="text-[10px] font-mono text-[var(--text-muted)]">
+              <span className="text-[10px] font-[family-name:var(--font-active)] text-[var(--text-muted)]">
                 Panel de Auditoría y Control del Organizador
               </span>
             </div>
@@ -148,8 +148,8 @@ export function OrganizerTransferReviewModal({
         {/* Scrollable Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {errorMsg && (
-            <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs font-mono flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <div className="p-3.5 rounded-2xl bg-[var(--app-danger-soft)] border border-[var(--app-danger)] text-[var(--app-danger)] text-xs font-[family-name:var(--font-active)] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-[var(--app-danger)] shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -159,30 +159,30 @@ export function OrganizerTransferReviewModal({
             <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] flex items-center justify-center text-[var(--text-heading)] font-black text-lg shadow-md">
-                  <User className="w-6 h-6 text-cyan-400" />
+                  <User className="w-6 h-6 text-[var(--app-accent)]" />
                 </div>
                 <div>
                   <h4 className="font-extrabold text-base text-[var(--text-heading)]">
                     {application.applicantName}
                   </h4>
-                  <span className="text-xs font-mono text-cyan-400 font-bold block">
+                  <span className="text-xs font-[family-name:var(--font-active)] text-[var(--app-accent)] font-bold block">
                     @{application.applicantGamertag || 'Atleta'} | Posición: {application.position}
                   </span>
                 </div>
               </div>
 
               <div className="text-right">
-                <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-amber-400 bg-amber-950/60 border border-amber-500/40 px-3 py-1 rounded-full inline-block">
+                <span className="text-[9px] font-[family-name:var(--font-active)] font-bold uppercase tracking-wider text-[var(--app-warning)] bg-[var(--app-warning-soft)] border border-[var(--app-warning)] px-3 py-1 rounded-full inline-block">
                   ⚠️ Fuera de Plazo / En Curso
                 </span>
               </div>
             </div>
 
             {/* Target Team Banner */}
-            <div className="flex items-center justify-between text-xs font-mono pt-1">
+            <div className="flex items-center justify-between text-xs font-[family-name:var(--font-active)] pt-1">
               <span className="text-[var(--text-muted)] uppercase font-bold">Solicitud de Ingreso a:</span>
-              <strong className="text-[var(--accent-emerald)] font-mono text-sm uppercase flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-emerald-400" />
+              <strong className="text-[var(--app-positive)] font-[family-name:var(--font-active)] text-sm uppercase flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-[var(--app-positive)]" />
                 {application.teamName}
               </strong>
             </div>
@@ -197,27 +197,27 @@ export function OrganizerTransferReviewModal({
           {/* 2. ANTIFRAUD & MOBILITY AUDIT SECTION */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-mono font-black uppercase text-[var(--text-muted)] tracking-wider flex items-center gap-2">
-                <History className="w-4 h-4 text-purple-400" />
+              <h4 className="text-xs font-[family-name:var(--font-active)] font-black uppercase text-[var(--text-muted)] tracking-wider flex items-center gap-2">
+                <History className="w-4 h-4 text-[var(--app-accent-2)]" />
                 Auditoría de Movimientos e Histórico de Clubes
               </h4>
 
               {/* Total Movements Counter Badge */}
               <div
-                className={`px-3 py-1 rounded-xl text-xs font-mono font-black border flex items-center gap-1.5 ${
+                className={`px-3 py-1 rounded-xl text-xs font-[family-name:var(--font-active)] font-black border flex items-center gap-1.5 ${
                   isHighMobility
-                    ? 'bg-rose-950/60 border-rose-500/50 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
-                    : 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
+                    ? 'bg-[var(--app-danger-soft)] border-[var(--app-danger)] text-[var(--app-danger)] shadow-[var(--shadow-soft)]'
+                    : 'bg-[var(--app-positive-soft)] border-[var(--app-positive)] text-[var(--app-positive)]'
                 }`}
               >
-                {isHighMobility && <AlertTriangle className="w-3.5 h-3.5 text-rose-400 animate-pulse" />}
+                {isHighMobility && <AlertTriangle className="w-3.5 h-3.5 text-[var(--app-danger)] animate-pulse" />}
                 <span>{totalMoves} MOVIMIENTOS DE CLUB</span>
               </div>
             </div>
 
             {isHighMobility && (
-              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-300 text-[11px] font-mono flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-[var(--app-warning-soft)] border border-[var(--app-warning)] text-[var(--app-warning)] text-[11px] font-[family-name:var(--font-active)] flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-[var(--app-warning)] shrink-0 mt-0.5" />
                 <span>
                   <strong>Advertencia Antifraude:</strong> Este atleta posee {totalMoves} cambios de equipo registrados en la organización. Verifica que no viole la normativa de máximo de traspasos por temporada.
                 </span>
@@ -226,7 +226,7 @@ export function OrganizerTransferReviewModal({
 
             {/* Timeline List of Last Teams Played For */}
             {historyLoading ? (
-              <div className="p-6 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">
+              <div className="p-6 text-center text-xs font-[family-name:var(--font-active)] text-[var(--text-muted)] animate-pulse">
                 Consultando historial de fichajes en BD...
               </div>
             ) : historyData?.recentTransfers && historyData.recentTransfers.length > 0 ? (
@@ -234,7 +234,7 @@ export function OrganizerTransferReviewModal({
                 {historyData.recentTransfers.map((t, idx) => (
                   <div
                     key={t.id || idx}
-                    className="p-2.5 rounded-xl bg-[var(--bg-main)]/70 border border-[var(--border-card)] flex items-center justify-between text-xs font-mono"
+                    className="p-2.5 rounded-xl bg-[var(--bg-main)]/70 border border-[var(--border-card)] flex items-center justify-between text-xs font-[family-name:var(--font-active)]"
                   >
                     <div className="flex items-center gap-2 truncate">
                       <span className="text-[var(--text-muted)] text-[10px]">
@@ -244,14 +244,14 @@ export function OrganizerTransferReviewModal({
                       <ArrowRight className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
                       <strong className="text-[var(--text-heading)] truncate">{t.toTeamName}</strong>
                     </div>
-                    <span className="text-[9px] uppercase px-2 py-0.5 rounded-md bg-[var(--bg-card)] border border-[var(--border-card)] text-cyan-400 shrink-0">
+                    <span className="text-[9px] uppercase px-2 py-0.5 rounded-md bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--app-accent)] shrink-0">
                       {t.transferType}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-4 text-center rounded-xl bg-[var(--bg-main)]/40 border border-[var(--border-card)] text-xs font-mono text-[var(--text-muted)]">
+              <div className="p-4 text-center rounded-xl bg-[var(--bg-main)]/40 border border-[var(--border-card)] text-xs font-[family-name:var(--font-active)] text-[var(--text-muted)]">
                 Sin traspasos previos registrados en esta organización (Atleta Limpio).
               </div>
             )}
@@ -259,15 +259,15 @@ export function OrganizerTransferReviewModal({
 
           {/* Rejection Form Field */}
           {showRejectForm && (
-            <div className="space-y-2 p-3.5 rounded-2xl bg-rose-950/30 border border-rose-500/30 animate-fade-in">
-              <label className="text-xs font-mono font-bold text-rose-300 block">
+            <div className="space-y-2 p-3.5 rounded-2xl bg-[var(--app-danger-soft)] border border-[var(--app-danger)] animate-fade-in">
+              <label className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--app-danger)] block">
                 Motivo del Rechazo (Visible para el Atleta y Capitán):
               </label>
               <textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Ejemplo: Exceso de cambios de club en la misma temporada o violacion del reglamento..."
-                className="w-full h-20 p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-rose-500"
+                className="w-full h-20 p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-[family-name:var(--font-active)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--app-danger)]"
               />
             </div>
           )}
@@ -280,7 +280,7 @@ export function OrganizerTransferReviewModal({
               <Button
                 variant="outline"
                 onClick={() => setShowRejectForm(true)}
-                className="text-xs font-mono border-rose-500/40 text-rose-400 hover:bg-rose-950/40"
+                className="text-xs font-[family-name:var(--font-active)] border-[var(--app-danger)] text-[var(--app-danger)] hover:bg-[var(--app-danger-soft)]"
               >
                 <XCircle className="w-4 h-4 mr-1.5" />
                 Rechazar Traspaso
@@ -288,7 +288,7 @@ export function OrganizerTransferReviewModal({
               <Button
                 onClick={handleApprove}
                 disabled={submitting}
-                className="text-xs font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                className="text-xs font-[family-name:var(--font-active)] font-bold bg-[var(--app-positive)] hover:bg-[var(--app-positive)] text-[var(--accent-contrast)] shadow-[var(--shadow-soft)]"
               >
                 <CheckCircle2 className="w-4 h-4 mr-1.5" />
                 {submitting ? 'Procesando...' : 'Aprobar y Registrar Fichaje'}
@@ -299,14 +299,14 @@ export function OrganizerTransferReviewModal({
               <Button
                 variant="ghost"
                 onClick={() => setShowRejectForm(false)}
-                className="text-xs font-mono"
+                className="text-xs font-[family-name:var(--font-active)]"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleReject}
                 disabled={submitting || !rejectionReason.trim()}
-                className="text-xs font-mono font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_15px_rgba(244,63,94,0.3)]"
+                className="text-xs font-[family-name:var(--font-active)] font-bold bg-[var(--app-danger)] hover:bg-[var(--app-danger)] text-[var(--accent-contrast)] shadow-[var(--shadow-soft)]"
               >
                 {submitting ? 'Guardando...' : 'Confirmar Rechazo'}
               </Button>

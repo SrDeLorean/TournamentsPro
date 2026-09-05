@@ -21,7 +21,7 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
-  brandColor = 'var(--accent-cyan)',
+  brandColor = 'var(--app-accent)',
   className,
 }: EmptyStateProps) {
   return (
@@ -30,7 +30,7 @@ export function EmptyState({
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 260, damping: 20 }}
       className={cn(
-        'flex flex-col items-center justify-center text-center py-16 px-6 rounded-2xl bg-[var(--bg-card)]/40 backdrop-blur-xl border border-[var(--border-card)] relative overflow-hidden',
+        'flex flex-col items-center justify-center text-center py-16 px-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] relative overflow-hidden font-[family-name:var(--font-active)]',
         className
       )}
     >

@@ -34,7 +34,8 @@ export interface EsportsSocialLinks {
 export interface EsportsCardProps {
   href?: string;
   onClick?: () => void;
-  entityType?: 'team' | 'organization' | 'user' | 'generic';
+  entityType?: 'team' | 'organization' | 'user' | 'competition' | 'generic';
+  gameSlug?: string;
   title: string;
   subtitle?: string;
   description?: string;
@@ -67,6 +68,7 @@ const ENTITY_LABEL = {
   team: 'Equipo competitivo',
   organization: 'Organización',
   user: 'Atleta',
+  competition: 'Competencia oficial',
   generic: 'Perfil competitivo',
 } as const;
 
@@ -110,8 +112,8 @@ function normalizeSocialUrl(platform: string, value: string) {
 
 export function EsportsCard({
   href, onClick, entityType = 'generic', title, subtitle, description, bannerUrl, logoUrl, fallbackIcon,
-  tag, country, countryCode, socials, badges = [], stats = [], progress, footerLeft,
-  actionText = 'Ver perfil', brandColor = 'var(--accent-cyan)', animationDelay = 0,
+  gameSlug, tag, country, countryCode, socials, badges = [], stats = [], progress, footerLeft,
+  actionText = 'Ver perfil', brandColor = 'var(--app-accent)', animationDelay = 0,
   transitionName, transitionTypes, children,
 }: EsportsCardProps) {
   const bannerImg = bannerUrl || '/images/default/banner-default.jpg';
@@ -130,8 +132,14 @@ export function EsportsCard({
 
   const card = (
     <article
-      className={`esports-entity-card is-${entityType}${isInteractive ? ' is-interactive' : ''}`}
-      style={{ '--card-brand': brandColor, animationDelay: `${animationDelay}ms` } as React.CSSProperties}
+      className={`esports-entity-card is-${entityType}${isInteractive ? ' is-interactive' : ''} font-[family-name:var(--font-active)]`}
+      data-game={gameSlug}
+      data-reactive-card={isInteractive ? '' : undefined}
+      style={{
+        '--card-brand': gameSlug ? 'var(--app-accent)' : brandColor,
+        '--ui-dynamic-brand': gameSlug ? 'var(--app-accent)' : brandColor,
+        animationDelay: `${animationDelay}ms`,
+      } as React.CSSProperties}
       onClick={!href ? onClick : undefined}
       onKeyDown={handleKeyDown}
       role={!href && onClick ? 'button' : undefined}

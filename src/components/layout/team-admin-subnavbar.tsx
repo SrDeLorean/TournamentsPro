@@ -24,10 +24,10 @@ interface TeamAdminSubnavbarProps {
 export function TeamAdminSubnavbar({
   team,
   onSelectSection,
-  brandColor = '#00F0FF',
+  brandColor = 'var(--app-accent)',
 }: TeamAdminSubnavbarProps) {
   const gameObj = GAMES_CATALOG[team.gameSlug] || GAMES_CATALOG['eafc26'];
-  const activeColor = brandColor || team.color || '#00F0FF';
+  const activeColor = brandColor || team.color || 'var(--app-accent)';
 
   const equipoSections: { id: TeamAdminSection; label: string; icon: React.ReactNode; badge?: string }[] = [
     { id: 'EQUIPO_ROSTER', label: 'Plantilla Roster', icon: <Users className="w-3.5 h-3.5" />, badge: `${team.membersCount}` },
@@ -51,18 +51,19 @@ export function TeamAdminSubnavbar({
   return (
     <>
       <div
-        className="w-full z-40 border-b backdrop-blur-xl transition-all duration-300 shadow-md py-1.5 px-4 sm:px-6 lg:px-8"
+        className="ui-navigation-tier w-full z-40 py-1.5 px-4 sm:px-6 lg:px-8"
         style={{
+          '--navigation-brand': activeColor,
           backgroundColor: `color-mix(in srgb, ${activeColor} 18%, var(--bg-nav))`,
           borderColor: `${activeColor}50`,
-        }}
+        } as React.CSSProperties}
       >
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3 overflow-x-auto scrollbar-none">
           
           {/* Left Team Badge + Theme Color Accent */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <div
-              className="w-7 h-7 rounded-lg bg-slate-950 border-2 flex items-center justify-center font-black text-xs shadow-md"
+              className="w-7 h-7 rounded-lg bg-[var(--app-canvas)] border-2 flex items-center justify-center font-black text-xs shadow-md"
               style={{ borderColor: activeColor, color: activeColor }}
             >
               {team.logoText}
@@ -70,14 +71,14 @@ export function TeamAdminSubnavbar({
 
             <div className="leading-none">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black uppercase text-white tracking-wider">
+                <span className="text-xs font-black uppercase text-[var(--text-heading)] tracking-wider">
                   {team.name}
                 </span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold uppercase bg-slate-900 text-white border border-slate-700">
+                <span className="text-[9px] px-1.5 py-0.2 rounded font-[family-name:var(--font-active)] font-bold uppercase bg-[var(--app-canvas)] text-[var(--text-heading)] border border-[var(--border-card)]">
                   {gameObj.name}
                 </span>
               </div>
-              <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1 mt-0.5">
+              <span className="text-[10px] text-[var(--navigation-brand)] font-[family-name:var(--font-active)] font-bold flex items-center gap-1 mt-0.5">
                 <CheckCircle2 className="w-3 h-3" />
                 Gestión Activa
               </span>
@@ -88,8 +89,8 @@ export function TeamAdminSubnavbar({
           <div className="flex items-center gap-3 overflow-x-auto scrollbar-none">
             
             {/* GROUP 1: 🛡️ GESTIÓN DE SU EQUIPO (MODAL INDEPENDIENTE) */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-950/70 border border-purple-500/30">
-              <span className="text-[9px] font-black uppercase tracking-wider text-purple-400 px-2 hidden lg:inline-block">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--app-canvas)] border border-[var(--navigation-brand)]">
+              <span className="text-[9px] font-black uppercase tracking-wider text-[var(--navigation-brand)] px-2 hidden lg:inline-block">
                 🛡️ Club:
               </span>
               {equipoSections.map((sec) => (
@@ -100,12 +101,12 @@ export function TeamAdminSubnavbar({
                     setIsTeamModalOpen(true);
                     if (onSelectSection) onSelectSection(sec.id);
                   }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-white hover:bg-purple-600/30 transition-all flex items-center gap-1.5 flex-shrink-0"
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-heading)] hover:bg-[var(--app-accent-soft)] transition-all flex items-center gap-1.5 flex-shrink-0"
                 >
                   {sec.icon}
                   <span>{sec.label}</span>
                   {sec.badge && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold bg-slate-800 text-[var(--text-muted)]">
+                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-[family-name:var(--font-active)] font-bold bg-[var(--app-canvas)] text-[var(--text-muted)]">
                       {sec.badge}
                     </span>
                   )}
@@ -116,8 +117,8 @@ export function TeamAdminSubnavbar({
             <div className="w-px h-6 bg-[var(--border-card)] hidden md:block" />
 
             {/* GROUP 2: 👤 GESTIÓN DE SÍ MISMO - ATLETA (MODAL INDEPENDIENTE) */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-950/70 border border-cyan-500/30">
-              <span className="text-[9px] font-black uppercase tracking-wider text-cyan-400 px-2 hidden lg:inline-block">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--app-canvas)] border border-[var(--app-accent)]">
+              <span className="text-[9px] font-black uppercase tracking-wider text-[var(--app-accent)] px-2 hidden lg:inline-block">
                 👤 Atleta:
               </span>
               {atletaSections.map((sec) => (
@@ -128,7 +129,7 @@ export function TeamAdminSubnavbar({
                     setIsAthleteModalOpen(true);
                     if (onSelectSection) onSelectSection(sec.id);
                   }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-white hover:bg-cyan-600/30 transition-all flex items-center gap-1.5 flex-shrink-0"
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-heading)] hover:bg-[var(--app-accent-soft)] transition-all flex items-center gap-1.5 flex-shrink-0"
                 >
                   {sec.icon}
                   <span>{sec.label}</span>

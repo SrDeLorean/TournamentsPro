@@ -49,13 +49,15 @@ import {
 describe('transactional services', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.transaction.executeCommand.mockResolvedValue({ affectedRows: 1 });
+    mocks.transaction.queryRows.mockReset().mockResolvedValue([]);
+    mocks.transaction.executeCommand.mockReset().mockResolvedValue({ affectedRows: 1 });
   });
 
   it('locks the team and membership before adding a squad member', async () => {
     mocks.transaction.queryRows
       .mockResolvedValueOnce([{ position: 'DFC' }])
       .mockResolvedValueOnce([{ organization_id: 'org-1' }])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
     const result = await addPlayerToSquadService('team-1', 'user-1', 'DFC');
@@ -254,7 +256,10 @@ describe('transactional services', () => {
   it('creates a team and captain membership in one transaction', async () => {
     mocks.transaction.queryRows
       .mockResolvedValueOnce([{ id: 'captain-1' }])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{
+        id: 'team-1', name: 'Equipo Uno', tag: 'UNO', game_slug: 'eafc26', captain_id: 'captain-1',
+      }]);
 
     const result = await createTeamService({ name: 'Equipo Uno', tag: 'UNO', gameSlug: 'eafc26' }, 'captain-1', 'Capitán');
 
@@ -266,9 +271,13 @@ describe('transactional services', () => {
 
   it('creates an organization and all organizer assignments atomically', async () => {
     mocks.transaction.queryRows
-      .mockResolvedValueOnce([{ id: 'owner-1' }])
-      .mockResolvedValueOnce([{ id: 'organizer-1' }, { id: 'organizer-2' }])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([{ id: 'organizer-1', role: 'Organizador' }])
+      .mockResolvedValueOnce([{ id: 'organizer-2', role: 'Organizador' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{
+        id: 'org-1', name: 'Liga Uno', tag: 'LUNO', owner_id: 'owner-1', allowed_games: '[]',
+      }]);
 
     const result = await createManagedOrganizationService({
       name: 'Liga Uno', tag: 'LUNO', ownerId: 'owner-1', organizerIds: ['organizer-1', 'organizer-2'],
@@ -277,14 +286,15 @@ describe('transactional services', () => {
     expect(result.success).toBe(true);
     const statements = mocks.transaction.executeCommand.mock.calls.map(([sql]) => String(sql));
     expect(statements.some((sql) => sql.includes('INSERT INTO organizations'))).toBe(true);
-    expect(statements.filter((sql) => sql.includes('UPDATE users SET organization_id')).length).toBe(2);
+    expect(statements.filter((sql) => sql.includes('UPDATE users') && sql.includes('organization_id')).length).toBe(2);
   });
 
   it('edits organization fields and organizer assignments under locks', async () => {
     mocks.transaction.queryRows
       .mockResolvedValueOnce([{ id: 'org-1' }])
-      .mockResolvedValueOnce([{ id: 'organizer-1' }])
-      .mockResolvedValueOnce([{ id: 'organizer-old' }]);
+      .mockResolvedValueOnce([{ id: 'organizer-1', role: 'Organizador' }])
+      .mockResolvedValueOnce([{ id: 'org-1', name: 'Liga Editada', allowed_games: '[]' }])
+      .mockResolvedValueOnce([{ id: 'organizer-old', organization_id: 'org-1', role: 'Organizador' }]);
 
     const result = await updateManagedOrganizationService('org-1', {
       name: 'Liga Editada', organizerIds: ['organizer-1'],
@@ -293,14 +303,22 @@ describe('transactional services', () => {
     expect(result.success).toBe(true);
     const statements = mocks.transaction.executeCommand.mock.calls.map(([sql]) => String(sql));
     expect(statements.some((sql) => sql.includes('UPDATE organizations'))).toBe(true);
-    expect(statements.some((sql) => sql.includes('organization_id = NULL'))).toBe(true);
+    expect(mocks.transaction.executeCommand.mock.calls.some(([sql, params]) => (
+      String(sql).includes('UPDATE users')
+      && String(sql).includes('organization_id')
+      && Array.isArray(params)
+      && params[0] === null
+    ))).toBe(true);
   });
 
   it('edits a team and replaces only its management assignments atomically', async () => {
     mocks.transaction.queryRows
       .mockResolvedValueOnce([{ id: 'team-1', captain_id: 'captain-old' }])
-      .mockResolvedValueOnce([{ id: 'captain-new' }, { id: 'manager-1' }])
-      .mockResolvedValueOnce([{ id: 'membership-old' }]);
+      .mockResolvedValueOnce([{ id: 'captain-new' }])
+      .mockResolvedValueOnce([{ id: 'manager-1' }])
+      .mockResolvedValueOnce([{
+        id: 'team-1', name: 'Equipo Editado', captain_id: 'captain-new', game_slug: 'eafc26',
+      }]);
 
     const result = await updateManagedTeamService('team-1', {
       name: 'Equipo Editado', captainId: 'captain-new', managerIds: ['manager-1'],

@@ -73,11 +73,14 @@ export function OrganizationDirectory({ gameSlug, gameConfig, mode = 'organizati
   const totalCompetitions = orgs.reduce((total, org) => total + Number(org.comp_count || 0), 0);
 
   return (
-    <div className="animate-in fade-in duration-300">
+    <div
+      className="animate-in fade-in duration-300"
+      style={{ '--ui-dynamic-brand': gameConfig.brandColor } as React.CSSProperties}
+    >
       <div className="pt-4 sm:pt-6">
         <PageHeader
           badgeText={isCompetitionDirectory ? 'CIRCUITO COMPETITIVO OFICIAL' : 'DIRECTORIO DE TORNEOS'}
-          badgeIcon={<Trophy className="w-3.5 h-3.5" style={{ color: gameConfig.brandColor, fill: gameConfig.brandColor }} />}
+          badgeIcon={<Trophy className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
           title={isCompetitionDirectory ? 'COMPETENCIAS POR' : 'ORGANIZACIONES &'}
           highlightTitle={isCompetitionDirectory ? 'ORGANIZACIÓN' : 'TORNEOS'}
           description={isCompetitionDirectory
@@ -133,6 +136,7 @@ export function OrganizationDirectory({ gameSlug, gameConfig, mode = 'organizati
                 <EsportsCard
                   key={org.id}
                   entityType="organization"
+                  gameSlug={gameSlug}
                   href={`/${gameSlug}/organizacion/${org.id}`}
                   title={org.name}
                   subtitle={org.tag ? `[${org.tag}] · ${org.comp_count || 0} competencias` : `${org.comp_count || 0} competencias publicadas`}
@@ -157,17 +161,16 @@ export function OrganizationDirectory({ gameSlug, gameConfig, mode = 'organizati
                   }
                   badges={[{ text: 'VERIFICADA', variant: 'emerald', pulse: true }]}
                   stats={[
-                    { icon: <Trophy className="w-3.5 h-3.5 text-amber-400" />, label: 'Torneos', value: org.comp_count || 0 },
-                    { icon: <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />, label: 'Prestigio', value: ratingStr, highlight: true },
+                    { icon: <Trophy className="w-3.5 h-3.5 text-[var(--app-warning)]" />, label: 'Torneos', value: org.comp_count || 0 },
+                    { icon: <Star className="w-3.5 h-3.5 text-[var(--app-warning)] fill-[var(--app-warning)]" />, label: 'Prestigio', value: ratingStr, highlight: true },
                   ]}
                   footerLeft={
                     <span className="flex items-center gap-1">
-                      <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                      <Shield className="w-3.5 h-3.5 text-[var(--app-positive)]" />
                       <span>Oficial TP</span>
                     </span>
                   }
                   actionText={isCompetitionDirectory ? 'EXPLORAR TORNEOS' : 'VER PERFIL'}
-                  brandColor={gameConfig.brandColor}
                   animationDelay={index * 50}
                 />
               );

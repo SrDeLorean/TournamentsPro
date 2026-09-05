@@ -10,7 +10,7 @@ describe('app UI evolution system', () => {
     const css = readFileSync(join(root, 'src/app/globals.css'), 'utf8');
 
     expect(studio).toContain('APP_PALETTES');
-    expect(studio).toContain('Graphite Cyan');
+    expect(studio).toContain('Red Mountain');
     expect(studio).toContain('Midnight Iris');
     expect(studio).toContain('Titanium Mint');
     expect(studio).toContain('Solar Carbon');

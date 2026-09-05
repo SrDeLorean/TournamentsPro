@@ -10,20 +10,20 @@ export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Alert({ variant = 'info', title, children, className, ...props }: AlertProps) {
   const configs = {
     info: {
-      bg: 'bg-[var(--accent-cyan-bg)] border-[var(--accent-cyan)]/30 text-[var(--text-primary)]',
-      icon: <Info className="w-5 h-5 text-[var(--accent-cyan)] flex-shrink-0 mt-0.5" />,
+      bg: 'bg-[color-mix(in_srgb,var(--app-accent)_12%,transparent)] border-[var(--app-accent)]/30 text-[var(--text-primary)]',
+      icon: <Info className="w-5 h-5 text-[var(--app-accent)] flex-shrink-0 mt-0.5" />,
     },
     success: {
-      bg: 'bg-[var(--accent-emerald-bg)] border-[var(--accent-emerald)]/30 text-[var(--text-primary)]',
-      icon: <CheckCircle className="w-5 h-5 text-[var(--accent-emerald)] flex-shrink-0 mt-0.5" />,
+      bg: 'bg-[color-mix(in_srgb,var(--app-positive)_14%,transparent)] border-[var(--app-positive)]/30 text-[var(--text-primary)]',
+      icon: <CheckCircle className="w-5 h-5 text-[var(--app-positive)] flex-shrink-0 mt-0.5" />,
     },
     warning: {
-      bg: 'bg-[var(--accent-gold-bg)] border-[var(--accent-gold)]/30 text-[var(--text-primary)]',
-      icon: <AlertTriangle className="w-5 h-5 text-[var(--accent-gold)] flex-shrink-0 mt-0.5" />,
+      bg: 'bg-[color-mix(in_srgb,var(--app-warning)_14%,transparent)] border-[var(--app-warning)]/30 text-[var(--text-primary)]',
+      icon: <AlertTriangle className="w-5 h-5 text-[var(--app-warning)] flex-shrink-0 mt-0.5" />,
     },
     danger: {
-      bg: 'bg-[var(--accent-crimson-bg)] border-[var(--accent-crimson)]/30 text-[var(--text-primary)]',
-      icon: <AlertCircle className="w-5 h-5 text-[var(--accent-crimson)] flex-shrink-0 mt-0.5" />,
+      bg: 'bg-[color-mix(in_srgb,var(--app-danger)_14%,transparent)] border-[var(--app-danger)]/30 text-[var(--text-primary)]',
+      icon: <AlertCircle className="w-5 h-5 text-[var(--app-danger)] flex-shrink-0 mt-0.5" />,
     },
   };
 
@@ -31,7 +31,7 @@ export function Alert({ variant = 'info', title, children, className, ...props }
     <div
       role={variant === 'danger' ? 'alert' : 'status'}
       aria-live={variant === 'danger' ? 'assertive' : 'polite'}
-      className={cn("ui-alert relative overflow-hidden p-4 rounded-xl border flex items-start gap-3 backdrop-blur-md shadow-sm transition-all animate-in fade-in zoom-in-95 duration-300", configs[variant].bg, className)}
+      className={cn("ui-alert relative overflow-hidden p-4 rounded-[var(--radius-card)] border flex items-start gap-3 backdrop-blur-md shadow-sm transition-all animate-in fade-in zoom-in-95 duration-300 font-[family-name:var(--font-active)]", configs[variant].bg, className)}
       {...props}
     >
       {configs[variant].icon}

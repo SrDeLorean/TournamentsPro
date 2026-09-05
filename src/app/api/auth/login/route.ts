@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyPassword, signToken } from '@/lib/auth';
-import { UserRow, mapUserRowToProfile, apiError } from '@/lib/api-types';
+import { mapUserRowToProfile, apiError } from '@/lib/api-types';
 import { authorizationErrorResponse, requireValidMutationOrigin } from '@/lib/auth-server';
 import { consumeSecurityRateLimit, createAuthSession, getTrustedClientAddress } from '@/lib/security';
 import { loginBodySchema } from '@/lib/api-schemas';
@@ -39,8 +39,8 @@ export async function POST(request: Request) {
 
     // Keep identifier resolution inside the active database adapter. Both MySQL
     // and Supabase implement a case-insensitive email/gamertag lookup.
-    const user = await import('@/lib/db/provider')
-      .then((module) => module.dbProvider.users.findByEmailOrGamertag(term));
+    const { dbProvider } = await import('@/lib/db/provider');
+    const user = await dbProvider.users.findByEmailOrGamertag(term);
 
     if (!user) {
       return apiError(INVALID_CREDENTIALS_MESSAGE, 401, 'INVALID_CREDENTIALS');
@@ -84,6 +84,13 @@ export async function POST(request: Request) {
       role: row.role,
       gamertag: row.gamertag,
     }, 'access', session.sessionId);
+
+    if (!row.organization_id && dbProvider.organizations?.findAll) {
+      const ownedOrgs = await dbProvider.organizations.findAll({ where: { owner_id: row.id }, limit: 1 });
+      if (ownedOrgs.length > 0) {
+        row.organization_id = ownedOrgs[0].id;
+      }
+    }
 
     const userProfile = mapUserRowToProfile(row);
 

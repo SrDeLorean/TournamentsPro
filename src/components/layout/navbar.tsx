@@ -1,22 +1,22 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, type SetStateAction } from 'react';
+import { useState, useRef, useEffect, useCallback, type CSSProperties, type SetStateAction } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { Trophy, Shield, Users, User, Sparkles, Settings, Info, Home, Menu, X, Flag, LogIn, UserPlus, PanelLeftClose, PanelLeftOpen, LayoutDashboard, UserRoundCog, Mail, LogOut, ChevronDown } from 'lucide-react';
+import { Trophy, Sparkles, Settings, Menu, X, LogIn, UserPlus, PanelLeftClose, PanelLeftOpen, LayoutDashboard, UserRoundCog, Mail, LogOut, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 
 import { AdminNavbar } from '@/components/layout/admin-navbar';
 import { NavLinks } from '@/components/layout/nav-links';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { GameLogo } from '@/components/ui/game-logo';
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 import { NotificationCenter } from '@/components/notifications/notification-center';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { MobilePublicNavigation } from '@/components/layout/mobile-public-navigation';
 
 interface ManagementNavigationControl {
   isMobileOpen: boolean;
@@ -50,6 +50,7 @@ export function Navbar({
   const settingsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const routeGameSlug = pathname.split('/').filter(Boolean)[0];
+  const routeGame = GAMES_CATALOG[routeGameSlug];
   const currentGame = GAMES_CATALOG[routeGameSlug] || GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG.eafc26;
 
   // Close dropdowns when clicking outside
@@ -89,9 +90,13 @@ export function Navbar({
   }
 
   return (
-    <header className="app-navbar sticky top-0 z-50 w-full h-14 border-b transition-colors duration-300 flex items-center">
+    <header
+      className="app-navbar ui-navigation-bar sticky top-0 z-50 flex h-14 w-full items-center"
+      data-game={routeGame?.slug}
+      style={{ '--navigation-brand': routeGame?.brandColor || 'var(--app-accent)' } as CSSProperties}
+    >
       {/* Thin Banner Stripe (h-12 / 48px) */}
-      <div className="app-navbar-inner max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full h-full flex items-center justify-between gap-2">
+      <div className="app-navbar-inner ui-navigation-frame h-full">
         {managementNavigation ? (
           <>
             <button
@@ -106,7 +111,7 @@ export function Navbar({
               aria-expanded={!managementNavigation.isDesktopCollapsed}
               aria-label={managementNavigation.isDesktopCollapsed ? 'Abrir panel de gestión' : 'Ocultar panel de gestión'}
               title="Panel de gestión"
-              className="management-navbar-toggle hidden size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--accent-cyan)] shadow-sm transition-colors hover:border-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] lg:inline-flex"
+              className="management-navbar-toggle ui-navigation-icon-button hidden size-9 lg:inline-flex"
             >
               {managementNavigation.isDesktopCollapsed
                 ? <PanelLeftOpen className="size-4" />
@@ -124,7 +129,7 @@ export function Navbar({
               aria-expanded={managementNavigation.isMobileOpen}
               aria-label={managementNavigation.isMobileOpen ? 'Cerrar panel de gestión' : 'Abrir panel de gestión'}
               title="Panel de gestión"
-              className="management-navbar-toggle inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--accent-cyan)] shadow-sm transition-colors hover:border-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] lg:hidden"
+              className="management-navbar-toggle ui-navigation-icon-button inline-flex size-9 lg:hidden"
             >
               {managementNavigation.isMobileOpen
                 ? <PanelLeftClose className="size-4" />
@@ -134,17 +139,17 @@ export function Navbar({
         ) : null}
 
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-600 to-amber-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-slate-950 rounded-[9px] flex items-center justify-center">
-              <Trophy className="w-4 h-4 text-cyan-400" />
+        <Link href="/" aria-label="Ir al inicio de TournamentsPro" className="ui-navigation-brand group">
+          <div className="ui-navigation-brand-mark">
+            <div>
+              <Trophy className="size-4" />
             </div>
           </div>
           <div className="hidden md:flex flex-col text-left">
-            <span className="text-base font-black tracking-tight text-[var(--text-heading)] uppercase leading-none">
-              TOURNAMENTS<span className="text-cyan-400">PRO</span>
+            <span className="ui-navigation-brand-title">
+              TOURNAMENTS<span>PRO</span>
             </span>
-            <span className="text-[9px] text-[var(--text-muted)] font-mono font-bold uppercase">
+            <span className="text-[9px] text-[var(--text-muted)] font-[family-name:var(--font-active)] font-bold uppercase tracking-wider">
               Plataforma Competitiva
             </span>
           </div>
@@ -154,7 +159,7 @@ export function Navbar({
         <NavLinks />
 
         {/* Right Controls: Settings Gear & Auth Buttons */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 font-[family-name:var(--font-active)]">
           {isAuthenticated ? (
             <div className="hidden sm:block">
               <NotificationCenter onOpen={() => {
@@ -168,30 +173,32 @@ export function Navbar({
           {/* Settings Gear Menu */}
           <div className={`relative ${isAuthenticated ? 'hidden sm:block' : ''}`} ref={settingsRef}>
             <button
-            onClick={() => setIsSettingsOpen((open) => !open)}
+              type="button"
+              onClick={() => setIsSettingsOpen((open) => !open)}
+              aria-label="Configuración de Plataforma (Tema e Idioma)"
               title="Configuración de Plataforma (Tema e Idioma)"
-              className="p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all shadow-sm flex items-center justify-center"
+              className="ui-navigation-icon-button"
             >
-              <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-[var(--accent-cyan)]' : ''}`} />
+              <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-[var(--app-accent)]' : ''}`} />
             </button>
 
             {/* Settings Dropdown Container */}
             {isSettingsOpen && (
-              <div className="absolute top-full right-0 mt-1 w-72 rounded-xl glass-panel p-3 shadow-2xl border border-[var(--border-card)] animate-in fade-in zoom-in-95 duration-150 z-50 space-y-3">
+              <div className="ui-navigation-popover absolute right-0 top-full z-50 mt-2 w-72 space-y-3 p-3 animate-in fade-in zoom-in-95 duration-150">
                 <div className="pb-2 border-b border-[var(--border-card)] flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-heading)]">Preferencias</span>
-                  <Sparkles className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-heading)] font-[family-name:var(--font-active)]">Preferencias</span>
+                  <Sparkles className="w-3.5 h-3.5 text-[var(--app-accent)]" />
                 </div>
 
                 {/* Theme Switcher */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-[var(--text-muted)] block">Tema Visual</label>
+                <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+                  <label className="text-[11px] font-bold text-[var(--text-muted)] block font-[family-name:var(--font-active)]">Tema Visual</label>
                   <ThemeSwitcher />
                 </div>
 
                 {/* Language Switcher */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-[var(--text-muted)] block">Idioma / Region</label>
+                <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+                  <label className="text-[11px] font-bold text-[var(--text-muted)] block font-[family-name:var(--font-active)]">Idioma / Region</label>
                   <LanguageSwitcher />
                 </div>
               </div>
@@ -200,7 +207,7 @@ export function Navbar({
 
           {/* Auth Buttons / Dashboard Session Button */}
           {isAuthenticated ? (
-            <div className="relative" ref={userMenuRef}>
+            <div className="relative font-[family-name:var(--font-active)]" ref={userMenuRef}>
               <button
                 type="button"
                 onClick={() => {
@@ -211,35 +218,35 @@ export function Navbar({
                 aria-label="Abrir menú de usuario"
                 aria-expanded={isUserMenuOpen}
                 aria-controls="public-authenticated-user-menu"
-                className="flex h-9 items-center gap-2 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-1 pr-1.5 shadow-sm transition-colors hover:border-[var(--accent-cyan)]"
+                className="flex h-9 items-center gap-2 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-1 pr-1.5 shadow-sm transition-colors hover:border-[var(--app-accent)]"
               >
                 <Avatar fallback={currentUser?.name || currentUser?.gamertag || 'Usuario'} status="online" size="sm" />
-                <span className="hidden max-w-28 truncate text-xs font-black text-[var(--text-heading)] md:inline">{currentUser?.gamertag}</span>
+                <span className="hidden max-w-28 truncate text-xs font-black text-[var(--text-heading)] md:inline font-[family-name:var(--font-active)]">{currentUser?.gamertag}</span>
                 <ChevronDown className={`hidden size-3 text-[var(--text-muted)] transition-transform md:block ${isUserMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isUserMenuOpen ? (
-                <div id="public-authenticated-user-menu" className="management-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] space-y-2 overflow-y-auto rounded-2xl p-3 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80">
+                <div id="public-authenticated-user-menu" className="management-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] space-y-2 overflow-y-auto rounded-2xl p-3 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80 font-[family-name:var(--font-active)]">
                   <div className="management-profile-card space-y-3 rounded-xl p-3">
                     <div className="flex items-center gap-3">
                       <Avatar fallback={currentUser?.name || 'Usuario'} status="online" size="md" />
                       <div className="min-w-0 flex-1">
-                        <strong className="block truncate text-sm text-[var(--text-heading)]">{currentUser?.name}</strong>
-                        <span className="block truncate font-mono text-xs font-bold text-[var(--accent-cyan)]">@{currentUser?.gamertag}</span>
-                        <span className="block truncate text-[10px] text-[var(--text-muted)]">{currentUser?.email}</span>
+                        <strong className="block truncate text-sm text-[var(--text-heading)] font-[family-name:var(--font-active)]">{currentUser?.name}</strong>
+                        <span className="block truncate font-[family-name:var(--font-active)] text-xs font-bold text-[var(--app-accent)]">@{currentUser?.gamertag}</span>
+                        <span className="block truncate text-[10px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">{currentUser?.email}</span>
                       </div>
                     </div>
-                    <Badge variant="violet">{currentUser?.role}</Badge>
+                    <Badge variant="secondary">{currentUser?.role}</Badge>
                   </div>
-                  <div className="space-y-1 text-xs font-bold">
+                  <div className="space-y-1 text-xs font-bold font-[family-name:var(--font-active)]">
                     <Link href="/dashboard" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
-                      <LayoutDashboard className="size-4 text-[var(--accent-violet)]" />Panel de gestión
+                      <LayoutDashboard className="size-4 text-[var(--navigation-brand)]" />Panel de gestión
                     </Link>
                     <Link href="/cuenta/ajustes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
-                      <UserRoundCog className="size-4 text-[var(--accent-cyan)]" />Configuración de la cuenta
+                      <UserRoundCog className="size-4 text-[var(--app-accent)]" />Configuración de la cuenta
                     </Link>
                     <Link href="/mensajes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
-                      <Mail className="size-4 text-[var(--accent-emerald)]" />Centro de mensajes
+                      <Mail className="size-4 text-[var(--navigation-brand)]" />Centro de mensajes
                     </Link>
                     <button
                       type="button"
@@ -248,7 +255,7 @@ export function Navbar({
                         logout();
                         router.push('/login');
                       }}
-                      className="management-profile-action w-full border-t border-[var(--border-card)] text-left text-[var(--accent-crimson)]"
+                      className="management-profile-action w-full border-t border-[var(--border-card)] text-left text-[var(--app-danger)] font-[family-name:var(--font-active)]"
                     >
                       <LogOut className="size-4" />Cerrar sesión
                     </button>
@@ -260,15 +267,15 @@ export function Navbar({
             <>
               {/* Iniciar Sesión Link Button */}
               <Link href="/login" className="hidden sm:inline-flex">
-                <Button variant="ghost" size="sm" className="text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] h-8 px-2.5">
-                  <LogIn className="w-3.5 h-3.5 mr-1 text-[var(--accent-cyan)]" />
+                <Button variant="ghost" size="sm" className="text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--app-accent)] h-8 px-2.5">
+                  <LogIn className="w-3.5 h-3.5 mr-1 text-[var(--app-accent)]" />
                   Ingresar
                 </Button>
               </Link>
 
               {/* Registrarse Link Button */}
               <Link href="/registro" className="hidden sm:inline-flex">
-                <Button size="sm" className="text-xs font-black h-8 px-3 bg-[var(--accent-cyan)] text-slate-950 hover:opacity-90">
+                <Button variant="primary" size="sm" className="text-xs font-black h-8 px-3 text-[var(--accent-contrast)]">
                   <UserPlus className="w-3.5 h-3.5 mr-1" />
                   Registro
                 </Button>
@@ -284,7 +291,7 @@ export function Navbar({
               if (managementNavigation?.isMobileOpen) managementNavigation.onToggle();
               setIsMobileMenuOpen((open) => !open);
             }}
-            className="app-navbar-mobile-toggle lg:hidden p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] transition-colors"
+            className="app-navbar-mobile-toggle ui-navigation-icon-button lg:hidden"
             type="button"
             aria-label={isMobileMenuOpen ? 'Cerrar navegación global' : 'Abrir navegación global'}
             aria-expanded={isMobileMenuOpen}
@@ -295,115 +302,9 @@ export function Navbar({
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
-      {isMobileMenuOpen && (
-        <>
-        <button
-          type="button"
-          aria-label="Cerrar menú principal"
-          onClick={() => setIsMobileMenuOpen(false)}
-          className="fixed inset-0 top-14 z-30 bg-black/55 backdrop-blur-sm lg:hidden"
-        />
-        <div id="public-mobile-navigation" className="app-navbar-mobile-menu fixed bottom-0 left-0 right-0 top-14 z-40 space-y-3 overflow-y-auto overscroll-contain rounded-none border-x-0 border-t-0 p-3 shadow-2xl glass-panel touch-pan-y lg:hidden">
-          <section
-            className="mobile-games-panel"
-            aria-labelledby="mobile-games-title"
-            style={{ '--mobile-game-color': currentGame.brandColor } as React.CSSProperties}
-          >
-            <div className="mobile-games-heading">
-              <div>
-                <GameLogo game={currentGame} size="sm" />
-                <span className="mobile-games-active-copy">
-                  <small id="mobile-games-title">Disciplina activa</small>
-                  <strong>{currentGame.name}</strong>
-                </span>
-              </div>
-              <small>Cambiar disciplina</small>
-            </div>
-            <div className="mobile-games-grid">
-              {Object.values(GAMES_CATALOG).map((game) => {
-                const isActive = game.slug === currentGame.slug;
-                return (
-                  <Link
-                    key={game.id}
-                    href={`/${game.slug}`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={isActive ? 'is-active' : ''}
-                    aria-current={isActive ? 'page' : undefined}
-                    style={{ '--mobile-game-color': game.brandColor } as React.CSSProperties}
-                  >
-                    <GameLogo game={game} size="sm" />
-                    <span><strong>{game.name}</strong><small>{game.category}</small></span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-
-          <div className="app-navbar-mobile-links space-y-1">
-            <Link
-              href="/"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 p-2 rounded-lg text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-            >
-              <Home className="w-4 h-4 text-[var(--accent-cyan)]" />
-              Inicio
-            </Link>
-            <Link
-              href="/equipos"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 p-2 rounded-lg text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-            >
-              <Shield className="w-4 h-4 text-[var(--accent-cyan)]" />
-              Directorio de Equipos
-            </Link>
-            <Link
-              href="/organizaciones"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 p-2 rounded-lg text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-            >
-              <Flag className="w-4 h-4 text-[var(--accent-emerald)]" />
-              Organizaciones
-            </Link>
-            <Link
-              href="/usuarios"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 p-2 rounded-lg text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-            >
-              <Users className="w-4 h-4 text-[var(--accent-violet)]" />
-              Usuarios & Atletas
-            </Link>
-            <Link
-              href="/informacion"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 p-2 rounded-lg text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-            >
-              <Info className="w-4 h-4 text-[var(--text-muted)]" />
-              Información & Reglamento
-            </Link>
-
-            {!isAuthenticated ? <div className="pt-2 border-t border-[var(--border-card)] grid grid-cols-2 gap-2">
-              <Link
-                href="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-1.5 p-2 rounded-lg text-xs font-bold bg-[var(--bg-card-hover)] border border-[var(--border-card)] text-[var(--text-primary)]"
-              >
-                <LogIn className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
-                Ingresar
-              </Link>
-              <Link
-                href="/registro"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-1.5 p-2 rounded-lg text-xs font-black bg-[var(--accent-cyan)] text-slate-950"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                Registro
-              </Link>
-            </div> : <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs font-black bg-[var(--accent-cyan)] text-slate-950"><User className="size-4" />Ir a mi panel</Link>}
-          </div>
-        </div>
-        </>
-      )}
+      {isMobileMenuOpen ? (
+        <MobilePublicNavigation currentGame={currentGame} isAuthenticated={isAuthenticated} onClose={() => setIsMobileMenuOpen(false)} />
+      ) : null}
     </header>
   );
 }

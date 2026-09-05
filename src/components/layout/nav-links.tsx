@@ -20,41 +20,55 @@ export function NavLinks() {
         setIsGamesOpen(false);
       }
     }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsGamesOpen(false);
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
 
+  const isCurrent = (href: string) => href === '/' ? pathname === href : pathname.startsWith(href);
+
   return (
-    <nav className="hidden lg:flex items-center gap-1">
+    <nav className="ui-navigation-list hidden lg:flex" aria-label="Navegación principal">
       <Link
         href="/"
-        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
+        aria-current={isCurrent('/') ? 'page' : undefined}
+        className="ui-navigation-link"
       >
-        <Home className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
+        <Home className="size-3.5" />
         Inicio
       </Link>
 
       {/* Juegos Dropdown */}
-      <div className="relative" ref={gamesRef}>
+      <div className="relative font-[family-name:var(--font-active)]" ref={gamesRef}>
         <button
+          type="button"
           onClick={() => setIsGamesOpen(!isGamesOpen)}
           onMouseEnter={() => setIsGamesOpen(true)}
-          className="px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
+          aria-expanded={isGamesOpen}
+          aria-controls="public-games-menu"
+          className="ui-navigation-link"
         >
-          <Gamepad2 className="w-3.5 h-3.5 text-purple-400" />
+          <Gamepad2 className="size-3.5" />
           {t('nav.games')}
-          <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isGamesOpen ? 'rotate-180 text-[var(--accent-cyan)]' : ''}`} />
+          <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isGamesOpen ? 'rotate-180 text-[var(--app-accent)]' : ''}`} />
         </button>
 
         {/* Dropdown Menu */}
         {isGamesOpen && (
           <div
-            className="absolute top-full left-0 mt-1 w-64 rounded-xl glass-panel p-2 shadow-2xl border border-[var(--border-card)] animate-in fade-in zoom-in-95 duration-150 z-50"
+            id="public-games-menu"
+            className="ui-navigation-popover absolute left-0 top-full z-50 mt-2 w-64 p-2 animate-in fade-in zoom-in-95 duration-150"
             onMouseLeave={() => setIsGamesOpen(false)}
           >
             <div className="px-2 py-1 mb-1 border-b border-[var(--border-card)] flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Disciplinas eSports</span>
-              <Sparkles className="w-3 h-3 text-[var(--accent-cyan)]" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] font-[family-name:var(--font-active)]">Disciplinas eSports</span>
+              <Sparkles className="w-3 h-3 text-[var(--app-accent)]" />
             </div>
             <div className="space-y-1">
               {Object.values(GAMES_CATALOG).map((game) => (
@@ -67,15 +81,15 @@ export function NavLinks() {
                   <div className="flex items-center gap-2.5">
                     <GameLogo game={game} size="sm" className="group-hover:scale-110" />
                     <div>
-                      <span className="font-bold text-xs block text-[var(--text-heading)] group-hover:text-[var(--accent-cyan)] transition-colors">
+                      <span className="font-bold text-xs block text-[var(--text-heading)] group-hover:text-[var(--app-accent)] transition-colors font-[family-name:var(--font-active)]">
                         {game.name}
                       </span>
-                      <span className="text-[10px] text-[var(--text-muted)] block line-clamp-1">{game.category}</span>
+                      <span className="text-[10px] text-[var(--text-muted)] block line-clamp-1 font-[family-name:var(--font-active)]">{game.category}</span>
                     </div>
                   </div>
                   <span
                     className="w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ backgroundColor: game.brandColor }}
+                    style={{ backgroundColor: game.semanticPalette?.brandPrimary || game.brandColor }}
                   />
                 </Link>
               ))}
@@ -86,33 +100,37 @@ export function NavLinks() {
 
       <Link
         href="/equipos"
-        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
+        aria-current={isCurrent('/equipos') ? 'page' : undefined}
+        className="ui-navigation-link"
       >
-        <Shield className="w-3.5 h-3.5 text-emerald-400" />
+        <Shield className="size-3.5" />
         Equipos
       </Link>
 
       <Link
         href="/organizaciones"
-        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
+        aria-current={isCurrent('/organizaciones') ? 'page' : undefined}
+        className="ui-navigation-link"
       >
-        <Flag className="w-3.5 h-3.5 text-yellow-400" />
+        <Flag className="size-3.5" />
         {t('nav.organizations')}
       </Link>
 
       <Link
         href="/usuarios"
-        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-all duration-300 flex items-center gap-1.5 neon-fx-hover"
+        aria-current={isCurrent('/usuarios') ? 'page' : undefined}
+        className="ui-navigation-link"
       >
-        <Users className="w-3.5 h-3.5 text-cyan-400" />
+        <Users className="size-3.5" />
         Usuarios
       </Link>
 
       <Link
         href="/informacion"
-        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent-cyan)] hover:bg-[var(--bg-card-hover)] transition-colors flex items-center gap-1.5"
+        aria-current={isCurrent('/informacion') ? 'page' : undefined}
+        className="ui-navigation-link"
       >
-        <Info className="w-3.5 h-3.5 text-slate-400" />
+        <Info className="size-3.5" />
         Información
       </Link>
     </nav>

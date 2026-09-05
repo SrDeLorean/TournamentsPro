@@ -20,10 +20,21 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PositionBadge } from '@/components/ui/position-badge';
-import { PlayerProfileView, PlayerData } from '@/components/players/player-profile-view';
+import type { PlayerData } from '@/components/players/player-profile-view';
+import dynamic from 'next/dynamic';
+
+const PlayerProfileView = dynamic(
+  () => import('@/components/players/player-profile-view').then((m) => m.PlayerProfileView),
+  { ssr: false }
+);
+
+const ConfirmModal = dynamic(
+  () => import('@/components/ui/confirm-modal').then((m) => m.ConfirmModal),
+  { ssr: false }
+);
+
 import { DataTable, ColumnDef } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
-import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
@@ -389,7 +400,7 @@ export default function UsersModulePage() {
           <Avatar fallback={row.name} src={row.avatar_url || row.foto} size="sm" />
           <div>
             <div className="font-bold text-[var(--text-heading)] text-xs">{row.name}</div>
-            <div className="text-[10px] font-mono text-[var(--accent-cyan)]">@{row.gamertag}</div>
+            <div className="text-[10px] font-[family-name:var(--font-active)] text-[var(--app-accent)]">@{row.gamertag}</div>
           </div>
         </div>
       ),
@@ -398,7 +409,7 @@ export default function UsersModulePage() {
       header: 'Email / Contacto',
       accessorKey: 'email',
       sortable: true,
-      className: 'font-mono text-[var(--text-secondary)] text-[11px]',
+      className: 'font-[family-name:var(--font-active)] text-[var(--text-secondary)] text-[11px]',
     },
     {
       header: 'Rol eSports',
@@ -406,12 +417,12 @@ export default function UsersModulePage() {
       accessorKey: 'role',
       cell: (row) => (
         <Badge
-          className={`text-[10px] uppercase font-mono ${
+          className={`text-[10px] uppercase font-[family-name:var(--font-active)] ${
             row.role === 'Administrador'
-              ? 'bg-rose-950 text-rose-300 border-rose-500/40'
+              ? 'bg-[var(--app-danger-soft)] text-[var(--app-danger)] border-[var(--app-danger)]/40'
               : row.role === 'Organizador'
-              ? 'bg-purple-950 text-purple-300 border-purple-500/40'
-              : 'bg-cyan-950 text-cyan-300 border-cyan-500/40'
+              ? 'bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] border-[var(--app-accent-2)]/40'
+              : 'bg-[var(--app-accent-soft)] text-[var(--app-accent)] border-[var(--app-accent)]/40'
           }`}
         >
           {row.role}
@@ -429,7 +440,7 @@ export default function UsersModulePage() {
       cell: (row) => (
         <Badge
           className={`text-[10px] uppercase ${
-            row.is_banned ? 'bg-rose-900 text-rose-200' : 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
+            row.is_banned ? 'bg-[var(--app-danger-soft-strong)] text-[var(--app-danger)]' : 'bg-[var(--app-positive-soft)] text-[var(--app-positive)] border-[var(--app-positive)]/40'
           }`}
         >
           {row.is_banned ? '🔴 Baneado' : `🟢 ${row.status || 'Activo'}`}
@@ -485,13 +496,13 @@ export default function UsersModulePage() {
         selectedPlayer ? (
           <PlayerProfileView
             player={selectedPlayer}
-            brandColor="#00F0FF"
+            brandColor="var(--app-accent)"
             onBack={() => setSelectedPlayer(null)}
           />
         ) : (
           <div className="space-y-6">
             {/* BARRA UNIFICADA DE FILTRO Y ANTIGÜEDAD */}
-            <div className="management-toolbar font-mono">
+            <div className="management-toolbar font-[family-name:var(--font-active)]">
               <div className="min-w-0 flex-1">
                 <FilterBar
                   searchPlaceholder="Buscar por Gamertag, nombre o posición..."
@@ -503,22 +514,22 @@ export default function UsersModulePage() {
                   renderAsSelect={true}
                   count={sortedActiveDirectoryUsers.length}
                   countLabel="ATLETAS"
-                  brandColor="#00F0FF"
+                  brandColor="var(--app-accent)"
                 />
               </div>
 
               <div className="flex w-full lg:w-auto min-w-0 items-center gap-2 shrink-0 bg-[var(--bg-main)] border border-[var(--border-card)] px-3.5 py-2 rounded-xl text-xs font-bold text-[var(--text-heading)]">
-                <Calendar className="w-4 h-4 text-[var(--accent-cyan)] shrink-0" />
+                <Calendar className="w-4 h-4 text-[var(--app-accent)] shrink-0" />
                 <span className="text-xs font-bold text-[var(--text-muted)] uppercase hidden sm:inline shrink-0">Antigüedad:</span>
                 <select
                   value={timeFilter}
                   onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
                   className="min-w-0 flex-1 bg-transparent focus:outline-none cursor-pointer"
                 >
-                  <option value="NEWEST" className="bg-[#0b101b] text-slate-100 font-semibold">⏱️ Más recientes primero</option>
-                  <option value="OLDEST" className="bg-[#0b101b] text-slate-100 font-semibold">⌛ Más antiguos primero</option>
-                  <option value="NAME_ASC" className="bg-[#0b101b] text-slate-100 font-semibold">🔤 Gamertag A-Z</option>
-                  <option value="NAME_DESC" className="bg-[#0b101b] text-slate-100 font-semibold">🔤 Gamertag Z-A</option>
+                  <option value="NEWEST" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">⏱️ Más recientes primero</option>
+                  <option value="OLDEST" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">⌛ Más antiguos primero</option>
+                  <option value="NAME_ASC" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🔤 Gamertag A-Z</option>
+                  <option value="NAME_DESC" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🔤 Gamertag Z-A</option>
                 </select>
               </div>
             </div>
@@ -527,19 +538,19 @@ export default function UsersModulePage() {
               {currentDirectoryUsers.map((user, index) => {
                 const uGameSlug = user.primaryGame || user.primary_game || user.gameSlug || user.game_slug || 'eafc26';
                 const gameCfg = GAMES_CATALOG[uGameSlug] || GAMES_CATALOG['eafc26'];
-                const userBrandColor = gameCfg?.brandColor || '#00F0FF';
 
                 return (
                   <EsportsCard
                     key={user.id}
                     entityType="user"
+                    gameSlug={uGameSlug}
                     onClick={() => setSelectedPlayer(toPlayerData(user))}
                     title={user.name}
                     subtitle={`🎮 ${gameCfg?.name || 'FC 26'} | @${user.gamertag || user.name}`}
                     description={user.biografia || user.bio || `Atleta eSports oficial registrado en el circuito profesional.`}
                     bannerUrl={user.banner_url || user.bannerUrl || '/images/default/banner-default.jpg'}
                     logoUrl={user.avatar_url || user.foto || user.avatarUrl}
-                    fallbackIcon={<Users className="w-8 h-8 text-cyan-400" />}
+                    fallbackIcon={<Users className="w-8 h-8 text-[var(--app-accent)]" />}
                     tag={user.position || user.pos || 'DFC'}
                     country={user.nacionalidad || user.country || 'Chile'}
                     socials={{
@@ -560,17 +571,16 @@ export default function UsersModulePage() {
                       },
                     ]}
                     stats={[
-                      { icon: <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />, label: 'Rating', value: user.rating || '9.0', highlight: true },
-                      { icon: <Award className="w-3.5 h-3.5 text-cyan-400" />, label: 'Posición', value: user.position || 'MCO' },
+                      { icon: <Star className="w-3.5 h-3.5 text-[var(--app-warning)] fill-[var(--app-warning)]" />, label: 'Rating', value: user.rating || '9.0', highlight: true },
+                      { icon: <Award className="w-3.5 h-3.5 text-[var(--app-accent)]" />, label: 'Posición', value: user.position || 'MCO' },
                     ]}
                     footerLeft={
-                      <span className="flex items-center gap-1">
-                        <Shield className="w-3.5 h-3.5" style={{ color: userBrandColor }} />
-                        <span style={{ color: userBrandColor }} className="font-bold">{user.teamName || user.team || 'Agencia Libre'}</span>
+                      <span className="ui-dynamic-brand-ink flex items-center gap-1">
+                        <Shield className="w-3.5 h-3.5" />
+                        <span className="font-bold">{user.teamName || user.team || 'Agencia Libre'}</span>
                       </span>
                     }
                     actionText="VER FICHA"
-                    brandColor={userBrandColor}
                     animationDelay={index * 50}
                   />
                 );
@@ -582,7 +592,7 @@ export default function UsersModulePage() {
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}
-                brandColor="#00F0FF"
+                brandColor="var(--app-accent)"
                 className="pt-6 pb-2"
               />
             )}
@@ -594,14 +604,14 @@ export default function UsersModulePage() {
       {activeTab === 'management' && canManage && (
         <div className="space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-sm font-black uppercase text-purple-300 tracking-wider flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-purple-400" />
+            <h3 className="text-sm font-black uppercase text-[var(--app-accent-2)] tracking-wider flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-[var(--app-accent-2)]" />
               Tabla General de Usuarios & Gestión de Cuentas
             </h3>
 
             <Button
               onClick={openCreateModal}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-black text-white shadow-lg hover:bg-purple-500 sm:w-auto"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--app-accent-2)] px-4 py-2 text-xs font-black text-[var(--text-heading)] shadow-lg hover:bg-[var(--app-accent-2)] sm:w-auto"
             >
               <Plus className="w-4 h-4" />
               <span>Crear Usuario</span>
@@ -634,7 +644,7 @@ export default function UsersModulePage() {
                 ],
               },
             ]}
-            brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
             defaultPageSize={10}
             actions={(row) => (
               <div className="flex items-center gap-1 justify-end">
@@ -642,7 +652,7 @@ export default function UsersModulePage() {
                   size="sm"
                   variant="ghost"
                   onClick={() => openEditModal(row)}
-                  className="text-xs text-[var(--accent-violet)] hover:bg-[var(--accent-violet-bg)] p-2 rounded-xl transition-colors"
+                  className="text-xs text-[var(--app-accent-2)] hover:bg-[var(--app-accent-2-soft)] p-2 rounded-xl transition-colors"
                   title="Editar datos del usuario"
                 >
                   <Edit className="w-3.5 h-3.5" />
@@ -653,9 +663,9 @@ export default function UsersModulePage() {
                   variant="ghost"
                   onClick={() => setBanConfirmUser(row)}
                   className={`text-xs p-2 rounded-xl transition-colors ${
-                    row.is_banned 
-                      ? 'text-[var(--accent-emerald)] hover:bg-[var(--accent-emerald-bg)]' 
-                      : 'text-[var(--accent-crimson)] hover:bg-[var(--accent-crimson-bg)]'
+                    row.is_banned
+                      ? 'text-[var(--app-positive)] hover:bg-[var(--app-positive-soft)]'
+                      : 'text-[var(--app-danger)] hover:bg-[var(--app-danger-soft)]'
                   }`}
                   title={row.is_banned ? 'Desbanear usuario' : 'Banear usuario'}
                 >
@@ -670,25 +680,25 @@ export default function UsersModulePage() {
       {/* TAB 3: MENÚ DE DESBANEO */}
       {activeTab === 'banned' && canManage && (
         <div className="space-y-6">
-          <h3 className="text-sm font-black uppercase text-rose-400 tracking-wider flex items-center gap-2">
+          <h3 className="text-sm font-black uppercase text-[var(--app-danger)] tracking-wider flex items-center gap-2">
             <ShieldAlert className="w-4 h-4" />
             Menú de Desbaneo de Usuarios Sancionados
           </h3>
 
           <DataTable
             columns={[
-              { header: 'Gamertag / Usuario', cell: (r) => <span className="font-bold text-rose-300">@{r.gamertag} ({r.name})</span> },
-              { header: 'Motivo del Baneo', accessorKey: 'ban_reason', className: 'font-mono text-slate-300' },
-              { header: 'Estado', cell: () => <Badge className="bg-rose-900 text-rose-200">🔴 Baneado</Badge> },
+              { header: 'Gamertag / Usuario', cell: (r) => <span className="font-bold text-[var(--app-danger)]">@{r.gamertag} ({r.name})</span> },
+              { header: 'Motivo del Baneo', accessorKey: 'ban_reason', className: 'font-[family-name:var(--font-active)] text-[var(--text-secondary)]' },
+              { header: 'Estado', cell: () => <Badge className="bg-[var(--app-danger-soft-strong)] text-[var(--app-danger)]">🔴 Baneado</Badge> },
             ]}
             data={bannedUsers}
             searchPlaceholder="Buscar usuarios baneados..."
-            brandColor="#F43F5E"
+          brandColor="var(--app-danger)"
             actions={(row) => (
               <Button
                 size="sm"
                 onClick={() => setBanConfirmUser(row)}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs px-3 py-1.5 rounded-xl shadow-lg"
+                className="bg-[var(--app-positive)] hover:bg-[var(--app-positive)] text-[var(--accent-contrast)] font-black text-xs px-3 py-1.5 rounded-xl shadow-lg"
               >
                 <Unlock className="w-3.5 h-3.5 mr-1" />
                 Desbanear
@@ -706,11 +716,11 @@ export default function UsersModulePage() {
         subtitle="Registrar un usuario en la plataforma"
         onSubmit={handleCreateUser}
         isSubmitting={isSubmitting}
-        brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
         size="xl"
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-900 border border-white/10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10">
             <ImageUploadCard
               label="Foto de Perfil"
               subtitle="Formato WebP"
@@ -718,7 +728,7 @@ export default function UsersModulePage() {
               fallbackType="avatar"
               uploadType="logo"
               maxDimension={400}
-              brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
               uploadButtonText="Subir Foto"
               entityName="usr-new"
               onUploadSuccess={(url) => setModalAvatarUrl(url)}
@@ -730,7 +740,7 @@ export default function UsersModulePage() {
               fallbackType="banner"
               uploadType="banner"
               maxDimension={1200}
-              brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
               uploadButtonText="Subir Banner"
               entityName="usr-new"
               onUploadSuccess={(url) => setModalBannerUrl(url)}
@@ -739,24 +749,24 @@ export default function UsersModulePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Nombre Completo:</label>
-              <input type="text" name="name" required placeholder="Nombre Apellido" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
+              <label className="text-[var(--text-secondary)] uppercase block">Nombre Completo:</label>
+              <input type="text" name="name" required placeholder="Nombre Apellido" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)]" />
             </div>
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Gamertag Oficial:</label>
-              <input type="text" name="gamertag" required placeholder="GamertagPro" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-cyan-400 font-mono" />
+              <label className="text-[var(--text-secondary)] uppercase block">Gamertag Oficial:</label>
+              <input type="text" name="gamertag" required placeholder="GamertagPro" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--app-accent)] font-[family-name:var(--font-active)]" />
             </div>
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Email:</label>
-              <input type="email" name="email" required placeholder="usuario@tournamentspro.com" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+              <label className="text-[var(--text-secondary)] uppercase block">Email:</label>
+              <input type="email" name="email" required placeholder="usuario@tournamentspro.com" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
             </div>
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Contraseña:</label>
-              <input type="password" name="password" required minLength={10} autoComplete="new-password" placeholder="Mínimo 10 caracteres" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+              <label className="text-[var(--text-secondary)] uppercase block">Contraseña:</label>
+              <input type="password" name="password" required minLength={10} autoComplete="new-password" placeholder="Mínimo 10 caracteres" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
             </div>
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Rol eSports:</label>
-              <select name="role" defaultValue="Jugador" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
+              <label className="text-[var(--text-secondary)] uppercase block">Rol eSports:</label>
+              <select name="role" defaultValue="Jugador" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)]">
                 <option value="Jugador">Jugador</option>
                 <option value="Capitán">Capitán</option>
                 {isAdmin && <option value="Organizador">Organizador</option>}
@@ -764,8 +774,8 @@ export default function UsersModulePage() {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-slate-300 uppercase block">Estado:</label>
-              <select name="status" defaultValue="Activo" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
+              <label className="text-[var(--text-secondary)] uppercase block">Estado:</label>
+              <select name="status" defaultValue="Activo" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)]">
                 <option value="Activo">🟢 Activo</option>
                 <option value="Inactivo">🟡 Inactivo</option>
                 <option value="Suspendido">🔴 Suspendido</option>
@@ -774,8 +784,8 @@ export default function UsersModulePage() {
           </div>
 
           <div className="space-y-1 text-xs font-bold">
-            <label className="text-slate-300 uppercase block">Biografía / Perfil Atleta:</label>
-            <textarea name="biografia" rows={2} placeholder="Descripción e historia del atleta..." className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-normal" />
+            <label className="text-[var(--text-secondary)] uppercase block">Biografía / Perfil Atleta:</label>
+            <textarea name="biografia" rows={2} placeholder="Descripción e historia del atleta..." className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-normal" />
           </div>
 
           <SocialMediaGroup prefixName="social" />
@@ -791,11 +801,11 @@ export default function UsersModulePage() {
           subtitle={`Gamertag: @${editingUser.gamertag}`}
           onSubmit={handleEditUser}
           isSubmitting={isSubmitting}
-          brandColor="#00F0FF"
+          brandColor="var(--app-accent)"
           size="xl"
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-900 border border-white/10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10">
               <ImageUploadCard
                 label="Foto de Perfil"
                 subtitle="Formato WebP"
@@ -803,7 +813,7 @@ export default function UsersModulePage() {
                 fallbackType="avatar"
                 uploadType="logo"
                 maxDimension={400}
-                brandColor="#00F0FF"
+                brandColor="var(--app-accent)"
                 uploadButtonText="Cambiar Foto"
                 entityName={editingUser.gamertag}
                 entityId={editingUser.id}
@@ -816,7 +826,7 @@ export default function UsersModulePage() {
                 fallbackType="banner"
                 uploadType="banner"
                 maxDimension={1200}
-                brandColor="#00F0FF"
+                brandColor="var(--app-accent)"
                 uploadButtonText="Cambiar Banner"
                 entityName={editingUser.gamertag}
                 entityId={editingUser.id}
@@ -826,20 +836,20 @@ export default function UsersModulePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Nombre Completo:</label>
-                <input type="text" name="name" defaultValue={editingUser.name} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
+                <label className="text-[var(--text-secondary)] uppercase block">Nombre Completo:</label>
+                <input type="text" name="name" defaultValue={editingUser.name} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)]" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Gamertag:</label>
-                <input type="text" name="gamertag" defaultValue={editingUser.gamertag} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-cyan-400 font-mono" />
+                <label className="text-[var(--text-secondary)] uppercase block">Gamertag:</label>
+                <input type="text" name="gamertag" defaultValue={editingUser.gamertag} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--app-accent)] font-[family-name:var(--font-active)]" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Email:</label>
-                <input type="email" name="email" defaultValue={editingUser.email} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+                <label className="text-[var(--text-secondary)] uppercase block">Email:</label>
+                <input type="email" name="email" defaultValue={editingUser.email} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Rol eSports:</label>
-                <select name="role" defaultValue={editingUser.role} disabled={!isAdmin && !isOrganizer} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white">
+                <label className="text-[var(--text-secondary)] uppercase block">Rol eSports:</label>
+                <select name="role" defaultValue={editingUser.role} disabled={!isAdmin && !isOrganizer} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)]">
                   <option value="Jugador">Jugador</option>
                   <option value="Capitán">Capitán</option>
                   {isAdmin && <option value="Organizador">Organizador</option>}
@@ -847,12 +857,12 @@ export default function UsersModulePage() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Nueva Contraseña (Opcional):</label>
-                <input type="password" name="newPassword" placeholder="Dejar en blanco para conservar" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+                <label className="text-[var(--text-secondary)] uppercase block">Nueva Contraseña (Opcional):</label>
+                <input type="password" name="newPassword" placeholder="Dejar en blanco para conservar" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block font-bold">Estado del Usuario en Sistema:</label>
-                <select name="status" defaultValue={editingUser.status || 'Activo'} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono">
+                <label className="text-[var(--text-secondary)] uppercase block font-bold">Estado del Usuario en Sistema:</label>
+                <select name="status" defaultValue={editingUser.status || 'Activo'} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]">
                   <option value="Activo">🟢 Activo (Acceso Permitido)</option>
                   <option value="Inactivo">🟡 Inactivo</option>
                   <option value="Suspendido">🟠 Suspendido (Acceso Suspendido)</option>
@@ -862,11 +872,11 @@ export default function UsersModulePage() {
             </div>
 
             {/* 🚫 SANCIÓN Y BANEO DE CHAT ESPORTS */}
-            <div className="p-3.5 rounded-2xl bg-slate-900 border border-white/10 space-y-3 font-mono">
+            <div className="p-3.5 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 space-y-3 font-[family-name:var(--font-active)]">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-rose-400">
-                  <MessageSquare className="w-4 h-4 text-rose-400" />
-                  <span className="text-xs font-bold uppercase text-white">Sanción de Mensajería / Silenciar Chat</span>
+                <div className="flex items-center gap-2 text-[var(--app-danger)]">
+                  <MessageSquare className="w-4 h-4 text-[var(--app-danger)]" />
+                  <span className="text-xs font-bold uppercase text-[var(--text-heading)]">Sanción de Mensajería / Silenciar Chat</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -876,27 +886,27 @@ export default function UsersModulePage() {
                     onChange={(e) => setModalIsBanned(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-600" />
+                  <div className="w-9 h-5 bg-[var(--app-surface-2)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-[var(--text-heading)] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--text-heading)] after:border-[var(--border-card)] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--app-danger)]" />
                 </label>
               </div>
 
               {modalIsBanned && (
                 <div className="space-y-1 text-xs">
-                  <label className="text-rose-300 uppercase block font-bold">Motivo de Sanción / Silencio de Chat:</label>
+                  <label className="text-[var(--app-danger)] uppercase block font-bold">Motivo de Sanción / Silencio de Chat:</label>
                   <input
                     type="text"
                     name="ban_reason"
                     defaultValue={editingUser.ban_reason || 'Infracción disciplinaria del reglamento eSports'}
                     placeholder="Razón del silencio en chat..."
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-rose-500/40 text-rose-200 font-mono"
+                    className="w-full p-2.5 rounded-xl bg-[var(--app-canvas)] border border-[var(--app-danger)]/40 text-[var(--app-danger)] font-[family-name:var(--font-active)]"
                   />
                 </div>
               )}
             </div>
 
             <div className="space-y-1 text-xs font-bold">
-              <label className="text-slate-300 uppercase block">Biografía:</label>
-              <textarea name="biografia" rows={2} defaultValue={editingUser.biografia || ''} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-normal" />
+              <label className="text-[var(--text-secondary)] uppercase block">Biografía:</label>
+              <textarea name="biografia" rows={2} defaultValue={editingUser.biografia || ''} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-normal" />
             </div>
 
             <SocialMediaGroup

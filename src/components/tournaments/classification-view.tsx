@@ -279,13 +279,13 @@ export function ClassificationView({
   const emptyState = getEmptyStateMessage();
 
   return (
-    <div className="classification-view w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-16">
+    <div className="classification-view w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-16" style={{ '--ui-dynamic-brand': brandColor } as React.CSSProperties}>
       
       {/* ── 1. ENCABEZADO ──────────────────────────────────────────────────────── */}
       {!hideHeader && (
         <PageHeader
           badgeText={`TEMPORADA OFICIAL / ${game.name.toUpperCase()}`}
-          badgeIcon={<BarChart2 className="w-3.5 h-3.5" style={{ color: brandColor, fill: brandColor }} />}
+          badgeIcon={<BarChart2 className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
           title="Tabla de Posiciones y Clasificación General"
           highlightTitle="Clasificación"
           description="Sigue de cerca el rendimiento de tu equipo, puntos, diferencia de gol y estadísticas en todas las ligas de TournamentsPro."
@@ -361,10 +361,10 @@ export function ClassificationView({
 
               {/* ORGANIZACIONES */}
               {!hideOrgFilter && (
-                <div className="classification-filter-section font-mono">
+                <div className="classification-filter-section font-[family-name:var(--font-active)]">
                   <div className="classification-filter-label">
                     <span className="flex min-w-0 items-center gap-2">
-                      <Building2 className="w-3.5 h-3.5 shrink-0" style={{ color: brandColor }} />
+                      <Building2 className="ui-dynamic-brand-ink w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">Organizaciones</span>
                     </span>
                     <span className="classification-filter-count">{organizations.length}</span>
@@ -443,10 +443,10 @@ export function ClassificationView({
 
               {/* COMPETENCIAS */}
               {!hideCompFilter && (
-                <div className="classification-filter-section font-mono">
+                <div className="classification-filter-section font-[family-name:var(--font-active)]">
                   <div className="classification-filter-label">
                     <span className="flex min-w-0 items-center gap-2">
-                    <Trophy className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                    <Trophy className="w-3.5 h-3.5 shrink-0 text-[var(--app-warning)]" />
                     <span className="truncate">
                       {targetTeamName 
                         ? 'Competencias en disputa'
@@ -478,7 +478,7 @@ export function ClassificationView({
                             : undefined
                         }
                       >
-                        <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <Trophy className="w-3.5 h-3.5 text-[var(--app-warning)] shrink-0" />
                         <span>TODAS</span>
                       </button>
                     {tournaments.map((comp) => {
@@ -518,7 +518,7 @@ export function ClassificationView({
                               }}
                             />
                           ) : (
-                            <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <Trophy className="w-3.5 h-3.5 text-[var(--app-warning)] shrink-0" />
                           )}
                           <span>{comp.name}</span>
                         </button>
@@ -539,7 +539,7 @@ export function ClassificationView({
             /* EMPTY STATE */
             <div className="p-12 text-center rounded-3xl glass-panel border border-[var(--border-card)] space-y-4">
               <BarChart2 className="w-12 h-12 mx-auto text-[var(--text-muted)] opacity-60" />
-              <h3 className="text-xl font-bold font-display text-[var(--text-heading)]">
+              <h3 className="text-xl font-bold font-[family-name:var(--font-active)] text-[var(--text-heading)]">
                 {emptyState.title}
               </h3>
               <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
@@ -567,8 +567,8 @@ export function ClassificationView({
                 {/* Header de la Organización */}
                 <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
                   <div className="flex items-center gap-3">
-                    <Building2 className="w-6 h-6" style={{ color: brandColor }} />
-                    <h2 className="text-xl sm:text-2xl font-extrabold font-display text-[var(--text-heading)] tracking-wider uppercase">
+                    <Building2 className="ui-dynamic-brand-ink w-6 h-6" />
+                    <h2 className="text-xl sm:text-2xl font-extrabold font-[family-name:var(--font-active)] text-[var(--text-heading)] tracking-wider uppercase">
                       {circuitName}
                     </h2>
                   </div>

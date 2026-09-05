@@ -20,6 +20,7 @@ export function GameIdentityCard({ game, compact = false, showDownload = true, c
   const identityData = JSON.stringify({
     game: game.name,
     slug: game.slug,
+    officialPalette: game.palette || [game.brandColor, game.accentColor, game.secondaryAccent, game.visualTheme.glow, game.visualTheme.highlight],
     palette: {
       primary: game.brandColor,
       accent: game.accentColor,
@@ -73,8 +74,8 @@ export function GameIdentityCard({ game, compact = false, showDownload = true, c
           </div>
 
           <div className="game-identity-card-swatches" aria-label={`Paleta de ${game.name}`}>
-            {[game.brandColor, game.accentColor, game.visualTheme.glow, game.visualTheme.highlight].map((color) => (
-              <span key={color} style={{ backgroundColor: color }} title={color} />
+            {(game.palette || [game.brandColor, game.accentColor, game.secondaryAccent, game.visualTheme.glow, game.visualTheme.highlight]).map((color) => (
+              <span key={color} style={{ '--identity-swatch': color } as CSSProperties} title={color} />
             ))}
           </div>
 

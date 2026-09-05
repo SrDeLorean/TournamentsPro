@@ -5,11 +5,11 @@ import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Settings, Shield, Save, CheckCircle2, ImageIcon } from 'lucide-react';
+import { Settings, Shield, Save, CheckCircle2 } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { TeamData } from '@/lib/data-store';
 import { useAuth } from '@/components/providers/auth-provider';
-import { ImageUploadCard } from '@/components/ui/image-upload-card';
+import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 
@@ -22,7 +22,7 @@ interface ClubSettingsViewProps {
 export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams }: ClubSettingsViewProps) {
   const { currentUser, updateCurrentUser } = useAuth();
   const game = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG['eafc26'];
-  const brandColor = game?.brandColor || '#00F0FF';
+  const brandColor = game?.brandColor || 'var(--app-accent)';
 
   const [currentTeamId, setCurrentTeamId] = useState<string>(
     (team?.id || currentUser?.teamId || `tm-${activeGameSlug.slice(0, 8)}-${(currentUser?.id || 'pro').replace('usr-', '')}`).slice(0, 36)
@@ -165,18 +165,14 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
 
   return (
     <Card
-      className="p-6 space-y-6 bg-slate-950 transition-all duration-500 shadow-2xl max-w-4xl border"
-      style={{
-        borderColor: `color-mix(in srgb, ${brandColor} 50%, transparent)`,
-        boxShadow: `0 0 35px ${brandColor}18`,
-      }}
+      className="account-settings-card ui-dynamic-brand-border p-6 space-y-6 transition-all duration-500 max-w-4xl"
+      style={{ '--ui-dynamic-brand': brandColor } as React.CSSProperties}
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-card)] pb-4">
         <div className="flex items-center gap-3">
           <div
-            className="w-12 h-12 rounded-xl bg-slate-900 border-2 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-lg"
-            style={{ borderColor: brandColor }}
+            className="ui-dynamic-brand-border w-12 h-12 rounded-xl bg-[var(--bg-elevated)] border-2 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-lg"
           >
             {logoUrl ? (
               <Image
@@ -188,27 +184,22 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
                 className="w-full h-full object-cover"
               />
             ) : (
-              <Shield className="w-6 h-6 text-slate-500" />
+              <Shield className="w-6 h-6 text-[var(--text-muted)]" />
             )}
           </div>
           <div>
-            <h3 className="text-base font-black uppercase text-white tracking-wider flex items-center gap-2">
-              <Settings className="w-4 h-4" style={{ color: brandColor }} />
+            <h3 className="text-base font-black uppercase text-[var(--text-heading)] tracking-wider flex items-center gap-2">
+              <Settings className="ui-dynamic-brand-ink w-4 h-4" />
               Ajustes & Atributos del Club ({game.name})
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
               Configura el logo oficial, banner panorámico e identidad de la escuadra en MySQL.
             </p>
           </div>
         </div>
 
         <Badge
-          className="uppercase font-mono text-[10px] self-start sm:self-auto"
-          style={{
-            backgroundColor: `color-mix(in srgb, ${brandColor} 20%, transparent)`,
-            color: brandColor,
-            borderColor: `color-mix(in srgb, ${brandColor} 40%, transparent)`,
-          }}
+          className="ui-dynamic-brand-chip uppercase font-bold text-[10px] self-start sm:self-auto"
         >
           {team?.name || currentUser?.teamName || 'Escuadra Registrada'}
         </Badge>
@@ -216,99 +207,60 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
 
       <form onSubmit={handleSaveTeam} className="space-y-6">
         {/* SECCIÓN REUTILIZABLE DE SUBIDA DE LOGO & BANNER */}
-        <div
-          className="p-5 rounded-2xl bg-slate-900/90 border space-y-4 transition-all"
-          style={{ borderColor: `color-mix(in srgb, ${brandColor} 35%, transparent)` }}
-        >
-          <h4
-            className="text-xs font-black uppercase tracking-wider flex items-center gap-2"
-            style={{ color: brandColor }}
-          >
-            <ImageIcon className="w-4 h-4" style={{ color: brandColor }} />
-            Imágenes Institucionales del Club (Logo Oficial & Banner de Portada):
-          </h4>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Logo Oficial */}
-            <ImageUploadCard
-              label="Logo Oficial / Escudo"
-              subtitle="Formato WebP optimizado"
-              currentUrl={logoUrl}
-              fallbackType="logo"
-              uploadType="logo"
-              maxDimension={512}
-              brandColor={brandColor}
-              uploadButtonText="Subir / Cambiar Logo"
-              entityName={team?.name || currentUser?.teamName || 'club'}
-              entityId={currentTeamId}
-              onUploadSuccess={(url) => persistImageUpdate('logo', url)}
-            />
-
-            {/* Banner Portada */}
-            <ImageUploadCard
-              label="Banner de Portada"
-              subtitle="Formato HD WebP panorámico"
-              currentUrl={bannerUrl}
-              fallbackType="banner"
-              uploadType="banner"
-              maxDimension={1200}
-              brandColor={brandColor}
-              uploadButtonText="Subir / Cambiar Banner"
-              entityName={team?.name || currentUser?.teamName || 'club'}
-              entityId={currentTeamId}
-              onUploadSuccess={(url) => persistImageUpdate('banner', url)}
-            />
-          </div>
-        </div>
+        <BrandedImageUploadSection
+          title="Imágenes Institucionales del Club (Logo Oficial & Banner de Portada):"
+          brandColor={brandColor}
+          items={[
+            { label: 'Logo Oficial / Escudo', subtitle: 'Formato WebP optimizado', currentUrl: logoUrl, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Subir / Cambiar Logo', entityName: team?.name || currentUser?.teamName || 'club', entityId: currentTeamId, onUploadSuccess: (url) => persistImageUpdate('logo', url) },
+            { label: 'Banner de Portada', subtitle: 'Formato HD WebP panorámico', currentUrl: bannerUrl, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Subir / Cambiar Banner', entityName: team?.name || currentUser?.teamName || 'club', entityId: currentTeamId, onUploadSuccess: (url) => persistImageUpdate('banner', url) },
+          ]}
+        />
 
         {/* DATOS GENERALES DEL CLUB */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-bold">
           <div className="sm:col-span-2 space-y-1.5">
-            <label className="text-slate-300 uppercase block">Nombre Oficial de la Escuadra:</label>
+            <label className="text-[var(--text-secondary)] uppercase block">Nombre Oficial de la Escuadra:</label>
             <input
               type="text"
               name="name"
               required
               defaultValue={team?.name || currentUser?.teamName || 'Escuadra Pro'}
-              className="w-full p-2.5 rounded-xl bg-slate-900 border text-white font-bold transition-all focus:outline-none"
-              style={{ borderColor: `color-mix(in srgb, ${brandColor} 40%, transparent)` }}
+              className="ui-dynamic-brand-border w-full p-2.5 rounded-xl bg-[var(--bg-elevated)] border text-[var(--text-heading)] font-bold transition-all focus:outline-none"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-slate-300 uppercase block">Tag / Abreviatura (Máx 4):</label>
+            <label className="text-[var(--text-secondary)] uppercase block">Tag / Abreviatura (Máx 4):</label>
             <input
               type="text"
               name="tag"
               required
               maxLength={4}
               defaultValue={team?.tag || 'TP'}
-              className="w-full p-2.5 rounded-xl bg-slate-900 border text-white font-mono font-black uppercase text-center focus:outline-none"
-              style={{ borderColor: `color-mix(in srgb, ${brandColor} 40%, transparent)`, color: brandColor }}
+              className="ui-dynamic-brand-border ui-dynamic-brand-ink w-full p-2.5 rounded-xl bg-[var(--bg-elevated)] border font-black uppercase text-center focus:outline-none"
             />
           </div>
         </div>
 
         {/* DESCRIPCIÓN E HISTORIA */}
-        <div className="space-y-1.5 text-xs font-bold">
-          <label className="text-slate-300 uppercase block">Descripción e Historia del Club:</label>
+        <div className="space-y-1.5 text-xs font-bold ">
+          <label className="text-[var(--text-secondary)] uppercase block ">Descripción e Historia del Club:</label>
           <textarea
             name="description"
             rows={3}
             defaultValue={team?.description || `Escuadra oficial del circuito eSports en la disciplina ${game.name}.`}
-            className="w-full p-2.5 rounded-xl bg-slate-900 border text-white font-medium focus:outline-none"
-            style={{ borderColor: `color-mix(in srgb, ${brandColor} 40%, transparent)` }}
+            className="ui-dynamic-brand-border w-full p-2.5 rounded-xl bg-[var(--bg-elevated)] border text-[var(--text-heading)] font-medium focus:outline-none"
           />
         </div>
 
         {/* PARÁMETROS TÉCNICOS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-bold">
-          <div className="space-y-1.5">
-            <label className="text-slate-300 uppercase block">Plataforma Oficial:</label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-bold ">
+          <div className="space-y-1.5 ">
+            <label className="text-[var(--text-secondary)] uppercase block ">Plataforma Oficial:</label>
             <select
               name="platform"
               defaultValue={team?.platform || 'CROSSPLAY'}
-              className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-bold focus:outline-none"
+              className="w-full p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-card)] text-[var(--text-heading)] font-bold focus:outline-none "
             >
               <option value="CROSSPLAY">CROSSPLAY (Todas)</option>
               <option value="PS5">PlayStation 5</option>
@@ -317,23 +269,23 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
             </select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-slate-300 uppercase block">ID Externo / Club EA ID:</label>
+          <div className="space-y-1.5 ">
+            <label className="text-[var(--text-secondary)] uppercase block ">ID Externo / Club EA ID:</label>
             <input
               type="text"
               name="clubIdEa"
               placeholder="ej. EA-18932402"
               defaultValue={team?.clubIdEa || ''}
-              className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-emerald-400 font-mono font-bold focus:outline-none"
+              className="w-full p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-card)] text-[var(--app-positive)]  font-bold focus:outline-none"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-slate-300 uppercase block">Estado del Club:</label>
+            <label className="text-[var(--text-secondary)] uppercase block">Estado del Club:</label>
             <select
               name="status"
               defaultValue={team?.status || 'Escuadra Activa'}
-              className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-bold focus:outline-none"
+              className="w-full p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-card)] text-[var(--text-heading)] font-bold focus:outline-none"
             >
               <option value="Escuadra Activa">🟢 Escuadra Activa</option>
               <option value="Búsqueda Abierta">⚡ En Reclutamiento</option>
@@ -357,18 +309,14 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
           <Button
             type="submit"
             disabled={isSaving}
-            className="font-black text-xs px-6 py-3 rounded-xl shadow-xl flex items-center gap-2 transition-all"
-            style={{
-              backgroundColor: brandColor,
-              color: '#020617',
-            }}
+            className="ui-dynamic-brand-button font-black text-xs px-6 py-3 rounded-xl flex items-center gap-2 transition-all"
           >
             <Save className="w-4 h-4" />
             <span>{isSaving ? 'Guardando...' : 'Guardar Todos los Cambios del Club'}</span>
           </Button>
 
           {saveSuccess && (
-            <div className="flex items-center gap-1.5 text-xs font-black text-emerald-400 animate-in fade-in">
+            <div className="flex items-center gap-1.5 text-xs font-black text-[var(--app-positive)] animate-in fade-in">
               <CheckCircle2 className="w-4 h-4" />
               <span>¡Cambios del club guardados en MySQL!</span>
             </div>

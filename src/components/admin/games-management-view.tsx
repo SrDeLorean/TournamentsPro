@@ -15,6 +15,7 @@ import {
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { ModalForm } from '@/components/ui/modal-form';
+import { GAMES_CATALOG } from '@/lib/games-data';
 
 interface StatSchemaField {
   key: string;
@@ -42,7 +43,7 @@ export function GamesManagementView() {
   const [newSlug, setNewSlug] = useState('');
   const [newName, setNewName] = useState('');
   const [newCategory, setNewCategory] = useState('');
-  const [newBrandColor, setNewBrandColor] = useState('#00F0FF');
+  const [newBrandColor, setNewBrandColor] = useState(GAMES_CATALOG.eafc26.brandColor);
   const [statsSchema, setStatsSchema] = useState<StatSchemaField[]>([{ key: 'kills', label: 'Kills', type: 'number' }]);
   const [formError, setFormError] = useState('');
 
@@ -172,30 +173,30 @@ export function GamesManagementView() {
           <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Slug (ej: rocketleague)</label>
+              <label className="text-xs text-[var(--text-muted)] mb-1 block">Slug (ej: rocketleague)</label>
               <Input value={newSlug} onChange={e => setNewSlug(e.target.value)} className="input-theme" />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Nombre (ej: Rocket League)</label>
+              <label className="text-xs text-[var(--text-muted)] mb-1 block">Nombre (ej: Rocket League)</label>
               <Input value={newName} onChange={e => setNewName(e.target.value)} className="input-theme" />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Categoría (ej: Deportes)</label>
+              <label className="text-xs text-[var(--text-muted)] mb-1 block">Categoría (ej: Deportes)</label>
               <Input value={newCategory} onChange={e => setNewCategory(e.target.value)} className="input-theme" />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Color de Marca (HEX)</label>
+              <label className="text-xs text-[var(--text-muted)] mb-1 block">Color de Marca (HEX)</label>
               <Input value={newBrandColor} onChange={e => setNewBrandColor(e.target.value)} className="input-theme" />
             </div>
           </div>
 
-          <div className="pt-4 border-t border-gray-800">
-            <h4 className="text-sm font-bold text-gray-300 mb-2">Esquema de Estadísticas (Reportes de Partido)</h4>
+          <div className="pt-4 border-t border-[var(--border-card)]">
+            <h4 className="text-sm font-bold text-[var(--text-secondary)] mb-2">Esquema de Estadísticas (Reportes de Partido)</h4>
             {statsSchema.map((stat, i) => (
               <div key={i} className="flex gap-2 mb-2 items-center">
                 <Input placeholder="Key (ej: goals)" value={stat.key} onChange={e => handleUpdateStat(i, 'key', e.target.value)} className="input-theme flex-1" />
                 <Input placeholder="Label (ej: Goles)" value={stat.label} onChange={e => handleUpdateStat(i, 'label', e.target.value)} className="input-theme flex-1" />
-                <Button variant="ghost" size="icon" onClick={() => handleRemoveStat(i)} className="text-red-400 hover:text-red-300"><Trash2 className="w-4 h-4"/></Button>
+                <Button variant="ghost" size="icon" onClick={() => handleRemoveStat(i)} className="text-[var(--app-danger)] hover:text-[var(--app-danger)]"><Trash2 className="w-4 h-4"/></Button>
               </div>
             ))}
             <Button variant="outline" size="sm" onClick={handleAddStat} className="mt-2 text-xs">
@@ -208,7 +209,7 @@ export function GamesManagementView() {
 
       <ManagementSection title="Base de datos de juegos" description="Selecciona una disciplina para editar su identidad y estadísticas." icon={Gamepad2} tone="violet">
         {isLoading ? (
-          <div className="py-10 text-center"><Loader2 className="mx-auto size-8 animate-spin text-[var(--accent-cyan)]"/></div>
+          <div className="py-10 text-center"><Loader2 className="mx-auto size-8 animate-spin text-[var(--app-accent)]"/></div>
         ) : (
           <ManagementGrid>
           {games.map(g => (
@@ -217,7 +218,7 @@ export function GamesManagementView() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-7 px-2 border-cyan-500/30 text-cyan-300 hover:bg-cyan-950"
+                  className="h-7 px-2 border-[var(--app-accent)]/30 text-[var(--app-accent)] hover:bg-[var(--app-accent-soft)]"
                   onClick={() => {
                     setNewSlug(g.slug);
                     setNewName(g.name);
@@ -233,7 +234,7 @@ export function GamesManagementView() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-7 px-2 border-red-500/30 text-red-300 hover:bg-red-950"
+                  className="h-7 px-2 border-[var(--app-danger)]/30 text-[var(--app-danger)] hover:bg-[var(--app-danger-soft)]"
                   onClick={() => setDeletingGame(g)}
                   aria-label={`Eliminar ${g.name}`}
                 >
@@ -242,20 +243,23 @@ export function GamesManagementView() {
               </div>
 
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-3 h-10 rounded-full" style={{ backgroundColor: g.brand_color }}></div>
+                  <div
+                    className="ui-dynamic-brand-swatch"
+                    style={{ '--ui-dynamic-brand': g.brand_color } as React.CSSProperties}
+                  />
                 <div>
                   <h3 className="font-bold text-lg pr-16">{g.name}</h3>
-                  <p className="text-xs text-gray-400 uppercase">{g.category}</p>
+                  <p className="text-xs text-[var(--text-muted)] uppercase">{g.category}</p>
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-mono text-gray-500">SLUG: {g.slug}</p>
-                <div className="text-xs font-mono text-gray-500 mt-2 border-t border-gray-800 pt-2">
+                <p className="text-xs font-[family-name:var(--font-active)] text-[var(--text-muted)]">SLUG: {g.slug}</p>
+                <div className="text-xs font-[family-name:var(--font-active)] text-[var(--text-muted)] mt-2 border-t border-[var(--border-card)] pt-2">
                   ESTADÍSTICAS:
                   <div className="flex flex-wrap gap-1 mt-1">
                     {Array.isArray(g.stats_schema) ? (g.stats_schema as StatSchemaField[]).map((s) => (
-                      <span key={s.key} className="px-2 py-0.5 bg-gray-800 rounded-md text-[10px] text-cyan-200">{s.label} ({s.key})</span>
-                    )) : <span className="text-gray-600">No definidas</span>}
+                      <span key={s.key} className="px-2 py-0.5 bg-[var(--app-surface-2)] rounded-md text-[10px] text-[var(--app-accent)]">{s.label} ({s.key})</span>
+                    )) : <span className="text-[var(--text-muted)]">No definidas</span>}
                   </div>
                 </div>
               </div>

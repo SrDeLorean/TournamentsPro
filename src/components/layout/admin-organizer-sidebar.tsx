@@ -5,21 +5,21 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Badge } from '@/components/ui/badge';
-import {
-  Shield, Users, LayoutDashboard, Calendar, Award, ArrowRightLeft, CheckCircle2, Gamepad2, Swords, Globe, Home, Star, PieChart, Database, Target, Building2, MessageSquare
-} from 'lucide-react';
+import { Check, ChevronDown, Gamepad2, Globe } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
+import { GameLogo } from '@/components/ui/game-logo';
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
+import {
+  adminNavItems,
+  getDisciplineNavItems,
+  isNavigationItemActive,
+  organizerNavItems,
+} from '@/components/layout/management-navigation-model';
 
 interface AdminOrganizerSidebarProps {
   isMobileOpen: boolean;
   isDesktopCollapsed: boolean;
   onMobileOpenChange: (open: boolean) => void;
-}
-
-function isNavigationItemActive(pathname: string, href: string) {
-  if (href === '/dashboard') return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobileOpenChange }: AdminOrganizerSidebarProps) {
@@ -51,6 +51,33 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
     };
   }, [isMobileOpen, onMobileOpenChange]);
 
+  const [isGameSelectOpen, setIsGameSelectOpen] = React.useState(false);
+  const gameSelectRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!isGameSelectOpen) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (gameSelectRef.current && !gameSelectRef.current.contains(e.target as Node)) {
+        setIsGameSelectOpen(false);
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsGameSelectOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isGameSelectOpen]);
+
   // Do not render sidebar for regular players/captains.
   if (!isAdmin && !isOrganizer) {
     return null;
@@ -58,137 +85,9 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
 
   const currentGameObj = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG['eafc26'];
 
-  const adminNavItems = [
-    {
-      title: 'Dashboard Global',
-      href: '/dashboard',
-      icon: <LayoutDashboard className="w-4 h-4 text-cyan-400" />,
-      badge: 'Stats',
-    },
-    {
-      title: 'Gestión Organizaciones',
-      href: '/dashboard/organizaciones',
-      icon: <Building2 className="w-4 h-4 text-emerald-400" />,
-      badge: 'Orgs.',
-    },
-    {
-      title: 'Gestión Disciplinas',
-      href: '/dashboard/disciplinas',
-      icon: <Gamepad2 className="w-4 h-4 text-pink-400" />,
-      badge: 'Juegos',
-    },
-    {
-      title: 'Gestión de Competencias',
-      href: '/dashboard/competencias',
-      icon: <Swords className="w-4 h-4 text-purple-400" />,
-      badge: 'Ligas',
-    },
-    {
-      title: 'Usuarios / Atletas',
-      href: '/dashboard/usuarios',
-      icon: <Users className="w-4 h-4 text-emerald-400" />,
-      badge: 'Directorio',
-    },
-    {
-      title: 'Clubes & Plantillas',
-      href: '/dashboard/equipos',
-      icon: <Shield className="w-4 h-4 text-amber-400" />,
-      badge: 'Todas las Orgs',
-    },
-    {
-      title: 'Reportar Encuentros',
-      href: '/dashboard/matchday',
-      icon: <CheckCircle2 className="w-4 h-4 text-rose-400" />,
-      badge: 'Matchday',
-    },
-    {
-      title: 'Moderación & Chat Global',
-      href: '/dashboard/moderacion',
-      icon: <MessageSquare className="w-4 h-4 text-orange-400" />,
-      badge: 'Bans/Chat',
-    },
-  ];
-
-  const organizerNavItems = [
-    { title: 'Centro operativo', href: '/dashboard', icon: <LayoutDashboard className="w-4 h-4 text-[var(--accent-cyan)]" />, badge: 'Inicio' },
-    { title: 'Mis competencias', href: '/dashboard/competencias', icon: <Swords className="w-4 h-4 text-[var(--accent-violet)]" />, badge: 'Ligas' },
-    { title: 'Usuarios / Atletas', href: '/dashboard/usuarios', icon: <Users className="w-4 h-4 text-[var(--accent-cyan)]" />, badge: 'Directorio' },
-    { title: 'Clubes & Plantillas', href: '/dashboard/equipos', icon: <Shield className="w-4 h-4 text-[var(--accent-gold)]" />, badge: 'Mi Organización' },
-    { title: 'Operación matchday', href: '/dashboard/matchday', icon: <CheckCircle2 className="w-4 h-4 text-[var(--accent-crimson)]" />, badge: 'Partidos' },
-    { title: 'Moderación & Chat', href: '/dashboard/moderacion', icon: <MessageSquare className="w-4 h-4 text-orange-400" />, badge: 'Bans/Chat' },
-  ];
-
   const globalNavItems = isAdmin ? adminNavItems : organizerNavItems;
 
-  // 2. GESTIÓN POR DISCIPLINA (Rutas públicas especializadas del submenú de la disciplina activa)
-  const disciplineNavItems = [
-    {
-      title: `Portada (${currentGameObj.name})`,
-      href: `/${activeGameSlug}`,
-      icon: <Home className="w-4 h-4 text-slate-300" />,
-      badge: 'Home',
-    },
-    {
-      title: 'Organizaciones',
-      href: `/${activeGameSlug}/organizaciones`,
-      icon: <Target className="w-4 h-4 text-yellow-400" />,
-      badge: 'Orgs.',
-    },
-    {
-      title: 'Torneos y competencias',
-      href: `/${activeGameSlug}/competencias`,
-      icon: <Swords className="w-4 h-4 text-purple-400" />,
-      badge: 'Torneos',
-    },
-    {
-      title: `Clasificación`,
-      href: `/${activeGameSlug}/clasificacion`,
-      icon: <Award className="w-4 h-4 text-purple-400" />,
-      badge: 'Tabla',
-    },
-    {
-      title: `Partidos / Fixture`,
-      href: `/${activeGameSlug}/partidos`,
-      icon: <Calendar className="w-4 h-4 text-emerald-400" />,
-      badge: 'Partidos',
-    },
-    {
-      title: `Traspasos & Fichajes`,
-      href: `/${activeGameSlug}/traspasos`,
-      icon: <ArrowRightLeft className="w-4 h-4 text-rose-400" />,
-      badge: 'Fichajes',
-    },
-    {
-      title: `Equipos & Clubes`,
-      href: `/${activeGameSlug}/equipos`,
-      icon: <Shield className="w-4 h-4 text-amber-400" />,
-      badge: 'Clubes',
-    },
-    {
-      title: `Jugadores`,
-      href: `/${activeGameSlug}/jugadores`,
-      icon: <Users className="w-4 h-4 text-cyan-400" />,
-      badge: 'Atletas',
-    },
-    {
-      title: `Tops & Rankings`,
-      href: `/${activeGameSlug}/tops`,
-      icon: <Star className="w-4 h-4 text-amber-300" />,
-      badge: 'Tops',
-    },
-    {
-      title: `Infografía & Stats`,
-      href: `/${activeGameSlug}/infografia`,
-      icon: <PieChart className="w-4 h-4 text-cyan-300" />,
-      badge: 'Stats',
-    },
-    {
-      title: `Datos & Ficha Técnica`,
-      href: `/${activeGameSlug}/datos`,
-      icon: <Database className="w-4 h-4 text-slate-400" />,
-      badge: 'Datos',
-    },
-  ];
+  const disciplineNavItems = getDisciplineNavItems(activeGameSlug, currentGameObj.name);
 
   return (
     <>
@@ -196,7 +95,7 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
         <button
           type="button" aria-label="Cerrar menú administrativo"
           onClick={() => onMobileOpenChange(false)}
-          className="fixed inset-0 top-14 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 top-14 z-30 bg-[var(--app-overlay)] backdrop-blur-sm lg:hidden"
         />
       )}
 
@@ -213,17 +112,17 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
           {/* Header Box with Role & User */}
           <div className="space-y-2 rounded-2xl border border-[var(--border-card)] bg-[var(--bg-card)] p-3 shadow-[var(--shadow-soft)]">
             <div className="flex items-center justify-between">
-              <Badge variant={isAdmin ? 'cyan' : 'emerald'} className="text-[9px] font-mono font-black uppercase tracking-wider">
+              <Badge variant={isAdmin ? 'cyan' : 'emerald'} className="text-[9px] font-[family-name:var(--font-active)] font-black uppercase tracking-wider">
                 {isAdmin ? 'PANEL ADMINISTRATIVO' : 'PANEL ORGANIZADOR'}
               </Badge>
-              <span className="h-2 w-2 rounded-full bg-[var(--accent-emerald)]" />
+              <span className="h-2 w-2 rounded-full bg-[var(--app-positive)]" />
             </div>
 
             <div className="space-y-0.5">
               <h4 className="truncate text-xs font-black uppercase tracking-tight text-[var(--text-heading)]">
                 {currentUser?.role || 'Organizador'}
               </h4>
-              <p className="truncate font-mono text-[10px] font-bold text-[var(--accent-cyan)]">
+              <p className="truncate font-[family-name:var(--font-active)] text-[10px] font-bold text-[var(--app-accent)]">
                 @{currentUser?.gamertag || 'organizador'}
               </p>
             </div>
@@ -231,8 +130,8 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
 
           {/* 🌐 SECCIÓN 1: GESTIÓN GLOBAL */}
           <div className="space-y-1.5">
-            <span className="text-[10px] font-black uppercase text-cyan-400 tracking-wider px-2 block flex items-center gap-1">
-              <Globe className="w-3 h-3 text-cyan-400" />
+            <span className="text-[10px] font-black uppercase text-[var(--app-accent)] tracking-wider px-2 block flex items-center gap-1">
+              <Globe className="w-3 h-3 text-[var(--app-accent)]" />
               {isAdmin ? 'GESTIÓN GLOBAL' : 'MI ORGANIZACIÓN'}
             </span>
 
@@ -246,7 +145,7 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
                     onClick={() => onMobileOpenChange(false)}
                     className={`w-full p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between group ${
                       isActive
-                        ? 'border-[var(--accent-cyan)]/30 bg-[var(--accent-cyan-bg)] text-[var(--accent-cyan)] shadow-sm font-black'
+                        ? 'border-[var(--app-accent)]/30 bg-[var(--app-accent-soft)] text-[var(--app-accent)] shadow-sm font-black'
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] border border-transparent hover:border-[var(--border-card)]'
                     }`}
                   >
@@ -256,8 +155,8 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
                     </div>
 
                     <span
-                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
-                        isActive ? 'bg-black/10 text-inherit' : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-card)]'
+                      className={`text-[9px] font-[family-name:var(--font-active)] px-1.5 py-0.5 rounded font-bold ${
+                        isActive ? 'bg-[var(--app-contrast-soft)] text-inherit' : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-card)]'
                       }`}
                     >
                       {item.badge}
@@ -271,31 +170,124 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
           {/* Public shortcuts preserve the same pages an anonymous visitor sees. */}
           <div className="management-public-shortcuts hidden space-y-2 border-t border-[var(--border-card)] pt-3 lg:block">
             <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase text-purple-300 tracking-wider px-2 block flex items-center gap-1">
-                <Gamepad2 className="w-3 h-3 text-purple-400" />
+              <span className="text-[10px] font-black uppercase text-[var(--app-accent-2)] tracking-wider px-2 block flex items-center gap-1">
+                <Gamepad2 className="w-3 h-3 text-[var(--app-accent-2)]" />
                 ACCESOS PÚBLICOS POR DISCIPLINA
               </span>
 
               {/* Selector de Juego / Disciplina Activa */}
-              <select
-                value={activeGameSlug}
-                onChange={(e) => {
-                  const newSlug = e.target.value;
-                  setActiveGameSlug(newSlug);
-                  const segments = pathname.split('/').filter(Boolean);
-                  if (segments.length > 0 && GAMES_CATALOG[segments[0]]) {
-                    segments[0] = newSlug;
-                    router.push('/' + segments.join('/'));
-                  }
-                }}
-                className="ui-control w-full cursor-pointer p-2 font-mono text-xs font-bold text-[var(--accent-violet)]"
-              >
-                {Object.values(GAMES_CATALOG).map((g) => (
-                  <option key={g.slug} value={g.slug}>
-                    {g.icon} {g.name}
-                  </option>
-                ))}
-              </select>
+              <div ref={gameSelectRef} className="relative z-20">
+                <button
+                  type="button"
+                  aria-expanded={isGameSelectOpen}
+                  aria-haspopup="listbox"
+                  aria-label={`Disciplina activa: ${currentGameObj.name}`}
+                  onClick={() => setIsGameSelectOpen((prev) => !prev)}
+                  className={`flex w-full items-center justify-between gap-2 rounded-xl border p-2 text-left font-[family-name:var(--font-active)] transition-all focus:outline-none ${
+                    isGameSelectOpen
+                      ? 'border-[var(--app-accent-2)] bg-[var(--bg-card-hover)] shadow-md ring-1 ring-[var(--app-accent-2)]/30'
+                      : 'border-[var(--border-card)] bg-[var(--bg-main)]/80 hover:border-[var(--app-accent-2)]/50 hover:bg-[var(--bg-card-hover)]'
+                  }`}
+                  style={{
+                    borderColor: isGameSelectOpen ? (currentGameObj.brandColor || 'var(--app-accent-2)') : undefined,
+                  }}
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <div
+                      className="flex size-6 shrink-0 items-center justify-center rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] p-0.5 shadow-sm"
+                      style={{
+                        borderColor: `color-mix(in srgb, ${currentGameObj.brandColor || 'var(--app-accent-2)'} 40%, var(--border-card))`,
+                      }}
+                    >
+                      <GameLogo game={currentGameObj} size="sm" />
+                    </div>
+                    <span className="truncate text-xs font-black uppercase tracking-tight text-[var(--text-heading)]">
+                      {currentGameObj.name}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    className={`size-3.5 shrink-0 text-[var(--text-muted)] transition-transform duration-200 ${
+                      isGameSelectOpen ? 'rotate-180 text-[var(--app-accent-2)]' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown flotante con los logos oficiales reales */}
+                {isGameSelectOpen && (
+                  <div
+                    role="listbox"
+                    aria-label="Disciplinas disponibles"
+                    className="absolute left-0 top-full z-50 mt-1.5 w-full rounded-xl border border-[var(--border-card)] bg-[var(--ui-surface-solid)]/98 p-1.5 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1"
+                    style={{
+                      borderColor: `color-mix(in srgb, ${currentGameObj.brandColor || 'var(--app-accent-2)'} 45%, var(--border-card))`,
+                    }}
+                  >
+                    <div className="mb-1 flex items-center justify-between border-b border-[var(--border-card)]/70 px-2 py-1 text-[9px] font-[family-name:var(--font-active)] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                      <span>Disciplinas oficiales</span>
+                      <span className="rounded-full bg-[var(--app-accent-2)]/15 px-1.5 py-0.2 text-[9px] font-black text-[var(--app-accent-2)]">
+                        {Object.values(GAMES_CATALOG).length}
+                      </span>
+                    </div>
+
+                    <div className="max-h-56 space-y-1 overflow-y-auto pr-0.5">
+                      {Object.values(GAMES_CATALOG).map((g) => {
+                        const isSelected = activeGameSlug === g.slug;
+                        const optColor = g.brandColor || 'var(--app-accent-2)';
+
+                        return (
+                          <button
+                            key={g.slug}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            onClick={() => {
+                              setActiveGameSlug(g.slug);
+                              setIsGameSelectOpen(false);
+                              const segments = pathname.split('/').filter(Boolean);
+                              if (segments.length > 0 && GAMES_CATALOG[segments[0]]) {
+                                segments[0] = g.slug;
+                                router.push('/' + segments.join('/'));
+                              }
+                            }}
+                            className={`flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-all ${
+                              isSelected
+                                ? 'border border-[var(--opt-accent)]/50 bg-[var(--opt-accent)]/15 font-black text-[var(--text-heading)]'
+                                : 'border border-transparent text-[var(--text-secondary)] hover:border-[var(--opt-accent)]/30 hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]'
+                            }`}
+                            style={{ '--opt-accent': optColor } as React.CSSProperties}
+                          >
+                            <div
+                              className="flex size-6 shrink-0 items-center justify-center rounded-md border border-[var(--border-card)] bg-[var(--bg-card)] p-0.5 shadow-sm"
+                              style={{
+                                borderColor: `color-mix(in srgb, ${optColor} 40%, var(--border-card))`,
+                              }}
+                            >
+                              <GameLogo game={g} size="sm" />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <span className="block truncate text-xs font-bold uppercase leading-tight">
+                                {g.name}
+                              </span>
+                              <span className="block truncate text-[9px] font-medium leading-tight text-[var(--text-muted)]">
+                                {g.category}
+                              </span>
+                            </div>
+
+                            {isSelected && (
+                              <Check
+                                className="size-3.5 shrink-0"
+                                style={{ color: optColor }}
+                                aria-hidden="true"
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Links de la Disciplina */}
@@ -309,7 +301,7 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
                     onClick={() => onMobileOpenChange(false)}
                     className={`w-full p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between group ${
                       isActive
-                        ? 'border-[var(--accent-violet)]/30 bg-[var(--accent-violet-bg)] text-[var(--accent-violet)] shadow-sm font-black'
+                        ? 'border-[var(--app-accent-2)]/30 bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] shadow-sm font-black'
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] border border-transparent hover:border-[var(--border-card)]'
                     }`}
                   >
@@ -319,8 +311,8 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
                     </div>
 
                     <span
-                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
-                        isActive ? 'bg-black/10 text-inherit' : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-card)]'
+                      className={`text-[9px] font-[family-name:var(--font-active)] px-1.5 py-0.5 rounded font-bold ${
+                        isActive ? 'bg-[var(--app-contrast-soft)] text-inherit' : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-card)]'
                       }`}
                     >
                       {item.badge}
@@ -334,11 +326,11 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
 
         {/* Bottom System Status */}
         <div className="space-y-1 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-3">
-          <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+          <div className="flex items-center justify-between text-[10px] font-[family-name:var(--font-active)] text-[var(--text-muted)]">
             <span>Vista pública activa:</span>
-            <span className="text-cyan-400 font-bold">{currentGameObj.name}</span>
+            <span className="text-[var(--app-accent)] font-bold">{currentGameObj.name}</span>
           </div>
-          <p className="text-[9px] text-slate-400 font-mono">El contenido se muestra sin herramientas de edición.</p>
+          <p className="text-[9px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">El contenido se muestra sin herramientas de edición.</p>
         </div>
       </aside>
     </>

@@ -4,6 +4,7 @@ import React from 'react';
 import { Building2, Gamepad2, Globe2, Shield, Sparkles, Trophy, UserRound, Users } from 'lucide-react';
 import { EsportsCard } from '@/components/ui/esports-card';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { PageHeader, PageHeaderMetrics } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { GAMES_CATALOG } from '@/lib/games-data';
 
@@ -63,29 +64,32 @@ interface DirectoryResponse {
 const DIRECTORY_CONFIG = {
   organizations: {
     eyebrow: 'Ecosistema competitivo',
-    title: 'Organizaciones que hacen crecer la escena',
+    title: 'Organizaciones que',
+    highlightTitle: 'hacen crecer la escena',
     description: 'Descubre comunidades, ligas y organizaciones verificadas de todas las disciplinas de TorneosPro.',
     search: 'Buscar organización, comunidad o tag...',
     countLabel: 'organizaciones',
-    accent: 'var(--accent-violet)',
+    accent: 'var(--app-accent)',
     icon: Building2,
   },
   users: {
     eyebrow: 'Talento de la comunidad',
-    title: 'Atletas listos para competir',
+    title: 'Atletas listos',
+    highlightTitle: 'para competir',
     description: 'Explora perfiles públicos, posiciones, disciplinas y estado competitivo de los jugadores registrados.',
     search: 'Buscar atleta, gamertag o posición...',
     countLabel: 'atletas',
-    accent: 'var(--accent-cyan)',
+    accent: 'var(--app-accent)',
     icon: UserRound,
   },
   teams: {
     eyebrow: 'Clubes y escuadras',
-    title: 'Equipos que compiten en TorneosPro',
+    title: 'Equipos que compiten',
+    highlightTitle: 'en TorneosPro',
     description: 'Conoce clubes, capitanes y plantillas activas dentro del circuito competitivo global.',
     search: 'Buscar equipo, tag o capitán...',
     countLabel: 'equipos',
-    accent: 'var(--accent-emerald)',
+    accent: 'var(--app-accent)',
     icon: Shield,
   },
 } as const;
@@ -158,22 +162,25 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
 
   return (
     <main className="public-directory-page" style={{ '--directory-accent': config.accent } as React.CSSProperties}>
-      <section className="public-directory-hero">
-        <div className="public-directory-hero-glow" />
-        <div className="public-directory-hero-copy">
-          <div className="public-directory-icon"><Icon className="size-6 sm:size-8" /></div>
-          <div>
-            <p className="public-directory-eyebrow"><Sparkles className="size-3.5" />{config.eyebrow}</p>
-            <h1>{config.title}</h1>
-            <p className="public-directory-description">{config.description}</p>
-          </div>
-        </div>
-        <div className="public-directory-metrics">
-          <div><strong>{records.length}</strong><span>{config.countLabel}</span></div>
-          <div><strong>{activeCount}</strong><span>activos</span></div>
-          <div><strong>{representedGames}</strong><span>disciplinas</span></div>
-        </div>
-      </section>
+      <PageHeader
+        className="public-directory-header"
+        badgeText={config.eyebrow}
+        badgeIcon={<Sparkles className="size-3.5" />}
+        heroIcon={<Icon />}
+        title={config.title}
+        highlightTitle={config.highlightTitle}
+        description={config.description}
+        brandColor={config.accent}
+        density="cinematic"
+      >
+        <PageHeaderMetrics
+          items={[
+            { label: config.countLabel, value: isLoading ? '—' : records.length, icon: <Users /> },
+            { label: 'Activos', value: isLoading ? '—' : activeCount, icon: <Trophy /> },
+            { label: 'Disciplinas', value: isLoading ? '—' : representedGames, icon: <Gamepad2 /> },
+          ]}
+        />
+      </PageHeader>
 
       <section className="public-directory-content" aria-labelledby="directory-results-title">
         <div className="public-directory-section-heading">
@@ -192,6 +199,7 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
           count={filteredRecords.length}
           countLabel={config.countLabel}
           brandColor={config.accent}
+          isLoading={isLoading}
         />
 
         {isLoading ? (
@@ -233,6 +241,7 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
                 <EsportsCard
                   key={record.id}
                   entityType={isOrganization ? 'organization' : isUser ? 'user' : 'team'}
+                  gameSlug={slug}
                   href={href}
                   title={record.name}
                   subtitle={subtitle}
@@ -242,12 +251,11 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
                   fallbackIcon={isUser ? <UserRound className="size-8" /> : isOrganization ? <Building2 className="size-8" /> : <Shield className="size-8" />}
                   country={record.country || 'Chile'}
                   tag={record.tag || undefined}
-                  badges={[{ text: record.status || 'Activo', variant: 'emerald', pulse: true }, { text: game.name, variant: 'purple' }]}
+                  badges={[{ text: record.status || 'Activo', variant: 'cyan', pulse: true }, { text: game.name, variant: 'purple' }]}
                   stats={stats}
                   socials={isOrganization ? { ...record.socialMedia, website: record.website || undefined } : undefined}
                   footerLeft={<span className="flex items-center gap-1"><Gamepad2 className="size-3.5" />{game.name}</span>}
                   actionText="VER PERFIL"
-                  brandColor={game.brandColor || config.accent}
                   animationDelay={index * 35}
                   transitionName={kind === 'teams' ? `team-identity-${record.id}` : undefined}
                   transitionTypes={kind === 'teams' ? ['nav-forward'] : undefined}

@@ -13,7 +13,7 @@ describe('visual system v2', () => {
     expect(new Set(games.map((game) => game.visualTheme.scene))).toHaveLength(games.length);
 
     for (const game of games) {
-      expect(game.bannerUrl).toBe(`/images/games-background/v2/${game.slug}-arena.webp`);
+      expect(game.bannerUrl).toBe(`/images/games-background/${game.slug === 'eafc26' ? 'eafc' : game.slug}.jpg`);
       expect(game.visualTheme.glow).toMatch(/^#[0-9a-f]{6}$/i);
       expect(game.visualTheme.highlight).toMatch(/^#[0-9a-f]{6}$/i);
       expect(game.visualTheme.scene.length).toBeGreaterThan(3);
@@ -32,14 +32,16 @@ describe('visual system v2', () => {
     expect(download).toContain('prefers-reduced-motion');
   });
 
-  it('includes the new arena and prism application themes', () => {
+  it('includes the standardized light, dark and OLED application themes', () => {
     const provider = readFileSync(join(root, 'src/components/providers/theme-provider.tsx'), 'utf8');
     const css = readFileSync(join(root, 'src/app/globals.css'), 'utf8');
 
-    expect(provider).toContain("'arena'");
-    expect(provider).toContain("'prism'");
-    expect(css).toContain('.arena');
-    expect(css).toContain('.prism');
+    expect(provider).toContain("'light'");
+    expect(provider).toContain("'dark'");
+    expect(provider).toContain("'oled'");
+    expect(css).toContain('.light .game-portal');
+    expect(css).toContain('.dark .game-portal');
+    expect(css).toContain('.oled .game-portal');
     expect(css).toContain('.parachute-download');
     expect(css).toContain('.game-scene-grid');
   });

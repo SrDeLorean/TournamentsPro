@@ -19,6 +19,7 @@ import {
   updateTypingStatusAction,
   clearTypingStatusAction,
   getTypingUsersAction,
+  reportChatMessageAction,
 } from '@/app/actions/chat';
 import {
   MessageSquare,
@@ -39,6 +40,8 @@ import {
   Users,
   Ban,
   ArrowLeft,
+  Check,
+  Flag,
 } from 'lucide-react';
 
 import { useSearchParams } from 'next/navigation';
@@ -51,6 +54,8 @@ interface ChatSystemProps {
 
 interface ChatThread {
   id: string;
+  channelType?: string;
+  gameSlug?: string;
   title: string;
   participantId: string;
   participantName: string;
@@ -108,7 +113,14 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
   const [showBanModal, setShowBanModal] = useState(false);
   const [banReasonInput, setBanReasonInput] = useState('Infracción disciplinaria del reglamento eSports.');
   const [banningUser, setBanningUser] = useState(false);
-  const [, setActionNotification] = useState<string | null>(null);
+  const [actionNotification, setActionNotification] = useState<string | null>(null);
+
+  // Denuncias y Reportes
+  const [reportingMessage, setReportingMessage] = useState<ChatMessageRecord | null>(null);
+  const [reportReason, setReportReason] = useState('Toxicidad / Lenguaje Ofensivo');
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [reportFeedback, setReportFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -147,8 +159,9 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
       getUsersByRoleAction(newChatRole)
         .then((res) => {
           if (res.success && res.data && res.data.length > 0) {
-            setAvailableUsersForRole(res.data);
-            setSelectedTargetUserId(res.data[0].id);
+            const visible = res.data.filter((u: RoleUser) => u.id !== currentUser?.id);
+            setAvailableUsersForRole(visible);
+            setSelectedTargetUserId(visible[0]?.id || '');
           } else {
             setAvailableUsersForRole([]);
             setSelectedTargetUserId('');
@@ -156,7 +169,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
         })
         .finally(() => setLoadingRoleUsers(false));
     }
-  }, [newChatRole, showNewChatModal]);
+  }, [newChatRole, showNewChatModal, currentUser?.id]);
 
   const filteredRoleUsers = availableUsersForRole.filter((u) => {
     const q = userSearchQuery.toLowerCase();
@@ -346,6 +359,50 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
     }
   };
 
+  const handleSendReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportingMessage || !activeThread) return;
+
+    setSubmittingReport(true);
+    setReportFeedback(null);
+
+    try {
+      const res = await reportChatMessageAction({
+        threadId: activeThread.id,
+        messageId: reportingMessage.id,
+        messageText: reportingMessage.text,
+        reportedUserId: reportingMessage.senderId,
+        reportedUserName: reportingMessage.senderName,
+        reason: reportReason,
+        details: reportDetails,
+      });
+
+      if (res.success) {
+        setReportFeedback({
+          type: 'success',
+          message: '¡Denuncia registrada! Los administradores y organizadores revisarán este reporte.',
+        });
+        setTimeout(() => {
+          setReportingMessage(null);
+          setReportFeedback(null);
+          setReportDetails('');
+        }, 2200);
+      } else {
+        setReportFeedback({
+          type: 'error',
+          message: res.error || 'Ocurrió un error al registrar la denuncia.',
+        });
+      }
+    } catch {
+      setReportFeedback({
+        type: 'error',
+        message: 'Error inesperado al comunicarse con el servidor.',
+      });
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
   const handleCreateNewChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
@@ -359,13 +416,6 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
     const targetId = targetUserObj.id;
     const targetName = targetUserObj.name;
 
-    const channelTypeVal =
-      newChatRole === 'Organizador'
-        ? 'SOPORTE_ORGANIZADOR'
-        : newChatRole === 'Administrador'
-        ? 'ANUNCIO_ADMIN'
-        : 'DIRECTO';
-
     const res = await createOrGetDirectThreadAction(
       currentUser.id,
       currentUser.name || 'Tú',
@@ -374,7 +424,7 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
       targetName,
       targetUserObj?.role || newChatRole,
       currentGameSlug,
-      channelTypeVal,
+      'DIRECTO',
       `Chat con ${targetName}`
     );
 
@@ -382,6 +432,8 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
       setSelectedThreadId(res.threadId);
       setShowNewChatModal(false);
       loadThreads();
+    } else if (!res.success && 'error' in res && res.error) {
+      setActionNotification(res.error);
     }
   };
 
@@ -408,41 +460,41 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'Administrador':
-        return <ShieldCheck className="w-3 h-3 text-rose-400" />;
+        return <ShieldCheck className="w-3 h-3 text-[var(--app-danger)]" />;
       case 'Organizador':
-        return <Trophy className="w-3 h-3 text-emerald-400" />;
+        return <Trophy className="w-3 h-3 text-[var(--app-positive)]" />;
       case 'Capitán':
       case 'Capitan':
-        return <Crown className="w-3 h-3 text-amber-400" />;
+        return <Crown className="w-3 h-3 text-[var(--app-warning)]" />;
       default:
-        return <User className="w-3 h-3 text-cyan-400" />;
+        return <User className="w-3 h-3 text-[var(--app-accent)]" />;
     }
   };
 
   if (!currentUser) {
     return (
-      <Card className="p-8 text-center space-y-5 max-w-lg mx-auto bg-[var(--bg-card)] border-[var(--border-card)] rounded-3xl shadow-2xl font-mono">
-        <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto shadow-lg">
+      <Card className="p-8 text-center space-y-5 max-w-lg mx-auto bg-[var(--bg-card)] border-[var(--border-card)] rounded-3xl shadow-2xl font-[family-name:var(--font-active)]">
+        <div className="w-16 h-16 rounded-3xl bg-[var(--app-warning-soft)] border border-[var(--app-warning)] flex items-center justify-center text-[var(--app-warning)] mx-auto shadow-lg">
           <Lock className="w-8 h-8" />
         </div>
-        <div className="space-y-1.5">
-          <h3 className="text-lg font-bold text-[var(--text-heading)] uppercase">
+        <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+          <h3 className="text-lg font-bold text-[var(--text-heading)] uppercase font-[family-name:var(--font-active)]">
             Autenticación Requerida
           </h3>
-          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed font-[family-name:var(--font-active)]">
             Inicia sesión con tu cuenta para acceder a la mensajería interna eSports, contactar capitanes de equipos y comunicarte con organizadores.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 pt-2">
+        <div className="grid grid-cols-2 gap-3 pt-2 font-[family-name:var(--font-active)]">
           <Link href="/login" className="w-full">
-            <Button className="w-full text-xs font-mono font-bold bg-[var(--accent-cyan)] text-slate-950 hover:brightness-110 flex items-center justify-center gap-1.5">
+            <Button className="w-full text-xs font-[family-name:var(--font-active)] font-bold bg-[var(--app-accent)] text-[var(--accent-contrast)] hover:brightness-110 flex items-center justify-center gap-1.5">
               <LogIn className="w-4 h-4" />
               Iniciar Sesión
             </Button>
           </Link>
           <Link href="/registro" className="w-full">
-            <Button variant="outline" className="w-full text-xs font-mono border-[var(--border-card)] flex items-center justify-center gap-1.5">
+            <Button variant="outline" className="w-full text-xs font-[family-name:var(--font-active)] border-[var(--border-card)] flex items-center justify-center gap-1.5">
               <UserPlus className="w-4 h-4" />
               Crear Cuenta
             </Button>
@@ -453,29 +505,37 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
   }
 
   return (
-    <div className="grid h-[calc(100dvh-10rem)] min-h-[32rem] w-full grid-cols-1 overflow-hidden rounded-2xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xl md:h-[700px] md:grid-cols-12 md:rounded-3xl">
+    <div className="relative grid h-[calc(100dvh-10rem)] min-h-[32rem] w-full grid-cols-1 overflow-hidden rounded-2xl border border-[var(--border-card)] bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xl md:h-[700px] md:grid-cols-12 md:rounded-3xl font-[family-name:var(--font-active)]">
+      {actionNotification && (
+        <div className="absolute top-3 right-3 z-50 max-w-sm p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--app-accent)] shadow-2xl flex items-center justify-between gap-3 text-xs font-[family-name:var(--font-active)]">
+          <span>{actionNotification}</span>
+          <button onClick={() => setActionNotification(null)} className="text-[var(--text-muted)] hover:text-[var(--text-heading)] cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       
       {/* 📁 LEFT SIDEBAR: Channels & Contacts */}
-      <div className={`${isMobileConversationOpen ? 'hidden md:flex' : 'flex'} flex-col justify-between border-r border-[var(--border-card)] bg-[var(--bg-card)] md:col-span-4`}>
-        <div className="p-4 border-b border-[var(--border-card)] space-y-3">
-          <div className="flex items-center justify-between">
+      <div className={`${isMobileConversationOpen ? 'hidden md:flex' : 'flex'} flex-col justify-between border-r border-[var(--border-card)] bg-[var(--bg-card)] md:col-span-4 font-[family-name:var(--font-active)]`}>
+        <div className="p-4 border-b border-[var(--border-card)] space-y-3 font-[family-name:var(--font-active)]">
+          <div className="flex items-center justify-between font-[family-name:var(--font-active)]">
             <div className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-[var(--accent-cyan)]" />
-              <h3 className="font-extrabold text-sm uppercase tracking-tight text-[var(--text-heading)]">
+              <MessageSquare className="w-5 h-5 text-[var(--app-accent)]" />
+              <h3 className="font-extrabold text-sm uppercase tracking-tight text-[var(--text-heading)] font-[family-name:var(--font-active)]">
                 Mensajería eSports
               </h3>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 font-[family-name:var(--font-active)]">
               <button
                 onClick={openNewChat}
-                className="p-1.5 rounded-xl bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)]/20 transition-all text-xs font-bold flex items-center gap-1"
+                className="p-1.5 rounded-xl bg-[color-mix(in_srgb,var(--app-accent)_16%,transparent)] text-[var(--app-accent)] hover:brightness-110 transition-all text-xs font-bold flex items-center gap-1 cursor-pointer font-[family-name:var(--font-active)]"
                 title="Nuevo Chat Directo"
               >
                 <Plus className="w-4 h-4" />
               </button>
               {onClose && (
-                <button onClick={onClose} className="p-1 rounded-lg text-[var(--text-muted)] hover:text-white">
+                <button onClick={onClose} className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-heading)] cursor-pointer font-[family-name:var(--font-active)]">
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -483,35 +543,35 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
           </div>
 
           {/* Search Contacts */}
-          <div className="relative">
+          <div className="relative font-[family-name:var(--font-active)]">
             <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-[var(--text-muted)]" />
             <input
               type="text"
               placeholder="Buscar atletas, capitanes, organizadores..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)]"
+              className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-[family-name:var(--font-active)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--app-accent)]"
             />
           </div>
 
           {/* 🏷️ Role Channel Filter Tabs */}
-          <div className="grid grid-cols-4 gap-1 p-1 bg-[var(--bg-main)]/60 rounded-xl border border-[var(--border-card)] text-[10px] font-mono font-bold">
+          <div className="grid grid-cols-4 gap-1 p-1 bg-[var(--bg-main)]/60 rounded-xl border border-[var(--border-card)] text-[10px] font-[family-name:var(--font-active)] font-bold">
             <button
               onClick={() => setChannelFilter('ALL')}
-              className={`py-1 rounded-lg transition-all ${
+              className={`py-1 rounded-lg transition-all font-[family-name:var(--font-active)] cursor-pointer ${
                 channelFilter === 'ALL'
-                  ? 'bg-[var(--accent-cyan)] text-slate-950 font-bold shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-white'
+                  ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] font-bold shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-heading)]'
               }`}
             >
               TODOS
             </button>
             <button
               onClick={() => setChannelFilter('DIRECTO')}
-              className={`py-1 rounded-lg transition-all flex items-center justify-center gap-1 ${
+              className={`py-1 rounded-lg transition-all flex items-center justify-center gap-1 font-[family-name:var(--font-active)] cursor-pointer ${
                 channelFilter === 'DIRECTO'
-                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-white'
+                  ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] font-bold shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-heading)]'
               }`}
             >
               <Users className="w-3 h-3" />
@@ -519,10 +579,10 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
             </button>
             <button
               onClick={() => setChannelFilter('SOPORTE_ORGANIZADOR')}
-              className={`py-1 rounded-lg transition-all flex items-center justify-center gap-1 ${
+              className={`py-1 rounded-lg transition-all flex items-center justify-center gap-1 font-[family-name:var(--font-active)] cursor-pointer ${
                 channelFilter === 'SOPORTE_ORGANIZADOR'
-                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-white'
+                  ? 'bg-[var(--app-positive)] text-[var(--accent-contrast)] font-bold shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-heading)]'
               }`}
             >
               <Trophy className="w-3 h-3" />
@@ -530,10 +590,10 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
             </button>
             <button
               onClick={() => setChannelFilter('ANUNCIO_ADMIN')}
-              className={`py-1 rounded-lg transition-all flex items-center justify-center gap-1 ${
+              className={`py-1 rounded-lg transition-all flex items-center justify-center gap-1 font-[family-name:var(--font-active)] cursor-pointer ${
                 channelFilter === 'ANUNCIO_ADMIN'
-                  ? 'bg-rose-500 text-slate-950 font-bold shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-white'
+                  ? 'bg-[var(--app-danger)] text-[var(--text-heading)] font-bold shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-heading)]'
               }`}
             >
               <ShieldCheck className="w-3 h-3" />
@@ -543,10 +603,10 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
         </div>
 
         {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-card)]">
+        <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-card)] font-[family-name:var(--font-active)]">
           {loadingThreads ? (
-            <div className="py-12 text-center text-xs font-mono text-[var(--text-muted)] flex flex-col items-center gap-2">
-              <RefreshCw className="w-5 h-5 animate-spin text-[var(--accent-cyan)]" />
+            <div className="py-12 text-center text-xs font-[family-name:var(--font-active)] text-[var(--text-muted)] flex flex-col items-center gap-2">
+              <RefreshCw className="w-5 h-5 animate-spin text-[var(--app-accent)]" />
               <span>Cargando canales eSports...</span>
             </div>
           ) : filteredThreads.length > 0 ? (
@@ -559,35 +619,35 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                     setSelectedThreadId(thread.id);
                     setIsMobileConversationOpen(true);
                   }}
-                  className={`w-full p-3.5 text-left flex items-start gap-3 transition-all ${
+                  className={`w-full p-3.5 text-left flex items-start gap-3 transition-all font-[family-name:var(--font-active)] cursor-pointer ${
                     isSelected
-                      ? 'bg-[var(--accent-cyan-bg)] border-l-4 border-[var(--accent-cyan)]'
+                      ? 'bg-[color-mix(in_srgb,var(--app-accent)_16%,transparent)] border-l-4 border-[var(--app-accent)]'
                       : 'hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
                   <Avatar fallback={thread.participantName} status="online" size="md" />
 
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-xs text-[var(--text-heading)] truncate flex items-center gap-1">
+                  <div className="flex-1 min-w-0 space-y-1 font-[family-name:var(--font-active)]">
+                    <div className="flex items-center justify-between font-[family-name:var(--font-active)]">
+                      <span className="font-extrabold text-xs text-[var(--text-heading)] truncate flex items-center gap-1 font-[family-name:var(--font-active)]">
                         {getRoleIcon(thread.participantRole)}
                         <span className="truncate">{thread.title}</span>
                       </span>
-                      <span className="text-[10px] text-[var(--text-muted)] font-mono">{thread.lastMessageAt}</span>
+                      <span className="text-[10px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">{thread.lastMessageAt}</span>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <Badge variant={getRoleBadgeVariant(thread.participantRole)} className="text-[9px] px-1.5 py-0 font-mono">
+                    <div className="flex items-center justify-between font-[family-name:var(--font-active)]">
+                      <Badge variant={getRoleBadgeVariant(thread.participantRole)} className="text-[9px] px-1.5 py-0 font-[family-name:var(--font-active)]">
                         {thread.participantRole}
                       </Badge>
                       {thread.unreadCount > 0 && (
-                        <span className="w-4 h-4 rounded-full bg-[var(--accent-cyan)] text-slate-950 font-extrabold text-[10px] flex items-center justify-center">
+                        <span className="w-4 h-4 rounded-full bg-[var(--app-accent)] text-[var(--accent-contrast)] font-extrabold text-[10px] flex items-center justify-center font-[family-name:var(--font-active)]">
                           {thread.unreadCount}
                         </span>
                       )}
                     </div>
 
-                    <p className="text-xs text-[var(--text-muted)] truncate font-mono">
+                    <p className="text-xs text-[var(--text-muted)] truncate font-[family-name:var(--font-active)]">
                       {thread.lastMessageText}
                     </p>
                   </div>
@@ -595,70 +655,70 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
               );
             })
           ) : (
-            <div className="py-12 text-center text-xs font-mono text-[var(--text-muted)] space-y-2 p-4">
-              <MessageSquare className="w-8 h-8 mx-auto opacity-40 text-[var(--accent-cyan)]" />
+            <div className="py-12 text-center text-xs font-[family-name:var(--font-active)] text-[var(--text-muted)] space-y-2 p-4">
+              <MessageSquare className="w-8 h-8 mx-auto opacity-40 text-[var(--app-accent)]" />
               <p>No se encontraron conversaciones activas en esta categoría.</p>
             </div>
           )}
         </div>
 
-        <div className="p-3 border-t border-[var(--border-card)] bg-[var(--bg-main)] text-[10px] text-[var(--text-muted)] font-mono text-center flex items-center justify-center gap-1.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="p-3 border-t border-[var(--border-card)] bg-[var(--bg-main)] text-[10px] text-[var(--text-muted)] font-[family-name:var(--font-active)] text-center flex items-center justify-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-[var(--app-positive)]" />
           <span>Chat en Vivo Auditado | TournamentsPro eSports</span>
         </div>
       </div>
 
       {/* 💬 RIGHT DISPLAY: Active Chat Messages */}
-      <div className={`${isMobileConversationOpen ? 'flex' : 'hidden md:flex'} flex-col justify-between bg-[var(--bg-main)] md:col-span-8`}>
+      <div className={`${isMobileConversationOpen ? 'flex' : 'hidden md:flex'} flex-col justify-between bg-[var(--bg-main)] md:col-span-8 font-[family-name:var(--font-active)]`}>
         {activeThread ? (
           <>
             {/* Header of Active Conversation */}
-            <div className="flex items-center justify-between gap-2 border-b border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--border-card)] bg-[var(--bg-card)] p-3 sm:p-4 font-[family-name:var(--font-active)]">
               <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-                <button type="button" onClick={() => setIsMobileConversationOpen(false)} className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] text-[var(--text-secondary)] md:hidden" aria-label="Volver a conversaciones">
+                <button type="button" onClick={() => setIsMobileConversationOpen(false)} className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border-card)] text-[var(--text-secondary)] md:hidden cursor-pointer" aria-label="Volver a conversaciones">
                   <ArrowLeft className="size-4" />
                 </button>
                 <Avatar fallback={activeThread.participantName} status="online" size="md" />
-                <div className="min-w-0">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <h4 className="flex min-w-0 items-center gap-1.5 truncate text-xs font-extrabold uppercase text-[var(--text-heading)] sm:text-sm">
+                <div className="min-w-0 font-[family-name:var(--font-active)]">
+                  <div className="flex min-w-0 items-center gap-2 font-[family-name:var(--font-active)]">
+                    <h4 className="flex min-w-0 items-center gap-1.5 truncate text-xs font-extrabold uppercase text-[var(--text-heading)] sm:text-sm font-[family-name:var(--font-active)]">
                       {getRoleIcon(activeThread.participantRole)}
                       <span className="truncate">{activeThread.title}</span>
                     </h4>
-                    <Badge variant={getRoleBadgeVariant(activeThread.participantRole)} className="hidden text-[10px] font-mono sm:inline-flex">
+                    <Badge variant={getRoleBadgeVariant(activeThread.participantRole)} className="hidden text-[10px] font-[family-name:var(--font-active)] sm:inline-flex">
                       {activeThread.participantRole}
                     </Badge>
                   </div>
-                  <p className="truncate font-mono text-[10px] text-[var(--text-muted)] sm:text-xs">
-                    Contacto: {activeThread.participantName} | Canal eSports MySQL
+                  <p className="truncate font-[family-name:var(--font-active)] text-[10px] text-[var(--text-muted)] sm:text-xs">
+                    Contacto: {activeThread.participantName} | Canal eSports
                   </p>
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-1.5 font-mono">
+              <div className="flex shrink-0 items-center gap-1.5 font-[family-name:var(--font-active)]">
                 {canBanOthers && activeThread && activeThread.participantId !== 'usr-all' && (
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setShowBanModal(true)}
-                    className="text-[11px] font-mono border-rose-500/40 text-rose-400 hover:bg-rose-950/80 flex items-center gap-1 h-8 rounded-xl"
+                    className="text-[11px] font-[family-name:var(--font-active)] border-[var(--app-danger)] text-[var(--app-danger)] hover:bg-[var(--app-danger-soft)] flex items-center gap-1 h-8 rounded-xl cursor-pointer"
                   >
                     <Ban className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Banear usuario</span>
                   </Button>
                 )}
-                <span className="hidden items-center gap-1 text-[11px] font-bold text-[var(--accent-emerald)] xl:flex">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="hidden items-center gap-1 text-[11px] font-bold text-[var(--app-positive)] xl:flex font-[family-name:var(--font-active)]">
+                  <span className="w-2 h-2 rounded-full bg-[var(--app-positive)] animate-pulse" />
                   En Línea
                 </span>
               </div>
             </div>
 
             {/* Messages Display Area */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 font-mono">
+            <div className="flex-1 p-4 overflow-y-auto space-y-4 font-[family-name:var(--font-active)]">
               {loadingMessages && messages.length === 0 ? (
-                <div className="py-12 text-center text-xs text-[var(--text-muted)] flex items-center justify-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin text-[var(--accent-cyan)]" />
+                <div className="py-12 text-center text-xs text-[var(--text-muted)] flex items-center justify-center gap-2 font-[family-name:var(--font-active)]">
+                  <RefreshCw className="w-4 h-4 animate-spin text-[var(--app-accent)]" />
                   <span>Cargando historial de mensajes...</span>
                 </div>
               ) : messages.length > 0 ? (
@@ -669,22 +729,38 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                   return (
                     <div
                       key={msg.id}
-                      className={`flex flex-col max-w-[80%] ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}
+                      className={`flex flex-col max-w-[80%] ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'} font-[family-name:var(--font-active)]`}
                     >
-                      <div className="flex items-center gap-1.5 mb-1 text-[10px] text-[var(--text-muted)] font-bold">
+                      <div className="flex items-center gap-1.5 mb-1 text-[10px] text-[var(--text-muted)] font-bold font-[family-name:var(--font-active)]">
                         <span>{msg.senderName}</span>
-                        <Badge variant={senderRoleVariant} className="text-[8px] px-1 py-0">
+                        <Badge variant={senderRoleVariant} className="text-[8px] px-1 py-0 font-[family-name:var(--font-active)]">
                           {msg.senderRole}
                         </Badge>
                         <span>•</span>
                         <span>{msg.timestamp}</span>
+                        {!isMe && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReportingMessage(msg);
+                              setReportFeedback(null);
+                              setReportDetails('');
+                              setReportReason('Toxicidad / Lenguaje Ofensivo');
+                            }}
+                            title="Reportar mensaje a moderadores"
+                            className="ml-1 p-0.5 text-[var(--text-muted)] hover:text-[var(--app-danger)] transition-colors rounded hover:bg-[var(--bg-card-hover)] flex items-center gap-1 cursor-pointer"
+                          >
+                            <Flag className="w-2.5 h-2.5" />
+                            <span className="text-[9px] hover:underline">Reportar</span>
+                          </button>
+                        )}
                       </div>
 
                       <div
-                        className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-md ${
+                        className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-md font-[family-name:var(--font-active)] ${
                           isMe
-                            ? 'bg-[var(--accent-cyan)] text-slate-950 rounded-br-none font-bold'
-                            : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-heading)] rounded-bl-none'
+                            ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] rounded-br-none font-bold'
+                            : 'bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--text-heading)] rounded-bl-none font-medium'
                         }`}
                       >
                         {msg.text}
@@ -693,8 +769,8 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                   );
                 })
               ) : (
-                <div className="py-16 text-center text-xs text-[var(--text-muted)] space-y-2">
-                  <Sparkles className="w-8 h-8 text-[var(--accent-cyan)] mx-auto opacity-50" />
+                <div className="py-16 text-center text-xs text-[var(--text-muted)] space-y-2 font-[family-name:var(--font-active)]">
+                  <Sparkles className="w-8 h-8 text-[var(--app-accent)] mx-auto opacity-50" />
                   <p className="font-bold">Inicia la conversación</p>
                   <p>Envía tu primer mensaje para acordar fichajes o realizar consultas de torneo.</p>
                 </div>
@@ -703,52 +779,57 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
             </div>
 
             {/* Input Message Form OR Ban Guard Banner */}
-            {userBanInfo.isBanned ? (
-              <div className="p-3.5 border-t border-rose-500/40 bg-rose-950/80 text-rose-300 font-mono text-xs flex items-center gap-3">
-                <ShieldAlert className="w-6 h-6 text-rose-400 shrink-0 animate-pulse" />
-                <div>
-                  <strong className="block text-white font-bold uppercase text-[11px]">
+            {activeThread.channelType === 'ANUNCIO_ADMIN' && currentUser?.role !== 'Administrador' ? (
+              <div className="p-3.5 border-t border-[var(--border-card)] bg-[var(--bg-main)] text-[var(--text-muted)] font-[family-name:var(--font-active)] text-xs flex items-center gap-2.5">
+                <Lock className="w-4 h-4 text-[var(--app-warning)] shrink-0" />
+                <span className="font-bold text-[var(--text-heading)]">Canal oficial de boletines de Administración. Solo lectura.</span>
+              </div>
+            ) : userBanInfo.isBanned ? (
+              <div className="p-3.5 border-t border-[var(--app-danger)] bg-[var(--app-danger-soft)] text-[var(--app-danger)] font-[family-name:var(--font-active)] text-xs flex items-center gap-3">
+                <ShieldAlert className="w-6 h-6 text-[var(--app-danger)] shrink-0 animate-pulse" />
+                <div className="font-[family-name:var(--font-active)]">
+                  <strong className="block text-[var(--text-heading)] font-bold uppercase text-[11px] font-[family-name:var(--font-active)]">
                     🚫 CUENTA SANCIONADA Y BANEADA DEL CHAT ESPORTS
                   </strong>
-                  <p className="text-[10px] text-rose-200">
+                  <p className="text-[10px] text-[var(--app-danger)] font-[family-name:var(--font-active)]">
                     Has sido sancionado por la administración y tus privilegios de envío de mensajes se encuentran suspendidos. Motivo: &quot;{userBanInfo.reason || 'Infracción de reglamento eSports.'}&quot;
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="border-t border-[var(--border-card)] bg-[var(--bg-card)]">
+              <div className="border-t border-[var(--border-card)] bg-[var(--bg-card)] font-[family-name:var(--font-active)]">
                 {/* INDICADOR DE USUARIO ESCRIBIENDO */}
                 {typingUsers.length > 0 && (
-                  <div className="px-4 py-2 bg-cyan-950/60 border-b border-cyan-500/30 text-cyan-300 font-mono text-[11px] flex items-center justify-between animate-fade-in">
-                    <div className="flex items-center gap-2">
+                  <div className="px-4 py-2 bg-[color-mix(in_srgb,var(--app-accent)_12%,transparent)] border-b border-[var(--app-accent)]/30 text-[var(--app-accent)] font-[family-name:var(--font-active)] text-[11px] flex items-center justify-between animate-fade-in">
+                    <div className="flex items-center gap-2 font-[family-name:var(--font-active)]">
                       <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--app-accent)] opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--app-accent)]" />
                       </span>
-                      <span className="font-bold text-cyan-200">
+                      <span className="font-bold text-[var(--text-heading)] font-[family-name:var(--font-active)]">
                         {typingUsers.join(', ')} {typingUsers.length === 1 ? 'está escribiendo' : 'están escribiendo'}...
                       </span>
                     </div>
-                    <div className="flex gap-1 items-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:-0.3s]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:-0.15s]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" />
+                    <div className="flex gap-1 items-center font-[family-name:var(--font-active)]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--app-accent)] animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--app-accent)] animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--app-accent)] animate-bounce" />
                     </div>
                   </div>
                 )}
 
-                <form onSubmit={handleSendMessage} className="p-3 flex items-center gap-2">
+                <form onSubmit={handleSendMessage} className="p-3 flex items-center gap-2 font-[family-name:var(--font-active)]">
                   <input
                     type="text"
                     value={inputMessage}
                     onChange={handleInputChange}
                     placeholder={`Escribir mensaje a ${activeThread.participantName}...`}
-                    className="flex-1 h-10 px-4 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)]"
+                    className="flex-1 h-10 px-4 rounded-[var(--radius-control)] bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-[family-name:var(--font-active)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--app-accent)]"
                   />
                   <Button
                     type="submit"
                     disabled={sending || !inputMessage.trim()}
-                    className="h-10 px-4 font-mono font-bold text-xs bg-[var(--accent-cyan)] text-slate-950 hover:brightness-110 flex items-center gap-1.5 rounded-xl shadow-md"
+                    className="h-10 px-4 font-[family-name:var(--font-active)] font-bold text-xs bg-[var(--app-accent)] text-[var(--accent-contrast)] hover:brightness-110 flex items-center gap-1.5 rounded-[var(--radius-control)] shadow-md cursor-pointer"
                   >
                   <Send className="w-3.5 h-3.5" />
                   {sending ? 'Enviando...' : 'Enviar'}
@@ -758,16 +839,16 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
           )}
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-[var(--text-muted)] space-y-3 font-mono">
-            <MessageSquare className="w-12 h-12 text-[var(--accent-cyan)] opacity-50 mx-auto" />
-            <h4 className="text-base font-bold text-[var(--text-heading)]">Selecciona o Inicia una Conversación</h4>
-            <p className="text-xs max-w-sm">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-[var(--text-muted)] space-y-3 font-[family-name:var(--font-active)]">
+            <MessageSquare className="w-12 h-12 text-[var(--app-accent)] opacity-50 mx-auto" />
+            <h4 className="text-base font-bold text-[var(--text-heading)] font-[family-name:var(--font-active)]">Selecciona o Inicia una Conversación</h4>
+            <p className="text-xs max-w-sm font-[family-name:var(--font-active)]">
               Conecta directamente con Atletas, Capitanes de Equipos o la Mesa de Organizadores eSports.
             </p>
             <Button
               size="sm"
               onClick={openNewChat}
-              className="text-xs font-mono font-bold bg-[var(--accent-cyan)] text-slate-950"
+              className="text-xs font-[family-name:var(--font-active)] font-bold bg-[var(--app-accent)] text-[var(--accent-contrast)] cursor-pointer"
             >
               + Iniciar Nuevo Chat
             </Button>
@@ -777,132 +858,155 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
 
       {/* ── NEW CHAT MODAL ────────────────────────────────────────────── */}
       {showNewChatModal && (
-        <Modal isOpen onClose={() => setShowNewChatModal(false)} ariaLabel="Nuevo chat directo" size="sm" showCloseButton={false} className="p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-[var(--accent-cyan)]" />
-                <h3 className="font-bold text-base text-[var(--text-heading)] uppercase tracking-tight font-mono">
+        <Modal isOpen onClose={() => setShowNewChatModal(false)} ariaLabel="Nuevo chat directo" size="sm" showCloseButton={false} className="p-6 space-y-5 font-[family-name:var(--font-active)]">
+            <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3 font-[family-name:var(--font-active)]">
+              <div className="flex items-center gap-2 font-[family-name:var(--font-active)]">
+                <MessageSquare className="w-5 h-5 text-[var(--app-accent)]" />
+                <h3 className="font-bold text-base text-[var(--text-heading)] uppercase tracking-tight font-[family-name:var(--font-active)]">
                   Nuevo Chat Directo
                 </h3>
               </div>
-              <button onClick={() => setShowNewChatModal(false)} className="text-[var(--text-muted)] hover:text-white">
+              <button onClick={() => setShowNewChatModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-heading)] cursor-pointer font-[family-name:var(--font-active)]">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateNewChat} className="space-y-4 font-mono">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[var(--text-muted)] uppercase block">
+            <form onSubmit={handleCreateNewChat} className="space-y-4 font-[family-name:var(--font-active)]">
+              <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+                <label className="text-xs font-bold text-[var(--text-muted)] uppercase block font-[family-name:var(--font-active)]">
                   Rol del Destinatario
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 font-[family-name:var(--font-active)]">
                   <button
                     type="button"
                     onClick={() => selectNewChatRole('Organizador')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer font-[family-name:var(--font-active)] ${
                       newChatRole === 'Organizador'
-                        ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-sm'
+                        ? 'bg-[var(--app-positive-soft)] border-[var(--app-positive)] text-[var(--app-positive)] shadow-sm'
                         : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-muted)]'
                     }`}
                   >
-                    <Trophy className="w-3.5 h-3.5 text-emerald-400" />
+                    <Trophy className="w-3.5 h-3.5 text-[var(--app-positive)]" />
                     Organizador
                   </button>
 
                   <button
                     type="button"
                     onClick={() => selectNewChatRole('Administrador')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer font-[family-name:var(--font-active)] ${
                       newChatRole === 'Administrador'
-                        ? 'bg-rose-950/80 border-rose-500 text-rose-300 shadow-sm'
+                        ? 'bg-[var(--app-danger-soft)] border-[var(--app-danger)] text-[var(--app-danger)] shadow-sm'
                         : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-muted)]'
                     }`}
                   >
-                    <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
+                    <ShieldCheck className="w-3.5 h-3.5 text-[var(--app-danger)]" />
                     Administrador
                   </button>
 
                   <button
                     type="button"
                     onClick={() => selectNewChatRole('Capitan')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer font-[family-name:var(--font-active)] ${
                       newChatRole === 'Capitan'
-                        ? 'bg-amber-950/80 border-amber-500 text-amber-300 shadow-sm'
+                        ? 'bg-[var(--app-warning-soft)] border-[var(--app-warning)] text-[var(--app-warning)] shadow-sm'
                         : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-muted)]'
                     }`}
                   >
-                    <Crown className="w-3.5 h-3.5 text-amber-400" />
+                    <Crown className="w-3.5 h-3.5 text-[var(--app-warning)]" />
                     Capitán de Club
                   </button>
 
                   <button
                     type="button"
                     onClick={() => selectNewChatRole('Jugador')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer font-[family-name:var(--font-active)] ${
                       newChatRole === 'Jugador'
-                        ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300 shadow-sm'
+                        ? 'bg-[color-mix(in_srgb,var(--app-accent)_16%,transparent)] border-[var(--app-accent)] text-[var(--app-accent)] shadow-sm'
                         : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-muted)]'
                     }`}
                   >
-                    <User className="w-3.5 h-3.5 text-cyan-400" />
+                    <User className="w-3.5 h-3.5 text-[var(--app-accent)]" />
                     Atleta
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-[var(--text-muted)] uppercase block">
+              <div className="space-y-2 font-[family-name:var(--font-active)]">
+                <label className="text-xs font-bold text-[var(--text-muted)] uppercase block font-[family-name:var(--font-active)]">
                   Seleccionar Usuario ({newChatRole === 'Jugador' ? 'Atleta' : newChatRole})
                 </label>
 
                 {/* 🔍 Fast Search Filter Box */}
-                <div className="relative">
+                <div className="relative font-[family-name:var(--font-active)]">
                   <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-[var(--text-muted)]" />
                   <input
                     type="text"
                     placeholder="Escribe para buscar por nombre o @gamertag..."
                     value={userSearchQuery}
                     onChange={(e) => setUserSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] font-mono"
+                    className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--app-accent)] font-[family-name:var(--font-active)]"
                   />
                 </div>
 
                 {loadingRoleUsers ? (
-                  <div className="text-xs text-[var(--text-muted)] font-mono py-2.5 px-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center gap-2">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[var(--accent-cyan)]" />
-                    <span>Consultando usuarios con rol {newChatRole} en MySQL...</span>
+                  <div className="text-xs text-[var(--text-muted)] font-[family-name:var(--font-active)] py-2.5 px-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center gap-2">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[var(--app-accent)]" />
+                    <span>Consultando usuarios con rol {newChatRole}...</span>
                   </div>
                 ) : filteredRoleUsers.length > 0 ? (
-                  <select
-                    value={effectiveTargetUserId}
-                    onChange={(e) => setSelectedTargetUserId(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] cursor-pointer font-mono"
-                  >
-                    {filteredRoleUsers.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} (@{u.gamertag})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+                    <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl border border-[var(--border-card)] bg-[var(--bg-main)] p-1.5">
+                      {filteredRoleUsers.map((u) => {
+                        const isSelected = effectiveTargetUserId === u.id;
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => setSelectedTargetUserId(u.id)}
+                            className={`flex w-full items-center justify-between rounded-lg p-2 text-left transition-all cursor-pointer font-[family-name:var(--font-active)] ${
+                              isSelected
+                                ? 'border border-[var(--app-accent)] bg-[var(--app-accent-soft)] text-[var(--text-heading)] font-bold shadow-sm'
+                                : 'border border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Avatar fallback={u.name} size="sm" />
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-bold leading-tight text-[var(--text-heading)]">
+                                  {u.name}
+                                </p>
+                                <p className="truncate text-[10px] font-bold leading-tight text-[var(--app-accent)]">
+                                  @{u.gamertag}
+                                </p>
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <Check className="size-4 text-[var(--app-accent)] shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ) : (
-                  <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs font-mono">
-                    {userSearchQuery ? `No se encontraron coincidencias para "${userSearchQuery}".` : `No hay usuarios con el rol ${newChatRole} en la BD.`}
+                  <div className="p-3 rounded-xl bg-[var(--app-warning-soft)] border border-[var(--app-warning)] text-[var(--app-warning)] text-xs font-[family-name:var(--font-active)]">
+                    {userSearchQuery ? `No se encontraron coincidencias para "${userSearchQuery}".` : `No hay usuarios con el rol ${newChatRole} disponibles.`}
                   </div>
                 )}
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex justify-end gap-2 font-[family-name:var(--font-active)]">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => setShowNewChatModal(false)}
-                  className="text-xs font-mono"
+                  className="text-xs font-[family-name:var(--font-active)] cursor-pointer"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  className="text-xs font-mono font-bold bg-[var(--accent-cyan)] text-slate-950"
+                  className="text-xs font-[family-name:var(--font-active)] font-bold bg-[var(--app-accent)] text-[var(--accent-contrast)] cursor-pointer"
                 >
                   Abrir Canal de Chat
                 </Button>
@@ -913,26 +1017,26 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
 
       {/* ── BAN MODAL FOR ADMINS & ORGANIZERS ───────────────────────── */}
       {showBanModal && activeThread && (
-        <Modal isOpen onClose={() => setShowBanModal(false)} ariaLabel="Sancionar usuario del chat" size="sm" showCloseButton={false} closeDisabled={banningUser} className="p-6 border-rose-500/40 space-y-4 font-mono">
-            <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
-              <div className="flex items-center gap-2 text-rose-400">
+        <Modal isOpen onClose={() => setShowBanModal(false)} ariaLabel="Sancionar usuario del chat" size="sm" showCloseButton={false} closeDisabled={banningUser} className="p-6 border-[var(--app-danger)] space-y-4 font-[family-name:var(--font-active)]">
+            <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3 font-[family-name:var(--font-active)]">
+              <div className="flex items-center gap-2 text-[var(--app-danger)] font-[family-name:var(--font-active)]">
                 <ShieldAlert className="w-5 h-5" />
-                <h3 className="font-bold text-sm uppercase tracking-tight text-white">
+                <h3 className="font-bold text-sm uppercase tracking-tight text-[var(--text-heading)] font-[family-name:var(--font-active)]">
                   Sancionar / Banear Usuario de Chat
                 </h3>
               </div>
-              <button onClick={() => setShowBanModal(false)} className="text-[var(--text-muted)] hover:text-white">
+              <button onClick={() => setShowBanModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-heading)] cursor-pointer font-[family-name:var(--font-active)]">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-200 text-xs">
+            <div className="p-3 rounded-xl bg-[var(--app-danger-soft)] border border-[var(--app-danger)] text-[var(--app-danger)] text-xs font-[family-name:var(--font-active)]">
               Vas a suspender los privilegios de envío de mensajes para <strong>{activeThread.participantName}</strong>. El usuario no podrá escribir en ningún canal eSports.
             </div>
 
-            <form onSubmit={handleBanTargetUser} className="space-y-4 text-xs">
-              <div className="space-y-1.5">
-                <label className="font-bold text-[var(--text-muted)] uppercase block">
+            <form onSubmit={handleBanTargetUser} className="space-y-4 text-xs font-[family-name:var(--font-active)]">
+              <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+                <label className="font-bold text-[var(--text-muted)] uppercase block font-[family-name:var(--font-active)]">
                   Motivo Oficial del Baneo / Sanción
                 </label>
                 <textarea
@@ -941,29 +1045,154 @@ export function ChatSystem({ activeConvId, initialTopic, onClose }: ChatSystemPr
                   value={banReasonInput}
                   onChange={(e) => setBanReasonInput(e.target.value)}
                   placeholder="Escribe la razón detallada de la sanción..."
-                  className="w-full p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-rose-500"
+                  className="w-full p-3 rounded-[var(--radius-control)] bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--app-danger)] font-[family-name:var(--font-active)]"
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex justify-end gap-2 font-[family-name:var(--font-active)]">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => setShowBanModal(false)}
-                  className="text-xs font-mono"
+                  className="text-xs font-[family-name:var(--font-active)] cursor-pointer"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
                   disabled={banningUser}
-                  className="text-xs font-mono font-bold bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 rounded-xl shadow-lg"
+                  className="text-xs font-[family-name:var(--font-active)] font-bold bg-[var(--app-danger)] hover:bg-[var(--app-danger)] text-[var(--text-heading)] flex items-center gap-1.5 rounded-[var(--radius-control)] shadow-lg cursor-pointer"
                 >
                   <Ban className="w-4 h-4" />
                   {banningUser ? 'Aplicando Baneo...' : 'Confirmar Baneo Directo'}
                 </Button>
               </div>
             </form>
+        </Modal>
+      )}
+
+      {/* ── REPORT MESSAGE MODAL ───────────────────────── */}
+      {reportingMessage && (
+        <Modal
+          isOpen
+          onClose={() => {
+            if (!submittingReport) {
+              setReportingMessage(null);
+              setReportFeedback(null);
+            }
+          }}
+          ariaLabel="Reportar mensaje"
+          size="sm"
+          showCloseButton={false}
+          closeDisabled={submittingReport}
+          className="p-6 border-[var(--border-card)] space-y-4 font-[family-name:var(--font-active)]"
+        >
+          <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3 font-[family-name:var(--font-active)]">
+            <div className="flex items-center gap-2 text-[var(--app-warning)] font-[family-name:var(--font-active)]">
+              <Flag className="w-5 h-5 text-[var(--app-warning)]" />
+              <h3 className="font-bold text-sm uppercase tracking-tight text-[var(--text-heading)] font-[family-name:var(--font-active)]">
+                Reportar Mensaje a Moderación
+              </h3>
+            </div>
+            <button
+              onClick={() => {
+                if (!submittingReport) {
+                  setReportingMessage(null);
+                  setReportFeedback(null);
+                }
+              }}
+              disabled={submittingReport}
+              className="text-[var(--text-muted)] hover:text-[var(--text-heading)] cursor-pointer font-[family-name:var(--font-active)]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Quoted Message Preview */}
+          <div className="p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-1.5 text-xs font-[family-name:var(--font-active)]">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">
+              <span className="font-bold text-[var(--text-heading)]">{reportingMessage.senderName}</span>
+              <span>{reportingMessage.timestamp}</span>
+            </div>
+            <p className="text-[var(--text-primary)] italic border-l-2 border-[var(--app-accent)] pl-2 py-0.5 line-clamp-3 font-[family-name:var(--font-active)]">
+              &quot;{reportingMessage.text}&quot;
+            </p>
+          </div>
+
+          {reportFeedback && (
+            <div
+              className={`p-3 rounded-xl text-xs flex items-center gap-2 font-[family-name:var(--font-active)] ${
+                reportFeedback.type === 'success'
+                  ? 'bg-[var(--app-positive-soft)] text-[var(--app-positive)] border border-[var(--app-positive)]'
+                  : 'bg-[var(--app-danger-soft)] text-[var(--app-danger)] border border-[var(--app-danger)]'
+              }`}
+            >
+              {reportFeedback.type === 'success' ? (
+                <Check className="w-4 h-4 shrink-0" />
+              ) : (
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+              )}
+              <span>{reportFeedback.message}</span>
+            </div>
+          )}
+
+          {(!reportFeedback || reportFeedback.type !== 'success') && (
+            <form onSubmit={handleSendReport} className="space-y-4 text-xs font-[family-name:var(--font-active)]">
+              <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+                <label className="font-bold text-[var(--text-muted)] uppercase block font-[family-name:var(--font-active)]">
+                  Motivo de la denuncia
+                </label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full p-2.5 rounded-[var(--radius-control)] bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--app-accent)] font-[family-name:var(--font-active)]"
+                >
+                  <option value="Toxicidad / Lenguaje Ofensivo">Toxicidad / Lenguaje Ofensivo</option>
+                  <option value="Acoso o Hostigamiento">Acoso o Hostigamiento</option>
+                  <option value="Spam o Publicidad no autorizada">Spam o Publicidad no autorizada</option>
+                  <option value="Trampas o Arreglo de Partidos">Trampas o Arreglo de Partidos</option>
+                  <option value="Conducta Antideportiva">Conducta Antideportiva</option>
+                  <option value="Otro motivo">Otro motivo</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+                <label className="font-bold text-[var(--text-muted)] uppercase block font-[family-name:var(--font-active)]">
+                  Detalles adicionales (opcional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Explica qué ocurrió o contexto relevante para los moderadores..."
+                  className="w-full p-2.5 rounded-[var(--radius-control)] bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--app-accent)] font-[family-name:var(--font-active)]"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 font-[family-name:var(--font-active)]">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setReportingMessage(null);
+                    setReportFeedback(null);
+                  }}
+                  disabled={submittingReport}
+                  className="text-xs font-[family-name:var(--font-active)] cursor-pointer"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submittingReport}
+                  className="text-xs font-[family-name:var(--font-active)] font-bold bg-[var(--app-warning)] hover:bg-[var(--app-warning)] text-[var(--accent-contrast)] flex items-center gap-1.5 rounded-[var(--radius-control)] shadow-lg cursor-pointer"
+                >
+                  <Flag className="w-3.5 h-3.5" />
+                  {submittingReport ? 'Enviando Reporte...' : 'Enviar Reporte'}
+                </Button>
+              </div>
+            </form>
+          )}
         </Modal>
       )}
     </div>

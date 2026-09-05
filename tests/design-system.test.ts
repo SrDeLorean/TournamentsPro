@@ -30,7 +30,7 @@ describe('design system preferences', () => {
       '--ui-scale': '1',
       '--ui-surface-opacity': '0.82',
       '--ui-blur': '18px',
-      '--ui-accent': '#22d3ee',
+      '--ui-accent': '#DC2011',
     });
   });
 });

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { LoaderCircle, SearchX } from 'lucide-react';
 import { TeamProfileView } from '@/components/teams/team-profile-view';
 import { Button } from '@/components/ui/button';
-import { GAMES_CATALOG } from '@/lib/games-data';
 import { initialTeams, type TeamData } from '@/lib/data-store';
 
 export default function GlobalTeamProfilePage({ params }: { params: Promise<{ teamId: string }> }) {
@@ -57,15 +56,14 @@ export default function GlobalTeamProfilePage({ params }: { params: Promise<{ te
   if (loading) return <main className="public-team-state"><LoaderCircle className="size-8 animate-spin" /><h1>Cargando equipo</h1></main>;
   if (!team) return <main className="public-team-state"><SearchX className="size-9" /><h1>Equipo no encontrado</h1><Link href="/equipos"><Button>Volver al directorio</Button></Link></main>;
 
-  const game = GAMES_CATALOG[team.gameSlug] || GAMES_CATALOG.eafc26;
   return (
     <ViewTransition
       enter={{ 'nav-forward': 'team-nav-forward', 'nav-back': 'team-nav-back', default: 'none' }}
       exit={{ 'nav-forward': 'team-nav-forward', 'nav-back': 'team-nav-back', default: 'none' }}
       default="none"
     >
-      <main className="public-team-page" style={{ '--profile-accent': team.color || game.brandColor, '--profile-accent-secondary': game.accentColor } as React.CSSProperties}>
-        <TeamProfileView team={team} brandColor={team.color || game.brandColor} />
+      <main className="public-team-page" style={{ '--profile-accent': 'var(--app-accent)', '--profile-accent-secondary': 'var(--app-accent-2)' } as React.CSSProperties}>
+        <TeamProfileView team={team} brandColor="var(--app-accent)" />
       </main>
     </ViewTransition>
   );

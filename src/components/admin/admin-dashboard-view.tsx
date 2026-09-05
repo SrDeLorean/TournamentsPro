@@ -1,17 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Building2, Plus, Shield, ShieldAlert, Trash2, Unlock, Users } from 'lucide-react';
+import { Building2, Fingerprint, Plus, Shield, ShieldAlert, Trash2, Unlock, Users } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   ManagementHero,
-  ManagementMetrics,
   ManagementPage,
   ManagementSection,
   ManagementTabs,
-  MetricCard,
   type ManagementTab,
 } from '@/components/dashboard/management-ui';
+import { DashboardInsightMetrics, IdentityWarningsPanel, useDashboardInsights } from '@/components/dashboard/dashboard-insights';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
@@ -54,7 +53,7 @@ interface AdminTeam {
   captain_name?: string;
 }
 
-type AdminTab = 'users' | 'banned' | 'organizations' | 'teams';
+type AdminTab = 'users' | 'identity' | 'banned' | 'organizations' | 'teams';
 type BanTarget = { kind: 'user' | 'team'; id: string; name: string; isBanned: boolean };
 
 export function AdminDashboardView() {
@@ -69,6 +68,7 @@ export function AdminDashboardView() {
   const [banTarget, setBanTarget] = useState<BanTarget | null>(null);
   const [createOrgError, setCreateOrgError] = useState('');
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
+  const { insights, loading: insightsLoading, reload: reloadInsights } = useDashboardInsights();
 
   const fetchUsers = useCallback(async () => {
     const response = await fetch(`/api/admin/users${userRoleFilter ? `?role=${encodeURIComponent(userRoleFilter)}` : ''}`);
@@ -109,7 +109,7 @@ export function AdminDashboardView() {
       });
       const data = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) throw new Error(data.error || 'No se pudo actualizar la sanción.');
-      await (kind === 'user' ? fetchUsers() : fetchTeams());
+      await Promise.all([kind === 'user' ? fetchUsers() : fetchTeams(), reloadInsights()]);
       endSuccess(isBanned ? 'El acceso fue restaurado correctamente.' : 'La sanción fue aplicada correctamente.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo actualizar la sanción.';
@@ -152,6 +152,7 @@ export function AdminDashboardView() {
 
   const tabs: ManagementTab<AdminTab>[] = [
     { id: 'users', label: 'Usuarios y roles', shortLabel: 'Usuarios', count: users.length, icon: Users, tone: 'cyan' },
+    { id: 'identity', label: 'IDs similares', shortLabel: 'Alertas ID', count: insights?.identityWarnings.length ?? 0, icon: Fingerprint, tone: 'crimson' },
     { id: 'banned', label: 'Sanciones', count: totalBanned, icon: ShieldAlert, tone: 'crimson' },
     { id: 'organizations', label: 'Organizaciones', shortLabel: 'Orgs.', count: organizations.length, icon: Building2, tone: 'violet' },
     { id: 'teams', label: 'Clubes y escuadras', shortLabel: 'Clubes', count: teams.length, icon: Shield, tone: 'emerald' },
@@ -169,14 +170,11 @@ export function AdminDashboardView() {
         badge={currentUser?.role || 'Administrador'}
       />
 
-      <ManagementMetrics>
-        <MetricCard label="Usuarios" value={users.length} hint="Perfiles registrados" icon={Users} tone="cyan" />
-        <MetricCard label="Organizaciones" value={organizations.length} hint="Entidades operativas" icon={Building2} tone="violet" />
-        <MetricCard label="Clubes" value={teams.length} hint="Escuadras registradas" icon={Shield} tone="emerald" />
-        <MetricCard label="Sanciones activas" value={totalBanned} hint="Usuarios y clubes" icon={ShieldAlert} tone="crimson" />
-      </ManagementMetrics>
+      <DashboardInsightMetrics insights={insights} loading={insightsLoading} />
 
       <ManagementTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} label="Módulos administrativos" />
+
+      {activeTab === 'identity' ? <IdentityWarningsPanel warnings={insights?.identityWarnings ?? []} /> : null}
 
       {activeTab === 'users' ? (
         <ManagementSection
@@ -196,15 +194,15 @@ export function AdminDashboardView() {
           <DataTable
             data={users}
             searchPlaceholder="Buscar por nombre, gamertag o correo..."
-            brandColor="var(--accent-cyan)"
+            brandColor="var(--app-accent)"
             columns={[
-              { header: 'Usuario', cell: (user) => <div><p className="font-bold text-[var(--text-heading)]">{user.name}</p><p className="font-mono text-[10px] text-[var(--accent-cyan)]">@{user.gamertag}</p></div> },
-              { header: 'Correo', accessorKey: 'email', className: 'font-mono text-[var(--text-secondary)]' },
+              { header: 'Usuario', cell: (user) => <div className="font-[family-name:var(--font-active)]"><p className="font-bold text-[var(--text-heading)]">{user.name}</p><p className="font-[family-name:var(--font-active)] text-[10px] text-[var(--app-accent)] font-bold">@{user.gamertag}</p></div> },
+              { header: 'Correo', accessorKey: 'email', className: 'font-[family-name:var(--font-active)] text-[var(--text-secondary)]' },
               { header: 'Rol', cell: (user) => <Badge variant={user.role === 'Administrador' ? 'rose' : user.role === 'Organizador' ? 'violet' : 'cyan'}>{user.role}</Badge> },
               { header: 'Estado', cell: (user) => <Badge variant={user.is_banned ? 'rose' : 'emerald'}>{user.is_banned ? 'Baneado' : user.status}</Badge> },
             ]}
             actions={(user) => (
-              <Button size="sm" variant="ghost" disabled={busyId === user.id} onClick={() => setBanTarget({ kind: 'user', id: user.id, name: user.gamertag, isBanned: user.is_banned === 1 })} className={user.is_banned ? 'text-[var(--accent-emerald)]' : 'text-[var(--accent-crimson)]'}>
+              <Button size="sm" variant="ghost" disabled={busyId === user.id} onClick={() => setBanTarget({ kind: 'user', id: user.id, name: user.gamertag, isBanned: user.is_banned === 1 })} className={user.is_banned ? 'text-[var(--app-positive)]' : 'text-[var(--app-danger)]'}>
                 {user.is_banned ? <Unlock className="mr-1 size-3.5" /> : <Trash2 className="mr-1 size-3.5" />}{user.is_banned ? 'Restaurar' : 'Sancionar'}
               </Button>
             )}
@@ -213,16 +211,16 @@ export function AdminDashboardView() {
       ) : null}
 
       {activeTab === 'banned' ? (
-        <div className="grid gap-5 2xl:grid-cols-2">
+        <div className="grid gap-5 2xl:grid-cols-2 font-[family-name:var(--font-active)]">
           <ManagementSection title="Usuarios sancionados" description="Perfiles sin acceso al sistema." icon={ShieldAlert} tone="crimson">
             <DataTable
               data={bannedUsers}
               searchPlaceholder="Buscar usuario sancionado..."
-              brandColor="var(--accent-crimson)"
+              brandColor="var(--app-danger)"
               columns={[
-                { header: 'Usuario', cell: (user) => <div><p className="font-bold text-[var(--text-heading)]">@{user.gamertag}</p><p className="text-[10px] text-[var(--text-muted)]">{user.name}</p></div> },
-                { header: 'Motivo', cell: (user) => <span className="text-[var(--text-secondary)]">{user.ban_reason || 'Sin motivo indicado'}</span> },
-                { header: 'Fecha', cell: (user) => <span className="font-mono text-[var(--text-muted)]">{user.banned_at ? new Date(user.banned_at).toLocaleDateString() : 'N/A'}</span> },
+                { header: 'Usuario', cell: (user) => <div className="font-[family-name:var(--font-active)]"><p className="font-bold text-[var(--text-heading)]">@{user.gamertag}</p><p className="text-[10px] text-[var(--text-muted)]">{user.name}</p></div> },
+                { header: 'Motivo', cell: (user) => <span className="text-[var(--text-secondary)] font-[family-name:var(--font-active)]">{user.ban_reason || 'Sin motivo indicado'}</span> },
+                { header: 'Fecha', cell: (user) => <span className="font-[family-name:var(--font-active)] text-[var(--text-muted)]">{user.banned_at ? new Date(user.banned_at).toLocaleDateString() : 'N/A'}</span> },
               ]}
               actions={(user) => <Button size="sm" onClick={() => setBanTarget({ kind: 'user', id: user.id, name: user.gamertag, isBanned: true })} disabled={busyId === user.id}><Unlock className="mr-1 size-3.5" />Restaurar</Button>}
             />
@@ -232,11 +230,11 @@ export function AdminDashboardView() {
             <DataTable
               data={bannedTeams}
               searchPlaceholder="Buscar club sancionado..."
-              brandColor="var(--accent-crimson)"
+              brandColor="var(--app-danger)"
               columns={[
-                { header: 'Club', cell: (team) => <span className="font-bold text-[var(--text-heading)]">{team.name} [{team.tag}]</span> },
-                { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-mono uppercase text-[var(--accent-cyan)]' },
-                { header: 'Motivo', cell: (team) => <span className="text-[var(--text-secondary)]">{team.ban_reason || 'Infracción disciplinaria'}</span> },
+                { header: 'Club', cell: (team) => <span className="font-bold text-[var(--text-heading)] font-[family-name:var(--font-active)]">{team.name} [{team.tag}]</span> },
+                { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-[family-name:var(--font-active)] font-bold uppercase text-[var(--app-accent)]' },
+                { header: 'Motivo', cell: (team) => <span className="text-[var(--text-secondary)] font-[family-name:var(--font-active)]">{team.ban_reason || 'Infracción disciplinaria'}</span> },
               ]}
               actions={(team) => <Button size="sm" onClick={() => setBanTarget({ kind: 'team', id: team.id, name: team.name, isBanned: true })} disabled={busyId === team.id}><Unlock className="mr-1 size-3.5" />Restaurar</Button>}
             />
@@ -245,24 +243,19 @@ export function AdminDashboardView() {
       ) : null}
 
       {activeTab === 'organizations' ? (
-        <ManagementSection
-          title="Organizaciones y permisos"
-          description="Administra entidades madre y las disciplinas que pueden operar."
-          icon={Building2}
-          tone="violet"
-          action={<Button onClick={() => setIsCreatingOrg((value) => !value)} className="w-full sm:w-auto"><Plus className="mr-1 size-4" />Nueva organización</Button>}
-        >
+        <ManagementSection title="Organizaciones eSports" description="Ecosistema de ligas y torneos registrados." icon={Building2} tone="violet">
           <CreateOrganizationModal
             isOpen={isCreatingOrg}
             onClose={() => { setIsCreatingOrg(false); setCreateOrgError(''); }}
             onSuccess={() => fetchOrganizations()}
             currentUser={currentUser}
-          />          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+          />
+          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3 font-[family-name:var(--font-active)]">
             {organizations.map((organization) => (
-              <article key={organization.id} className="rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-4 transition-colors hover:bg-[var(--bg-card-hover)]">
-                <div className="flex items-start justify-between gap-3"><div><h3 className="font-black uppercase text-[var(--text-heading)]">{organization.name}</h3><p className="font-mono text-xs text-[var(--accent-violet)]">[{organization.tag}]</p></div><Badge variant="emerald">{organization.status || 'Activa'}</Badge></div>
-                <dl className="mt-4 grid grid-cols-2 gap-2 text-xs"><div><dt className="text-[var(--text-muted)]">Organizadores</dt><dd className="mt-1 font-black text-[var(--text-heading)]">{organization.organizers_count ?? 0}</dd></div><div><dt className="text-[var(--text-muted)]">Escuadras</dt><dd className="mt-1 font-black text-[var(--text-heading)]">{organization.teams_count ?? 0}</dd></div></dl>
-                <div className="mt-4 flex flex-wrap gap-1.5 border-t border-[var(--border-card)] pt-3">{(organization.allowedGames ?? []).map((game) => <Badge key={game} variant="violet">{game}</Badge>)}</div>
+              <article key={organization.id} className="rounded-2xl border border-[var(--border-card)] bg-[var(--bg-subtle)] p-4 transition-colors hover:bg-[var(--bg-card-hover)] font-[family-name:var(--font-active)]">
+                <div className="flex items-start justify-between gap-3"><div><h3 className="font-black uppercase text-[var(--text-heading)] font-[family-name:var(--font-active)]">{organization.name}</h3><p className="font-[family-name:var(--font-active)] font-bold text-xs text-[var(--app-accent-2)]">[{organization.tag}]</p></div><Badge variant="emerald">{organization.status || 'Activa'}</Badge></div>
+                <dl className="mt-4 grid grid-cols-2 gap-2 text-xs font-[family-name:var(--font-active)]"><div><dt className="text-[var(--text-muted)]">Organizadores</dt><dd className="mt-1 font-black text-[var(--text-heading)]">{organization.organizers_count ?? 0}</dd></div><div><dt className="text-[var(--text-muted)]">Escuadras</dt><dd className="mt-1 font-black text-[var(--text-heading)]">{organization.teams_count ?? 0}</dd></div></dl>
+                <div className="mt-4 flex flex-wrap gap-1.5 border-t border-[var(--border-card)] pt-3 font-[family-name:var(--font-active)]">{(organization.allowedGames ?? []).map((game) => <Badge key={game} variant="violet">{game}</Badge>)}</div>
               </article>
             ))}
           </div>
@@ -274,13 +267,13 @@ export function AdminDashboardView() {
           <DataTable
             data={teams}
             searchPlaceholder="Buscar por club, tag o disciplina..."
-            brandColor="var(--accent-emerald)"
+            brandColor="var(--app-accent)"
             columns={[
-              { header: 'Club', cell: (team) => <div><p className="font-bold text-[var(--text-heading)]">{team.name} [{team.tag}]</p><p className="text-[10px] text-[var(--text-muted)]">Capitán: {team.captain_name || 'Sin asignar'}</p></div> },
-              { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-mono uppercase text-[var(--accent-cyan)]' },
+              { header: 'Club', cell: (team) => <div className="font-[family-name:var(--font-active)]"><p className="font-bold text-[var(--text-heading)]">{team.name} [{team.tag}]</p><p className="text-[10px] text-[var(--text-muted)]">Capitán: {team.captain_name || 'Sin asignar'}</p></div> },
+              { header: 'Disciplina', accessorKey: 'game_slug', className: 'font-[family-name:var(--font-active)] font-bold uppercase text-[var(--app-accent)]' },
               { header: 'Estado', cell: (team) => <Badge variant={team.is_banned ? 'rose' : 'emerald'}>{team.is_banned ? 'Baneado' : team.status || 'Activo'}</Badge> },
             ]}
-            actions={(team) => <Button size="sm" variant={team.is_banned ? 'primary' : 'ghost'} disabled={busyId === team.id} onClick={() => setBanTarget({ kind: 'team', id: team.id, name: team.name, isBanned: team.is_banned === 1 })} className={team.is_banned ? '' : 'text-[var(--accent-crimson)]'}>{team.is_banned ? <Unlock className="mr-1 size-3.5" /> : <Trash2 className="mr-1 size-3.5" />}{team.is_banned ? 'Restaurar' : 'Sancionar'}</Button>}
+            actions={(team) => <Button size="sm" variant={team.is_banned ? 'primary' : 'ghost'} disabled={busyId === team.id} onClick={() => setBanTarget({ kind: 'team', id: team.id, name: team.name, isBanned: team.is_banned === 1 })} className={team.is_banned ? '' : 'text-[var(--app-danger)]'}>{team.is_banned ? <Unlock className="mr-1 size-3.5" /> : <Trash2 className="mr-1 size-3.5" />}{team.is_banned ? 'Restaurar' : 'Sancionar'}</Button>}
           />
         </ManagementSection>
       ) : null}

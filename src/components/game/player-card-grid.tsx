@@ -70,7 +70,7 @@ export function PlayerCardGrid({ players, gameSlug, brandColor }: PlayerCardGrid
     <div className="space-y-6">
       <div className="game-directory-grid">
         {currentPlayers.map((player, idx) => (
-          <PlayerCard key={player.id || idx} player={player} gameSlug={gameSlug} brandColor={brandColor} />
+          <PlayerCard key={player.id || idx} player={player} gameSlug={gameSlug} />
         ))}
       </div>
 
@@ -88,17 +88,18 @@ export function PlayerCardGrid({ players, gameSlug, brandColor }: PlayerCardGrid
 import { EsportsCard } from '@/components/ui/esports-card';
 import { UserCheck, Star, Award, Shield } from 'lucide-react';
 
-function PlayerCard({ player, gameSlug, brandColor }: { player: PlayerCardData; gameSlug: string; brandColor: string }) {
+function PlayerCard({ player, gameSlug }: { player: PlayerCardData; gameSlug: string }) {
   return (
     <EsportsCard
       entityType="user"
+      gameSlug={gameSlug}
       href={`/${gameSlug}/usuarios/${player.id}`}
       title={player.name}
       subtitle={`🎮 ID: ${player.gameId}`}
       description={`Atleta eSports compitiendo para ${player.team}.`}
       bannerUrl={player.bannerUrl || '/images/default/banner-default.jpg'}
       logoUrl={player.avatarUrl}
-      fallbackIcon={<UserCheck className="w-8 h-8 text-cyan-400" />}
+      fallbackIcon={<UserCheck className="w-8 h-8 text-[var(--app-info)]" />}
       tag={player.pos}
       country={player.nacionalidad}
       socials={
@@ -116,17 +117,16 @@ function PlayerCard({ player, gameSlug, brandColor }: { player: PlayerCardData; 
         { text: player.status || 'Atleta Activo', variant: 'emerald', pulse: true },
       ]}
       stats={[
-        { icon: <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />, label: 'Rating', value: player.rating, highlight: true },
-        { icon: <Award className="w-3.5 h-3.5 text-cyan-400" />, label: 'Efectividad', value: player.pss },
+        { icon: <Star className="w-3.5 h-3.5 text-[var(--app-warning)] fill-[var(--app-warning)]" />, label: 'Rating', value: player.rating, highlight: true },
+        { icon: <Award className="w-3.5 h-3.5 text-[var(--app-info)]" />, label: 'Efectividad', value: player.pss },
       ]}
       footerLeft={
         <span className="flex items-center gap-1">
-          <Shield className="w-3.5 h-3.5 text-emerald-400" />
+          <Shield className="w-3.5 h-3.5 text-[var(--app-positive)]" />
           <span>{player.team}</span>
         </span>
       }
       actionText="VER FICHA"
-      brandColor={brandColor}
     />
   );
 }

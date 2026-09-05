@@ -1,3 +1,1 @@
-import ComponentsShowcasePage from '../componentes/page';
-
-export default ComponentsShowcasePage;
+export { metadata, default } from '../componentes/page';

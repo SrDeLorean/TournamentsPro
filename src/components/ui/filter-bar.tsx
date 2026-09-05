@@ -1,14 +1,15 @@
 'use client';
 
-import React from 'react';
-import { Search, X } from 'lucide-react';
+import { useId, useState, useRef, useEffect, type CSSProperties, type ReactNode } from 'react';
+import { Check, ChevronDown, Layers, LoaderCircle, Search, SlidersHorizontal, X } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { GameLogo } from '@/components/ui/game-logo';
+import { cn } from '@/lib/utils';
 
 export interface FilterOption {
   id: string;
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 }
 
 export interface FilterBarProps {
@@ -23,7 +24,11 @@ export interface FilterBarProps {
   count?: number;
   countLabel?: string;
   searchHint?: string;
-  children?: React.ReactNode;
+  searchLabel?: string;
+  filterLabel?: string;
+  isLoading?: boolean;
+  className?: string;
+  children?: ReactNode;
 }
 
 export function FilterBar({
@@ -34,138 +39,262 @@ export function FilterBar({
   activeFilter = 'TODOS',
   onFilterChange,
   renderAsSelect = false,
-  brandColor = 'var(--game-brand)',
+  brandColor = 'var(--game-brand, var(--app-accent))',
   count,
   countLabel = 'REGISTROS',
   searchHint = 'ENTER',
+  searchLabel = 'Buscar',
+  filterLabel = 'Filtrar por',
+  isLoading = false,
+  className,
   children,
 }: FilterBarProps) {
+  const searchId = useId();
+  const selectId = useId();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const activeGame = GAMES_CATALOG[activeFilter];
+  const activeOption = options.find((option) => option.id === activeFilter);
+  const activeColor = activeGame?.brandColor || brandColor;
+
+  // Cierra el dropdown al hacer click fuera o presionar Escape
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isDropdownOpen]);
+
+  // Renderiza el logo oficial real de la disciplina o un icono limpio para "Todas"
+  const renderOptionLogo = (optionId: string, size: 'sm' | 'md' = 'sm') => {
+    const game = GAMES_CATALOG[optionId];
+    if (game?.logoUrl) {
+      return (
+        <span className="ui-filter-logo-box" style={{ '--opt-brand': game.brandColor } as CSSProperties}>
+          <GameLogo game={game} size={size} className="ui-filter-game-logo" />
+        </span>
+      );
+    }
+    if (['ALL', 'TODOS'].includes(optionId)) {
+      return (
+        <span className="ui-filter-logo-box is-all">
+          <Layers className="size-3.5" aria-hidden="true" />
+        </span>
+      );
+    }
+    const opt = options.find((o) => o.id === optionId);
+    if (opt?.icon) {
+      return (
+        <span className="ui-filter-logo-box">
+          {opt.icon}
+        </span>
+      );
+    }
+    return (
+      <span className="ui-filter-logo-box is-all">
+        <Layers className="size-3.5" aria-hidden="true" />
+      </span>
+    );
+  };
 
   return (
     <div
-      className="ui-filter-bar game-filter-panel flex min-w-0 flex-col gap-3 p-3 text-[var(--text-primary)] sm:gap-4 sm:p-4 xl:flex-row xl:flex-wrap xl:items-center"
-      style={{ '--filter-brand': brandColor } as React.CSSProperties}
+      className={cn(
+        'ui-filter-bar game-filter-panel font-[family-name:var(--font-active)]',
+        isLoading && 'is-loading',
+        isDropdownOpen && 'is-dropdown-open',
+        className
+      )}
+      style={{ '--filter-brand': brandColor } as CSSProperties}
     >
-      {/* 1. SEARCH INPUT WITH CLEAR BUTTON */}
-      <div className="game-search-control group relative w-full min-w-0 flex-1 xl:min-w-[16rem] xl:basis-[20rem]">
-        <Search
-          className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-300"
-          style={{ color: brandColor }}
-        />
-        <input
-          type="search"
-          aria-label={searchPlaceholder}
-          placeholder={searchPlaceholder}
-          value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="ui-control w-full h-11 pl-11 pr-16 text-xs sm:text-sm font-mono placeholder:text-[var(--text-muted)]"
-        />
-        {searchValue ? (
-          <button
-            type="button"
-            onClick={() => onSearchChange('')}
-            aria-label="Limpiar búsqueda"
-            className="game-search-clear absolute right-3.5 top-1/2 -translate-y-1/2"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        ) : (
-          <kbd className="game-search-hint absolute right-3.5 top-1/2 -translate-y-1/2">{searchHint}</kbd>
-        )}
+      {/* 1. CONTROL DE BÚSQUEDA */}
+      <div className="ui-filter-search game-search-control">
+        <label className="ui-filter-field-label" htmlFor={searchId}>
+          <Search className="size-3.5" aria-hidden="true" />
+          <span>{searchLabel}</span>
+        </label>
+        <div className="ui-filter-control-shell">
+          <Search className="ui-filter-leading-icon" aria-hidden="true" />
+          <input
+            id={searchId}
+            type="search"
+            aria-label={searchPlaceholder}
+            placeholder={searchPlaceholder}
+            value={searchValue}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="ui-filter-input"
+          />
+          {isLoading ? (
+            <LoaderCircle className="ui-filter-loading-icon" aria-label="Actualizando resultados" />
+          ) : searchValue ? (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              aria-label="Limpiar búsqueda"
+              className="game-search-clear ui-filter-clear"
+            >
+              <X className="size-4" />
+            </button>
+          ) : (
+            <kbd className="game-search-hint ui-filter-hint">{searchHint}</kbd>
+          )}
+        </div>
       </div>
 
-      {/* 2. FILTER OPTIONS (PILLS OR DROPDOWN SELECT) */}
-      {options.length > 0 && onFilterChange && (
+      {/* 2. SELECTOR DE OPCIONES / DISCIPLINAS */}
+      {options.length > 0 && onFilterChange ? (
         renderAsSelect ? (
-          <div className="group/sel relative flex w-full min-w-0 shrink-0 items-center sm:max-w-full xl:w-auto xl:min-w-[13rem]">
-            {/* Selected Game PNG Logo or Icon */}
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10 flex items-center justify-center">
-              {activeGame?.logoUrl ? (
-                <GameLogo game={activeGame} size="sm" className="filter drop-shadow" />
-              ) : (
-                <span className="text-xs font-mono">
-                  {activeGame?.icon || (['ALL', 'TODOS'].includes(activeFilter) ? '🌐' : '🎮')}
-                </span>
-              )}
-            </div>
+          <div
+            className={cn('ui-filter-select-group', isDropdownOpen && 'is-dropdown-open')}
+            style={{ '--filter-option-brand': activeColor } as CSSProperties}
+          >
+            <span className="ui-filter-field-label">
+              <SlidersHorizontal className="size-3.5" aria-hidden="true" />
+              {filterLabel}
+            </span>
+            <div ref={dropdownRef} className="ui-filter-control-shell is-select-custom">
+              <button
+                id={selectId}
+                type="button"
+                role="combobox"
+                aria-expanded={isDropdownOpen}
+                aria-haspopup="listbox"
+                aria-label={`${filterLabel}: ${activeOption?.label || activeFilter}`}
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+                className={cn('ui-filter-select-trigger', isDropdownOpen && 'is-open')}
+              >
+                <div className="ui-filter-trigger-content">
+                  {renderOptionLogo(activeFilter, 'sm')}
+                  <span className="ui-filter-trigger-label">
+                    {activeOption?.label || activeGame?.name || activeFilter}
+                  </span>
+                </div>
+                <ChevronDown
+                  className={cn('ui-filter-chevron', isDropdownOpen && 'is-open')}
+                  aria-hidden="true"
+                />
+              </button>
 
-            <select
-              aria-label="Seleccionar filtro"
-              value={activeFilter}
-              onChange={(e) => onFilterChange(e.target.value)}
-              className="ui-control w-full h-11 pl-11 pr-9 text-xs font-mono font-bold uppercase cursor-pointer appearance-none"
-              style={
-                activeFilter !== 'ALL' && activeFilter !== 'TODOS' && activeGame
-                  ? {
-                      borderColor: activeGame.brandColor || brandColor,
-                      color: activeGame.brandColor || brandColor,
-                      backgroundColor: `color-mix(in srgb, ${activeGame.brandColor || brandColor} 12%, transparent)`,
-                    }
-                  : undefined
-              }
-            >
-              {options.map((opt) => {
-                const gConfig = GAMES_CATALOG[opt.id];
-                const iconPrefix = gConfig?.icon || (['ALL', 'TODOS'].includes(opt.id) ? '🌐' : '🎮');
-                return (
-                  <option key={opt.id} value={opt.id} className="bg-[var(--bg-card)] text-[var(--text-primary)] font-bold py-1.5">
-                    {iconPrefix} {opt.label}
-                  </option>
-                );
-              })}
-            </select>
-            <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-muted)] z-10">
-              ▼
+              {/* MENÚ DESPLEGABLE CON LOGOS OFICIALES REALES */}
+              {isDropdownOpen && (
+                <div
+                  role="listbox"
+                  aria-label={filterLabel}
+                  className="ui-filter-dropdown-menu"
+                >
+                  <div className="ui-filter-dropdown-header">
+                    <span>Disciplinas oficiales</span>
+                    <span className="ui-filter-dropdown-badge">{options.length}</span>
+                  </div>
+                  <div className="ui-filter-dropdown-list">
+                    {options.map((option) => {
+                      const isSelected = activeFilter === option.id;
+                      const game = GAMES_CATALOG[option.id];
+                      const optColor = game?.brandColor || brandColor;
+                      const isAll = ['ALL', 'TODOS'].includes(option.id);
+
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            onFilterChange(option.id);
+                            setIsDropdownOpen(false);
+                          }}
+                          className={cn('ui-filter-dropdown-item', isSelected && 'is-selected')}
+                          style={{ '--item-brand': optColor } as CSSProperties}
+                        >
+                          {renderOptionLogo(option.id, 'sm')}
+                          <div className="ui-filter-dropdown-item-info">
+                            <span className="ui-filter-dropdown-item-title">
+                              {option.label}
+                            </span>
+                            {game?.category ? (
+                              <span className="ui-filter-dropdown-item-category">
+                                {game.category}
+                              </span>
+                            ) : isAll ? (
+                              <span className="ui-filter-dropdown-item-category">
+                                Catálogo general
+                              </span>
+                            ) : null}
+                          </div>
+                          {isSelected ? (
+                            <Check className="ui-filter-dropdown-check" aria-hidden="true" />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="game-filter-options mobile-scroll-row flex w-full flex-shrink-0 touch-pan-x items-center gap-2 overflow-x-auto pb-1 xl:w-auto xl:pb-0">
-            {options.map((opt) => {
-              const isActive = activeFilter === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => onFilterChange(opt.id)}
-                  aria-pressed={isActive}
-                  className={`game-filter-option px-3.5 py-2 rounded-[var(--ui-radius-control)] text-xs font-mono font-bold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap border select-none active:scale-95 ${
-                    isActive
-                      ? 'shadow-md'
-                      : 'bg-[var(--bg-main)]/40 border-[var(--border-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
-                  }`}
-                  style={
-                    isActive
-                      ? {
-                          backgroundColor: `color-mix(in srgb, ${brandColor} 20%, transparent)`,
-                          borderColor: brandColor,
-                          color: brandColor,
-                          boxShadow: `0 0 15px color-mix(in srgb, ${brandColor} 30%, transparent)`,
-                        }
-                      : undefined
-                  }
-                >
-                  {opt.icon}
-                  {opt.label}
-                </button>
-              );
-            })}
+          <div className="ui-filter-options-group">
+            <span className="ui-filter-field-label">
+              <SlidersHorizontal className="size-3.5" aria-hidden="true" />
+              {filterLabel}
+            </span>
+            <div className="game-filter-options mobile-scroll-row" role="group" aria-label={filterLabel}>
+              {options.map((option) => {
+                const isActive = activeFilter === option.id;
+                const game = GAMES_CATALOG[option.id];
+                const optionColor = game?.brandColor || brandColor;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => onFilterChange(option.id)}
+                    aria-pressed={isActive}
+                    className="game-filter-option"
+                    style={{ '--filter-option-brand': optionColor } as CSSProperties}
+                  >
+                    {renderOptionLogo(option.id, 'sm')}
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )
-      )}
+      ) : null}
 
-      {/* 3. OPTIONAL RESULTS COUNT BADGE */}
-      {typeof count === 'number' && (
-        <output aria-live="polite" className="flex min-h-10 w-full shrink-0 items-center justify-between gap-1.5 self-start rounded-[var(--ui-radius-control)] border border-[var(--border-card)] bg-[var(--bg-subtle)] px-3.5 py-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] shadow-sm sm:w-auto xl:self-auto">
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--filter-brand)] animate-pulse" />
-          <span>
-            {count} {countLabel}
+      {/* 3. CONTADOR DE RESULTADOS */}
+      {typeof count === 'number' ? (
+        <output aria-live="polite" aria-busy={isLoading} className="ui-filter-result-count">
+          <span className="ui-filter-result-pulse" />
+          <span className="ui-filter-result-copy">
+            <strong>{isLoading ? '—' : count}</strong>
+            <small>{countLabel}</small>
           </span>
         </output>
-      )}
+      ) : null}
 
-      {/* 4. ADDITIONAL CHILDREN SLOT */}
-      {children && <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 xl:w-auto">{children}</div>}
+      {/* 4. ACCIONES O BOTONES ADICIONALES */}
+      {children ? <div className="ui-filter-actions">{children}</div> : null}
     </div>
   );
 }

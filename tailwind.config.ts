@@ -39,6 +39,12 @@ const config = {
       backdropBlur: {
         glass: '18px',
       },
+      fontFamily: {
+        sans: ['var(--font-outfit)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['var(--font-outfit)', 'ui-sans-serif', 'sans-serif'],
+        outfit: ['var(--font-outfit)', 'ui-sans-serif', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+      },
     },
   },
   plugins: [],

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { GameConfig } from '@/lib/games-data';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import { SubSubNavbar, SubSubTabOption } from '@/components/layout/sub-sub-navbar';
+import { PublicProfileShell } from '@/components/public/public-profile-shell';
 import {
   Trophy, Shield, Calendar, ArrowLeft, Award, Users, Target, Activity,
   CheckCircle2, FileText, Building2, RefreshCw, BarChart2
@@ -102,7 +103,7 @@ export function PublicCompetitionDetailView({
   context = 'game',
 }: PublicCompetitionDetailViewProps) {
   const [activeTab, setActiveTab] = useState<CompTab>('equipos');
-  const brandColor = gameConfig?.brandColor || '#077D7E';
+  const brandColor = gameConfig?.brandColor || 'var(--app-accent)';
 
   const isPlayoff = competition.format?.toLowerCase().includes('playoff') || competition.mode_format?.toLowerCase().includes('playoff');
   const isHybrid = competition.format?.toLowerCase().includes('hibrid') || competition.mode_format?.toLowerCase().includes('hibrid');
@@ -136,188 +137,41 @@ export function PublicCompetitionDetailView({
   }));
 
   return (
-    <div
-      className="public-competition-profile space-y-6 sm:space-y-8 animate-in fade-in duration-300 text-[var(--text-primary)]"
-      style={{
-        '--game-brand': brandColor,
-        '--game-accent': gameConfig.accentColor || '#00F0FF',
-      } as React.CSSProperties}
+    <PublicProfileShell
+      entityId={competition.id}
+      transitionPrefix="competition"
+      accentColor={brandColor}
+      bannerUrl={compBanner}
+      bannerAlt={competition.name}
+      logoUrl={orgLogo}
+      logoAlt={orgName}
+      logoFallback={<Trophy className="size-12" />}
+      logoFit="contain"
+      eyebrow={<><Trophy className="size-3.5" />Competencia oficial</>}
+      title={competition.name}
+      badge={competition.status === 'Activo' ? 'EN CURSO' : competition.status}
+      description={competition.description || `Competencia oficial organizada por ${orgName}.`}
+      facts={<><span><Building2 className="size-3.5" />{orgName}</span><span><Users className="size-3.5" />{competition.mode_format || '11v11'}</span><span className="is-active"><CheckCircle2 className="size-3.5" />{isPlayoff ? 'Playoff' : isHybrid ? 'Liga híbrida' : 'Liga de puntos'}</span></>}
+      actions={<Link href={organizationHref}><button className="public-team-primary-action"><Building2 className="size-4" />Ver organización</button></Link>}
+      metrics={[
+        { value: competition.prize_pool || '—', label: 'prize pool' },
+        { value: `${regCount}/${maxCount}`, label: `${percent}% de equipos inscritos` },
+        { value: competition.match_mode === 'IdaVuelta' ? 'I/V' : '1', label: competition.match_mode === 'IdaVuelta' ? 'ida y vuelta' : 'partido único' },
+        { value: competition.transfer_market_mode || 'ABIERTO', label: 'mercado de fichajes' },
+      ]}
+      tabs={<SubSubNavbar tabs={compSubSubTabs} activeTab={activeTab} onSelectTab={setActiveTab} brandColor={brandColor} />}
+      contentClassName="public-competition-content pb-16"
     >
-      {/* ── 1. FULL-WIDTH HERO HEADER BANNER ────────────────────────────── */}
-      <div className="relative w-full rounded-[1.5rem] bg-slate-950 border border-[var(--border-card)] shadow-2xl overflow-hidden min-h-[260px] sm:min-h-[360px] flex flex-col justify-end">
-        {/* Full-bleed background graphic */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src={compBanner}
-            alt={competition.name}
-            fill
-            sizes="100vw"
-            loading="eager"
-            unoptimized={shouldBypassImageOptimization(compBanner)}
-            onError={(e) => {
-              e.currentTarget.src = '/images/default/banner-default.jpg';
-            }}
-            className="object-cover opacity-90 filter contrast-[1.1] brightness-[0.85]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-transparent to-slate-950/90" />
-        </div>
-
-        {/* Content Box Layer */}
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
-            {/* Org Logo Crest */}
-            <Link href={organizationHref}>
-              <div
-                className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl bg-slate-950/90 border-2 sm:border-4 flex items-center justify-center shadow-2xl flex-shrink-0 overflow-hidden relative group backdrop-blur-xl hover:scale-105 transition-all"
-                style={{ borderColor: brandColor, boxShadow: `0 0 30px ${brandColor}40` }}
-              >
-                {orgLogo ? (
-                  <Image
-                    src={orgLogo}
-                    alt={orgName}
-                    fill
-                    sizes="112px"
-                    unoptimized={shouldBypassImageOptimization(orgLogo)}
-                    onError={(e) => {
-                      e.currentTarget.src = '/images/default/logo-default.png';
-                    }}
-                    className="object-contain p-2 filter drop-shadow-md"
-                  />
-                ) : (
-                  <Building2 className="w-10 h-10 sm:w-14 sm:h-14" style={{ color: brandColor }} />
-                )}
-              </div>
-            </Link>
-
-            {/* Title & Badges */}
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-black uppercase tracking-wider backdrop-blur-md border ${
-                    competition.status === 'Activo' || competition.status === 'EN CURSO'
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                      : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
-                  }`}
-                >
-                  {competition.status === 'Activo' ? 'EN CURSO' : competition.status}
-                </span>
-
-                <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1 border border-white/10 bg-white/10 px-2.5 py-0.5 rounded-lg backdrop-blur-md">
-                  <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                  {isPlayoff ? 'PLAYOFF ELIMINATORIA' : isHybrid ? 'LIGA HÍBRIDA' : 'LIGA DE PUNTOS'}
-                </span>
-
-                <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1 border border-white/10 bg-white/10 px-2.5 py-0.5 rounded-lg backdrop-blur-md">
-                  <Users className="w-3.5 h-3.5 text-cyan-400" />
-                  {competition.mode_format || '11v11'}
-                </span>
-              </div>
-
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black font-display text-white uppercase tracking-tight drop-shadow-lg leading-none">
-                {competition.name}
-              </h1>
-
-              <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-300 font-mono pt-1">
-                <Link
-                  href={organizationHref}
-                  className="flex items-center gap-1.5 bg-black/50 px-3 py-1 rounded-xl backdrop-blur-md border border-white/10 shadow-inner hover:border-cyan-400 transition-colors"
-                >
-                  <Building2 className="w-3.5 h-3.5" style={{ color: brandColor }} />
-                  <span>Sede: <strong className="text-white hover:underline">{orgName}</strong></span>
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Button */}
-          <div className="flex items-center gap-3 shrink-0">
-            <Link href={organizationHref}>
-              <button className="px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all duration-300 bg-slate-900/90 hover:bg-slate-800 border border-white/20 text-white backdrop-blur-md flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95">
-                <ArrowLeft className="w-4 h-4" /> Volver a la Organización
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 2. TELEMETRY & PRIZE POOL STRIPE ────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-3xl bg-gradient-to-br from-amber-500/15 via-[var(--bg-card)] to-[var(--bg-card)] border border-amber-500/30 shadow-xl backdrop-blur-md flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5" /> PRIZE POOL
-            </span>
-            <div className="text-2xl font-black font-display text-amber-400">
-              {competition.prize_pool || 'Por Definir'}
-            </div>
-          </div>
-          <Trophy className="w-8 h-8 text-amber-400/40" />
-        </div>
-
-        <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xl backdrop-blur-md flex flex-col justify-between space-y-2">
-          <div className="flex justify-between text-[11px] font-mono">
-            <span className="text-[var(--text-muted)] uppercase tracking-wider">EQUIPOS INSCRITOS</span>
-            <span className="font-bold text-[var(--text-primary)]">{regCount} / {maxCount}</span>
-          </div>
-          <div className="w-full h-2.5 bg-[var(--bg-main)] rounded-full overflow-hidden border border-[var(--border-card)] p-0.5">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${percent}%`,
-                backgroundColor: brandColor,
-                boxShadow: `0 0 12px ${brandColor}`,
-              }}
-            />
-          </div>
-          <span className="text-[10px] text-[var(--text-muted)] font-mono text-right">{percent}% Completado</span>
-        </div>
-
-        <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xl backdrop-blur-md flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-mono font-bold text-[var(--text-muted)] uppercase tracking-widest">
-              FORMATO ENCUENTROS
-            </span>
-            <div className="text-sm font-bold text-[var(--text-primary)]">
-              {competition.match_mode === 'IdaVuelta' ? 'Ida y Vuelta' : 'Partido Único'}
-            </div>
-          </div>
-          <Activity className="w-6 h-6 text-purple-400 opacity-60" />
-        </div>
-
-        <div className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xl backdrop-blur-md flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-mono font-bold text-[var(--text-muted)] uppercase tracking-widest">
-              MERCADO FICHAJES
-            </span>
-            <div className="text-xs font-bold text-emerald-400 font-mono">
-              {competition.transfer_market_mode || 'ABIERTO'}
-            </div>
-          </div>
-          <RefreshCw className="w-6 h-6 text-emerald-400 opacity-60" />
-        </div>
-      </div>
-
-      {/* ── 3. SUB-SUB-NAVBAR TABS ────────────────────────────────────────── */}
-      <SubSubNavbar
-        tabs={compSubSubTabs}
-        activeTab={activeTab}
-        onSelectTab={(t) => setActiveTab(t as CompTab)}
-        brandColor={brandColor}
-      />
-
-      {/* ── 4. TAB CONTENT ─────────────────────────────────────────────── */}
-      <div className="pb-16">
         {/* ── TAB 1: EQUIPOS CONFIRMADOS ────────────────────────────────── */}
         {activeTab === 'equipos' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl sm:text-2xl font-black font-display text-[var(--text-heading)] uppercase tracking-tight flex items-center gap-2">
-                  <Shield className="w-6 h-6" style={{ color: brandColor }} />
+                <h2 className="text-xl sm:text-2xl font-black font-[family-name:var(--font-active)] text-[var(--text-heading)] uppercase tracking-tight flex items-center gap-2">
+                  <Shield className="ui-dynamic-brand-ink w-6 h-6" />
                   Equipos Confirmados ({teams.length})
                 </h2>
-                <p className="text-xs text-[var(--text-muted)] font-mono mt-1">
+                <p className="text-xs text-[var(--text-muted)] font-[family-name:var(--font-active)] mt-1">
                   Escuadras oficiales inscritas que disputan esta competencia.
                 </p>
               </div>
@@ -347,14 +201,14 @@ export function PublicCompetitionDetailView({
 
                   <div className="overflow-hidden space-y-1">
                     {t.team_tag && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/5 border border-[var(--border-card)] text-[var(--text-secondary)] uppercase">
+                      <span className="text-[9px] font-[family-name:var(--font-active)] font-bold px-1.5 py-0.5 rounded bg-[var(--app-contrast-soft)] border border-[var(--border-card)] text-[var(--text-secondary)] uppercase">
                         {t.team_tag}
                       </span>
                     )}
-                    <h3 className="text-base font-bold text-[var(--text-heading)] group-hover:text-[var(--game-brand)] transition-colors truncate uppercase font-display">
+                    <h3 className="text-base font-bold text-[var(--text-heading)] group-hover:text-[var(--game-brand)] transition-colors truncate uppercase font-[family-name:var(--font-active)]">
                       {t.team_name}
                     </h3>
-                    <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1">
+                    <span className="text-[10px] text-[var(--app-positive)] font-[family-name:var(--font-active)] font-bold flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" /> CONFIRMADO
                     </span>
                   </div>
@@ -381,13 +235,13 @@ export function PublicCompetitionDetailView({
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-2">
                   <h3 className="text-sm font-black uppercase text-[var(--text-heading)] tracking-wider flex items-center gap-2">
-                    <Target className="w-4 h-4 text-purple-400" />
+                    <Target className="w-4 h-4 text-[var(--app-accent-2)]" />
                     Cuadro de Eliminatoria Playoffs
                   </h3>
                 </div>
                 {matches.length > 0 ? (
                   <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-3xl p-6 shadow-xl overflow-x-auto relative backdrop-blur-xl">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--app-accent-2-soft)] rounded-full blur-[80px] pointer-events-none" />
                     <PlayoffBracket matches={playoffMatches} brandColor={brandColor} />
                   </div>
                 ) : (
@@ -438,16 +292,16 @@ export function PublicCompetitionDetailView({
         {activeTab === 'reglas' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xl space-y-6">
-              <h2 className="text-xl font-black font-display text-[var(--text-heading)] uppercase flex items-center gap-2">
-                <FileText className="w-5 h-5" style={{ color: brandColor }} />
+              <h2 className="text-xl font-black font-[family-name:var(--font-active)] text-[var(--text-heading)] uppercase flex items-center gap-2">
+                <FileText className="ui-dynamic-brand-ink w-5 h-5" />
                 Reglamento & Descripción del Torneo
               </h2>
 
-              <p className="text-sm text-[var(--text-primary)] leading-relaxed font-sans">
+              <p className="text-sm text-[var(--text-primary)] leading-relaxed font-[family-name:var(--font-active)]">
                 {competition.description || `Competencia oficial de ${gameConfig.name} administrada por ${orgName}. Todos los participantes deben respetar los estatutos del circuito y reportar resultados en tiempo y forma.`}
               </p>
 
-              <div className="pt-6 border-t border-[var(--border-card)] space-y-4 text-xs font-mono">
+              <div className="pt-6 border-t border-[var(--border-card)] space-y-4 text-xs font-[family-name:var(--font-active)]">
                 <h3 className="text-sm font-bold text-[var(--text-heading)] uppercase">Especificaciones del Sistema</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-1">
@@ -464,18 +318,18 @@ export function PublicCompetitionDetailView({
                   </div>
                   <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-1">
                     <span className="text-[var(--text-muted)]">CLASIFICAN A PLAYOFFS</span>
-                    <p className="font-bold text-amber-400">Top {competition.qualifiers_per_group || 2} por Grupo</p>
+                    <p className="font-bold text-[var(--app-warning)]">Top {competition.qualifiers_per_group || 2} por Grupo</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xl space-y-4">
-              <h3 className="text-sm font-bold text-[var(--text-heading)] uppercase font-mono flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-cyan-400" /> Fechas Clave
+              <h3 className="text-sm font-bold text-[var(--text-heading)] uppercase font-[family-name:var(--font-active)] flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[var(--app-accent)]" /> Fechas Clave
               </h3>
 
-              <div className="space-y-3 text-xs font-mono">
+              <div className="space-y-3 text-xs font-[family-name:var(--font-active)]">
                 <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)]">
                   <span className="text-[var(--text-muted)]">INICIO DEL TORNEO:</span>
                   <strong className="text-[var(--text-primary)] font-bold">
@@ -500,7 +354,6 @@ export function PublicCompetitionDetailView({
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PublicProfileShell>
   );
 }

@@ -12,7 +12,8 @@ export function ThemeProvider({
       attribute="class"
       defaultTheme="dark"
       enableSystem={false}
-      themes={['light', 'dark', 'oled', 'arena', 'prism']}
+      storageKey="tournamentspro:theme:v2"
+      themes={['light', 'dark', 'oled']}
       {...props}
     >
       {children}

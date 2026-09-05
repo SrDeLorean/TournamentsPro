@@ -12,6 +12,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
     | 'danger'
     | 'ghost'
     | 'glass'
+    | '3d-primary'
+    | '3d-secondary'
     | '3d-cyan'
     | '3d-violet'
     | '3d-emerald'
@@ -24,7 +26,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
-    const baseStyles = "inline-flex items-center justify-center font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-cyan)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-main)] disabled:opacity-50 disabled:pointer-events-none select-none";
+    const baseStyles = "group inline-flex items-center justify-center font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-main)] disabled:pointer-events-none select-none";
 
     const variants = {
       primary: "ui-button ui-button-primary font-bold",
@@ -33,6 +35,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       danger: "ui-button ui-button-danger font-bold",
       ghost: "ui-button ui-button-ghost",
       glass: "ui-button ui-button-glass",
+      '3d-primary': "btn-3d btn-3d-cyan",
+      '3d-secondary': "btn-3d btn-3d-violet",
       '3d-cyan': "btn-3d btn-3d-cyan",
       '3d-violet': "btn-3d btn-3d-violet",
       '3d-emerald': "btn-3d btn-3d-emerald",
@@ -42,10 +46,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const sizes = {
-      sm: "h-8 px-3 text-xs gap-1.5",
-      md: "h-10 px-4 text-sm gap-2",
-      lg: "h-12 px-6 text-base gap-2.5",
-      icon: "h-10 w-10 shrink-0",
+      sm: "min-h-10 px-3 text-xs gap-1.5 rounded-[var(--radius-control)]",
+      md: "h-10 px-4 text-sm gap-2 rounded-[var(--radius-control)]",
+      lg: "h-12 px-6 text-base gap-2.5 rounded-[var(--radius-control)]",
+      icon: "h-10 w-10 shrink-0 rounded-[var(--radius-control)]",
     };
 
     return (
@@ -53,10 +57,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         aria-busy={isLoading || undefined}
+        data-variant={variant}
+        data-size={size}
         className={cn(baseStyles, variants[variant], sizes[size], className)}
         {...props}
       >
-        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
         {children}
       </button>
     );

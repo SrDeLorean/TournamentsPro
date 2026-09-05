@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
-import ComponentsShowcaseClient from '@/features/design-system/components/components-showcase-client';
+import FinalDesignSystemPage from '@/features/design-system/components/final-design-system-page';
 
-export const metadata: Metadata = { title: 'Catálogo de componentes | TorneosPro' };
+export const metadata: Metadata = {
+  title: 'Catálogo Maestro de Componentes UI & Sistema de Diseño | TorneosPro',
+  description: 'Suite integral de componentes UI, identidad GameSlug, multi-tema Claro/Oscuro/OLED y formularios eSports de TorneosPro.',
+};
 
 export default function ComponentsPage() {
-  return <ComponentsShowcaseClient />;
+  return <FinalDesignSystemPage />;
 }

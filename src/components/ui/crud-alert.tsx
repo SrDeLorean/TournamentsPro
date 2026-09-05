@@ -123,17 +123,17 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
           aria-atomic="true"
           className={`ui-crud-alert fixed inset-x-3 top-[max(.75rem,env(safe-area-inset-top))] mx-auto w-auto max-w-md overflow-hidden rounded-2xl border p-4 backdrop-blur-xl shadow-2xl sm:inset-x-auto sm:right-5 sm:top-5 sm:w-full ${
             isLoading
-              ? 'bg-[var(--bg-card)]/95 border-[var(--accent-cyan)]/50 text-[var(--accent-cyan)] shadow-[0_4px_20px_color-mix(in_srgb,var(--accent-cyan)_20%,transparent)]'
+              ? 'bg-[var(--bg-card)]/95 border-[var(--app-accent)]/50 text-[var(--app-accent)] shadow-[0_4px_20px_color-mix(in_srgb,var(--app-accent)_20%,transparent)]'
               : isSuccess
-              ? 'bg-[var(--bg-card)]/95 border-[var(--accent-emerald)]/50 text-[var(--accent-emerald)] shadow-[0_4px_20px_color-mix(in_srgb,var(--accent-emerald)_20%,transparent)]'
-              : 'bg-[var(--bg-card)]/95 border-[var(--accent-crimson)]/50 text-[var(--accent-crimson)] shadow-[0_4px_20px_color-mix(in_srgb,var(--accent-crimson)_20%,transparent)]'
+              ? 'bg-[var(--bg-card)]/95 border-[var(--app-positive)]/50 text-[var(--app-positive)] shadow-[0_4px_20px_color-mix(in_srgb,var(--app-positive)_20%,transparent)]'
+              : 'bg-[var(--bg-card)]/95 border-[var(--app-danger)]/50 text-[var(--app-danger)] shadow-[0_4px_20px_color-mix(in_srgb,var(--app-danger)_20%,transparent)]'
           }`}
         >
           <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            {isLoading && <Loader2 className="w-5 h-5 text-[var(--accent-cyan)] animate-spin mt-0.5 flex-shrink-0" />}
-            {isSuccess && <CheckCircle2 className="w-5 h-5 text-[var(--accent-emerald)] mt-0.5 flex-shrink-0" />}
-            {isError && <XCircle className="w-5 h-5 text-[var(--accent-crimson)] mt-0.5 flex-shrink-0" />}
+            {isLoading && <Loader2 className="w-5 h-5 text-[var(--app-accent)] animate-spin mt-0.5 flex-shrink-0" />}
+            {isSuccess && <CheckCircle2 className="w-5 h-5 text-[var(--app-positive)] mt-0.5 flex-shrink-0" />}
+            {isError && <XCircle className="w-5 h-5 text-[var(--app-danger)] mt-0.5 flex-shrink-0" />}
 
             <div className="min-w-0 space-y-1 text-xs">
               <div className="flex items-center gap-2">
@@ -146,10 +146,10 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
               <p className="break-words font-semibold text-[var(--text-primary)]">{state.actionName || 'Actualizando información'}</p>
 
               {state.message && (
-                <p className="font-medium text-[var(--text-secondary)] font-sans leading-relaxed mt-1 text-[13px]">{state.message}</p>
+                <p className="font-medium text-[var(--text-secondary)] font-[family-name:var(--font-active)] leading-relaxed mt-1 text-[13px]">{state.message}</p>
               )}
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-[var(--text-muted)] pt-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-[family-name:var(--font-active)] font-medium text-[var(--text-muted)] pt-1">
                 {state.startTime && (
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
@@ -163,7 +163,7 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
                   </span>
                 )}
                 {isLoading && (
-                  <span className="animate-pulse text-[var(--accent-cyan)] font-semibold">● Ejecutando en base de datos...</span>
+                  <span className="animate-pulse text-[var(--app-accent)] font-semibold">● Ejecutando en base de datos...</span>
                 )}
                 {typeof state.durationMs === 'number' && <span>{state.durationMs < 1000 ? `${state.durationMs} ms` : `${(state.durationMs / 1000).toFixed(1)} s`}</span>}
               </div>
@@ -182,7 +182,7 @@ export function CrudAlertBanner({ state, onClose }: CrudAlertProps) {
           {isSuccess && (
             <motion.div
               aria-hidden="true"
-              className="absolute inset-x-0 bottom-0 h-1 origin-left bg-[var(--accent-emerald)]"
+              className="absolute inset-x-0 bottom-0 h-1 origin-left bg-[var(--app-positive)]"
               initial={{ scaleX: 1 }}
               animate={{ scaleX: 0 }}
               transition={{ duration: autoDismissMs / 1000, ease: 'linear' }}

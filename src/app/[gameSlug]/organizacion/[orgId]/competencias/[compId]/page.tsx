@@ -48,7 +48,7 @@ export default async function PublicCompetitionDetailPage({
           <div className="text-center space-y-4">
             <Trophy className="w-16 h-16 mx-auto text-[var(--text-muted)] opacity-50" />
             <h1 className="text-2xl font-black text-[var(--text-heading)] uppercase">Competencia no encontrada</h1>
-            <Link href={`/${gameSlug}/organizacion/${orgId}`} className="text-[var(--accent-cyan)] hover:underline text-sm font-bold block">
+            <Link href={`/${gameSlug}/organizacion/${orgId}`} className="text-[var(--app-accent)] hover:underline text-sm font-bold block">
               Volver a la Organización
             </Link>
           </div>

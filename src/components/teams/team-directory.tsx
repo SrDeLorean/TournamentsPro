@@ -56,7 +56,7 @@ interface DirectoryTeam extends TeamData {
 
 export function TeamDirectory({
   gameSlug = 'ALL',
-  brandColor = '#077D7E',
+  brandColor,
   hideHeader = false,
   myTeamsOnly = false,
 }: TeamDirectoryProps) {
@@ -69,7 +69,7 @@ export function TeamDirectory({
 
   // Active game metadata
   const gameConfig: GameConfig = GAMES_CATALOG[gameSlug || 'eafc26'] || GAMES_CATALOG['eafc26'];
-  const activeBrandColor = gameConfig?.brandColor || brandColor || '#077D7E';
+  const activeBrandColor = gameConfig?.brandColor || brandColor || 'var(--app-accent)';
 
   useEffect(() => {
     let isMounted = true;
@@ -182,11 +182,11 @@ export function TeamDirectory({
   const isSpecificGame = !!gameSlug && gameSlug !== 'ALL';
 
   return (
-    <div className="space-y-6 sm:space-y-8 font-mono">
+    <div className="space-y-6 sm:space-y-8 font-[family-name:var(--font-active)]" style={{ '--ui-dynamic-brand': activeBrandColor } as React.CSSProperties}>
       {!hideHeader && (
         <PageHeader
           badgeText={badgeText}
-          badgeIcon={<Flame className="w-3.5 h-3.5" style={{ color: activeBrandColor, fill: activeBrandColor }} />}
+          badgeIcon={<Flame className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
           title={title}
           highlightTitle={highlightTitle}
           description={description}
@@ -231,10 +231,10 @@ export function TeamDirectory({
           {filteredTeams.length === 0 ? (
             <div className="p-12 text-center rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-4 shadow-xl">
               <Shield className="w-12 h-12 text-[var(--text-muted)] opacity-60 mx-auto" />
-              <h3 className="text-xl font-bold font-display text-[var(--text-heading)]">
+              <h3 className="text-xl font-bold font-[family-name:var(--font-active)] text-[var(--text-heading)]">
                 No se encontraron escuadras registradas
               </h3>
-              <p className="text-xs font-mono text-[var(--text-muted)] max-w-sm mx-auto">
+              <p className="text-xs font-[family-name:var(--font-active)] text-[var(--text-muted)] max-w-sm mx-auto">
                 No existen clubes que coincidan con la búsqueda o disciplina seleccionada.
               </p>
               <Button
@@ -246,7 +246,7 @@ export function TeamDirectory({
                   setSelectedDiscipline('ALL');
                   setCurrentPage(1);
                 }}
-                className="text-xs font-mono gap-1.5"
+                className="text-xs font-[family-name:var(--font-active)] gap-1.5"
               >
                 Restablecer Filtros
               </Button>
@@ -257,12 +257,12 @@ export function TeamDirectory({
                 {currentTeams.map((team, index) => {
                   const tGameSlug = team.gameSlug || team.game_slug || 'eafc26';
                   const tGameConfig = GAMES_CATALOG[tGameSlug] || gameConfig;
-                  const tBrandColor = tGameConfig?.brandColor || activeBrandColor;
 
                   return (
                     <EsportsCard
                       key={team.id}
                       entityType="team"
+                      gameSlug={tGameSlug}
                       href={`/${tGameSlug}/equipos/${team.id}`}
                       title={team.name}
                       subtitle={`🎮 ${tGameConfig?.name || 'FC 26'} | 🖥️ ${team.platform || 'CROSSPLAY'}`}
@@ -286,17 +286,16 @@ export function TeamDirectory({
                         { text: team.status || 'Escuadra Activa', variant: 'emerald', pulse: true }
                       ]}
                       stats={[
-                        { icon: <Users className="w-3.5 h-3.5 text-cyan-400" />, label: 'Plantilla', value: `${team.membersCount || team.members_count || 11} Atletas` },
-                        { icon: <Crown className="w-3.5 h-3.5 text-amber-400" />, label: 'Capitán', value: team.captainName || 'Asignado' },
+                        { icon: <Users className="w-3.5 h-3.5 text-[var(--app-accent)]" />, label: 'Plantilla', value: `${team.membersCount || team.members_count || 11} Atletas` },
+                        { icon: <Crown className="w-3.5 h-3.5 text-[var(--app-warning)]" />, label: 'Capitán', value: team.captainName || 'Asignado' },
                       ]}
                       footerLeft={
                         <span className="flex items-center gap-1">
-                          <Shield className="w-3.5 h-3.5" style={{ color: tBrandColor }} />
-                          <span style={{ color: tBrandColor }} className="font-bold">{tGameConfig?.name || 'Club Oficial'}</span>
+                          <Shield className="ui-dynamic-brand-ink w-3.5 h-3.5" />
+                          <span className="ui-dynamic-brand-ink font-bold">{tGameConfig?.name || 'Club Oficial'}</span>
                         </span>
                       }
                       actionText="VER CLUB"
-                      brandColor={tBrandColor}
                       animationDelay={index * 50}
                     />
                   );

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Outfit, Inter, JetBrains_Mono } from 'next/font/google';
+import { Outfit, Inter, JetBrains_Mono, Plus_Jakarta_Sans, Sora, Space_Grotesk } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -17,6 +17,24 @@ export const dynamic = 'force-dynamic';
 const outfit = Outfit({
   subsets: ['latin'],
   variable: '--font-outfit',
+  display: 'swap',
+});
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
+  display: 'swap',
+});
+
+const sora = Sora({
+  subsets: ['latin'],
+  variable: '--font-sora',
+  display: 'swap',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
   display: 'swap',
 });
 
@@ -49,13 +67,44 @@ export const viewport: Viewport = {
   ],
 };
 
+const fontInitScript = `
+  (function() {
+    try {
+      var raw = localStorage.getItem('tournamentspro:design:v4');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        var fontMap = {
+          'outfit': 'var(--font-outfit), ui-sans-serif, system-ui, sans-serif',
+          'jakarta': 'var(--font-jakarta), var(--font-outfit), ui-sans-serif, system-ui, sans-serif',
+          'sora': 'var(--font-sora), var(--font-outfit), ui-sans-serif, system-ui, sans-serif',
+          'space-grotesk': 'var(--font-space-grotesk), var(--font-outfit), ui-sans-serif, system-ui, sans-serif',
+          'inter': 'var(--font-inter), ui-sans-serif, system-ui, sans-serif'
+        };
+        if (parsed && parsed.font && fontMap[parsed.font]) {
+          document.documentElement.style.setProperty('--font-sans', fontMap[parsed.font]);
+          document.documentElement.style.setProperty('--font-active', fontMap[parsed.font]);
+          document.documentElement.dataset.uiFont = parsed.font;
+        }
+      }
+    } catch (e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="es"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+      className={`${outfit.variable} ${plusJakarta.variable} ${sora.variable} ${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: fontInitScript }} />
+      </head>
       <body className="antialiased flex flex-col min-h-screen">
         <ChunkErrorHandler />
         <ThemeProvider>

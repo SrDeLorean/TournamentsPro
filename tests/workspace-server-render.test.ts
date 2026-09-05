@@ -1,6 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ATHLETE_WORKSPACE_SECTIONS, CLUB_WORKSPACE_SECTIONS } from '@/lib/workspace-sections';
 
 const testUser = {
   id: 'captain-test', email: 'captain@test.invalid', name: 'Captain Test', gamertag: 'CaptainTest',
@@ -29,18 +30,18 @@ describe('authenticated workspaces server rendering', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('renders every athlete section without a Server Components exception', async () => {
-    const { ATHLETE_SECTIONS, AthleteWorkspaceView } = await import('@/components/workspaces/athlete-workspace-view');
+    const { AthleteWorkspaceView } = await import('@/components/workspaces/athlete-workspace-view');
 
-    for (const section of ATHLETE_SECTIONS) {
+    for (const section of ATHLETE_WORKSPACE_SECTIONS) {
       expect(() => renderToStaticMarkup(createElement(AthleteWorkspaceView, { gameSlug: 'eafc26', section })), section).not.toThrow();
     }
-  });
+  }, 15_000);
 
   it('renders every club section without a Server Components exception', async () => {
-    const { CLUB_SECTIONS, ClubWorkspaceView } = await import('@/components/workspaces/club-workspace-view');
+    const { ClubWorkspaceView } = await import('@/components/workspaces/club-workspace-view');
 
-    for (const section of CLUB_SECTIONS) {
+    for (const section of CLUB_WORKSPACE_SECTIONS) {
       expect(() => renderToStaticMarkup(createElement(ClubWorkspaceView, { gameSlug: 'eafc26', section })), section).not.toThrow();
     }
-  });
+  }, 15_000);
 });

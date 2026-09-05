@@ -10,8 +10,17 @@ import { Building2, Plus, Shield, Edit, Users, Trophy, Star, Trash2, Gamepad2, A
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { DataTable } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
-import { CreateOrganizationModal } from '@/features/organizations/components/create-organization-modal';
-import { ConfirmModal } from '@/components/ui/confirm-modal';
+import dynamic from 'next/dynamic';
+
+const CreateOrganizationModal = dynamic(
+  () => import('@/features/organizations/components/create-organization-modal').then((m) => m.CreateOrganizationModal),
+  { ssr: false }
+);
+
+const ConfirmModal = dynamic(
+  () => import('@/components/ui/confirm-modal').then((m) => m.ConfirmModal),
+  { ssr: false }
+);
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
@@ -382,7 +391,7 @@ export default function OrganizationsModulePage() {
             renderAsSelect={true}
             count={filteredOrgs.length}
             countLabel="ORGANIZACIONES"
-            brandColor="#A855F7"
+            brandColor="var(--app-accent-2)"
           />
 
           <div className="management-grid">
@@ -399,12 +408,12 @@ export default function OrganizationsModulePage() {
                 : (allowedList[0] || org.game_slug || 'eafc26');
 
               const gameCfg = GAMES_CATALOG[primarySlug] || GAMES_CATALOG['eafc26'];
-              const orgBrandColor = gameCfg?.brandColor || '#A855F7';
 
               return (
                 <EsportsCard
                   key={org.id}
                   entityType="organization"
+                  gameSlug={primarySlug}
                   title={org.name}
                   subtitle={`🎮 ${gameCfg?.name || 'eSports'} | ${org.tag ? `[${org.tag}]` : 'Madre'}`}
                   description={org.description || `Organización oficial eSports y administradora de torneos competitivos.`}
@@ -418,20 +427,19 @@ export default function OrganizationsModulePage() {
                     { text: org.status || 'Activa', variant: 'emerald', pulse: true },
                   ]}
                   stats={[
-                    { icon: <Trophy className="w-3.5 h-3.5 text-amber-400" />, label: 'Organizadores', value: org.organizers?.length || 1 },
-                    { icon: <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />, label: 'Prestigio', value: org.rating || '4.98', highlight: true },
+                    { icon: <Trophy className="w-3.5 h-3.5 text-[var(--app-warning)]" />, label: 'Organizadores', value: org.organizers?.length || 1 },
+                    { icon: <Star className="w-3.5 h-3.5 text-[var(--app-warning)] fill-[var(--app-warning)]" />, label: 'Prestigio', value: org.rating || '4.98', highlight: true },
                   ]}
                   footerLeft={
-                    <span className="flex items-center gap-1">
-                      <Shield className="w-3.5 h-3.5" style={{ color: orgBrandColor }} />
-                      <span style={{ color: orgBrandColor }} className="font-bold">Est. {org.founded_year || org.foundedYear || '2019'}</span>
+                    <span className="ui-dynamic-brand-ink flex items-center gap-1">
+                      <Shield className="w-3.5 h-3.5" />
+                      <span className="font-bold">Est. {org.founded_year || org.foundedYear || '2019'}</span>
                     </span>
                   }
                   actionText="VER DETALLES"
-                  brandColor={orgBrandColor}
                   animationDelay={index * 50}
                 >
-                  <div className="pt-2 border-t border-[var(--border-card)]/50 space-y-1.5 font-mono">
+                  <div className="pt-2 border-t border-[var(--border-card)]/50 space-y-1.5 font-[family-name:var(--font-active)]">
                     <span className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-wider block">
                       Disciplinas Habilitadas:
                     </span>
@@ -444,11 +452,8 @@ export default function OrganizationsModulePage() {
                           <div
                             key={gSlug}
                             title={`Disciplina: ${gConfig.name}`}
-                            className="w-7 h-7 rounded-xl bg-[var(--bg-main)]/90 border flex items-center justify-center p-1.5 hover:scale-125 transition-all duration-300 shadow-md group/logo cursor-pointer"
-                            style={{
-                              borderColor: gConfig.brandColor,
-                              boxShadow: `0 0 10px color-mix(in srgb, ${gConfig.brandColor} 35%, transparent)`,
-                            }}
+                            className="ui-dynamic-brand-tile w-7 h-7 rounded-xl border flex items-center justify-center p-1.5 hover:scale-125 transition-all duration-300 group/logo cursor-pointer"
+                            style={{ '--ui-dynamic-brand': gConfig.brandColor } as React.CSSProperties}
                           >
                             {gConfig.logoUrl ? (
                               <Image
@@ -480,7 +485,7 @@ export default function OrganizationsModulePage() {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              brandColor="#A855F7"
+              brandColor="var(--app-accent-2)"
               className="pt-6 pb-2"
             />
           )}
@@ -491,14 +496,14 @@ export default function OrganizationsModulePage() {
       {activeTab === 'admin' && isAdmin && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black uppercase text-purple-300 tracking-wider flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-purple-400" />
+            <h3 className="text-sm font-black uppercase text-[var(--app-accent-2)] tracking-wider flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-[var(--app-accent-2)]" />
               Tabla General de Organizaciones & Asignación de Organizadores
             </h3>
 
             <Button
               onClick={openCreateModal}
-              className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
+              className="bg-[var(--app-accent-2)] hover:bg-[var(--app-accent-2)] text-[var(--text-heading)] font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
               <span>Nueva Organización</span>
@@ -518,16 +523,16 @@ export default function OrganizationsModulePage() {
                         width={32}
                         height={32}
                         unoptimized={shouldBypassImageOptimization(r.logo_url)}
-                        className="w-8 h-8 rounded-lg object-cover border border-purple-400"
+                        className="w-8 h-8 rounded-lg object-cover border border-[var(--app-accent-2)]"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-lg bg-purple-950 border border-purple-400 flex items-center justify-center font-black text-[10px] text-white">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--app-accent-2-soft)] border border-[var(--app-accent-2)] flex items-center justify-center font-black text-[10px] text-[var(--text-heading)]">
                         {r.tag}
                       </div>
                     )}
                     <div>
-                      <div className="font-black text-white text-xs">{r.name}</div>
-                      <div className="text-[10px] font-mono text-purple-300">[{r.tag}]</div>
+                      <div className="font-black text-[var(--text-heading)] text-xs">{r.name}</div>
+                      <div className="text-[10px] font-[family-name:var(--font-active)] text-[var(--app-accent-2)]">[{r.tag}]</div>
                     </div>
                   </div>
                 ),
@@ -536,24 +541,24 @@ export default function OrganizationsModulePage() {
                 header: 'Organizadores Vinculados',
                 cell: (r) => (
                   <div className="flex items-center gap-1">
-                    <span className="font-mono text-white font-bold">{r.organizers_count || r.organizers?.length || 0}</span>
-                    <span className="text-[10px] text-slate-400">asignados</span>
+                    <span className="font-[family-name:var(--font-active)] text-[var(--text-heading)] font-bold">{r.organizers_count || r.organizers?.length || 0}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">asignados</span>
                   </div>
                 ),
               },
-              { header: 'País / Sede', accessorKey: 'country', className: 'font-mono text-slate-300' },
-              { header: 'Año Fundación', accessorKey: 'founded_year', className: 'font-mono text-slate-300' },
-              { header: 'Estado', cell: (r) => <Badge variant="cyan" className="font-mono text-[10px] uppercase">{r.status || 'Activa'}</Badge> },
+              { header: 'País / Sede', accessorKey: 'country', className: 'font-[family-name:var(--font-active)] text-[var(--text-secondary)]' },
+              { header: 'Año Fundación', accessorKey: 'founded_year', className: 'font-[family-name:var(--font-active)] text-[var(--text-secondary)]' },
+              { header: 'Estado', cell: (r) => <Badge variant="cyan" className="font-[family-name:var(--font-active)] text-[10px] uppercase">{r.status || 'Activa'}</Badge> },
             ]}
             data={organizations}
             searchPlaceholder="Buscar organización..."
-            brandColor="#A855F7"
+            brandColor="var(--app-accent-2)"
             actions={(row) => (
               <div className="flex items-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => openEditModal(row)} className="text-xs text-purple-300 hover:bg-purple-950 p-2">
+                <Button size="sm" variant="ghost" onClick={() => openEditModal(row)} className="text-xs text-[var(--app-accent-2)] hover:bg-[var(--app-accent-2-soft)] p-2">
                   <Edit className="w-3.5 h-3.5" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setDeletingOrg(row)} aria-label={`Eliminar ${row.name}`} title={`Eliminar ${row.name}`} className="text-xs text-rose-400 hover:bg-rose-950/50 p-2">
+                <Button size="sm" variant="ghost" onClick={() => setDeletingOrg(row)} aria-label={`Eliminar ${row.name}`} title={`Eliminar ${row.name}`} className="text-xs text-[var(--app-danger)] hover:bg-[var(--app-danger-soft)]/50 p-2">
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
@@ -582,10 +587,10 @@ export default function OrganizationsModulePage() {
           subtitle={`Tag: [${editingOrg.tag}]`}
           onSubmit={handleEditOrg}
           isSubmitting={isSubmitting}
-          brandColor="#00F0FF"
+          brandColor="var(--app-accent)"
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-900 border border-white/10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10">
               <ImageUploadCard
                 label="Logo / Escudo Oficial"
                 subtitle="Formato WebP"
@@ -593,7 +598,7 @@ export default function OrganizationsModulePage() {
                 fallbackType="logo"
                 uploadType="logo"
                 maxDimension={512}
-                brandColor="#00F0FF"
+          brandColor="var(--app-accent)"
                 uploadButtonText="Cambiar Escudo"
                 entityName={editingOrg.name}
                 entityId={editingOrg.id}
@@ -606,7 +611,7 @@ export default function OrganizationsModulePage() {
                 fallbackType="banner"
                 uploadType="banner"
                 maxDimension={1200}
-                brandColor="#00F0FF"
+          brandColor="var(--app-accent)"
                 uploadButtonText="Cambiar Banner"
                 entityName={editingOrg.name}
                 entityId={editingOrg.id}
@@ -616,42 +621,42 @@ export default function OrganizationsModulePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Nombre Oficial:</label>
-                <input type="text" name="name" defaultValue={editingOrg.name} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
+                <label className="text-[var(--text-secondary)] uppercase block">Nombre Oficial:</label>
+                <input type="text" name="name" defaultValue={editingOrg.name} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)]" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Tag:</label>
-                <input type="text" name="tag" defaultValue={editingOrg.tag} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-purple-300 font-mono uppercase" />
+                <label className="text-[var(--text-secondary)] uppercase block">Tag:</label>
+                <input type="text" name="tag" defaultValue={editingOrg.tag} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--app-accent-2)] font-[family-name:var(--font-active)] uppercase" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">País / Sede:</label>
-                <input type="text" name="country" defaultValue={editingOrg.country || 'Venezuela'} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
+                <label className="text-[var(--text-secondary)] uppercase block">País / Sede:</label>
+                <input type="text" name="country" defaultValue={editingOrg.country || 'Venezuela'} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)]" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Año de Fundación:</label>
-                <input type="text" name="foundedYear" defaultValue={editingOrg.founded_year || '2019'} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+                <label className="text-[var(--text-secondary)] uppercase block">Año de Fundación:</label>
+                <input type="text" name="foundedYear" defaultValue={editingOrg.founded_year || '2019'} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Rating de Prestigio:</label>
-                <input type="text" name="rating" defaultValue={editingOrg.rating || '4.98'} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-amber-400 font-mono" />
+                <label className="text-[var(--text-secondary)] uppercase block">Rating de Prestigio:</label>
+                <input type="text" name="rating" defaultValue={editingOrg.rating || '4.98'} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--app-warning)] font-[family-name:var(--font-active)]" />
               </div>
               <div className="space-y-1">
-                <label className="text-slate-300 uppercase block">Sitio Web Oficial:</label>
-                <input type="text" name="website" defaultValue={editingOrg.website || ''} className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+                <label className="text-[var(--text-secondary)] uppercase block">Sitio Web Oficial:</label>
+                <input type="text" name="website" defaultValue={editingOrg.website || ''} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
               </div>
             </div>
 
             {/* Asignación de Organizadores */}
-            <div className="space-y-2 p-3 rounded-xl bg-slate-900 border border-white/10">
-              <label className="text-xs font-bold text-slate-300 uppercase block flex items-center gap-1">
-                <Users className="w-4 h-4 text-purple-400" />
+            <div className="space-y-2 p-3 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10">
+              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase block flex items-center gap-1">
+                <Users className="w-4 h-4 text-[var(--app-accent-2)]" />
                 Asignar Organizadores a esta Organización:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {availableOrganizers.map((oUser) => {
                   const isAssigned = editingOrg.organizers?.some((o) => o.id === oUser.id);
                   return (
-                    <label key={oUser.id} className="flex items-center gap-2 text-xs font-semibold text-white bg-slate-950 p-2 rounded-lg border border-white/10 cursor-pointer">
+                    <label key={oUser.id} className="flex items-center gap-2 text-xs font-semibold text-[var(--text-heading)] bg-[var(--app-canvas)] p-2 rounded-lg border border-[var(--text-heading)]/10 cursor-pointer">
                       <input type="checkbox" name={`organizer_${oUser.id}`} defaultChecked={isAssigned} />
                       <Avatar fallback={oUser.name} src={oUser.avatar_url || oUser.foto} size="sm" />
                       <span>@{oUser.gamertag || oUser.name}</span>
@@ -662,12 +667,12 @@ export default function OrganizationsModulePage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-300 uppercase block">Disciplinas eSports Autorizadas:</label>
+              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase block">Disciplinas eSports Autorizadas:</label>
               <div className="flex flex-wrap gap-3">
                 {Object.entries(GAMES_CATALOG).map(([slug, g]) => {
                   const isChecked = (editingOrg.allowedGames || []).includes(slug);
                   return (
-                    <label key={slug} className="flex items-center gap-2 text-xs font-semibold text-white bg-slate-900 p-2 rounded-xl border border-white/10 cursor-pointer">
+                    <label key={slug} className="flex items-center gap-2 text-xs font-semibold text-[var(--text-heading)] bg-[var(--app-surface-2)] p-2 rounded-xl border border-[var(--text-heading)]/10 cursor-pointer">
                       <input type="checkbox" name={`game_${slug}`} defaultChecked={isChecked} />
                       <span>{g.name}</span>
                     </label>

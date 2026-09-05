@@ -3,13 +3,13 @@
 import type { ComponentType, CSSProperties } from 'react';
 import { useSyncExternalStore } from 'react';
 import { useTheme } from 'next-themes';
-import { Gem, Moon, Orbit, Sun, Zap } from 'lucide-react';
+import { Moon, Sun, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const subscribeToHydration = () => () => {};
 
 interface ThemeOption {
-  id: 'light' | 'dark' | 'oled' | 'arena' | 'prism';
+  id: 'light' | 'dark' | 'oled';
   label: string;
   title: string;
   icon: ComponentType<{ className?: string }>;
@@ -17,11 +17,9 @@ interface ThemeOption {
 }
 
 const THEME_OPTIONS: ThemeOption[] = [
-  { id: 'light', label: 'Claro', title: 'Tema claro editorial', icon: Sun, accent: '#f59e0b' },
-  { id: 'dark', label: 'Noche', title: 'Tema oscuro equilibrado', icon: Moon, accent: '#22d3ee' },
-  { id: 'oled', label: 'OLED', title: 'Negro puro para pantallas OLED', icon: Zap, accent: '#c084fc' },
-  { id: 'arena', label: 'Arena', title: 'Arena inmersiva azul y cobre', icon: Orbit, accent: '#42e8ff' },
-  { id: 'prism', label: 'Prisma', title: 'Cristal violeta con luz espectral', icon: Gem, accent: '#ff6bd6' },
+  { id: 'light', label: 'Claro', title: 'Blanco técnico y rojo competitivo', icon: Sun, accent: 'var(--app-accent-2)' },
+  { id: 'dark', label: 'Oscuro', title: 'Carbón, borgoña y rojo activo', icon: Moon, accent: 'var(--app-accent)' },
+  { id: 'oled', label: 'OLED', title: 'Negro puro y rojo eléctrico', icon: Zap, accent: 'var(--app-accent)' },
 ];
 
 export function ThemeSwitcher({ className }: { className?: string }) {
@@ -64,4 +62,3 @@ export function ThemeSwitcher({ className }: { className?: string }) {
     </div>
   );
 }
-

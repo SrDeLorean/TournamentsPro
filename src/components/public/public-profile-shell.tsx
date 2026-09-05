@@ -61,6 +61,7 @@ export function PublicProfileShell({
   const profileStyle = {
     '--profile-accent': accentColor,
     '--game-brand': accentColor,
+    '--ui-dynamic-brand': accentColor,
   } as CSSProperties;
 
   return (
@@ -83,7 +84,7 @@ export function PublicProfileShell({
 
           <div className="public-team-hero-content">
             <div className="public-team-identity">
-              <div className="public-team-logo" style={{ borderColor: accentColor, color: accentColor }}>
+              <div className="public-team-logo">
                 {logoUrl ? (
                   <Image
                     src={logoUrl}
@@ -101,7 +102,7 @@ export function PublicProfileShell({
                 <p className="public-team-eyebrow">{eyebrow}</p>
                 <div className="public-team-title-row">
                   <h1>{title}</h1>
-                  {badge ? <span style={{ borderColor: accentColor }}>{badge}</span> : null}
+                  {badge ? <span>{badge}</span> : null}
                 </div>
                 {description ? <p className="public-team-description">{description}</p> : null}
                 {facts ? <div className="public-team-facts">{facts}</div> : null}
@@ -112,7 +113,10 @@ export function PublicProfileShell({
           </div>
 
           <div className="public-team-metrics">
-            <div className="public-team-metrics-inner">
+            <div
+              className="public-team-metrics-inner"
+              style={{ '--metrics-count': metrics.length } as CSSProperties}
+            >
               {metrics.map((metric, index) => (
                 <div key={index}><strong>{metric.value}</strong><span>{metric.label}</span></div>
               ))}

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
-import { Save, CheckCircle2, AlertCircle, Info, Loader2 } from 'lucide-react';
+import { Save, CheckCircle2, AlertCircle, Info, Loader2, ShieldCheck } from 'lucide-react';
 
 export interface ModalFormProps {
   isOpen: boolean;
@@ -30,7 +30,7 @@ export function ModalForm({
   onSubmit,
   isSubmitting = false,
   submitButtonText = 'Guardar Registro',
-  brandColor = '#00F0FF',
+  brandColor = 'var(--app-accent)',
   successMessage,
   errorMessage,
   infoMessage,
@@ -41,65 +41,80 @@ export function ModalForm({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} ariaLabel={title} closeOnBackdrop={!isSubmitting} closeOnEscape={!isSubmitting} closeDisabled={isSubmitting} size={size} className="ui-modal-form p-0 overflow-hidden bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] shadow-2xl font-mono text-[var(--text-primary)]">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel={title}
+      closeOnBackdrop={!isSubmitting}
+      closeOnEscape={!isSubmitting}
+      closeDisabled={isSubmitting}
+      size={size}
+      className="ui-modal-form p-0 overflow-hidden"
+    >
       <div
-        className="ui-modal-form-header p-4 sm:p-5 pr-12 border-b border-[var(--border-card)] flex items-center justify-between"
+        className="ui-modal-form-header relative flex items-start gap-3 border-b border-[var(--border-card)] p-5 pr-14 sm:p-6 sm:pr-16"
         style={{
-          backgroundColor: `color-mix(in srgb, ${brandColor} 12%, transparent)`,
-        }}
+          '--modal-brand': brandColor,
+        } as React.CSSProperties}
       >
-        <div>
-          <h3 className="text-sm sm:text-base font-black text-[var(--text-heading)] uppercase tracking-wider text-pretty">{title}</h3>
-          {subtitle && <p className="text-xs text-[var(--text-muted)] mt-0.5">{subtitle}</p>}
+        <span className="ui-modal-form-icon" aria-hidden="true"><Save /></span>
+        <div className="min-w-0">
+          <span className="ui-modal-form-kicker">Formulario de gestión</span>
+          <h3 className="text-base sm:text-lg font-black text-[var(--text-heading)] uppercase tracking-tight font-[family-name:var(--font-active)]">{title}</h3>
+          {subtitle && <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{subtitle}</p>}
         </div>
       </div>
 
       <form onSubmit={onSubmit} className="ui-modal-form-content">
-        <div className="ui-modal-form-body p-4 sm:p-6 space-y-5">
-        {/* BANNER ALERTA ÉXITO */}
-        {successMessage && (
-          <div className="p-3.5 rounded-xl bg-[var(--accent-emerald-bg)] border border-[var(--accent-emerald)]/50 text-[var(--accent-emerald)] text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>{successMessage}</span>
-          </div>
-        )}
+        <div className="ui-modal-form-body space-y-5 p-5 text-xs text-[var(--text-primary)] sm:p-7">
+          {successMessage && (
+            <div role="status" className="ui-modal-feedback is-success">
+              <CheckCircle2 className="w-4 h-4 text-[var(--app-positive)] flex-shrink-0" />
+              <div><strong>Operación completada</strong><span>{successMessage}</span></div>
+            </div>
+          )}
 
-        {/* BANNER ALERTA ERROR */}
-        {errorMessage && (
-          <div className="p-3.5 rounded-xl bg-[var(--accent-crimson-bg)] border border-[var(--accent-crimson)]/50 text-[var(--accent-crimson)] text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
-            <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
-        )}
+          {errorMessage && (
+            <div role="alert" className="ui-modal-feedback is-danger">
+              <AlertCircle className="w-4 h-4 text-[var(--app-danger)] flex-shrink-0" />
+              <div><strong>No pudimos completar la acción</strong><span>{errorMessage}</span></div>
+            </div>
+          )}
 
-        {/* BANNER ALERTA INFO */}
-        {infoMessage && (
-          <div className="p-3.5 rounded-xl bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)]/50 text-[var(--accent-cyan)] text-xs font-bold flex items-center gap-2 font-mono shadow-sm">
-            <Info className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-            <span>{infoMessage}</span>
-          </div>
-        )}
+          {infoMessage && (
+            <div role="status" className="ui-modal-feedback is-info">
+              <Info className="w-4 h-4 text-[var(--app-accent)] flex-shrink-0" />
+              <div><strong>Información importante</strong><span>{infoMessage}</span></div>
+            </div>
+          )}
 
           {children}
         </div>
 
-        <div className="ui-modal-form-actions border-t border-[var(--border-card)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3">
-          <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-4 py-2.5 rounded-xl">
+        <div className="ui-modal-form-actions flex flex-col-reverse gap-3 border-t border-[var(--border-card)] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <span className="ui-modal-form-assurance"><ShieldCheck /> Validación segura antes de guardar</span>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="w-full sm:w-auto"
+          >
             Cancelar
           </Button>
           <Button
             type="submit"
             disabled={isSubmitting || submitDisabled}
-            className="w-full sm:w-auto font-black text-xs uppercase px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all hover:scale-[0.98]"
+            className="ui-modal-submit w-full sm:w-auto"
             style={{
-              backgroundColor: brandColor,
-              color: '#020617',
-              boxShadow: `0 4px 14px 0 color-mix(in srgb, ${brandColor} 30%, transparent)`,
-            }}
+              '--button-brand': brandColor,
+            } as React.CSSProperties}
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{isSubmitting ? 'Guardando...' : submitButtonText}</span>
           </Button>
+          </div>
         </div>
       </form>
     </Modal>

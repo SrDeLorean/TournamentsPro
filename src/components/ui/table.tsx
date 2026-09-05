@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 export function Table({ className, children, ...props }: React.HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="table-container-theme mobile-scroll-row font-mono" role="region" aria-label="Tabla desplazable horizontalmente" tabIndex={0}>
+    <div className="table-container-theme mobile-scroll-row font-[family-name:var(--font-active)]" role="region" aria-label="Tabla desplazable horizontalmente" tabIndex={0}>
       <table className={cn("ui-table", className)} {...props}>
         {children}
       </table>

@@ -111,20 +111,20 @@ export function TeamManagementModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} ariaLabel={`Gestión de ${currentTeam.name}`} size="lg" showCloseButton={false} className="glass-panel p-6 sm:p-8 border-purple-500/40 space-y-6">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel={`Gestión de ${currentTeam.name}`} size="lg" showCloseButton={false} className="glass-panel p-6 sm:p-8 border-[var(--app-accent-2)]/40 space-y-6">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
           <div className="flex items-center gap-3">
             <div
-              className="w-12 h-12 rounded-2xl bg-slate-950 border-2 flex items-center justify-center font-black text-xl shadow-xl flex-shrink-0"
-              style={{ borderColor: currentTeam.color || '#00F0FF', color: currentTeam.color || '#00F0FF' }}
+              className="ui-dynamic-brand-tile w-12 h-12 rounded-2xl border-2 flex items-center justify-center font-black text-xl flex-shrink-0"
+              style={{ '--ui-dynamic-brand': currentTeam.color || 'var(--app-accent)' } as React.CSSProperties}
             >
               {currentTeam.logoText}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-xl font-black uppercase text-white">
+                <h3 className="text-xl font-black uppercase text-[var(--text-heading)]">
                   {currentTeam.name}
                 </h3>
                 <Badge variant="violet">🛡️ Panel de Gestión del Club</Badge>
@@ -135,27 +135,27 @@ export function TeamManagementModal({
             </div>
           </div>
 
-          <button onClick={onClose} className="p-1 rounded-xl text-[var(--text-muted)] hover:text-white">
+          <button onClick={onClose} className="p-1 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-heading)]">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Success Notice */}
         {successNotice && (
-          <div className="p-3 rounded-xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <div className="p-3 rounded-xl bg-[var(--app-positive-soft)] border border-[var(--app-positive)]/50 text-[var(--app-positive)] text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[var(--app-positive)]" />
             <span>{successNotice}</span>
           </div>
         )}
 
         {/* Team Management Only Tabs Strip */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none p-1 rounded-2xl bg-slate-950 border border-purple-500/30">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none p-1 rounded-2xl bg-[var(--app-canvas)] border border-[var(--app-accent-2)]/30">
           <button
             onClick={() => setActiveTab('EQUIPO_ROSTER')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
               activeTab === 'EQUIPO_ROSTER'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'text-[var(--text-secondary)] hover:text-white'
+                ? 'bg-[var(--app-accent-2)] text-[var(--text-heading)] shadow-md'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -166,8 +166,8 @@ export function TeamManagementModal({
             onClick={() => setActiveTab('EQUIPO_RECLUTAMIENTO')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
               activeTab === 'EQUIPO_RECLUTAMIENTO'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
-                : 'text-[var(--text-secondary)] hover:text-white'
+                ? 'bg-[var(--app-warning)] text-[var(--accent-contrast)] shadow-md'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -178,8 +178,8 @@ export function TeamManagementModal({
             onClick={() => setActiveTab('EQUIPO_MATCHDAY')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
               activeTab === 'EQUIPO_MATCHDAY'
-                ? 'bg-emerald-500 text-slate-950 shadow-md'
-                : 'text-[var(--text-secondary)] hover:text-white'
+                ? 'bg-[var(--app-positive)] text-[var(--accent-contrast)] shadow-md'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]'
             }`}
           >
             <Award className="w-3.5 h-3.5" />
@@ -190,8 +190,8 @@ export function TeamManagementModal({
             onClick={() => setActiveTab('EQUIPO_AJUSTES')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
               activeTab === 'EQUIPO_AJUSTES'
-                ? 'bg-slate-800 text-white shadow-md'
-                : 'text-[var(--text-secondary)] hover:text-white'
+                ? 'bg-[var(--app-surface-2)] text-[var(--text-heading)] shadow-md'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-heading)]'
             }`}
           >
             <Settings className="w-3.5 h-3.5" />
@@ -202,24 +202,24 @@ export function TeamManagementModal({
         {/* TAB 1: PLANTILLA ROSTER POR TORNEO / COMPETENCIA */}
         {activeTab === 'EQUIPO_ROSTER' && (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900 border border-purple-500/30">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/30">
               <div>
-                <span className="text-[10px] font-black uppercase text-purple-400 block tracking-wider">
+                <span className="text-[10px] font-black uppercase text-[var(--app-accent-2)] block tracking-wider">
                   🏆 Competencia / Torneo Activo
                 </span>
-                <span className="text-xs font-black text-white block">
+                <span className="text-xs font-black text-[var(--text-heading)] block">
                   Liga Élite Pro 11v11 2026 ({gameObj.name})
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant="cyan" className="font-mono font-bold text-xs">
+                <Badge variant="cyan" className="font-[family-name:var(--font-active)] font-bold text-xs">
                   Plantilla Habilitada: {membersList.length} Atletas
                 </Badge>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-300 text-[11px] font-medium leading-relaxed">
+            <div className="p-3 rounded-xl bg-[var(--app-accent-2-soft)] border border-[var(--app-accent-2)]/30 text-[var(--app-accent-2)] text-[11px] font-medium leading-relaxed">
               💡 <strong>Regla de Inscripción Multi-Torneo:</strong> Las plantillas se registran por torneo específico. Un atleta puede integrar esta plantilla para la <em>Liga Élite 2026</em> y estar inscrito con otro club en una competencia distinta sin causar conflicto.
             </div>
 
@@ -229,14 +229,14 @@ export function TeamManagementModal({
                   <div className="flex items-center gap-3">
                     <Avatar fallback={member.name} size="md" status="online" />
                     <div>
-                      <span className="font-extrabold text-sm text-white block">{member.name}</span>
-                      <span className="text-[var(--text-muted)] font-mono text-[11px]">@{member.gamertag}</span>
+                      <span className="font-extrabold text-sm text-[var(--text-heading)] block">{member.name}</span>
+                      <span className="text-[var(--text-muted)] font-[family-name:var(--font-active)] text-[11px]">@{member.gamertag}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <Badge variant="cyan">{member.position}</Badge>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-emerald-400 border border-emerald-700">
+                    <span className="text-[10px] font-[family-name:var(--font-active)] font-bold px-2 py-0.5 rounded bg-[var(--app-surface-2)] text-[var(--app-positive)] border border-[var(--app-positive)]">
                       Habilitado
                     </span>
                   </div>
@@ -250,7 +250,7 @@ export function TeamManagementModal({
         {activeTab === 'EQUIPO_RECLUTAMIENTO' && (
           <div className="space-y-4">
             <div className="space-y-1">
-              <h4 className="font-black text-sm uppercase text-white">Publicar Vacantes de Reclutamiento</h4>
+              <h4 className="font-black text-sm uppercase text-[var(--text-heading)]">Publicar Vacantes de Reclutamiento</h4>
               <p className="text-xs text-[var(--text-secondary)]">
                 Las posiciones agregadas aparecerán en el Mercado de Traspasos para atraer atletas libres.
               </p>
@@ -264,19 +264,19 @@ export function TeamManagementModal({
                 onChange={(e) => setNewVacantInput(e.target.value)}
                 className="flex-1 px-4 py-2.5 rounded-xl input-theme border border-[var(--border-card)] text-xs font-extrabold uppercase"
               />
-              <Button onClick={handleAddVacant} size="sm" className="font-bold text-xs bg-[var(--accent-cyan)] text-slate-950">
+              <Button onClick={handleAddVacant} size="sm" className="font-bold text-xs bg-[var(--app-accent)] text-[var(--accent-contrast)]">
                 <Plus className="w-4 h-4 mr-1" />
                 Agregar Vacante
               </Button>
             </div>
 
             <div className="space-y-2 pt-2">
-              <span className="text-xs font-bold uppercase text-white block">Vacantes Activas:</span>
+              <span className="text-xs font-bold uppercase text-[var(--text-heading)] block">Vacantes Activas:</span>
               <div className="flex items-center gap-2 flex-wrap">
                 {currentTeam.vacantPositions.map((pos) => (
-                  <span key={pos} className="px-3.5 py-1.5 rounded-xl bg-amber-950/80 border border-amber-500/40 text-amber-300 font-mono font-bold text-xs flex items-center gap-2.5">
+                  <span key={pos} className="px-3.5 py-1.5 rounded-xl bg-[var(--app-warning-soft)] border border-[var(--app-warning)]/40 text-[var(--app-warning)] font-[family-name:var(--font-active)] font-bold text-xs flex items-center gap-2.5">
                     <span>+ Vacante: {pos}</span>
-                    <button onClick={() => handleRemoveVacant(pos)} className="text-amber-400 hover:text-rose-400">
+                    <button onClick={() => handleRemoveVacant(pos)} className="text-[var(--app-warning)] hover:text-[var(--app-danger)]">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </span>
@@ -291,10 +291,10 @@ export function TeamManagementModal({
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
               <div>
-                <h4 className="font-black text-sm uppercase text-white">Alineación Titular Matchday</h4>
+                <h4 className="font-black text-sm uppercase text-[var(--text-heading)]">Alineación Titular Matchday</h4>
                 <p className="text-xs text-[var(--text-secondary)]">Haz clic para convocar a los titulares del partido</p>
               </div>
-              <Badge variant="cyan" className="font-mono font-bold">{starters.length} Titulares Seleccionados</Badge>
+              <Badge variant="cyan" className="font-[family-name:var(--font-active)] font-bold">{starters.length} Titulares Seleccionados</Badge>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -307,19 +307,19 @@ export function TeamManagementModal({
                     onClick={() => handleToggleStarter(m.id)}
                     className={`p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
                       isSelected
-                        ? 'bg-emerald-950/60 border-emerald-500/60 shadow-lg'
+                        ? 'bg-[var(--app-positive-soft)] border-[var(--app-positive)]/60 shadow-lg'
                         : 'bg-[var(--bg-main)] border-[var(--border-card)] opacity-75 hover:opacity-100'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar fallback={m.name} size="sm" />
                       <div>
-                        <span className="font-extrabold text-xs text-white block">{m.name}</span>
-                        <span className="text-[10px] text-[var(--text-muted)] font-mono">@{m.gamertag} • {m.position}</span>
+                        <span className="font-extrabold text-xs text-[var(--text-heading)] block">{m.name}</span>
+                        <span className="text-[10px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">@{m.gamertag} • {m.position}</span>
                       </div>
                     </div>
 
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${isSelected ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${isSelected ? 'bg-[var(--app-positive)] text-[var(--accent-contrast)]' : 'bg-[var(--app-surface-2)] text-[var(--text-muted)]'}`}>
                       {isSelected ? <Check className="w-4 h-4" /> : '+'}
                     </div>
                   </button>
@@ -334,7 +334,7 @@ export function TeamManagementModal({
           <div className="space-y-4 text-xs font-semibold">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-white block">Nombre del Club</label>
+                <label className="text-xs font-bold uppercase text-[var(--text-heading)] block">Nombre del Club</label>
                 <input
                   type="text"
                   value={currentTeam.name}
@@ -344,7 +344,7 @@ export function TeamManagementModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-white block">Tag / Sigla</label>
+                <label className="text-xs font-bold uppercase text-[var(--text-heading)] block">Tag / Sigla</label>
                 <input
                   type="text"
                   value={currentTeam.tag}
@@ -355,7 +355,7 @@ export function TeamManagementModal({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase text-white block">Descripción del Club</label>
+              <label className="text-xs font-bold uppercase text-[var(--text-heading)] block">Descripción del Club</label>
               <textarea
                 rows={3}
                 value={currentTeam.description}
@@ -368,7 +368,7 @@ export function TeamManagementModal({
 
         {/* Footer */}
         <div className="flex items-center justify-end border-t border-[var(--border-card)] pt-4">
-          <Button onClick={onClose} size="sm" className="font-bold text-xs bg-purple-600 hover:bg-purple-500 text-white">
+          <Button onClick={onClose} size="sm" className="font-bold text-xs bg-[var(--app-accent-2)] hover:bg-[var(--app-accent-2)] text-[var(--text-heading)]">
             Guardar & Cerrar
           </Button>
         </div>

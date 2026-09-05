@@ -20,6 +20,10 @@ import {
   updateTypingStatusService,
   clearTypingStatusService,
   getTypingUsersService,
+  reportChatMessageService,
+  getChatReportsService,
+  resolveChatReportService,
+  getUserChatHistoryService,
 } from '@/lib/services';
 import { consumeSecurityRateLimit, revokeUserSessions, writeSecurityAudit } from '@/lib/security';
 import { getActionErrorMessage } from '@/lib/action-utils';
@@ -73,6 +77,7 @@ export async function sendChatMessageAction(
     const res = await sendChatMessageService(threadId, actor.userId, session?.name || 'Usuario', actor.role, text);
     if (res.success) {
       revalidatePath('/mensajes');
+      revalidatePath('/dashboard/moderacion');
     }
     return res;
   } catch (error: unknown) {
@@ -117,6 +122,7 @@ export async function createOrGetDirectThreadAction(
     );
     if (res.success) {
       revalidatePath('/mensajes');
+      revalidatePath('/dashboard/moderacion');
     }
     return res;
   } catch (error: unknown) {
@@ -157,6 +163,7 @@ export async function banUserFromChatAction(targetUserId: string, reason?: strin
         metadata: { reason },
       });
       revalidatePath('/mensajes');
+      revalidatePath('/dashboard/moderacion');
     }
     return res;
   } catch (error: unknown) {
@@ -184,6 +191,7 @@ export async function unbanUserFromChatAction(targetUserId: string) {
         resourceId: targetUserId,
       });
       revalidatePath('/mensajes');
+      revalidatePath('/dashboard/moderacion');
     }
     return res;
   } catch (error: unknown) {
@@ -223,3 +231,105 @@ export async function getTypingUsersAction(threadId: string, currentUserId: stri
   const users = await getTypingUsersService(threadId, actor.userId);
   return { success: true, data: users };
 }
+
+export async function reportChatMessageAction(params: {
+  threadId: string;
+  messageId: string;
+  messageText: string;
+  reportedUserId: string;
+  reportedUserName: string;
+  reason: string;
+  details?: string;
+}) {
+  try {
+    const actor = await requireServerActor();
+    const session = await getServerUserSession();
+    await requireThreadParticipant(params.threadId);
+
+    const rateLimit = await consumeSecurityRateLimit('report-chat-message', actor.userId, 10, 60 * 1_000);
+    if (!rateLimit.allowed) {
+      return { success: false, error: `Demasiados reportes. Reintenta en ${rateLimit.retryAfter} segundos.` };
+    }
+
+    const res = await reportChatMessageService({
+      reporterId: actor.userId,
+      reporterName: session?.name || 'Usuario',
+      reporterRole: actor.role,
+      reportedUserId: params.reportedUserId,
+      reportedUserName: params.reportedUserName,
+      threadId: params.threadId,
+      messageId: params.messageId,
+      messageText: params.messageText,
+      reason: params.reason,
+      details: params.details,
+    });
+
+    if (res.success) {
+      revalidatePath('/dashboard/moderacion');
+    }
+
+    return res;
+  } catch (error: unknown) {
+    console.error('Error en reportChatMessageAction:', error);
+    return { success: false, error: getActionErrorMessage(error, 'Error al enviar reporte.') };
+  }
+}
+
+export async function getChatReportsAction(statusFilter?: string) {
+  try {
+    await requireServerActor(['Administrador', 'Organizador']);
+    const reports = await getChatReportsService(statusFilter);
+    return { success: true, data: reports };
+  } catch (error: unknown) {
+    console.error('Error en getChatReportsAction:', error);
+    return { success: false, error: getActionErrorMessage(error, 'Error al obtener reportes.'), data: [] };
+  }
+}
+
+export async function resolveChatReportAction(
+  reportId: string,
+  status: 'Sancionado' | 'Descartado',
+  moderatorNotes?: string
+) {
+  try {
+    const actor = await requireServerActor(['Administrador', 'Organizador']);
+    const session = await getServerUserSession();
+    const res = await resolveChatReportService(
+      reportId,
+      status,
+      moderatorNotes,
+      session?.name || actor.role
+    );
+
+    if (res.success) {
+      await writeSecurityAudit({
+        actor,
+        action: status === 'Sancionado' ? 'CHAT_REPORT_SANCTIONED' : 'CHAT_REPORT_DISMISSED',
+        resourceType: 'chat_report',
+        resourceId: reportId,
+        metadata: { status, moderatorNotes },
+      });
+      revalidatePath('/dashboard/moderacion');
+    }
+
+    return res;
+  } catch (error: unknown) {
+    console.error('Error en resolveChatReportAction:', error);
+    return { success: false, error: getActionErrorMessage(error, 'Error al resolver reporte.') };
+  }
+}
+
+export async function getUserChatHistoryAction(targetUserId: string) {
+  try {
+    await requireServerActor(['Administrador', 'Organizador']);
+    const history = await getUserChatHistoryService(targetUserId);
+    if (!history) {
+      return { success: false, error: 'Usuario no encontrado o sin historial.' };
+    }
+    return { success: true, data: history };
+  } catch (error: unknown) {
+    console.error('Error en getUserChatHistoryAction:', error);
+    return { success: false, error: getActionErrorMessage(error, 'Error al obtener historial de chat.') };
+  }
+}
+

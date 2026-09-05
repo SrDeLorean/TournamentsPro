@@ -13,7 +13,7 @@ interface PositionBadgeProps {
 export function PositionBadge({
   primaryPosition = '',
   secondaryPosition = '',
-  brandColor = '#00F0FF',
+  brandColor = 'var(--app-accent)',
   className = '',
 }: PositionBadgeProps) {
   // Clean positions logic: omit NA, Sin Posición, or duplicates
@@ -23,7 +23,7 @@ export function PositionBadge({
   if (!cleanPrimary && !cleanSecondary) {
     return (
       <Badge
-        className={`font-mono uppercase text-[10px] bg-[var(--bg-card)]/80 border border-[var(--border-card)] text-[var(--text-muted)] ${className}`}
+        className={`font-[family-name:var(--font-active)] uppercase text-[10px] font-bold bg-[var(--bg-card)]/80 border border-[var(--border-card)] text-[var(--text-muted)] ${className}`}
       >
         Sin Posición
       </Badge>
@@ -31,10 +31,10 @@ export function PositionBadge({
   }
 
   return (
-    <div className={`inline-flex items-center gap-1.5 ${className}`}>
+    <div className={`inline-flex items-center gap-1.5 font-[family-name:var(--font-active)] ${className}`}>
       {cleanPrimary && (
         <Badge
-          className="font-mono uppercase text-[10px] font-black tracking-wider transition-all"
+          className="font-[family-name:var(--font-active)] uppercase text-[10px] font-black tracking-wider transition-all"
           style={{
             backgroundColor: `color-mix(in srgb, ${brandColor} 15%, transparent)`,
             color: brandColor,
@@ -48,7 +48,7 @@ export function PositionBadge({
 
       {cleanSecondary && (
         <Badge
-          className="font-mono uppercase text-[10px] font-bold bg-[var(--bg-card)]/60 border border-[var(--border-card)] text-[var(--text-secondary)]"
+          className="font-[family-name:var(--font-active)] uppercase text-[10px] font-bold bg-[var(--bg-card)]/60 border border-[var(--border-card)] text-[var(--text-secondary)]"
         >
           {cleanSecondary}
         </Badge>

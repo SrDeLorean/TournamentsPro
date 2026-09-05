@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy,
@@ -12,8 +12,6 @@ import {
   Gamepad2,
   ArrowRight,
   CheckCircle2,
-  Tv,
-  MessageSquare,
   Flame,
   AlertCircle,
   Eye,
@@ -25,14 +23,24 @@ import {
   Crown,
   LogIn,
   UserPlus,
-  Sparkles,
   ChevronDown,
+  Zap,
 } from 'lucide-react';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { useAuth } from '@/components/providers/auth-provider';
 import { buildRegistrationPayload, validateRegistrationForm } from '@/features/auth/lib/register-form';
-import { GoogleOAuthModal } from '@/components/auth/google-oauth-modal';
-import { HologramStage3D } from '@/components/3d/hologram-stage-3d';
+import { AuthProviderButtons } from '@/features/auth/components/auth-provider-buttons';
+import dynamic from 'next/dynamic';
+
+const GoogleOAuthModal = dynamic(
+  () => import('@/components/auth/google-oauth-modal').then((m) => m.GoogleOAuthModal),
+  { ssr: false }
+);
+
+const HologramStage3D = dynamic(
+  () => import('@/components/3d/hologram-stage-3d').then((m) => m.HologramStage3D),
+  { ssr: false }
+);
 import { Card3D, Card3DItem } from '@/components/3d/card-3d';
 
 interface AuthPageClientProps {
@@ -45,10 +53,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
   const { login, register, isAuthenticated } = useAuth();
   const gamesList = Object.values(GAMES_CATALOG);
 
-  // Active auth mode ('login' | 'register')
-  const [mode, setMode] = useState<'login' | 'register'>(
-    initialMode || (pathname?.includes('registro') ? 'register' : 'login')
-  );
+  const mode = pathname?.includes('registro') ? 'register' : initialMode;
   // Direction for slide animation: 1 = to register (slide left), -1 = to login (slide right)
   const [direction, setDirection] = useState<number>(0);
 
@@ -75,22 +80,13 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
 
   // eSports active disciplines catalog for showcase
   const activeDisciplines = [
-    { name: 'EA FC 26', mode: '11v11 Clubes Pro', color: '#72f7c1', icon: Trophy },
-    { name: 'VALORANT', mode: '5v5 Táctico', color: '#ff4655', icon: Crosshair },
-    { name: 'CS2 / CS:GO', mode: 'Competitivo 5v5', color: '#f8ae3c', icon: Swords },
-    { name: 'LEAGUE OF LEGENDS', mode: 'Torneo 5v5', color: '#c89b3c', icon: Crown },
+    { name: 'EA FC 26', mode: '11v11 Clubes Pro', slug: 'eafc26', icon: Trophy },
+    { name: 'VALORANT', mode: '5v5 Táctico', slug: 'valorant', icon: Crosshair },
+    { name: 'CS2 / CS:GO', mode: 'Competitivo 5v5', slug: 'csgo', icon: Swords },
+    { name: 'LEAGUE OF LEGENDS', mode: 'Torneo 5v5', slug: 'lol', icon: Crown },
+    { name: 'ROCKET LEAGUE', mode: '3v3 Vehicular', slug: 'rocketleague', icon: Flame },
+    { name: 'FORTNITE', mode: 'Battle Royale', slug: 'fortnite', icon: Zap },
   ];
-
-  // Sync mode with pathname if navigated externally
-  useEffect(() => {
-    if (pathname?.includes('registro') && mode !== 'register') {
-      setDirection(1);
-      setMode('register');
-    } else if (pathname?.includes('login') && mode !== 'login') {
-      setDirection(-1);
-      setMode('login');
-    }
-  }, [pathname]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -105,11 +101,8 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
     if (newMode === mode) return;
     setAuthError(null);
     setDirection(newMode === 'register' ? 1 : -1);
-    setMode(newMode);
     const targetUrl = newMode === 'register' ? '/registro' : '/login';
-    if (typeof window !== 'undefined') {
-      window.history.pushState(null, '', targetUrl);
-    }
+    router.push(targetUrl, { scroll: false });
   };
 
   // Handle Login submission
@@ -219,31 +212,19 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-64px)] w-full bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col justify-center overflow-x-hidden py-3 sm:py-8 lg:py-10 transition-colors duration-300">
+    <div className="auth-page relative min-h-[calc(100vh-64px)] w-full bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col justify-center overflow-x-hidden py-3 sm:py-8 lg:py-10 transition-colors duration-300" data-auth-mode={mode}>
       
       {/* 🌌 Theme-Responsive Ambient eSports Background */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[var(--bg-main)] via-[var(--bg-main)] to-[var(--bg-subtle)] opacity-95" />
         
         {/* Responsive Theme Grid Pattern */}
-        <div 
-          className="absolute inset-0 opacity-[0.03] sm:opacity-[0.04]" 
-          style={{ 
-            backgroundImage: `linear-gradient(to right, var(--accent-cyan) 1px, transparent 1px), linear-gradient(to bottom, var(--accent-cyan) 1px, transparent 1px)`,
-            backgroundSize: '32px 32px' 
-          }} 
-        />
+        <div className="auth-page-grid absolute inset-0 opacity-[0.03] sm:opacity-[0.04]" />
         
         {/* Dynamic Ambient Neon Glows */}
-        <div 
-          className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[280px] sm:w-[550px] h-[280px] sm:h-[550px] blur-[100px] sm:blur-[140px] rounded-full pointer-events-none opacity-35 sm:opacity-40 transition-all duration-700" 
-          style={{ background: mode === 'login' ? 'var(--accent-cyan)' : 'var(--accent-violet)' }}
-        />
-        <div 
-          className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[280px] sm:w-[550px] h-[280px] sm:h-[550px] blur-[120px] sm:blur-[160px] rounded-full pointer-events-none opacity-25 sm:opacity-30 transition-all duration-700" 
-          style={{ background: mode === 'login' ? 'var(--accent-violet)' : 'var(--accent-cyan)' }}
-        />
-        <div className="absolute inset-0 bg-radial-[circle_at_center,transparent_0%,rgba(0,0,0,0.5)_90%]" />
+        <div className="auth-page-glow auth-page-glow-primary absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[280px] sm:w-[550px] h-[280px] sm:h-[550px] blur-[100px] sm:blur-[140px] rounded-full pointer-events-none opacity-35 sm:opacity-40 transition-all duration-700" />
+        <div className="auth-page-glow auth-page-glow-secondary absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[280px] sm:w-[550px] h-[280px] sm:h-[550px] blur-[120px] sm:blur-[160px] rounded-full pointer-events-none opacity-25 sm:opacity-30 transition-all duration-700" />
+        <div className="auth-page-vignette absolute inset-0" />
       </div>
 
       {/* 🌟 MAIN eSPORTS CONTENT GRID */}
@@ -254,23 +235,23 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
           
           {/* Tactical HUD Header Tag */}
           <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--accent-cyan)] text-xs font-mono font-black uppercase tracking-wider backdrop-blur-md shadow-[0_0_20px_var(--accent-cyan-bg)]">
-              <span className="size-2 rounded-full bg-[var(--accent-emerald)] animate-ping" />
-              <Activity className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--app-accent)] text-xs font-black uppercase tracking-wider backdrop-blur-md shadow-[0_0_20px_var(--app-accent-soft)]">
+              <span className="size-2 rounded-full bg-[var(--app-positive)] animate-ping" />
+              <Activity className="w-3.5 h-3.5 text-[var(--app-accent)]" />
               <span>CIRCUITO COMPETITIVO // TEMPORADA 2026</span>
             </div>
 
-            <div className="px-3 py-1.5 rounded-full bg-[var(--accent-violet-bg)] border border-[var(--accent-violet)] text-[var(--accent-violet)] text-[11px] font-mono font-bold flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-[var(--accent-gold)] animate-pulse" />
+            <div className="px-3 py-1.5 rounded-full bg-[var(--app-accent-2-soft)] border border-[var(--app-accent-2)] text-[var(--app-accent-2)] text-[11px] font-bold flex items-center gap-1.5">
+              <Flame className="w-3.5 h-3.5 text-[var(--app-warning)] animate-pulse" />
               <span>MATCHDAYS EN VIVO</span>
             </div>
           </div>
 
           {/* Hero eSports Typography */}
           <div className="space-y-2">
-            <h1 className="text-4xl xl:text-5xl font-black text-[var(--text-heading)] uppercase tracking-tight leading-[1.05] drop-shadow-2xl font-display">
+            <h1 className="text-4xl xl:text-5xl font-black text-[var(--text-heading)] uppercase tracking-tight leading-[1.05] drop-shadow-2xl">
               La Arena Pro de <br />
-              <span className="bg-gradient-to-r from-[var(--accent-cyan)] via-[var(--accent-violet)] to-[var(--accent-gold)] bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[var(--app-accent)] via-[var(--app-accent-2)] to-[var(--app-warning)] bg-clip-text text-transparent">
                 eSports en Sudamérica
               </span>
             </h1>
@@ -283,13 +264,13 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
           <div className="relative w-full rounded-3xl bg-[var(--bg-card)] border border-[var(--border-card)] backdrop-blur-xl p-6 overflow-hidden shadow-[var(--shadow-card)] flex flex-col sm:flex-row items-center justify-between gap-6 group hover:border-[var(--border-card-hover)] transition-all duration-300">
             
             {/* Ambient Theme Glow */}
-            <div className="absolute -top-10 -left-10 size-64 bg-[var(--accent-cyan-bg)] blur-3xl pointer-events-none rounded-full" />
-            <div className="absolute -bottom-10 -right-10 size-64 bg-[var(--accent-violet-bg)] blur-3xl pointer-events-none rounded-full" />
+            <div className="absolute -top-10 -left-10 size-64 bg-[var(--app-accent-soft)] blur-3xl pointer-events-none rounded-full" />
+            <div className="absolute -bottom-10 -right-10 size-64 bg-[var(--app-accent-2-soft)] blur-3xl pointer-events-none rounded-full" />
 
             {/* Left: 3D Live Trophy Canvas */}
             <div className="relative flex-shrink-0 flex items-center justify-center">
-              <HologramStage3D size={210} glowColor="var(--accent-cyan)" accentColor="var(--accent-violet)" />
-              <div className="absolute -bottom-2 text-[10px] font-mono font-bold text-[var(--accent-cyan)] uppercase tracking-widest bg-[var(--bg-elevated)] px-3 py-0.5 rounded-full border border-[var(--border-card)] shadow-lg">
+              <HologramStage3D size={210} glowColor="var(--app-accent)" accentColor="var(--app-accent-2)" />
+              <div className="absolute -bottom-2 text-[10px] font-bold text-[var(--app-accent)] uppercase tracking-widest bg-[var(--bg-elevated)] px-3 py-0.5 rounded-full border border-[var(--border-card)] shadow-lg">
                 ★ 3D CHAMPIONS TROPHY ★
               </div>
             </div>
@@ -297,7 +278,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
             {/* Right: Live eSports Stats & Disciplines */}
             <div className="space-y-4 flex-1">
               <div>
-                <span className="text-[10px] font-mono font-extrabold text-[var(--accent-cyan)] uppercase tracking-widest">
+                <span className="text-[10px] font-extrabold text-[var(--app-accent)] uppercase tracking-widest">
                   [ PLATAFORMA VERIFICADA ]
                 </span>
                 <h3 className="text-base font-black text-[var(--text-heading)] uppercase tracking-tight mt-0.5">
@@ -312,13 +293,11 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                   return (
                     <div
                       key={item.name}
+                      data-game={item.slug}
                       className="p-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] hover:border-[var(--border-card-hover)] transition-colors flex items-center gap-2"
                     >
-                      <div
-                        className="size-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${item.color}18`, border: `1px solid ${item.color}40` }}
-                      >
-                        <Icon className="w-3.5 h-3.5" style={{ color: item.color }} />
+                      <div className="auth-discipline-icon size-7 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Icon className="w-3.5 h-3.5" />
                       </div>
                       <div className="min-w-0">
                         <div className="text-[11px] font-black text-[var(--text-heading)] uppercase truncate">{item.name}</div>
@@ -330,12 +309,12 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
               </div>
 
               {/* Tournament Telemetry Row */}
-              <div className="flex items-center justify-between pt-1 text-xs border-t border-[var(--border-card)] font-mono">
+              <div className="flex items-center justify-between pt-1 text-xs border-t border-[var(--border-card)]">
                 <span className="text-[var(--text-muted)] flex items-center gap-1.5">
-                  <Gamepad2 className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
+                  <Gamepad2 className="w-3.5 h-3.5 text-[var(--app-accent)]" />
                   +120 Ligas Oficiales
                 </span>
-                <span className="text-[var(--accent-emerald)] font-bold flex items-center gap-1">
+                <span className="text-[var(--app-positive)] font-bold flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   Anti-Cheat Protegido
                 </span>
@@ -347,8 +326,8 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
           <div className="grid grid-cols-3 gap-3 pt-1">
             <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--border-card-hover)] backdrop-blur-md transition-all duration-300 hover:translate-y-[-2px] space-y-1">
               <div className="flex items-center gap-2">
-                <div className="size-6 rounded-lg bg-[var(--accent-cyan-bg)] border border-[var(--accent-cyan)] flex items-center justify-center">
-                  <Trophy className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
+                <div className="size-6 rounded-lg bg-[var(--app-accent-soft)] border border-[var(--app-accent)] flex items-center justify-center">
+                  <Trophy className="w-3.5 h-3.5 text-[var(--app-accent)]" />
                 </div>
                 <span className="text-xs font-black text-[var(--text-heading)] uppercase">Fixtures Pro</span>
               </div>
@@ -359,8 +338,8 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
 
             <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--border-card-hover)] backdrop-blur-md transition-all duration-300 hover:translate-y-[-2px] space-y-1">
               <div className="flex items-center gap-2">
-                <div className="size-6 rounded-lg bg-[var(--accent-violet-bg)] border border-[var(--accent-violet)] flex items-center justify-center">
-                  <Flame className="w-3.5 h-3.5 text-[var(--accent-violet)]" />
+                <div className="size-6 rounded-lg bg-[var(--app-accent-2-soft)] border border-[var(--app-accent-2)] flex items-center justify-center">
+                  <Flame className="w-3.5 h-3.5 text-[var(--app-accent-2)]" />
                 </div>
                 <span className="text-xs font-black text-[var(--text-heading)] uppercase">Mercado Libre</span>
               </div>
@@ -371,8 +350,8 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
 
             <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--border-card-hover)] backdrop-blur-md transition-all duration-300 hover:translate-y-[-2px] space-y-1">
               <div className="flex items-center gap-2">
-                <div className="size-6 rounded-lg bg-[var(--accent-gold-bg)] border border-[var(--accent-gold)] flex items-center justify-center">
-                  <Shield className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                <div className="size-6 rounded-lg bg-[var(--app-warning-soft)] border border-[var(--app-warning)] flex items-center justify-center">
+                  <Shield className="w-3.5 h-3.5 text-[var(--app-warning)]" />
                 </div>
                 <span className="text-xs font-black text-[var(--text-heading)] uppercase">Clubes & Stats</span>
               </div>
@@ -386,23 +365,23 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
         {/* 📱 MOBILE BRAND HEADER (Visible only on < lg screens) */}
         <div className="w-full lg:hidden flex flex-col items-center text-center space-y-2 pt-1 pb-1">
           <Link href="/" className="inline-flex items-center gap-2.5 group">
-            <div className="size-10 rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] via-[var(--accent-violet)] to-[var(--accent-gold)] p-0.5 shadow-lg group-hover:scale-105 transition-transform">
+            <div className="size-10 rounded-xl bg-gradient-to-br from-[var(--app-accent)] via-[var(--app-accent-2)] to-[var(--app-warning)] p-0.5 shadow-lg group-hover:scale-105 transition-transform">
               <div className="w-full h-full bg-[var(--bg-elevated)] rounded-[10px] flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-[var(--accent-cyan)]" />
+                <Trophy className="w-5 h-5 text-[var(--app-accent)]" />
               </div>
             </div>
             <div className="flex flex-col text-left">
-              <span className="text-xl font-black tracking-tight text-[var(--text-heading)] uppercase leading-none font-display">
-                TOURNAMENTS<span className="text-[var(--accent-cyan)]">PRO</span>
+              <span className="text-xl font-black tracking-tight text-[var(--text-heading)] uppercase leading-none">
+                TOURNAMENTS<span className="text-[var(--app-accent)]">PRO</span>
               </span>
-              <span className="text-[9px] text-[var(--text-muted)] font-mono font-bold tracking-wider uppercase mt-0.5">
+              <span className="text-[9px] text-[var(--text-muted)] font-bold tracking-wider uppercase mt-0.5">
                 ARENA DEPORTIVA SUDAMÉRICA
               </span>
             </div>
           </Link>
           
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[10px] font-mono font-bold text-[var(--accent-cyan)] shadow-sm">
-            <span className="size-1.5 rounded-full bg-[var(--accent-emerald)] animate-pulse" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[10px] font-bold text-[var(--app-accent)] shadow-sm">
+            <span className="size-1.5 rounded-full bg-[var(--app-positive)] animate-pulse" />
             <span>CIRCUITO OFICIAL 2026 // ACCESO ATLETAS</span>
           </div>
         </div>
@@ -438,7 +417,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                         transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                       />
                     )}
-                    <LogIn className={`w-4 h-4 ${mode === 'login' ? 'text-[var(--accent-cyan)]' : 'text-[var(--text-muted)]'}`} />
+                    <LogIn className={`w-4 h-4 ${mode === 'login' ? 'text-[var(--app-accent)]' : 'text-[var(--text-muted)]'}`} />
                     <span>Iniciar Sesión</span>
                   </button>
 
@@ -459,7 +438,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                         transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                       />
                     )}
-                    <UserPlus className={`w-4 h-4 ${mode === 'register' ? 'text-[var(--accent-violet)]' : 'text-[var(--text-muted)]'}`} />
+                    <UserPlus className={`w-4 h-4 ${mode === 'register' ? 'text-[var(--app-accent-2)]' : 'text-[var(--text-muted)]'}`} />
                     <span>Crear Cuenta</span>
                   </button>
                 </div>
@@ -481,7 +460,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                   >
                     {/* Header Title (Subtle on Mobile) */}
                     <div className="text-center space-y-1 pt-0.5">
-                      <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight text-[var(--text-heading)] font-display">
+                      <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight text-[var(--text-heading)]">
                         Acceso a la Arena
                       </h2>
                       <p className="text-xs text-[var(--text-muted)] font-medium">
@@ -489,43 +468,15 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                       </p>
                     </div>
 
-                    {/* Google OAuth Button (Mobile Touch Friendly) */}
-                    <button
-                      type="button"
-                      onClick={() => setIsGoogleModalOpen(true)}
-                      className="w-full min-h-[46px] sm:min-h-[44px] py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 dark:bg-[var(--bg-elevated)] dark:hover:bg-[var(--bg-card-hover)] border border-slate-200 dark:border-[var(--border-card)] text-slate-900 dark:text-[var(--text-primary)] text-xs font-black uppercase tracking-wider flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow-md active:scale-[0.98] cursor-pointer"
-                    >
-                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                      </svg>
-                      <span className="truncate">Continuar con Google</span>
-                    </button>
-
-                    {/* Social Login Instant Buttons */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        className="min-h-[42px] sm:min-h-[40px] p-2.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] hover:border-[#9146FF] text-[var(--text-secondary)] hover:text-[#c084fc] text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-                      >
-                        <Tv className="w-4 h-4 text-[#9146FF] shrink-0" />
-                        <span>Twitch</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="min-h-[42px] sm:min-h-[40px] p-2.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] hover:border-[#5865F2] text-[var(--text-secondary)] hover:text-[#818cf8] text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-                      >
-                        <MessageSquare className="w-4 h-4 text-[#5865F2] shrink-0" />
-                        <span>Discord</span>
-                      </button>
-                    </div>
+                    <AuthProviderButtons
+                      googleLabel="Continuar con Google"
+                      onGoogle={() => setIsGoogleModalOpen(true)}
+                    />
 
                     {/* Divider with Cyber Text */}
                     <div className="relative flex items-center justify-center my-1">
                       <div className="w-full border-t border-[var(--border-card)]" />
-                      <span className="absolute bg-[var(--bg-card)] px-3 text-[9px] font-mono font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                      <span className="absolute bg-[var(--bg-card)] px-3 text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
                         O con credenciales
                       </span>
                     </div>
@@ -534,11 +485,11 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                     <form onSubmit={handleLoginSubmit} className="space-y-3 sm:space-y-3.5">
                       {/* Gamertag / Email */}
                       <div className="space-y-1">
-                        <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider font-display">
+                        <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider">
                           Gamertag o Correo Electrónico
                         </label>
                         <div className="relative group">
-                          <Mail className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none" />
+                          <Mail className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--app-accent)] transition-colors pointer-events-none" />
                           <input
                             type="text"
                             required
@@ -548,7 +499,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                               setLoginEmail(e.target.value);
                               if (authError) setAuthError(null);
                             }}
-                            className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all"
+                            className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--app-accent)] focus:ring-2 focus:ring-[var(--app-accent-soft)] transition-all"
                           />
                         </div>
                       </div>
@@ -556,18 +507,18 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                       {/* Password */}
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider font-display">
+                          <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider">
                             Contraseña
                           </label>
                           <a
                             href="#"
-                            className="text-[11px] font-bold text-[var(--accent-cyan)] hover:brightness-125 transition-colors p-1"
+                            className="text-[11px] font-bold text-[var(--app-accent)] hover:brightness-125 transition-colors p-1"
                           >
                             ¿Olvidaste?
                           </a>
                         </div>
                         <div className="relative group">
-                          <Lock className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none" />
+                          <Lock className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--app-accent)] transition-colors pointer-events-none" />
                           <input
                             type={loginShowPassword ? 'text' : 'password'}
                             required
@@ -577,7 +528,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                               setLoginPassword(e.target.value);
                               if (authError) setAuthError(null);
                             }}
-                            className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all"
+                            className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--app-accent)] focus:ring-2 focus:ring-[var(--app-accent-soft)] transition-all"
                           />
                           <button
                             type="button"
@@ -597,12 +548,12 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                             type="checkbox"
                             checked={rememberMe}
                             onChange={(e) => setRememberMe(e.target.checked)}
-                            className="size-4 rounded bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--accent-cyan)] focus:ring-0 cursor-pointer"
+                            className="size-4 rounded bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--app-accent)] focus:ring-0 cursor-pointer"
                           />
                           <span>Recordar sesión</span>
                         </label>
-                        <span className="text-[10px] text-[var(--text-muted)] font-mono flex items-center gap-1">
-                          <Shield className="w-3 h-3 text-[var(--accent-emerald)] shrink-0" />
+                        <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
+                          <Shield className="w-3 h-3 text-[var(--app-positive)] shrink-0" />
                           SSL SEGURO
                         </span>
                       </div>
@@ -612,9 +563,9 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                         <motion.div
                           initial={{ opacity: 0, y: -6 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="flex items-start gap-2.5 rounded-xl border border-[var(--accent-crimson)] bg-[var(--accent-crimson-bg)] p-3 text-xs font-semibold text-[var(--accent-crimson)] shadow-md"
+                          className="flex items-start gap-2.5 rounded-xl border border-[var(--app-danger)] bg-[var(--app-danger-soft)] p-3 text-xs font-semibold text-[var(--app-danger)] shadow-md"
                         >
-                          <AlertCircle className="size-4 shrink-0 mt-0.5 text-[var(--accent-crimson)]" />
+                          <AlertCircle className="size-4 shrink-0 mt-0.5 text-[var(--app-danger)]" />
                           <span>{authError}</span>
                         </motion.div>
                       )}
@@ -623,9 +574,9 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                       <button
                         type="submit"
                         disabled={isLoading}
-                        className="relative w-full min-h-[50px] sm:min-h-[46px] h-12 rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest text-[var(--accent-contrast)] bg-gradient-to-r from-[var(--accent-cyan)] via-[var(--accent-emerald)] to-[var(--accent-cyan)] hover:brightness-110 transition-all duration-300 shadow-[0_0_25px_var(--accent-cyan-bg)] hover:shadow-[0_0_35px_var(--accent-cyan-bg)] flex items-center justify-center gap-2 overflow-hidden group disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer"
+                        className="relative w-full min-h-[50px] sm:min-h-[46px] h-12 rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest text-[var(--accent-contrast)] bg-gradient-to-r from-[var(--app-accent)] via-[var(--app-positive)] to-[var(--app-accent)] hover:brightness-110 transition-all duration-300 shadow-[0_0_25px_var(--app-accent-soft)] hover:shadow-[0_0_35px_var(--app-accent-soft)] flex items-center justify-center gap-2 overflow-hidden group disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer"
                       >
-                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+                        <div className="auth-submit-shimmer absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
                         {isLoading ? (
                           <div className="flex items-center gap-2">
                             <div className="size-4 rounded-full border-2 border-[var(--accent-contrast)] border-t-transparent animate-spin" />
@@ -646,7 +597,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                       <button
                         type="button"
                         onClick={() => switchMode('register')}
-                        className="font-bold text-[var(--accent-cyan)] hover:brightness-125 hover:underline transition-colors ml-1 py-1 inline-block cursor-pointer"
+                        className="font-bold text-[var(--app-accent)] hover:brightness-125 hover:underline transition-colors ml-1 py-1 inline-block cursor-pointer"
                       >
                         Crear cuenta eSports
                       </button>
@@ -666,7 +617,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                   >
                     {/* Header Title (Subtle on Mobile) */}
                     <div className="text-center space-y-1 pt-0.5">
-                      <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight text-[var(--text-heading)] font-display">
+                      <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight text-[var(--text-heading)]">
                         Crear Ficha de Atleta
                       </h2>
                       <p className="text-xs text-[var(--text-muted)] font-medium">
@@ -674,43 +625,15 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                       </p>
                     </div>
 
-                    {/* Google OAuth Button */}
-                    <button
-                      type="button"
-                      onClick={() => setIsGoogleModalOpen(true)}
-                      className="w-full min-h-[46px] sm:min-h-[44px] py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 dark:bg-[var(--bg-elevated)] dark:hover:bg-[var(--bg-card-hover)] border border-slate-200 dark:border-[var(--border-card)] text-slate-900 dark:text-[var(--text-primary)] text-xs font-black uppercase tracking-wider flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow-md active:scale-[0.98] cursor-pointer"
-                    >
-                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                      </svg>
-                      <span className="truncate">Registrarse con Google</span>
-                    </button>
-
-                    {/* Social Login Instant Buttons */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        className="min-h-[42px] sm:min-h-[40px] p-2.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] hover:border-[#9146FF] text-[var(--text-secondary)] hover:text-[#c084fc] text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-                      >
-                        <Tv className="w-4 h-4 text-[#9146FF] shrink-0" />
-                        <span>Twitch</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="min-h-[42px] sm:min-h-[40px] p-2.5 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-card)] hover:border-[#5865F2] text-[var(--text-secondary)] hover:text-[#818cf8] text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-                      >
-                        <MessageSquare className="w-4 h-4 text-[#5865F2] shrink-0" />
-                        <span>Discord</span>
-                      </button>
-                    </div>
+                    <AuthProviderButtons
+                      googleLabel="Registrarse con Google"
+                      onGoogle={() => setIsGoogleModalOpen(true)}
+                    />
 
                     {/* Divider with Cyber Text */}
                     <div className="relative flex items-center justify-center my-1">
                       <div className="w-full border-t border-[var(--border-card)]" />
-                      <span className="absolute bg-[var(--bg-card)] px-3 text-[9px] font-mono font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                      <span className="absolute bg-[var(--bg-card)] px-3 text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
                         o datos del atleta
                       </span>
                     </div>
@@ -720,11 +643,11 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                       {/* Row 1: Gamertag & Full Name */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                         <div className="space-y-1">
-                          <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider font-display">
+                          <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider">
                             Gamertag / Nick
                           </label>
                           <div className="relative group">
-                            <Gamepad2 className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none" />
+                            <Gamepad2 className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--app-accent)] transition-colors pointer-events-none" />
                             <input
                               type="text"
                               required
@@ -737,17 +660,17 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                                 setGamertag(e.target.value);
                                 if (authError) setAuthError(null);
                               }}
-                              className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all"
+                              className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--app-accent)] focus:ring-2 focus:ring-[var(--app-accent-soft)] transition-all"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider font-display">
+                          <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider">
                             Nombre Completo
                           </label>
                           <div className="relative group">
-                            <User className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none" />
+                            <User className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--app-accent)] transition-colors pointer-events-none" />
                             <input
                               type="text"
                               required
@@ -759,7 +682,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                                 setFullName(e.target.value);
                                 if (authError) setAuthError(null);
                               }}
-                              className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all"
+                              className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--app-accent)] focus:ring-2 focus:ring-[var(--app-accent-soft)] transition-all"
                             />
                           </div>
                         </div>
@@ -767,11 +690,11 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
 
                       {/* Email */}
                       <div className="space-y-1">
-                        <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider font-display">
+                        <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider">
                           Correo Electrónico
                         </label>
                         <div className="relative group">
-                          <Mail className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none" />
+                          <Mail className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--app-accent)] transition-colors pointer-events-none" />
                           <input
                             type="email"
                             required
@@ -783,7 +706,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                               setRegisterEmail(e.target.value);
                               if (authError) setAuthError(null);
                             }}
-                            className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all"
+                            className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--app-accent)] focus:ring-2 focus:ring-[var(--app-accent-soft)] transition-all"
                           />
                         </div>
                       </div>
@@ -791,13 +714,13 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                       {/* Password */}
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider font-display">
+                          <label className="text-xs font-extrabold text-[var(--text-secondary)] block uppercase tracking-wider">
                             Contraseña Segura
                           </label>
                           <span className="text-[10px] text-[var(--text-muted)]">Min. 10 car. (1 letra + 1 num)</span>
                         </div>
                         <div className="relative group">
-                          <Lock className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--accent-cyan)] transition-colors pointer-events-none" />
+                          <Lock className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-[var(--app-accent)] transition-colors pointer-events-none" />
                           <input
                             type={registerShowPassword ? 'text' : 'password'}
                             required
@@ -810,7 +733,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                               setRegisterPassword(e.target.value);
                               if (authError) setAuthError(null);
                             }}
-                            className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-cyan)] focus:ring-2 focus:ring-[var(--accent-cyan-bg)] transition-all"
+                            className="w-full min-h-[48px] sm:min-h-[44px] pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-sm sm:text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--app-accent)] focus:ring-2 focus:ring-[var(--app-accent-soft)] transition-all"
                           />
                           <button
                             type="button"
@@ -833,7 +756,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                             <select
                               value={primaryGame}
                               onChange={(e) => setPrimaryGame(e.target.value)}
-                              className="w-full min-h-[46px] sm:min-h-[42px] px-3.5 pr-8 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] appearance-none cursor-pointer"
+                              className="w-full min-h-[46px] sm:min-h-[42px] px-3.5 pr-8 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--app-accent)] appearance-none cursor-pointer"
                             >
                               {gamesList.map((g) => (
                                 <option key={g.id} value={g.slug} className="bg-[var(--bg-elevated)] text-[var(--text-primary)]">
@@ -853,7 +776,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                             <select
                               value={platform}
                               onChange={(e) => setPlatform(e.target.value)}
-                              className="w-full min-h-[46px] sm:min-h-[42px] px-3.5 pr-8 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-cyan)] appearance-none cursor-pointer"
+                              className="w-full min-h-[46px] sm:min-h-[42px] px-3.5 pr-8 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--app-accent)] appearance-none cursor-pointer"
                             >
                               <option value="PS5" className="bg-[var(--bg-elevated)] text-[var(--text-primary)]">PS5 (PlayStation 5)</option>
                               <option value="PS4" className="bg-[var(--bg-elevated)] text-[var(--text-primary)]">PS4 (PlayStation 4)</option>
@@ -873,11 +796,11 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                           required
                           checked={acceptTerms}
                           onChange={(e) => setAcceptTerms(e.target.checked)}
-                          className="mt-0.5 size-4 rounded bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--accent-cyan)] focus:ring-0 cursor-pointer"
+                          className="mt-0.5 size-4 rounded bg-[var(--bg-subtle)] border-[var(--border-card)] text-[var(--app-accent)] focus:ring-0 cursor-pointer"
                         />
                         <span className="text-[11px] sm:text-xs leading-relaxed">
                           Acepto los{' '}
-                          <Link href="/informacion" className="font-bold text-[var(--accent-cyan)] hover:brightness-125 hover:underline">
+                          <Link href="/informacion" className="font-bold text-[var(--app-accent)] hover:brightness-125 hover:underline">
                             Términos
                           </Link>{' '}
                           y política eSports.
@@ -889,9 +812,9 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                         <motion.div
                           initial={{ opacity: 0, y: -6 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="flex items-start gap-2.5 rounded-xl border border-[var(--accent-crimson)] bg-[var(--accent-crimson-bg)] p-3 text-xs font-semibold text-[var(--accent-crimson)] shadow-md"
+                          className="flex items-start gap-2.5 rounded-xl border border-[var(--app-danger)] bg-[var(--app-danger-soft)] p-3 text-xs font-semibold text-[var(--app-danger)] shadow-md"
                         >
-                          <AlertCircle className="size-4 shrink-0 mt-0.5 text-[var(--accent-crimson)]" />
+                          <AlertCircle className="size-4 shrink-0 mt-0.5 text-[var(--app-danger)]" />
                           <span>{authError}</span>
                         </motion.div>
                       )}
@@ -900,9 +823,9 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                       <button
                         type="submit"
                         disabled={isLoading || !acceptTerms}
-                        className="relative w-full min-h-[50px] sm:min-h-[46px] h-12 rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest text-[var(--accent-contrast)] bg-gradient-to-r from-[var(--accent-cyan)] via-[var(--accent-emerald)] to-[var(--accent-cyan)] hover:brightness-110 transition-all duration-300 shadow-[0_0_25px_var(--accent-cyan-bg)] hover:shadow-[0_0_35px_var(--accent-cyan-bg)] flex items-center justify-center gap-2 overflow-hidden group disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer"
+                        className="relative w-full min-h-[50px] sm:min-h-[46px] h-12 rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest text-[var(--accent-contrast)] bg-gradient-to-r from-[var(--app-accent)] via-[var(--app-positive)] to-[var(--app-accent)] hover:brightness-110 transition-all duration-300 shadow-[0_0_25px_var(--app-accent-soft)] hover:shadow-[0_0_35px_var(--app-accent-soft)] flex items-center justify-center gap-2 overflow-hidden group disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer"
                       >
-                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+                        <div className="auth-submit-shimmer absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
                         {isLoading ? (
                           <div className="flex items-center gap-2">
                             <div className="size-4 rounded-full border-2 border-[var(--accent-contrast)] border-t-transparent animate-spin" />
@@ -923,7 +846,7 @@ export default function AuthPageClient({ initialMode = 'login' }: AuthPageClient
                       <button
                         type="button"
                         onClick={() => switchMode('login')}
-                        className="font-bold text-[var(--accent-cyan)] hover:brightness-125 hover:underline transition-colors ml-1 py-1 inline-block cursor-pointer"
+                        className="font-bold text-[var(--app-accent)] hover:brightness-125 hover:underline transition-colors ml-1 py-1 inline-block cursor-pointer"
                       >
                         Inicia sesión aquí
                       </button>

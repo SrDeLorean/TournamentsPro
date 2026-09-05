@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Upload, ImageIcon, Shield, AlertCircle } from 'lucide-react';
 import { compressImageToWebP } from '@/lib/image-compressor';
-import { fetchJson } from '@/lib/fetch-utils';
 
 export interface ImageUploadCardProps {
   label: string;
@@ -19,6 +18,7 @@ export interface ImageUploadCardProps {
   entityName?: string;
   entityId?: string;
   uploadType?: 'logo' | 'banner' | 'avatar';
+  mode?: 'persist' | 'preview';
   onUploadSuccess: (url: string, statsMessage: string) => Promise<void> | void;
 }
 
@@ -29,11 +29,12 @@ export function ImageUploadCard({
   fallbackType = 'avatar',
   maxDimension = 600,
   quality = 0.85,
-  brandColor = '#00F0FF',
+  brandColor = 'var(--app-accent)',
   uploadButtonText,
   entityName = 'upload',
   entityId = 'id',
   uploadType = 'logo',
+  mode = 'persist',
   onUploadSuccess,
 }: ImageUploadCardProps) {
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
@@ -75,7 +76,15 @@ export function ImageUploadCard({
 
       setLocalPreview(base64Data);
 
+      if (mode === 'preview') {
+        const previewStats = `${statsMsg} · Vista previa local, sin persistencia`;
+        setStats(previewStats);
+        await onUploadSuccess(base64Data, previewStats);
+        return;
+      }
+
       const cleanSlug = entityName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const { fetchJson } = await import('@/lib/fetch-utils');
 
       const data = await fetchJson<{ success?: boolean; data?: { url?: string }; url?: string }>('/api/upload', {
         method: 'POST',
@@ -110,23 +119,23 @@ export function ImageUploadCard({
 
   const renderFallback = () => {
     if (fallbackType === 'banner') {
-      return <ImageIcon className="w-6 h-6 text-slate-500" />;
+      return <ImageIcon className="w-6 h-6 text-[var(--text-muted)]" />;
     }
     if (fallbackType === 'logo') {
-      return <Shield className="w-6 h-6 text-slate-500" />;
+      return <Shield className="w-6 h-6 text-[var(--text-muted)]" />;
     }
-    return <Upload className="w-6 h-6 text-slate-500" />;
+    return <Upload className="w-6 h-6 text-[var(--text-muted)]" />;
   };
 
   const isBanner = fallbackType === 'banner' || uploadType === 'banner';
   const effectiveUrl = localPreview || currentUrl;
 
   return (
-    <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4 flex flex-col justify-between shadow-sm transition-all duration-300">
+    <div data-mode={mode} className="ui-image-upload-card p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4 flex flex-col justify-between shadow-sm transition-all duration-300 font-[family-name:var(--font-active)]">
       <div className="flex items-center gap-3.5">
         {/* Preview Frame */}
         {isBanner ? (
-          <div className="w-20 h-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] overflow-hidden flex items-center justify-center flex-shrink-0 relative shadow-sm">
+          <div className="ui-image-upload-preview w-20 h-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] overflow-hidden flex items-center justify-center flex-shrink-0 relative shadow-sm">
             {effectiveUrl ? (
               <Image src={effectiveUrl} alt={label} fill sizes="80px" unoptimized className="object-cover" />
             ) : (
@@ -135,8 +144,8 @@ export function ImageUploadCard({
           </div>
         ) : (
           <div
-            className="relative w-14 h-14 rounded-xl bg-[var(--bg-card)] border-2 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-sm"
-            style={{ borderColor: brandColor }}
+            className="ui-image-upload-preview ui-dynamic-brand-tile relative w-14 h-14 rounded-xl border-2 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-sm"
+            style={{ '--ui-dynamic-brand': brandColor } as React.CSSProperties}
           >
             {effectiveUrl ? (
               <Image src={effectiveUrl} alt={label} fill sizes="56px" unoptimized className="object-cover" />
@@ -146,12 +155,12 @@ export function ImageUploadCard({
           </div>
         )}
 
-        <div className="min-w-0 flex-1">
-          <span className="font-bold font-mono text-[var(--text-heading)] text-xs block uppercase tracking-wide truncate">{label}</span>
-          <span className="text-[11px] font-mono text-[var(--text-muted)] block mt-0.5 truncate">{subtitle}</span>
-          {stats && <span className="text-[11px] font-mono text-[var(--accent-emerald)] font-bold block mt-1">{stats}</span>}
+        <div className="min-w-0 flex-1 font-[family-name:var(--font-active)]">
+          <span className="font-bold font-[family-name:var(--font-active)] text-[var(--text-heading)] text-xs block uppercase tracking-wide truncate">{label}</span>
+          <span className="text-[11px] font-[family-name:var(--font-active)] text-[var(--text-muted)] block mt-0.5 truncate">{subtitle}</span>
+          {stats && <span className="text-[11px] font-[family-name:var(--font-active)] text-[var(--app-positive)] font-bold block mt-1">{stats}</span>}
           {errorMessage && (
-            <span className="text-[11px] font-mono text-[var(--accent-crimson)] font-bold flex items-center gap-1 mt-1">
+            <span className="text-[11px] font-[family-name:var(--font-active)] text-[var(--app-danger)] font-bold flex items-center gap-1 mt-1">
               <AlertCircle className="w-3 h-3 flex-shrink-0" />
               <span className="truncate">{errorMessage}</span>
             </span>
@@ -160,12 +169,7 @@ export function ImageUploadCard({
       </div>
 
       <label
-        className="w-full py-2.5 px-3 rounded-xl border font-mono font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md active:scale-[0.98] hover:opacity-90"
-        style={{
-          backgroundColor: brandColor,
-          borderColor: brandColor,
-          color: '#020617',
-        }}
+        className="ui-image-upload-action w-full py-2.5 px-3 rounded-[var(--radius-control)] border font-[family-name:var(--font-active)] font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md active:scale-[0.98] bg-[var(--app-accent)] text-[var(--accent-contrast)] hover:brightness-105 border-transparent"
       >
         <Upload className="w-4 h-4" />
         <span>{isCompressing ? 'Procesando...' : buttonText}</span>
@@ -174,4 +178,3 @@ export function ImageUploadCard({
     </div>
   );
 }
-

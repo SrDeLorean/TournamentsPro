@@ -102,10 +102,10 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
       subtitle="Registrar organización en la base de datos MySQL"
       onSubmit={handleCreateOrg}
       isSubmitting={isSubmitting}
-      brandColor="#A855F7"
+      brandColor="var(--app-accent-2)"
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-900 border border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--border-card)]">
           <ImageUploadCard
             label="Logo / Escudo Oficial"
             subtitle="Formato WebP"
@@ -113,7 +113,7 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
             fallbackType="logo"
             uploadType="logo"
             maxDimension={512}
-            brandColor="#A855F7"
+            brandColor="var(--app-accent-2)"
             uploadButtonText="Subir Escudo"
             entityName="org-new"
             onUploadSuccess={(url) => setModalLogoUrl(url)}
@@ -125,7 +125,7 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
             fallbackType="banner"
             uploadType="banner"
             maxDimension={1200}
-            brandColor="#A855F7"
+            brandColor="var(--app-accent-2)"
             uploadButtonText="Subir Banner"
             entityName="org-new"
             onUploadSuccess={(url) => setModalBannerUrl(url)}
@@ -134,56 +134,56 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
           <div className="space-y-1">
-            <label className="text-slate-300 uppercase block">Nombre Oficial:</label>
-            <input type="text" name="name" required placeholder="San Lorenzo eSports" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
+            <label className="text-[var(--text-secondary)] uppercase block">Nombre Oficial:</label>
+            <input type="text" name="name" required placeholder="San Lorenzo eSports" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-heading)]" />
           </div>
           <div className="space-y-1">
-            <label className="text-slate-300 uppercase block">Tag / Abreviatura:</label>
-            <input type="text" name="tag" required maxLength={5} placeholder="SL" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-purple-300 font-mono uppercase" />
+            <label className="text-[var(--text-secondary)] uppercase block">Tag / Abreviatura:</label>
+            <input type="text" name="tag" required maxLength={5} placeholder="SL" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--app-accent-2)] font-[family-name:var(--font-active)] uppercase" />
           </div>
           <div className="space-y-1">
-            <label className="text-slate-300 uppercase block">País / Sede:</label>
-            <input type="text" name="country" defaultValue="Venezuela" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white" />
+            <label className="text-[var(--text-secondary)] uppercase block">País / Sede:</label>
+            <input type="text" name="country" defaultValue="Venezuela" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-heading)]" />
           </div>
           <div className="space-y-1">
-            <label className="text-slate-300 uppercase block">Año de Fundación:</label>
-            <input type="text" name="foundedYear" defaultValue="2019" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+            <label className="text-[var(--text-secondary)] uppercase block">Año de Fundación:</label>
+            <input type="text" name="foundedYear" defaultValue="2019" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
           </div>
           <div className="space-y-1">
-            <label className="text-slate-300 uppercase block">Rating de Prestigio:</label>
-            <input type="text" name="rating" defaultValue="4.98" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-amber-400 font-mono" />
+            <label className="text-[var(--text-secondary)] uppercase block">Rating de Prestigio:</label>
+            <input type="text" name="rating" defaultValue="4.98" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--app-warning)] font-[family-name:var(--font-active)]" />
           </div>
           <div className="space-y-1">
-            <label className="text-slate-300 uppercase block">Sitio Web Oficial:</label>
-            <input type="text" name="website" placeholder="https://sanlorenzoesports.com" className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white font-mono" />
+            <label className="text-[var(--text-secondary)] uppercase block">Sitio Web Oficial:</label>
+            <input type="text" name="website" placeholder="https://sanlorenzoesports.com" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
           </div>
         </div>
 
         {/* Asignación de Organizadores */}
-        <div className="space-y-2 p-3 rounded-xl bg-slate-900 border border-white/10">
-          <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1">
-            <Users className="w-4 h-4 text-purple-400" />
+        <div className="space-y-2 p-3 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)]">
+          <label className="text-xs font-bold text-[var(--text-secondary)] uppercase flex items-center gap-1">
+            <Users className="w-4 h-4 text-[var(--app-accent-2)]" />
             Asignar Organizadores a la Organización:
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {availableOrganizers.map((oUser) => (
-              <label key={oUser.id} className="flex items-center gap-2 text-xs font-semibold text-white bg-slate-950 p-2 rounded-lg border border-white/10 cursor-pointer">
+              <label key={oUser.id} className="flex items-center gap-2 text-xs font-semibold text-[var(--text-heading)] bg-[var(--app-canvas)] p-2 rounded-lg border border-[var(--border-card)] cursor-pointer">
                 <input type="checkbox" name={`organizer_${oUser.id}`} />
                 <Avatar fallback={oUser.name} src={oUser.avatar_url || oUser.foto} size="sm" />
                 <span>@{oUser.gamertag || oUser.name}</span>
               </label>
             ))}
             {availableOrganizers.length === 0 && (
-              <p className="text-[10px] text-slate-400">No hay organizadores libres disponibles.</p>
+              <p className="text-[10px] text-[var(--text-muted)]">No hay organizadores libres disponibles.</p>
             )}
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-300 uppercase block">Disciplinas eSports Autorizadas:</label>
+          <label className="text-xs font-bold text-[var(--text-secondary)] uppercase block">Disciplinas eSports Autorizadas:</label>
           <div className="flex flex-wrap gap-3">
             {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
-              <label key={slug} className="flex items-center gap-2 text-xs font-semibold text-white bg-slate-900 p-2 rounded-xl border border-white/10 cursor-pointer">
+              <label key={slug} className="flex items-center gap-2 text-xs font-semibold text-[var(--text-heading)] bg-[var(--app-surface-2)] p-2 rounded-xl border border-[var(--border-card)] cursor-pointer">
                 <input type="checkbox" name={`game_${slug}`} defaultChecked />
                 <span>{g.name}</span>
               </label>

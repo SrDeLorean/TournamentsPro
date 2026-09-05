@@ -16,7 +16,7 @@ export function Pagination({
   currentPage,
   totalPages,
   onPageChange,
-  brandColor = 'var(--accent-cyan)',
+  brandColor = 'var(--app-accent)',
   className,
 }: PaginationProps) {
   // Generate pagination array (e.g., 1, '...', 4, 5, 6, '...', 10)
@@ -37,13 +37,15 @@ export function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className={cn("flex items-center justify-center w-full", className)}>
-      <div className="flex items-center gap-1 sm:gap-2 bg-[var(--bg-card)]/50 border border-[var(--border-card)] p-1.5 rounded-2xl backdrop-blur-md shadow-sm">
+    <div className={cn("flex items-center justify-center w-full font-[family-name:var(--font-active)]", className)}>
+      <div className="flex items-center gap-1 sm:gap-2 bg-[var(--bg-card)] border border-[var(--border-card)] p-1.5 rounded-[var(--radius-card)] backdrop-blur-md shadow-sm">
         {/* Prev Button */}
         <button
+          type="button"
+          aria-label="Página anterior"
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="p-2 sm:px-3 sm:py-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-main)] disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 text-sm font-bold"
+          className="p-2 sm:px-3 sm:py-2 rounded-[var(--radius-control)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-main)] disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 text-sm font-bold font-[family-name:var(--font-active)]"
         >
           <ChevronLeft className="w-4 h-4" />
           <span className="hidden sm:inline">Ant</span>
@@ -64,12 +66,15 @@ export function Pagination({
 
             return (
               <button
+                type="button"
                 key={`page-${pageNum}`}
                 onClick={() => onPageChange(pageNum as number)}
+                aria-label={`Ir a la página ${pageNum}`}
+                aria-current={isCurrent ? 'page' : undefined}
                 className={cn(
-                  "w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl text-xs sm:text-sm font-bold transition-all",
+                  "w-10 h-10 flex items-center justify-center rounded-[var(--radius-control)] text-xs sm:text-sm font-bold transition-all font-[family-name:var(--font-active)]",
                   isCurrent
-                    ? "shadow-sm text-black"
+                    ? "shadow-sm text-[var(--accent-contrast)]"
                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-main)]"
                 )}
                 style={
@@ -86,9 +91,11 @@ export function Pagination({
 
         {/* Next Button */}
         <button
+          type="button"
+          aria-label="Página siguiente"
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="p-2 sm:px-3 sm:py-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-main)] disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 text-sm font-bold"
+          className="p-2 sm:px-3 sm:py-2 rounded-[var(--radius-control)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-main)] disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 text-sm font-bold font-[family-name:var(--font-active)]"
         >
           <span className="hidden sm:inline">Sig</span>
           <ChevronRight className="w-4 h-4" />

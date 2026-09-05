@@ -268,16 +268,16 @@ export function TransferMarket({ game }: TransferMarketProps) {
   const hasTeam = Boolean(currentUser?.teamId || legacyUser?.team || ['Capitán', 'DT', 'Manager', 'Administrador'].includes(currentRole || ''));
 
   return (
-    <div className="space-y-6 text-[var(--text-primary)]">
+    <div
+      className="space-y-6 text-[var(--text-heading)]"
+      style={{ '--ui-dynamic-brand': currentGameObj.brandColor } as React.CSSProperties}
+    >
       {/* 🚀 Top Control Strip & Page Header */}
       <div className="space-y-4">
         <PageHeader
           badgeText="MERCADO DE TRASPASOS"
           badgeIcon={
-            <ArrowRightLeft
-              className="w-3.5 h-3.5"
-              style={{ color: currentGameObj.brandColor, fill: currentGameObj.brandColor }}
-            />
+            <ArrowRightLeft className="ui-dynamic-brand-icon w-3.5 h-3.5" />
           }
           title="Agencia Libre & Fichajes"
           highlightTitle="Transferencias"
@@ -288,27 +288,22 @@ export function TransferMarket({ game }: TransferMarketProps) {
         {/* Squad Cap Rule & Expiry Banner - Loaded Dynamically from MySQL */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[var(--app-accent-soft)] border border-[var(--app-accent)] flex items-center justify-center text-[var(--app-accent)] shrink-0">
               <Database className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-xs font-mono font-bold text-[var(--text-heading)] uppercase block flex items-center gap-1.5">
+              <span className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--text-heading)] uppercase block flex items-center gap-1.5">
                 Reglamento de Plantilla MySQL ({currentGameObj.name})
               </span>
-              <p className="text-[11px] text-[var(--text-muted)] font-mono">
-                Capacidad máxima BD: <strong className="text-cyan-400">{dbGameConfig.maxSquadCap} Atletas</strong>. Máx. fichajes/temporada: <strong className="text-amber-400">{dbGameConfig.maxTransfersPerWindow}</strong>. Expiración BD: <strong>{dbGameConfig.postExpirationDays} días</strong>.
+              <p className="text-[11px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">
+                Capacidad máxima BD: <strong className="text-[var(--app-accent)]">{dbGameConfig.maxSquadCap} Atletas</strong>. Máx. fichajes/temporada: <strong className="text-[var(--app-warning)]">{dbGameConfig.maxTransfersPerWindow}</strong>. Expiración BD: <strong>{dbGameConfig.postExpirationDays} días</strong>.
               </p>
             </div>
           </div>
 
           <Button
             onClick={openCreateModal}
-            className="font-bold text-xs shrink-0 rounded-xl shadow-md flex items-center gap-1.5"
-            style={{
-              backgroundColor: currentGameObj.brandColor,
-              color: '#020617',
-              boxShadow: `0 0 15px color-mix(in srgb, ${currentGameObj.brandColor} 30%, transparent)`,
-            }}
+            className="ui-dynamic-brand-button font-bold text-xs shrink-0 rounded-xl shadow-md flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Publicar en Mercado
@@ -347,7 +342,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
           brandColor={currentGameObj.brandColor}
         >
           <label className="game-filter-inline-select">
-            <Calendar className="w-4 h-4 shrink-0" style={{ color: currentGameObj.brandColor }} />
+            <Calendar className="ui-dynamic-brand-ink w-4 h-4 shrink-0" />
             <span>Antigüedad</span>
             <select
               aria-label="Filtrar publicaciones por antigüedad"
@@ -383,6 +378,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
               <EsportsCard
                 key={item.id}
                 entityType="user"
+                gameSlug={currentGameSlug}
                 href="#"
                 title={`${item.playerName} (@${item.playerGamertag})`}
                 subtitle={`🎮 ${currentGameObj.name}`}
@@ -395,24 +391,23 @@ export function TransferMarket({ game }: TransferMarketProps) {
                   },
                 ]}
                 stats={[
-                  { icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, label: 'Origen', value: item.fromTeamName },
-                  { icon: <Shield className="w-3.5 h-3.5 text-emerald-400" />, label: 'Destino', value: item.toTeamName },
+                  { icon: <Shield className="w-3.5 h-3.5 text-[var(--app-warning)]" />, label: 'Origen', value: item.fromTeamName },
+                  { icon: <Shield className="w-3.5 h-3.5 text-[var(--app-positive)]" />, label: 'Destino', value: item.toTeamName },
                 ]}
                 footerLeft={
-                  <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] font-mono">
-                    <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">
+                    <Clock className="w-3.5 h-3.5 text-[var(--app-accent)]" />
                     <span>{new Date(item.signedAt).toLocaleDateString()}</span>
                   </span>
                 }
                 actionText="VER MOVIMIENTO AUDITADO"
-                brandColor={currentGameObj.brandColor}
                 animationDelay={index * 50}
               />
             ))}
 
             {filteredCompletedTransfers.length === 0 && (
-              <div className="col-span-full py-16 text-center border border-dashed border-[var(--border-card)] rounded-3xl bg-[var(--bg-card)]/40 space-y-3 font-mono">
-                <Trophy className="w-12 h-12 text-amber-400 mx-auto opacity-50" />
+              <div className="col-span-full py-16 text-center border border-dashed border-[var(--border-card)] rounded-3xl bg-[var(--bg-card)]/40 space-y-3 font-[family-name:var(--font-active)]">
+                <Trophy className="w-12 h-12 text-[var(--app-warning)] mx-auto opacity-50" />
                 <h3 className="text-lg font-bold text-[var(--text-heading)]">No hay registros de traspasos completados</h3>
                 <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
                   Los fichajes aprobados oficialmente por organizadores y capitanes aparecerán aquí en tiempo real.
@@ -443,6 +438,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
                 <EsportsCard
                   key={item.id}
                   entityType={isPlayerListing ? 'user' : 'team'}
+                  gameSlug={currentGameSlug}
                   href={chatHref}
                   title={isPlayerListing ? item.userName : item.teamName || item.userName}
                   subtitle={`🎮 ${currentGameObj.name} | 🖥️ ${item.platform}`}
@@ -460,17 +456,16 @@ export function TransferMarket({ game }: TransferMarketProps) {
                     },
                   ]}
                   stats={[
-                    { icon: <UserCheck className="w-3.5 h-3.5 text-cyan-400" />, label: 'Gamertag', value: `@${item.userGamertag}` },
-                    { icon: <Clock className="w-3.5 h-3.5 text-amber-400" />, label: 'Publicado', value: item.date },
+                    { icon: <UserCheck className="w-3.5 h-3.5 text-[var(--app-accent)]" />, label: 'Gamertag', value: `@${item.userGamertag}` },
+                    { icon: <Clock className="w-3.5 h-3.5 text-[var(--app-warning)]" />, label: 'Publicado', value: item.date },
                   ]}
                   footerLeft={
                     <span className="flex items-center gap-1">
-                      <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                      <Shield className="w-3.5 h-3.5 text-[var(--app-positive)]" />
                       <span>{isPlayerListing ? 'Agente Libre' : 'Club Registrado'}</span>
                     </span>
                   }
                   actionText="CONTACTAR Y HABLAR EN CHAT"
-                  brandColor={currentGameObj.brandColor}
                   animationDelay={index * 50}
                 />
               );
@@ -480,14 +475,13 @@ export function TransferMarket({ game }: TransferMarketProps) {
               <div className="col-span-full py-16 text-center border border-dashed border-[var(--border-card)] rounded-3xl bg-[var(--bg-card)]/40 space-y-3">
                 <ArrowRightLeft className="w-12 h-12 text-[var(--text-muted)] mx-auto opacity-50" />
                 <h3 className="text-lg font-bold text-[var(--text-heading)]">No se encontraron ofertas activas en la BD</h3>
-                <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto font-mono">
+                <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto font-[family-name:var(--font-active)]">
                   Sé el primero en publicar una vacante de club o tu perfil de agente libre en {currentGameObj.name}.
                 </p>
                 <Button
                   size="sm"
                   onClick={openCreateModal}
-                  className="text-xs font-mono font-bold"
-                  style={{ backgroundColor: currentGameObj.brandColor, color: '#020617' }}
+                  className="ui-dynamic-brand-button text-xs font-[family-name:var(--font-active)] font-bold"
                 >
                   Publicar Anuncio Ahora
                 </Button>
@@ -502,7 +496,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
         <Modal isOpen onClose={() => setShowCreateModal(false)} ariaLabel="Publicar en mercado de traspasos" size="md" showCloseButton={false} closeDisabled={submitting} className="p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
               <div className="flex items-center gap-2">
-                <ArrowRightLeft className="w-5 h-5" style={{ color: currentGameObj.brandColor }} />
+                <ArrowRightLeft className="ui-dynamic-brand-ink w-5 h-5" />
                 <h3 className="font-bold text-base text-[var(--text-heading)] uppercase tracking-tight">
                   Publicar en Mercado de Traspasos
                 </h3>
@@ -517,8 +511,8 @@ export function TransferMarket({ game }: TransferMarketProps) {
 
             {/* IF NOT LOGGED IN: SHOW AUTH ALERT */}
             {!currentUser ? (
-              <div className="py-6 text-center space-y-5 font-mono">
-                <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto shadow-lg">
+              <div className="py-6 text-center space-y-5 font-[family-name:var(--font-active)]">
+                <div className="w-16 h-16 rounded-3xl bg-[var(--app-warning-soft)] border border-[var(--app-warning)] flex items-center justify-center text-[var(--app-warning)] mx-auto shadow-lg">
                   <Lock className="w-8 h-8" />
                 </div>
                 <div className="space-y-1.5">
@@ -532,13 +526,13 @@ export function TransferMarket({ game }: TransferMarketProps) {
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <Link href="/login" className="w-full">
-                    <Button className="w-full text-xs font-mono font-bold bg-[var(--game-brand)] text-slate-950 hover:brightness-110 flex items-center justify-center gap-1.5">
+                    <Button className="w-full text-xs font-[family-name:var(--font-active)] font-bold bg-[var(--game-brand)] text-[var(--text-heading)] hover:brightness-110 flex items-center justify-center gap-1.5">
                       <LogIn className="w-4 h-4" />
                       Iniciar Sesión
                     </Button>
                   </Link>
                   <Link href="/registro" className="w-full">
-                    <Button variant="outline" className="w-full text-xs font-mono border-[var(--border-card)] flex items-center justify-center gap-1.5">
+                    <Button variant="outline" className="w-full text-xs font-[family-name:var(--font-active)] border-[var(--border-card)] flex items-center justify-center gap-1.5">
                       <UserPlus className="w-4 h-4" />
                       Crear Cuenta
                     </Button>
@@ -548,7 +542,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
             ) : (
               /* LOGGED IN FORM */
               <form onSubmit={handleCreateListing} className="space-y-4">
-                <div className="p-3 rounded-2xl bg-[var(--bg-main)]/60 border border-[var(--border-card)] flex items-center justify-between text-xs font-mono">
+                <div className="p-3 rounded-2xl bg-[var(--bg-main)]/60 border border-[var(--border-card)] flex items-center justify-between text-xs font-[family-name:var(--font-active)]">
                   <span className="text-[var(--text-muted)]">Usuario Conectado:</span>
                   <strong className="text-[var(--text-heading)] font-bold">
                     {currentUser.name} (@{currentUser.gamertag})
@@ -556,16 +550,16 @@ export function TransferMarket({ game }: TransferMarketProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase block">
+                  <label className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--text-muted)] uppercase block">
                     Tipo de Publicación
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setListingType('JUGADOR_BUSCA_CLUB')}
-                      className={`py-2 px-3 rounded-xl text-xs font-mono font-bold border transition-all ${
+                      className={`py-2 px-3 rounded-xl text-xs font-[family-name:var(--font-active)] font-bold border transition-all ${
                         listingType === 'JUGADOR_BUSCA_CLUB'
-                          ? 'bg-amber-950/60 border-amber-500 text-amber-300 shadow-md'
+                          ? 'bg-[var(--app-warning-soft)] border-[var(--app-warning)] text-[var(--app-warning)] shadow-md'
                           : 'bg-[var(--bg-main)]/40 border-[var(--border-card)] text-[var(--text-muted)]'
                       }`}
                     >
@@ -574,9 +568,9 @@ export function TransferMarket({ game }: TransferMarketProps) {
                     <button
                       type="button"
                       onClick={() => setListingType('CLUB_RECLUTA_JUGADOR')}
-                      className={`py-2 px-3 rounded-xl text-xs font-mono font-bold border transition-all ${
+                      className={`py-2 px-3 rounded-xl text-xs font-[family-name:var(--font-active)] font-bold border transition-all ${
                         listingType === 'CLUB_RECLUTA_JUGADOR'
-                          ? 'bg-purple-950/60 border-purple-500 text-purple-300 shadow-md'
+                          ? 'bg-[var(--app-accent-2-soft)] border-[var(--app-accent-2)] text-[var(--app-accent-2)] shadow-md'
                           : 'bg-[var(--bg-main)]/40 border-[var(--border-card)] text-[var(--text-muted)]'
                       }`}
                     >
@@ -587,13 +581,13 @@ export function TransferMarket({ game }: TransferMarketProps) {
 
                 {/* Team check when posting as Club Recruitment */}
                 {listingType === 'CLUB_RECLUTA_JUGADOR' && !hasTeam && (
-                  <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-300 text-xs font-mono space-y-2">
+                  <div className="p-3.5 rounded-2xl bg-[var(--app-warning-soft)] border border-[var(--app-warning)] text-[var(--app-warning)] text-xs font-[family-name:var(--font-active)] space-y-2">
                     <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <AlertCircle className="w-4 h-4 text-[var(--app-warning)] shrink-0" />
                       <span>Se requiere liderazgo de un club registrado para reclutar.</span>
                     </div>
                     <Link href={`/${currentGameSlug}/equipos`} className="block">
-                      <Button size="sm" variant="outline" className="w-full text-[11px] font-mono border-amber-500/40 text-amber-300 hover:bg-amber-950/80">
+                      <Button size="sm" variant="outline" className="w-full text-[11px] font-[family-name:var(--font-active)] border-[var(--app-warning)] text-[var(--app-warning)] hover:bg-[var(--app-warning-soft)]">
                         Ver o Registrar Mi Escuadra &rarr;
                       </Button>
                     </Link>
@@ -602,13 +596,13 @@ export function TransferMarket({ game }: TransferMarketProps) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase block">
+                    <label className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--text-muted)] uppercase block">
                       Posición Táctica ({currentGameObj.name})
                     </label>
                     <select
                       value={positionInput}
                       onChange={(e) => setPositionInput(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--game-brand)] cursor-pointer"
+                      className="w-full h-10 px-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-[family-name:var(--font-active)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--game-brand)] cursor-pointer"
                     >
                       {dbGameConfig.positions.map((pos) => (
                         <option key={pos} value={pos}>
@@ -619,13 +613,13 @@ export function TransferMarket({ game }: TransferMarketProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase block">
+                    <label className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--text-muted)] uppercase block">
                       Plataforma
                     </label>
                     <select
                       value={platformInput}
                       onChange={(e) => setPlatformInput(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-mono text-[var(--text-primary)] focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-[family-name:var(--font-active)] text-[var(--text-primary)] focus:outline-none"
                     >
                       <option value="CROSSPLAY">CROSSPLAY</option>
                       <option value="PS5">PS5</option>
@@ -636,7 +630,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase block">
+                  <label className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--text-muted)] uppercase block">
                     Mensaje Propuesta / Requisitos (Caduca en {dbGameConfig.postExpirationDays} Días)
                   </label>
                   <textarea
@@ -649,7 +643,7 @@ export function TransferMarket({ game }: TransferMarketProps) {
                     }
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
-                    className="w-full p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--game-brand)]"
+                    className="w-full p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-[family-name:var(--font-active)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--game-brand)]"
                   />
                 </div>
 
@@ -658,15 +652,14 @@ export function TransferMarket({ game }: TransferMarketProps) {
                     type="button"
                     variant="ghost"
                     onClick={() => setShowCreateModal(false)}
-                    className="text-xs font-mono"
+                    className="text-xs font-[family-name:var(--font-active)]"
                   >
                     Cancelar
                   </Button>
                   <Button
                     type="submit"
                     disabled={submitting || (listingType === 'CLUB_RECLUTA_JUGADOR' && !hasTeam)}
-                    className="text-xs font-mono font-bold"
-                    style={{ backgroundColor: currentGameObj.brandColor, color: '#020617' }}
+                    className="ui-dynamic-brand-button text-xs font-[family-name:var(--font-active)] font-bold"
                   >
                     {submitting ? 'Guardando en BD...' : `Publicar (Válido ${dbGameConfig.postExpirationDays} Días)`}
                   </Button>

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useId, type CSSProperties, type ReactNode } from 'react';
+import { useId, type CSSProperties, type ReactNode } from 'react';
 import { RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface GameExplorerPanelProps {
   title: string;
@@ -30,15 +31,16 @@ export function GameExplorerPanel({
   const headingId = useId();
   const panelStyle = brandColor === 'var(--game-brand)'
     ? undefined
-    : ({ '--game-brand': brandColor } as CSSProperties);
+    : ({ '--game-brand': brandColor, '--filter-brand': brandColor } as CSSProperties);
 
   return (
     <section
       aria-labelledby={headingId}
-      className={`game-explorer-panel game-directory-explorer game-filter-card game-query-panel rounded-3xl border border-[var(--border-card)] bg-[var(--bg-card)] shadow-xl backdrop-blur-md ${className}`.trim()}
+      className={cn('game-explorer-panel game-directory-explorer game-filter-card game-query-panel font-[family-name:var(--font-active)]', className)}
       style={panelStyle}
     >
-      <div className="game-filter-heading font-sans">
+      <div className="game-explorer-panel-glow" aria-hidden="true" />
+      <div className="game-filter-heading font-[family-name:var(--font-active)]">
         <div className="game-filter-heading-copy">
           <span className="game-filter-heading-icon" aria-hidden="true">
             {icon ?? <SlidersHorizontal className="size-4" />}
@@ -49,7 +51,7 @@ export function GameExplorerPanel({
           </div>
         </div>
 
-        {onReset && (
+        {onReset ? (
           <button
             type="button"
             onClick={onReset}
@@ -59,7 +61,7 @@ export function GameExplorerPanel({
             <RotateCcw className="size-3.5" />
             <span>{resetLabel}</span>
           </button>
-        )}
+        ) : null}
       </div>
 
       <div className="game-explorer-content">{children}</div>

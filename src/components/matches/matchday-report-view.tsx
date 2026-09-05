@@ -274,7 +274,7 @@ export function MatchdayReportView() {
   };
 
   return (
-    <ManagementPage className="font-sans">
+    <ManagementPage className="font-[family-name:var(--font-active)]">
       
       {/* ── 1. PAGE HEADER ────────────────────────────────────────────────── */}
       <ManagementHero
@@ -294,8 +294,8 @@ export function MatchdayReportView() {
       </ManagementMetrics>
 
       {actionSuccessMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs font-mono font-bold flex items-center gap-2 animate-in fade-in shadow-xl">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="p-4 rounded-2xl bg-[var(--app-positive-soft)]/90 border border-[var(--app-positive)]/50 text-[var(--app-positive)] text-xs font-[family-name:var(--font-active)] font-bold flex items-center gap-2 animate-in fade-in shadow-xl">
+          <CheckCircle2 className="w-5 h-5 text-[var(--app-positive)] shrink-0" />
           <span>{actionSuccessMsg}</span>
         </div>
       )}
@@ -309,7 +309,7 @@ export function MatchdayReportView() {
         activeFilter={selectedGameSlug}
         onFilterChange={handleGameSelect}
         renderAsSelect
-        brandColor="var(--accent-crimson)"
+        brandColor="var(--app-danger)"
         count={matches.length}
         countLabel="ENCUENTROS"
         searchHint="CLUB"
@@ -409,24 +409,24 @@ export function MatchdayReportView() {
 
       {/* Modal de Equivalencia de Horarios por Región con Banderas de Países LATAM */}
       {isTimezoneModalOpen && (
-        <Modal isOpen onClose={() => setIsTimezoneModalOpen(false)} ariaLabel="Horarios por país" size="sm" showCloseButton={false} className="bg-slate-950 border-purple-500/40 p-6 space-y-5 font-mono">
+        <Modal isOpen onClose={() => setIsTimezoneModalOpen(false)} ariaLabel="Horarios por país" size="sm" showCloseButton={false} className="bg-[var(--app-canvas)] border-[var(--app-accent-2)]/40 p-6 space-y-5 font-[family-name:var(--font-active)]">
             
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center justify-between border-b border-[var(--text-heading)]/10 pb-3">
               <div className="flex items-center gap-2">
-                <Globe2 className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                <Globe2 className="w-5 h-5 text-[var(--app-accent)]" />
+                <h3 className="text-sm font-black text-[var(--text-heading)] uppercase tracking-wider">
                   Horarios por País LATAM ({selectedTimeForModal} Chile)
                 </h3>
               </div>
               <button
                 onClick={() => setIsTimezoneModalOpen(false)}
-                className="p-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white"
+                className="p-1 rounded-lg bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-heading)]"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
               Equivalencias horarias del partido para competidores de Latinoamérica basadas en la hora oficial de Chile:
             </p>
 
@@ -434,24 +434,24 @@ export function MatchdayReportView() {
               {getRegionalTimes(selectedTimeForModal).map((item) => (
                 <div
                   key={item.country}
-                  className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-900/90 border border-white/10 text-xs hover:border-cyan-500/40 transition-colors"
+                  className="flex items-center justify-between p-2.5 rounded-2xl bg-[var(--app-surface-2)]/90 border border-[var(--text-heading)]/10 text-xs hover:border-[var(--app-accent)]/40 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <CountryFlag code={item.code} name={item.country} size="md" />
                     <div className="flex flex-col">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-extrabold text-white">{item.country}</span>
-                        <span className="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-300 font-mono font-bold">
+                        <span className="font-extrabold text-[var(--text-heading)]">{item.country}</span>
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-[var(--app-surface-2)] text-[var(--text-secondary)] font-[family-name:var(--font-active)] font-bold">
                           {item.code}
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-400">{item.zone}</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">{item.zone}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="font-black text-amber-400 text-sm font-mono">{item.time} hrs</span>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 font-bold">
+                    <span className="font-black text-[var(--app-warning)] text-sm font-[family-name:var(--font-active)]">{item.time} hrs</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--app-accent-soft)]/80 text-[var(--app-accent)] border border-[var(--app-accent)]/30 font-bold">
                       {item.note}
                     </span>
                   </div>
@@ -464,7 +464,7 @@ export function MatchdayReportView() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsTimezoneModalOpen(false)}
-                className="w-full text-xs font-mono font-bold"
+                className="w-full text-xs font-[family-name:var(--font-active)] font-bold"
               >
                 Cerrar Ventana
               </Button>

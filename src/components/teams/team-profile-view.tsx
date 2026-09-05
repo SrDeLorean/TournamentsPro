@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, ViewTransition } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { TeamData } from '@/lib/data-store';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
@@ -18,8 +17,9 @@ import { getSentContractsByTeamAction } from '@/app/actions/new-transfers';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { ClassificationView } from '@/components/tournaments/classification-view';
 import { FixtureScheduleView } from '@/components/tournaments/fixture-schedule-view';
-import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import { useAuth } from '@/components/providers/auth-provider';
+import { PublicProfileShell } from '@/components/public/public-profile-shell';
+import { SubSubNavbar } from '@/components/layout/sub-sub-navbar';
 
 interface TeamProfileViewProps {
   team: TeamData;
@@ -58,7 +58,7 @@ export type ProfileTab = 'plantilla' | 'posiciones' | 'calendario' | 'traspasos'
 
 export function TeamProfileView({
   team,
-  brandColor = '#00F0FF',
+  brandColor,
 }: TeamProfileViewProps) {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('plantilla');
@@ -87,7 +87,7 @@ export function TeamProfileView({
   const game = GAMES_CATALOG[team.gameSlug || 'eafc26'];
 
   // Dynamic theme color for team profile matching the active game
-  const activeColor = brandColor || team.color || '#00F0FF';
+  const activeColor = brandColor || team.color || game?.brandColor || 'var(--app-accent)';
   const legacyTeam = team as LegacyTeamData;
 
   // Resolve display squad with fallbacks if backend query is loading or empty
@@ -157,64 +157,21 @@ export function TeamProfileView({
   const occupancy = Math.min(100, Math.round((team.membersCount / Math.max(team.maxMembers, 1)) * 100));
 
   return (
-    <div className="public-team-profile animate-in fade-in duration-300">
-      <ViewTransition name={`team-identity-${team.id}`} share="team-morph" default="none">
-      <section className="public-team-hero">
-        <div className="public-team-banner">
-          <Image
-            src={teamBanner}
-            alt={teamName}
-            fill
-            sizes="100vw"
-            loading="eager"
-            unoptimized={shouldBypassImageOptimization(teamBanner)}
-            onError={(e) => {
-              e.currentTarget.src = '/images/default/banner-default.jpg';
-            }}
-            className="object-cover"
-          />
-          <div className="public-team-banner-overlay" />
-        </div>
-
-        <div className="public-team-hero-content">
-          <div className="public-team-identity">
-            <div
-              className="public-team-logo"
-              style={{ borderColor: activeColor, color: activeColor }}
-            >
-              {teamLogo ? (
-                <Image
-                  src={teamLogo}
-                  alt={teamName}
-                  fill
-                  sizes="96px"
-                  unoptimized={shouldBypassImageOptimization(teamLogo)}
-                  onError={(e) => {
-                    e.currentTarget.src = '/images/default/logo-default.png';
-                  }}
-                  className="object-cover"
-                />
-              ) : (
-                teamLogoText
-              )}
-            </div>
-
-            <div className="public-team-copy">
-              <p className="public-team-eyebrow"><ShieldCheck className="size-3.5" />Ficha pública verificada</p>
-              <div className="public-team-title-row">
-                <h1>{teamName}</h1>
-                <span style={{ borderColor: activeColor }}>{teamTag}</span>
-              </div>
-              <p className="public-team-description">{teamDesc}</p>
-              <div className="public-team-facts">
-                <span><Gamepad2 className="size-3.5" />{game?.name}</span>
-                <span><Monitor className="size-3.5" />{team.platform}</span>
-                <span className="is-active"><CheckCircle2 className="size-3.5" />{team.status}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="public-team-actions">
+    <PublicProfileShell
+      entityId={team.id}
+      transitionPrefix="team"
+      accentColor={activeColor}
+      bannerUrl={teamBanner}
+      bannerAlt={teamName}
+      logoUrl={teamLogo}
+      logoAlt={teamName}
+      logoFallback={teamLogoText}
+      eyebrow={<><ShieldCheck className="size-3.5" />Ficha pública verificada</>}
+      title={teamName}
+      badge={teamTag}
+      description={teamDesc}
+      facts={<><span><Gamepad2 className="size-3.5" />{game?.name}</span><span><Monitor className="size-3.5" />{team.platform}</span><span className="is-active"><CheckCircle2 className="size-3.5" />{team.status}</span></>}
+      actions={<>
             {canManage ? (
               <Button onClick={() => setIsManageModalOpen(true)} variant="outline">
                 <Settings className="size-4" />Administrar club
@@ -225,33 +182,20 @@ export function TeamProfileView({
                 <MessageSquare className="size-4" />Contactar capitán
               </Button>
             </Link>
-          </div>
-        </div>
-        <div className="public-team-metrics">
-          <div className="public-team-metrics-inner">
-            <div><strong>{team.membersCount}/{team.maxMembers}</strong><span>integrantes</span></div>
-            <div><strong>{occupancy}%</strong><span>ocupación</span></div>
-            <div><strong>{vacantPositions.length}</strong><span>vacantes</span></div>
-            <div><strong>{team.palmares || '—'}</strong><span>palmarés</span></div>
-          </div>
-        </div>
-      </section>
-      </ViewTransition>
-
-      <nav className="public-team-tabs" aria-label="Secciones del perfil">
-        {profileTabs.map((tab) => (
-          <button key={tab.id} type="button" className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}>
-            {tab.icon}<span>{tab.label}</span>{tab.badge !== undefined ? <small>{tab.badge}</small> : null}
-          </button>
-        ))}
-      </nav>
-
-      <div className="public-team-content">
+      </>}
+      metrics={[
+        { value: `${team.membersCount}/${team.maxMembers}`, label: 'integrantes' },
+        { value: `${occupancy}%`, label: 'ocupación' },
+        { value: vacantPositions.length, label: 'vacantes' },
+        { value: team.palmares || '—', label: 'palmarés' },
+      ]}
+      tabs={<SubSubNavbar tabs={profileTabs} activeTab={activeTab} onSelectTab={setActiveTab} brandColor={activeColor} />}
+    >
         
         {/* Vacant Positions Recruitment Strip */}
         {vacantPositions.length > 0 ? <div className="public-team-recruitment">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" />
+            <Sparkles className="w-5 h-5 text-[var(--app-warning)]" />
             <div>
               <span className="text-xs font-black uppercase text-[var(--text-heading)] block">
                 Vacantes de Reclutamiento Activas
@@ -291,7 +235,7 @@ export function TeamProfileView({
                           <Avatar src={p.avatar_url || p.foto || undefined} fallback={p.user_name} size="md" status="online" />
                           <div>
                             <span className="font-bold text-sm text-[var(--text-heading)] block">{p.user_name}</span>
-                            <span className="text-[var(--text-muted)] text-[11px] font-mono">{p.gamertag}</span>
+                            <span className="text-[var(--text-muted)] text-[11px] font-[family-name:var(--font-active)]">{p.gamertag}</span>
                           </div>
                         </div>
                         <Badge variant="cyan">{p.tactical_position || 'DFC'}</Badge>
@@ -326,7 +270,7 @@ export function TeamProfileView({
              ) : (
                 <div className="ui-data-table-shell overflow-x-auto rounded-xl border border-[var(--border-card)]">
                   <table className="ui-table ui-data-table-responsive w-full text-sm text-left">
-                    <thead className="text-xs text-[var(--text-muted)] uppercase bg-black/50 border-b border-[var(--border-card)]">
+                    <thead className="text-xs text-[var(--text-muted)] uppercase bg-[var(--app-overlay)] border-b border-[var(--border-card)]">
                       <tr>
                         <th className="px-4 py-3">Jugador</th>
                         <th className="px-4 py-3">Organización</th>
@@ -339,7 +283,7 @@ export function TeamProfileView({
                         const orgMatch = c.pitch_message?.match(/\[Organización:\s*([^\]]+)\]/i);
                         const orgName = orgMatch ? orgMatch[1] : 'General';
                         return (
-                          <tr key={c.id} className="border-b border-[var(--border-card)] hover:bg-white/5">
+                          <tr key={c.id} className="border-b border-[var(--border-card)] hover:bg-[var(--app-contrast-soft)]">
                             <td data-label="Jugador" className="px-4 py-3 font-medium">
                               <span className="flex items-center gap-2">
                               <Avatar src={c.avatar_url} fallback={c.player_name} className="w-6 h-6" /> {c.player_name}
@@ -374,13 +318,11 @@ export function TeamProfileView({
             <p className="text-xs text-[var(--text-muted)]">Información oficial actualizada para la escuadra {team.name} estará disponible próximamente.</p>
           </div>
         )}
-      </div>
-
       {canManage ? <ClubManagementModal
         team={team}
         isOpen={isManageModalOpen}
         onClose={() => setIsManageModalOpen(false)}
       /> : null}
-    </div>
+    </PublicProfileShell>
   );
 }

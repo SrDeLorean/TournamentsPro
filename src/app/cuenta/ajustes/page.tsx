@@ -17,10 +17,7 @@ export default function AccountSettingsPage() {
   const game = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG.eafc26;
 
   return (
-    <div
-      className="account-settings-shell min-h-screen bg-[var(--bg-main)] pb-20 text-[var(--text-primary)]"
-      style={{ '--game-brand': game.brandColor, '--game-accent': game.accentColor } as React.CSSProperties}
-    >
+    <div className="account-settings-shell min-h-screen bg-[var(--bg-main)] pb-20 text-[var(--text-primary)]">
       <ManagementPage className="context-workspace account-settings-page">
         <ManagementHero
           eyebrow="Identidad, seguridad y preferencias"
@@ -45,7 +42,7 @@ export default function AccountSettingsPage() {
             <Badge variant="cyan">{currentUser?.role || 'Jugador'}</Badge>
           </div>
         </ManagementHero>
-        <UserProfileSettingsView brandColor={game.brandColor} embedded />
+        <UserProfileSettingsView brandColor="var(--app-accent)" embedded />
       </ManagementPage>
     </div>
   );

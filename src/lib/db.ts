@@ -8,6 +8,10 @@ export interface DatabaseExecutor {
   executeCommand(sql: string, params?: DatabaseParams): Promise<ResultSetHeader>;
 }
 
+type CompareAndSwapExecutor = DatabaseExecutor | {
+  execute(sql: string, params?: DatabaseParams): Promise<ResultSetHeader>;
+};
+
 // MySQL Connection Pool for XAMPP / Local MySQL Server
 export const dbPool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -18,6 +22,8 @@ export const dbPool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
 });
 
 function sanitizeParams(params: DatabaseParams): ExecuteValues[] {
@@ -46,12 +52,14 @@ export const queryRows = poolExecutor.queryRows;
 export const executeCommand = poolExecutor.executeCommand;
 
 export async function executeCas(
-  executor: DatabaseExecutor,
+  executor: CompareAndSwapExecutor,
   sql: string,
   params: DatabaseParams,
   conflictMessage: string,
 ): Promise<ResultSetHeader> {
-  const result = await executor.executeCommand(sql, params);
+  const result = 'executeCommand' in executor
+    ? await executor.executeCommand(sql, params)
+    : await executor.execute(sql, params);
   if (result.affectedRows !== 1) throw new Error(conflictMessage);
   return result;
 }

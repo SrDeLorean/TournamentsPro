@@ -17,7 +17,6 @@ import {
   Smartphone,
   Monitor,
   Copy,
-  Activity,
   Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,9 +27,9 @@ type EvolutionLevel = 'base' | 'refined' | 'specialized';
 
 export const APP_PALETTES = [
   {
-    id: 'graphite-cyan', name: 'Graphite Cyan', note: 'Precisa, sobria y tecnológica', recommended: true,
-    colors: ['#38D9F2', '#7C8CFF', '#34D399', '#F8FAFC'],
-    vars: { '--app-accent': '#38D9F2', '--app-accent-2': '#7C8CFF', '--app-positive': '#34D399', '--app-warm': '#F6B94A', '--app-canvas': '#060A11', '--app-surface': '#0C1420', '--app-surface-2': '#121E2D', '--app-ink': '#F8FAFC' },
+    id: 'red-mountain', name: 'Red Mountain', note: 'Borgoña, rojo, marfil y carbón', recommended: true,
+    colors: ['#380F17', '#8F0B13', '#DC2011', '#EFDFC5'],
+    vars: { '--app-accent': '#DC2011', '--app-accent-2': '#8F0B13', '--app-positive': '#5F8F72', '--app-warning': '#D9A441', '--app-info': '#718096', '--app-warm': '#D9A441', '--app-danger': '#8F0B13', '--app-canvas': '#111414', '--app-surface': '#252B2B', '--app-surface-2': '#34393A', '--app-ink': '#EFDFC5' },
   },
   {
     id: 'midnight-iris', name: 'Midnight Iris', note: 'Editorial, premium y competitivo',
@@ -65,9 +64,9 @@ function EvolutionPreview({ level, isMobileFrame }: { level: EvolutionLevel; isM
       <div className="app-preview-topbar">
         <span className="app-preview-brand"><Trophy className="w-4 h-4" /> <strong>TOURNAMENTS<span>PRO</span></strong></span>
         <nav aria-label={`Navegación de muestra ${level}`}>
-          <button className="is-active"><LayoutDashboard className="w-3.5 h-3.5" /> {!isMobileFrame && 'Gestión'}</button>
-          <button><Bell className="w-3.5 h-3.5" /> {!isMobileFrame && 'Alertas'}</button>
-          <button><CircleUserRound className="w-3.5 h-3.5" /> {!isMobileFrame && 'Cuenta'}</button>
+          <button type="button" aria-label="Gestión" className="is-active"><LayoutDashboard className="w-3.5 h-3.5" /> {!isMobileFrame && 'Gestión'}</button>
+          <button type="button" aria-label="Alertas"><Bell className="w-3.5 h-3.5" /> {!isMobileFrame && 'Alertas'}</button>
+          <button type="button" aria-label="Cuenta"><CircleUserRound className="w-3.5 h-3.5" /> {!isMobileFrame && 'Cuenta'}</button>
         </nav>
       </div>
 
@@ -92,7 +91,7 @@ function EvolutionPreview({ level, isMobileFrame }: { level: EvolutionLevel; isM
           onValueChange={setQuery}
           placeholder="Buscar equipo, atleta o copa..."
           resultLabel="24 resultados"
-          filters={<button className="cursor-pointer">Estado <ChevronDown className="w-3.5 h-3.5 ml-1 inline" /></button>}
+          filters={<button type="button" className="cursor-pointer">Estado <ChevronDown className="w-3.5 h-3.5 ml-1 inline" /></button>}
         />
       ) : (
         <label className="app-preview-basic-search">Buscar <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nombre..." /></label>
@@ -143,6 +142,8 @@ export function AppUiEvolutionStudio() {
               <button
                 type="button"
                 onClick={() => setViewMode('desktop')}
+                aria-label="Vista de escritorio"
+                aria-pressed={viewMode === 'desktop'}
                 className={cn('px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer', viewMode === 'desktop' ? 'bg-[var(--app-accent)] text-black shadow-md' : 'text-[var(--text-muted)] hover:text-white')}
               >
                 <Monitor className="w-3.5 h-3.5" />
@@ -151,6 +152,8 @@ export function AppUiEvolutionStudio() {
               <button
                 type="button"
                 onClick={() => setViewMode('mobile')}
+                aria-label="Vista móvil"
+                aria-pressed={viewMode === 'mobile'}
                 className={cn('px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer', viewMode === 'mobile' ? 'bg-[var(--app-accent)] text-black shadow-md' : 'text-[var(--text-muted)] hover:text-white')}
               >
                 <Smartphone className="w-3.5 h-3.5" />
@@ -201,12 +204,32 @@ export function AppUiEvolutionStudio() {
       </div>
 
       <div className="app-evolution-mobile-tabs" role="tablist" aria-label="Nivel de evolución">
-        {LEVELS.map((level) => <button key={level.id} type="button" role="tab" aria-selected={mobileLevel === level.id} onClick={() => setMobileLevel(level.id)} className="cursor-pointer">{level.name}</button>)}
+        {LEVELS.map((level) => (
+          <button
+            key={level.id}
+            id={`app-evolution-tab-${level.id}`}
+            type="button"
+            role="tab"
+            aria-controls={`app-evolution-panel-${level.id}`}
+            aria-selected={mobileLevel === level.id}
+            tabIndex={mobileLevel === level.id ? 0 : -1}
+            onClick={() => setMobileLevel(level.id)}
+            className="cursor-pointer"
+          >
+            {level.name}
+          </button>
+        ))}
       </div>
 
       <div className={cn('app-evolution-grid', viewMode === 'mobile' && 'grid-cols-1 md:grid-cols-3 justify-items-center')}>
         {LEVELS.map((level) => (
-          <article key={level.id} className={cn('app-evolution-stage w-full', mobileLevel === level.id && 'is-mobile-active')}>
+          <article
+            key={level.id}
+            id={`app-evolution-panel-${level.id}`}
+            role="tabpanel"
+            aria-labelledby={`app-evolution-tab-${level.id}`}
+            className={cn('app-evolution-stage w-full', mobileLevel === level.id && 'is-mobile-active')}
+          >
             <header><small>{level.eyebrow}</small><strong>{level.name}</strong><p>{level.detail}</p></header>
             <EvolutionPreview level={level.id} isMobileFrame={viewMode === 'mobile'} />
           </article>

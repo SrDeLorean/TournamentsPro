@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,8 +32,24 @@ const modalSizes: Record<NonNullable<ModalProps['size']>, string> = {
   full: 'max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)]',
 };
 
-export function Modal({ isOpen, onClose, title, description, ariaLabel, children, className, closeOnBackdrop = true, closeOnEscape = true, closeDisabled = false, size = 'md', showCloseButton = true, style }: ModalProps) {
-  const [mounted, setMounted] = useState(false);
+const subscribeToClient = () => () => {};
+
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  description,
+  ariaLabel,
+  children,
+  className,
+  closeOnBackdrop = true,
+  closeOnEscape = true,
+  closeDisabled = false,
+  size = 'md',
+  showCloseButton = true,
+  style,
+}: ModalProps) {
+  const mounted = useSyncExternalStore(subscribeToClient, () => true, () => false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
@@ -41,16 +57,14 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
   useBodyScrollLock(isOpen, 'modal');
 
   useEffect(() => {
-    // Portals are mounted only after hydration because document.body is browser-only.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && closeOnEscape && !closeDisabled) onClose();
       if (e.key !== 'Tab' || !dialogRef.current) return;
-      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -68,7 +82,9 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
       window.addEventListener('keydown', handleKeyDown);
       const frame = window.requestAnimationFrame(() => {
         const preferred = dialogRef.current?.querySelector<HTMLElement>('[data-autofocus]');
-        const fallback = dialogRef.current?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
+        const fallback = dialogRef.current?.querySelector<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+        );
         (preferred ?? fallback)?.focus();
       });
       return () => {
@@ -84,24 +100,24 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="ui-modal-layer fixed inset-0 flex items-center justify-center p-2 sm:p-4">
-          {/* Backdrop */}
+        <div className="ui-modal-layer fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5">
+          {/* Backdrop with Glass Blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-slate-950/60 dark:bg-black/80 backdrop-blur-md"
+            className="ui-modal-backdrop fixed inset-0 bg-[var(--bg-main)]/75 backdrop-blur-md"
             onClick={closeOnBackdrop && !closeDisabled ? onClose : undefined}
           />
 
-          {/* Modal Dialog */}
+          {/* Modal Dialog Box */}
           <motion.div
             ref={dialogRef}
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
+            exit={{ opacity: 0, scale: 0.94, y: 12 }}
+            transition={{ type: 'spring', duration: 0.35, bounce: 0.1 }}
             role="dialog"
             aria-modal="true"
             aria-label={!title ? ariaLabel : undefined}
@@ -109,26 +125,41 @@ export function Modal({ isOpen, onClose, title, description, ariaLabel, children
             aria-describedby={description ? descriptionId : undefined}
             style={style}
             className={cn(
-              "relative z-10 w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[var(--ui-radius-card)] bg-[var(--bg-card)] backdrop-blur-2xl border border-[var(--border-card)] p-4 sm:p-6 shadow-2xl text-[var(--text-primary)] font-sans",
+              'ui-modal-shell relative z-10 w-full max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[var(--radius-hero)] bg-[var(--bg-card)] border border-[var(--border-card)] p-6 sm:p-7 shadow-2xl text-[var(--text-primary)] font-[family-name:var(--font-active)]',
               modalSizes[size],
               className
             )}
           >
-            {showCloseButton ? <button
-              type="button"
-              onClick={onClose}
-              disabled={closeDisabled}
-              aria-label="Cerrar ventana"
-              className="absolute top-4 right-4 p-2 rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-              title="Cerrar modal (Esc)"
-            >
-              <X className="w-4 h-4" />
-            </button> : null}
+            {/* Top Accent Ambient Glow Rim */}
+            <div className="absolute top-0 inset-x-8 h-[2px] bg-gradient-to-r from-transparent via-[var(--app-accent)] to-transparent opacity-85" />
+
+            {showCloseButton && (
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={closeDisabled}
+                aria-label="Cerrar ventana"
+                className="ui-modal-close absolute top-5 right-5 p-2 rounded-[var(--radius-control)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] border border-transparent hover:border-[var(--border-card)] transition-all disabled:cursor-not-allowed disabled:opacity-40 flex items-center gap-1 font-[family-name:var(--font-active)] text-[11px] font-bold uppercase tracking-wider"
+                title="Cerrar modal (Esc)"
+              >
+                <span className="hidden sm:inline opacity-60">ESC</span>
+                <X className="w-4 h-4" />
+              </button>
+            )}
 
             {title && (
-              <div className="mb-5 pr-8">
-                <h3 id={titleId} className="text-lg sm:text-xl font-extrabold text-[var(--text-heading)] uppercase tracking-wider font-sans text-pretty">{title}</h3>
-                {description && <p id={descriptionId} className="text-xs text-[var(--text-muted)] mt-1 font-sans text-pretty">{description}</p>}
+              <div className="ui-modal-heading mb-6 pr-14">
+                <h3
+                  id={titleId}
+                  className="text-lg sm:text-xl font-black text-[var(--text-heading)] uppercase tracking-tight font-[family-name:var(--font-active)]"
+                >
+                  {title}
+                </h3>
+                {description && (
+                  <p id={descriptionId} className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed font-[family-name:var(--font-active)]">
+                    {description}
+                  </p>
+                )}
               </div>
             )}
 

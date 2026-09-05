@@ -61,24 +61,26 @@ describe('public directory routing', () => {
   });
 
   it('keeps every global management destination under dashboard', async () => {
-    const [sidebar, legacyMatchday, legacyModeration] = await Promise.all([
+    const [sidebar, navigationModel, legacyMatchday, legacyModeration] = await Promise.all([
       readFile('src/components/layout/admin-organizer-sidebar.tsx', 'utf8'),
+      readFile('src/components/layout/management-navigation-model.tsx', 'utf8'),
       readFile('src/app/matchday/page.tsx', 'utf8'),
       readFile('src/app/moderacion/page.tsx', 'utf8'),
     ]);
 
     for (const path of ['organizaciones', 'usuarios', 'equipos', 'matchday', 'moderacion']) {
-      expect(sidebar).toContain(`/dashboard/${path}`);
+      expect(`${sidebar}\n${navigationModel}`).toContain(`/dashboard/${path}`);
     }
     expect(legacyMatchday).toContain("permanentRedirect('/dashboard/matchday')");
     expect(legacyModeration).toContain("permanentRedirect('/dashboard/moderacion')");
   });
 
   it('shares a dedicated mobile layer across public routes with and without game slug', async () => {
-    const [styles, mobileGameNav, publicNavbar, informationPage] = await Promise.all([
+    const [styles, mobileGameNav, publicNavbar, mobilePublicNavigation, informationPage] = await Promise.all([
       readFile('src/app/globals.css', 'utf8'),
       readFile('src/components/layout/mobile-responsive-subnavbar.tsx', 'utf8'),
       readFile('src/components/layout/navbar.tsx', 'utf8'),
+      readFile('src/components/layout/mobile-public-navigation.tsx', 'utf8'),
       readFile('src/app/informacion/page.tsx', 'utf8'),
     ]);
 
@@ -90,8 +92,9 @@ describe('public directory routing', () => {
     expect(mobileGameNav).not.toContain('Portal competitivo');
     expect(mobileGameNav).not.toContain('<GameSwitcher');
     expect(publicNavbar).toContain('aria-controls="public-mobile-navigation"');
-    expect(publicNavbar).toContain('Disciplina activa');
-    expect(publicNavbar).toContain("className={isActive ? 'is-active' : ''}");
+    expect(publicNavbar).toContain('<MobilePublicNavigation');
+    expect(mobilePublicNavigation).toContain('Disciplina activa');
+    expect(mobilePublicNavigation).toContain("className={isActive ? 'is-active' : ''}");
     expect(informationPage).toContain('public-info-page');
   });
 });

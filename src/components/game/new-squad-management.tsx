@@ -217,7 +217,7 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
               brandColor={game.brandColor} 
             />
             <select 
-              className="bg-black/50 border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" 
+              className="bg-[color-mix(in_srgb,var(--app-canvas)_50%,transparent)] border border-[color-mix(in_srgb,var(--text-heading)_10%,transparent)] rounded-md px-3 py-2 text-sm text-[var(--text-heading)] focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]"
               value={rosterOrgFilter} 
               onChange={e => setRosterOrgFilter(e.target.value)}
             >
@@ -227,9 +227,9 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredSquad.map(member => (
-              <Card key={member.user_id} className="glass-card relative overflow-hidden group border-white/5 bg-black/40">
+              <Card key={member.user_id} className="glass-card relative overflow-hidden group border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)] bg-[color-mix(in_srgb,var(--app-canvas)_40%,transparent)]">
                 <div className="p-4 flex flex-col items-center text-center space-y-3">
-                  <Avatar className="w-16 h-16 border-2 border-[var(--primary)]" src={member.avatar_url || member.foto} fallback={member.user_name} />
+                  <Avatar className="w-16 h-16 border-2 border-[var(--app-accent)]" src={member.avatar_url || member.foto} fallback={member.user_name} />
                   <div>
                     <h3 className="font-bold text-lg">{member.user_name}</h3>
                     <p className="text-sm text-[var(--text-muted)]">{member.gamertag}</p>
@@ -251,20 +251,20 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
 
       {/* RECRUIT TAB */}
       {activeTab === 'recruit' && (
-        <Card className="glass-card border-white/5 bg-black/40">
+        <Card className="glass-card border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)] bg-[color-mix(in_srgb,var(--app-canvas)_40%,transparent)]">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><UserPlus className="text-[var(--primary)]" /> Emitir Nuevo Contrato</CardTitle>
+            <CardTitle className="flex items-center gap-2"><UserPlus className="text-[var(--app-accent)]" /> Emitir Nuevo Contrato</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {!selectedPlayer ? (
               <div className="space-y-4">
                 <div className="flex gap-2">
-                  <Input placeholder="Buscar por gamertag o nombre..." value={recruitSearch} onChange={e => setRecruitSearch(e.target.value)} className="bg-black/50" />
+                  <Input placeholder="Buscar por gamertag o nombre..." value={recruitSearch} onChange={e => setRecruitSearch(e.target.value)} className="bg-[color-mix(in_srgb,var(--app-canvas)_50%,transparent)]" />
                   <Button onClick={loadData}><Search className="w-4 h-4" /></Button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {searchablePlayers.map(p => (
-                    <div key={p.id} className="p-3 bg-black/30 border border-white/5 rounded-lg flex items-center justify-between hover:border-[var(--primary)]/50 transition-colors">
+                    <div key={p.id} className="p-3 bg-[color-mix(in_srgb,var(--app-canvas)_30%,transparent)] border border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)] rounded-lg flex items-center justify-between hover:border-[var(--app-accent)]/50 transition-colors">
                       <div className="flex items-center gap-3">
                         <Avatar src={p.avatar_url} fallback={p.name} className="w-10 h-10" />
                         <div>
@@ -279,7 +279,7 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
               </div>
             ) : (
               <div className="space-y-6 animate-in fade-in">
-                <div className="flex items-center gap-4 p-4 bg-[var(--primary)]/10 border border-[var(--primary)]/30 rounded-xl">
+                <div className="flex items-center gap-4 p-4 bg-[var(--app-accent)]/10 border border-[var(--app-accent)]/30 rounded-xl">
                   <Avatar src={selectedPlayer.avatar_url} fallback={selectedPlayer.name} className="w-12 h-12" />
                   <div>
                     <h3 className="font-bold">Contratando a {selectedPlayer.name}</h3>
@@ -294,10 +294,10 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
                       key={org} 
                       onClick={() => toggleOrgSelection(org)}
                       className={`cursor-pointer px-4 py-3 rounded-lg border flex items-center gap-2 transition-all ${
-                        selectedOrgs.includes(org) ? 'bg-[var(--primary)]/20 border-[var(--primary)] text-white' : 'bg-black/40 border-white/10 text-white/60 hover:border-white/30'
+                        selectedOrgs.includes(org) ? 'bg-[var(--app-accent)]/20 border-[var(--app-accent)] text-[var(--text-heading)]' : 'bg-[color-mix(in_srgb,var(--app-canvas)_40%,transparent)] border-[color-mix(in_srgb,var(--text-heading)_10%,transparent)] text-[color-mix(in_srgb,var(--text-heading)_60%,transparent)] hover:border-[color-mix(in_srgb,var(--text-heading)_30%,transparent)]'
                       }`}
                     >
-                      {selectedOrgs.includes(org) ? <CheckSquare className="w-5 h-5 text-[var(--primary)]" /> : <div className="w-5 h-5 rounded border border-white/30" />}
+                      {selectedOrgs.includes(org) ? <CheckSquare className="w-5 h-5 text-[var(--app-accent)]" /> : <div className="w-5 h-5 rounded border border-[color-mix(in_srgb,var(--text-heading)_30%,transparent)]" />}
                       <span className="font-medium uppercase text-sm">{org}</span>
                     </div>
                   ))}
@@ -315,14 +315,14 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
 
       {/* CONTRACTS TAB */}
       {activeTab === 'contracts' && (
-        <Card className="glass-card border-white/5 bg-black/40">
+        <Card className="glass-card border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)] bg-[color-mix(in_srgb,var(--app-canvas)_40%,transparent)]">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FileText className="text-[var(--primary)]" /> Historial de Contratos Enviados</CardTitle>
+            <CardTitle className="flex items-center gap-2"><FileText className="text-[var(--app-accent)]" /> Historial de Contratos Enviados</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="text-xs text-[var(--text-muted)] uppercase bg-black/50">
+                <thead className="text-xs text-[var(--text-muted)] uppercase bg-[color-mix(in_srgb,var(--app-canvas)_50%,transparent)]">
                   <tr>
                     <th className="px-4 py-3">Jugador</th>
                     <th className="px-4 py-3">Organización</th>
@@ -335,7 +335,7 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
                     const orgMatch = c.pitch_message?.match(/\[Organización:\s*([^\]]+)\]/i);
                     const orgName = orgMatch ? orgMatch[1] : 'General';
                     return (
-                      <tr key={c.id} className="border-b border-white/5 hover:bg-white/5">
+                      <tr key={c.id} className="border-b border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)] hover:bg-[color-mix(in_srgb,var(--text-heading)_5%,transparent)]">
                         <td className="px-4 py-3 font-medium flex items-center gap-2">
                           <Avatar src={c.avatar_url} fallback={c.player_name} className="w-6 h-6" /> {c.player_name}
                         </td>
@@ -366,17 +366,17 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
 
       {/* MATRIX TAB */}
       {activeTab === 'matrix' && (
-        <Card className="glass-card border-white/5 bg-black/40 overflow-hidden">
+        <Card className="glass-card border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)] bg-[color-mix(in_srgb,var(--app-canvas)_40%,transparent)] overflow-hidden">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Layers className="text-[var(--primary)]" /> Matriz de Organizaciones</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Layers className="text-[var(--app-accent)]" /> Matriz de Organizaciones</CardTitle>
           </CardHeader>
           <div className="overflow-x-auto p-4">
             <table className="w-full text-sm">
               <thead>
                 <tr>
-                  <th className="p-3 text-left bg-black/60 rounded-tl-lg">Atleta</th>
+                  <th className="p-3 text-left bg-[color-mix(in_srgb,var(--app-canvas)_60%,transparent)] rounded-tl-lg">Atleta</th>
                   {availableOrgs.map(org => (
-                    <th key={org} className="p-3 text-center bg-black/40 border-l border-white/5 text-xs uppercase text-[var(--text-muted)]">
+                    <th key={org} className="p-3 text-center bg-[color-mix(in_srgb,var(--app-canvas)_40%,transparent)] border-l border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)] text-xs uppercase text-[var(--text-muted)]">
                       {org}
                     </th>
                   ))}
@@ -384,16 +384,16 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
               </thead>
               <tbody>
                 {matrix.map((row, idx) => (
-                  <tr key={row.user_id} className={`border-b border-white/5 ${idx % 2 === 0 ? 'bg-black/20' : ''}`}>
-                    <td className="p-3 font-medium border-r border-white/5">{row.user_name}</td>
+                  <tr key={row.user_id} className={`border-b border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)] ${idx % 2 === 0 ? 'bg-[color-mix(in_srgb,var(--app-canvas)_20%,transparent)]' : ''}`}>
+                    <td className="p-3 font-medium border-r border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)]">{row.user_name}</td>
                     {availableOrgs.map(org => {
                       const isActive = row.organizations.some((organization) => organization.name.toLowerCase() === org.toLowerCase());
                       return (
-                        <td key={org} className="p-3 text-center border-l border-white/5">
+                        <td key={org} className="p-3 text-center border-l border-[color-mix(in_srgb,var(--text-heading)_5%,transparent)]">
                           {isActive ? (
-                            <CheckSquare className="w-5 h-5 mx-auto text-[var(--primary)]" />
+                            <CheckSquare className="w-5 h-5 mx-auto text-[var(--app-accent)]" />
                           ) : (
-                            <div className="w-5 h-5 mx-auto rounded border border-white/10 opacity-30" />
+                            <div className="w-5 h-5 mx-auto rounded border border-[color-mix(in_srgb,var(--text-heading)_10%,transparent)] opacity-30" />
                           )}
                         </td>
                       );

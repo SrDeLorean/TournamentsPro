@@ -182,12 +182,12 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Reportar resultado del partido" size="lg" showCloseButton={false} closeDisabled={isSubmitting} className="p-6 sm:p-8 space-y-6 font-mono">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Reportar resultado del partido" size="lg" showCloseButton={false} closeDisabled={isSubmitting} className="p-6 sm:p-8 space-y-6 font-[family-name:var(--font-active)]">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-950/80 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 font-black text-xl shadow-xl">
+            <div className="w-12 h-12 rounded-2xl bg-[var(--app-positive-soft)] border-2 border-[var(--app-positive)] flex items-center justify-center text-[var(--app-positive)] font-black text-xl shadow-xl">
               🎮
             </div>
             <div>
@@ -210,16 +210,16 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
 
         {/* Success Notice */}
         {successNotice && (
-          <div className="p-3.5 rounded-xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <div className="p-3.5 rounded-xl bg-[var(--app-positive-soft)] border border-[var(--app-positive)] text-[var(--app-positive)] text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[var(--app-positive)] flex-shrink-0" />
             <span>{successNotice}</span>
           </div>
         )}
 
         {/* Error Notice */}
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs font-bold flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+          <div className="p-3 rounded-xl bg-[var(--app-danger-soft)] border border-[var(--app-danger)] text-[var(--app-danger)] text-xs font-bold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-[var(--app-danger)] flex-shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -227,10 +227,10 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
         <form onSubmit={handleSubmitReport} className="space-y-5">
           
           {isRiotGame && (
-            <div className="p-4 rounded-xl border border-[#EB0029]/30 bg-[#EB0029]/5 space-y-3">
+            <div className="p-4 rounded-xl border border-[var(--app-danger)]/30 bg-[var(--app-danger-soft)] space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-[#EB0029] block tracking-wider flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#EB0029] animate-pulse"></span>
+                <span className="text-[10px] font-black uppercase text-[var(--app-danger)] block tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--app-danger)] animate-pulse"></span>
                   Integración Automática Riot Games
                 </span>
               </div>
@@ -242,9 +242,9 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                   placeholder="Riot ID (ej. Faker#SKT1)"
                   value={riotId}
                   onChange={(e) => setRiotId(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg input-theme text-xs font-mono"
+                  className="flex-1 px-3 py-2 rounded-lg input-theme text-xs font-[family-name:var(--font-active)]"
                 />
-                <Button type="button" onClick={handleSearchHistory} disabled={isFetchingHistory} className="bg-[#EB0029] hover:bg-[#EB0029]/80 text-white whitespace-nowrap">
+                <Button type="button" onClick={handleSearchHistory} disabled={isFetchingHistory} className="bg-[var(--app-danger)] hover:bg-[var(--app-danger)] text-[var(--accent-contrast)] whitespace-nowrap">
                   {isFetchingHistory ? 'Buscando...' : 'Ver Historial'}
                 </Button>
               </div>
@@ -256,19 +256,19 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                     <div 
                       key={i} 
                       onClick={() => handleSelectRiotMatch(h.matchId)}
-                      className={`p-3 rounded-lg border border-[#EB0029]/20 bg-[var(--bg-card)] hover:border-[#EB0029] cursor-pointer flex justify-between items-center transition-all ${isSyncing ? 'opacity-50 pointer-events-none' : ''}`}
+                      className={`p-3 rounded-lg border border-[var(--app-danger)]/20 bg-[var(--app-surface-1)] hover:border-[var(--app-danger)] cursor-pointer flex justify-between items-center transition-all ${isSyncing ? 'opacity-50 pointer-events-none' : ''}`}
                     >
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${h.result === 'Victoria' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                          <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${h.result === 'Victoria' ? 'bg-[var(--app-positive-soft)] text-[var(--app-positive)]' : 'bg-[var(--app-danger-soft)] text-[var(--app-danger)]'}`}>
                             {h.result}
                           </span>
-                          <span className="text-xs font-bold text-white">{h.champion}</span>
+                          <span className="text-xs font-bold text-[var(--text-heading)]">{h.champion}</span>
                         </div>
                         <p className="text-[10px] text-[var(--text-muted)] mt-1">{h.date} • Duración: {h.duration}</p>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs font-mono font-bold text-[#EB0029]">{h.kda} KDA</span>
+                        <span className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--app-danger)]">{h.kda} KDA</span>
                       </div>
                     </div>
                   ))}
@@ -279,7 +279,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
           
           {/* Score Counter Box */}
           <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4">
-            <span className="text-[10px] font-black uppercase text-purple-400 block tracking-wider text-center">
+            <span className="text-[10px] font-black uppercase text-[var(--app-accent-2)] block tracking-wider text-center">
               🛡️ Marcador Final del Encuentro
             </span>
 
@@ -293,11 +293,11 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                   max="99"
                   value={homeScore}
                   onChange={(e) => setHomeScore(parseInt(e.target.value) || 0)}
-                  className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-cyan-400 font-black text-2xl text-cyan-400 focus:outline-none"
+                  className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-[var(--app-accent)] font-black text-2xl text-[var(--app-accent)] focus:outline-none"
                 />
               </div>
 
-              <span className="text-xl font-black text-[var(--text-muted)] font-mono">VS</span>
+              <span className="text-xl font-black text-[var(--text-muted)] font-[family-name:var(--font-active)]">VS</span>
 
               {/* Away Team */}
               <div className="col-span-2 space-y-2">
@@ -308,7 +308,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                   max="99"
                   value={awayScore}
                   onChange={(e) => setAwayScore(parseInt(e.target.value) || 0)}
-                  className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-purple-400 font-black text-2xl text-purple-400 focus:outline-none"
+                  className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-[var(--app-accent-2)] font-black text-2xl text-[var(--app-accent-2)] focus:outline-none"
                 />
               </div>
             </div>
@@ -329,7 +329,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                     value={mvpName}
                     onChange={(e) => setMvpName(e.target.value)}
                     placeholder="Gamertag del MVP"
-                    className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-card)] rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm font-medium transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-card)] rounded-xl focus:border-[var(--app-positive)] focus:ring-2 focus:ring-[var(--app-positive)] outline-none text-sm font-medium transition-all"
                   />
                 </div>
               </div>
@@ -347,7 +347,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                           value={dynamicStats[stat.key] || ''}
                           onChange={(e) => handleStatChange(stat.key, e.target.value)}
                           placeholder={`Ej: ${stat.type === 'number' ? '0' : '-'}`}
-                          className="w-full px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-xs font-mono transition-all"
+                          className="w-full px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-lg focus:border-[var(--app-positive)] focus:ring-2 focus:ring-[var(--app-positive)] outline-none text-xs font-[family-name:var(--font-active)] transition-all"
                         />
                       </div>
                     ))}
@@ -357,9 +357,9 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
             </div>
           ) : (
             <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
+              <div className="p-4 rounded-xl border border-[var(--app-positive)] bg-[var(--app-positive-soft)] flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-emerald-400 uppercase flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-[var(--app-positive)] uppercase flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4" />
                     10 Jugadores Cargados
                   </h4>
@@ -378,10 +378,10 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[var(--border-card)] font-mono">
+                    <tbody className="divide-y divide-[var(--border-card)] font-[family-name:var(--font-active)]">
                       {/* TEAM A HEADER */}
-                      <tr className="bg-emerald-500/10 border-l-2 border-emerald-500">
-                        <td colSpan={gameSchema.length + 1} className="px-3 py-1 text-[10px] font-black uppercase text-emerald-400 tracking-wider">
+                      <tr className="bg-[var(--app-positive-soft)] border-l-2 border-[var(--app-positive)]">
+                        <td colSpan={gameSchema.length + 1} className="px-3 py-1 text-[10px] font-black uppercase text-[var(--app-positive)] tracking-wider">
                           Team A
                         </td>
                       </tr>
@@ -390,10 +390,10 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                         ? participantsStats.filter((p: any) => p.teamId === 'Blue' || p.teamId === 100)
                         : participantsStats.slice(0, 5)
                       ).map((p: any, idx: number) => (
-                        <tr key={`a-${idx}`} className="hover:bg-[var(--bg-card-hover)] transition-colors border-l-2 border-emerald-500/20">
-                          <td className="px-3 py-2 font-bold text-white truncate max-w-[120px]">{p.riotId}</td>
+                        <tr key={`a-${idx}`} className="hover:bg-[var(--bg-card-hover)] transition-colors border-l-2 border-[var(--app-positive)]">
+                          <td className="px-3 py-2 font-bold text-[var(--text-heading)] truncate max-w-[120px]">{p.riotId}</td>
                           {gameSchema.map(stat => (
-                            <td key={stat.key} className={`px-2 py-2 text-center ${stat.key === 'acs' || stat.key === 'kills' ? 'font-bold text-white' : 'text-[var(--text-muted)]'}`}>
+                            <td key={stat.key} className={`px-2 py-2 text-center ${stat.key === 'acs' || stat.key === 'kills' ? 'font-bold text-[var(--text-heading)]' : 'text-[var(--text-muted)]'}`}>
                               {p.stats[stat.key] !== undefined ? p.stats[stat.key] : '-'}
                             </td>
                           ))}
@@ -401,8 +401,8 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                       ))}
 
                       {/* TEAM B HEADER */}
-                      <tr className="bg-rose-500/10 border-l-2 border-rose-500 mt-2">
-                        <td colSpan={gameSchema.length + 1} className="px-3 py-1 text-[10px] font-black uppercase text-rose-400 tracking-wider">
+                      <tr className="bg-[var(--app-danger-soft)] border-l-2 border-[var(--app-danger)] mt-2">
+                        <td colSpan={gameSchema.length + 1} className="px-3 py-1 text-[10px] font-black uppercase text-[var(--app-danger)] tracking-wider">
                           Team B
                         </td>
                       </tr>
@@ -411,10 +411,10 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
                         ? participantsStats.filter((p: any) => p.teamId === 'Red' || p.teamId === 200)
                         : participantsStats.slice(5, 10)
                       ).map((p: any, idx: number) => (
-                        <tr key={`b-${idx}`} className="hover:bg-[var(--bg-card-hover)] transition-colors border-l-2 border-rose-500/20">
-                          <td className="px-3 py-2 font-bold text-white truncate max-w-[120px]">{p.riotId}</td>
+                        <tr key={`b-${idx}`} className="hover:bg-[var(--bg-card-hover)] transition-colors border-l-2 border-[var(--app-danger)]">
+                          <td className="px-3 py-2 font-bold text-[var(--text-heading)] truncate max-w-[120px]">{p.riotId}</td>
                           {gameSchema.map(stat => (
-                            <td key={stat.key} className={`px-2 py-2 text-center ${stat.key === 'acs' || stat.key === 'kills' ? 'font-bold text-white' : 'text-[var(--text-muted)]'}`}>
+                            <td key={stat.key} className={`px-2 py-2 text-center ${stat.key === 'acs' || stat.key === 'kills' ? 'font-bold text-[var(--text-heading)]' : 'text-[var(--text-muted)]'}`}>
                               {p.stats[stat.key] !== undefined ? p.stats[stat.key] : '-'}
                             </td>
                           ))}
@@ -430,11 +430,11 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
           {/* Upload Screenshot Evidence */}
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase text-[var(--text-heading)] block flex items-center gap-1.5">
-              <Camera className="w-4 h-4 text-emerald-400" />
+              <Camera className="w-4 h-4 text-[var(--app-positive)]" />
               Adjuntar Captura de Pantalla / Evidencia del Marcador
             </label>
 
-            <div className="p-4 rounded-2xl border-2 border-dashed border-[var(--border-card)] bg-[var(--bg-main)] text-center hover:border-emerald-500 transition-colors">
+            <div className="p-4 rounded-2xl border-2 border-dashed border-[var(--border-card)] bg-[var(--bg-main)] text-center hover:border-[var(--app-positive)] transition-colors">
               <input
                 type="file"
                 accept="image/*"
@@ -445,8 +445,8 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
               <label htmlFor="evidence-upload" className="cursor-pointer space-y-2 block">
                 {evidencePreview ? (
                   <div className="space-y-2">
-                    <Image src={evidencePreview} alt="Evidencia" width={512} height={128} unoptimized className="h-32 w-auto mx-auto rounded-xl object-cover border border-emerald-500" />
-                    <span className="text-[11px] text-emerald-400 font-bold block">✓ Captura cargada correctamente</span>
+                    <Image src={evidencePreview} alt="Evidencia" width={512} height={128} unoptimized className="h-32 w-auto mx-auto rounded-xl object-cover border border-[var(--app-positive)]" />
+                    <span className="text-[11px] text-[var(--app-positive)] font-bold block">✓ Captura cargada correctamente</span>
                   </div>
                 ) : (
                   <div className="space-y-1">
@@ -467,7 +467,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="font-black text-xs uppercase bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-2.5 rounded-xl shadow-lg"
+              className="font-black text-xs uppercase bg-[var(--app-positive)] hover:bg-[var(--app-positive)] text-[var(--text-heading)] px-6 py-2.5 rounded-xl shadow-lg"
             >
               {isSubmitting ? 'Enviando Reporte...' : 'Enviar Reporte de Marcador'}
             </Button>

@@ -3,10 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
+  ChevronDown,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -15,6 +12,7 @@ import {
   Inbox,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 export interface ColumnDef<T> {
   header: string;
@@ -50,7 +48,7 @@ export function DataTable<T extends { id: string | number }>({
   searchField,
   filterOptions = [],
   defaultPageSize = 10,
-  brandColor = '#00F0FF',
+  brandColor = 'var(--app-accent)',
   emptyMessage = 'No se encontraron registros en la tabla.',
   actions,
   ariaLabel = 'Listado de gestión',
@@ -164,7 +162,7 @@ export function DataTable<T extends { id: string | number }>({
           {/* Dynamic Dropdown Filters */}
           <div className="ui-data-table-filters grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:w-auto xl:grid-cols-none xl:auto-cols-max xl:grid-flow-col xl:items-center">
             {filterOptions.map((f) => (
-              <div key={f.key} className="flex min-w-0 items-center gap-1.5">
+              <div key={f.key} className="relative flex min-w-0 items-center">
                 <select
                   value={activeFilters[f.key] || 'ALL'}
                   onChange={(e) => {
@@ -172,23 +170,23 @@ export function DataTable<T extends { id: string | number }>({
                     setCurrentPage(1);
                   }}
                   aria-label={`Filtrar por ${f.label}`}
-                  className="ui-control min-w-0 max-w-full flex-1 h-9 px-3 text-[12px] font-semibold cursor-pointer"
+                  className="w-full xl:w-auto min-w-[140px] h-10 pl-3 pr-8 rounded-xl appearance-none bg-[var(--bg-subtle)] border border-[var(--border-card)] text-[12px] font-bold text-[var(--text-primary)] cursor-pointer shadow-sm focus:outline-none focus:border-[var(--app-accent)] focus:ring-1 focus:ring-[var(--app-accent-soft)] transition-all"
                 >
-                  <option value="ALL" className="bg-[var(--bg-card)] text-[var(--text-primary)]">
+                  <option value="ALL" className="bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold">
                     {f.label}: Todos
                   </option>
                   {f.options.map((opt) => (
-                    <option key={opt.value} value={opt.value} className="bg-[var(--bg-card)] text-[var(--text-primary)]">
+                    <option key={opt.value} value={opt.value} className="bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold">
                       {opt.label}
                     </option>
                   ))}
                 </select>
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-2.5 pointer-events-none" />
               </div>
             ))}
 
             {/* Page Size Selector */}
-            <div className="flex min-w-0 items-center justify-between gap-1.5 rounded-lg border border-[var(--border-card)] bg-[var(--bg-subtle)] px-2 sm:justify-start xl:border-0 xl:bg-transparent xl:px-0">
-              <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Filas:</span>
+            <div className="relative flex min-w-0 items-center">
               <select
                 value={pageSize}
                 onChange={(e) => {
@@ -196,30 +194,31 @@ export function DataTable<T extends { id: string | number }>({
                   setCurrentPage(1);
                 }}
                 aria-label="Filas por página"
-                className="ui-control h-9 px-2 text-[12px] font-bold text-[var(--accent-cyan)] cursor-pointer"
+                className="w-full xl:w-auto min-w-[100px] h-10 pl-3 pr-8 rounded-xl appearance-none bg-[var(--bg-subtle)] border border-[var(--border-card)] text-[12px] font-bold text-[var(--text-primary)] cursor-pointer shadow-sm focus:outline-none focus:border-[var(--app-accent)] focus:ring-1 focus:ring-[var(--app-accent-soft)] transition-all"
               >
-                <option value={5} className="bg-[var(--bg-card)] text-[var(--text-primary)]">5</option>
-                <option value={10} className="bg-[var(--bg-card)] text-[var(--text-primary)]">10</option>
-                <option value={20} className="bg-[var(--bg-card)] text-[var(--text-primary)]">20</option>
-                <option value={50} className="bg-[var(--bg-card)] text-[var(--text-primary)]">50</option>
+                <option value={5} className="bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold">5 filas</option>
+                <option value={10} className="bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold">10 filas</option>
+                <option value={20} className="bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold">20 filas</option>
+                <option value={50} className="bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold">50 filas</option>
               </select>
+              <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-2.5 pointer-events-none" />
             </div>
             {hasActiveControls && (
-              <Button type="button" size="sm" variant="ghost" onClick={resetControls} className="h-9 w-full gap-1.5 text-xs text-[var(--text-secondary)] xl:w-auto">
+              <Button type="button" size="sm" variant="ghost" onClick={resetControls} className="h-10 w-full gap-1.5 text-xs text-[var(--text-secondary)] xl:w-auto">
                 <RotateCcw className="size-3.5" /> Restablecer
               </Button>
             )}
           </div>
         </div>
-        <div className="ui-data-table-summary flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-card)] pt-3 text-[11px] text-[var(--text-muted)]">
+        <div className="ui-data-table-summary flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-card)] pt-3 text-[11px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">
           <span><strong className="text-[var(--text-heading)]">{sortedData.length}</strong> de {data.length} registros disponibles</span>
-          {hasActiveControls && <span className="rounded-full bg-[var(--accent-cyan-bg)] px-2.5 py-1 font-mono font-bold text-[var(--accent-cyan)]">Filtros activos</span>}
+          {hasActiveControls && <span className="rounded-full bg-[color-mix(in_srgb,var(--app-accent)_16%,transparent)] px-2.5 py-1 font-[family-name:var(--font-active)] font-bold text-[var(--app-accent)]">Filtros activos</span>}
         </div>
       </div>
 
       {/* Standardized Table Container */}
       <div
-        className="ui-data-table-shell table-container-theme font-mono"
+        className="ui-data-table-shell table-container-theme font-[family-name:var(--font-active)]"
       >
         <div className="ui-data-table-heading" aria-hidden="true">
           <span>Directorio</span>
@@ -243,9 +242,9 @@ export function DataTable<T extends { id: string | number }>({
                           <span className="text-[var(--text-muted)]">
                             {isSorted ? (
                               sortDirection === 'asc' ? (
-                                <ArrowUp className="w-3 h-3 text-[var(--accent-cyan)]" />
+                                <ArrowUp className="w-3 h-3 text-[var(--app-accent)]" />
                               ) : (
-                                <ArrowDown className="w-3 h-3 text-[var(--accent-cyan)]" />
+                                <ArrowDown className="w-3 h-3 text-[var(--app-accent)]" />
                               )
                             ) : (
                               <ArrowUpDown className="w-3 h-3 opacity-50 hover:opacity-100" />
@@ -290,58 +289,13 @@ export function DataTable<T extends { id: string | number }>({
           </table>
         </div>
 
-        {/* Pagination Controls */}
-        <div className="ui-data-table-pagination flex flex-col justify-between gap-3 border-t border-[var(--border-card)]/50 p-3 text-sm sm:flex-row sm:items-center sm:p-4">
-          <span className="text-[12px] text-[var(--text-muted)] font-medium">
-            Mostrando <strong>{sortedData.length ? (safeCurrentPage - 1) * pageSize + 1 : 0}</strong> a{' '}
-            <strong>{Math.min(safeCurrentPage * pageSize, sortedData.length)}</strong> de{' '}
-            <strong>{sortedData.length}</strong> registros
-          </span>
-
-          <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              disabled={safeCurrentPage === 1}
-              onClick={() => setCurrentPage(1)}
-              className="w-8 h-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
-            >
-              <ChevronsLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              disabled={safeCurrentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="w-8 h-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-
-            <span className="px-3 py-1 font-mono text-[12px] text-[var(--text-primary)] font-bold bg-[var(--bg-main)]/50 rounded-lg border border-[var(--border-card)]">
-              {safeCurrentPage} / {totalPages}
-            </span>
-
-            <Button
-              size="icon"
-              variant="ghost"
-              disabled={safeCurrentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="w-8 h-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              disabled={safeCurrentPage === totalPages}
-              onClick={() => setCurrentPage(totalPages)}
-              className="w-8 h-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30"
-            >
-              <ChevronsRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+        <DataTablePagination
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          totalItems={sortedData.length}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

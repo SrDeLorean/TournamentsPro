@@ -21,13 +21,13 @@ export function SubSubNavbar<T extends string = string>({
   tabs,
   activeTab,
   onSelectTab,
-  brandColor = '#00F0FF',
+  brandColor = 'var(--app-accent)',
   className = '',
 }: SubSubNavbarProps<T>) {
   const navStyle = { '--subtab-brand': brandColor } as React.CSSProperties;
 
   return (
-    <nav className={`ui-sub-tabs ${className}`} style={navStyle} aria-label="Secciones del perfil">
+    <nav className={`ui-sub-tabs ui-navigation-tier ${className}`} style={navStyle} aria-label="Secciones del perfil">
       <div className="ui-sub-tabs-scroll">
         <div className="ui-sub-tabs-track">
           {tabs.map((t) => {

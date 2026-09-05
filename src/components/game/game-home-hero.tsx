@@ -6,30 +6,21 @@ import { GameHighlightsSection } from '@/components/game/game-highlights-section
 import { GameLogo } from '@/components/ui/game-logo';
 import { Button } from '@/components/ui/button';
 import { ParachuteDownloadButton } from '@/components/ui/parachute-download-button';
+import { PublicPortalOverview } from '@/components/public/public-portal-overview';
+import type { PublicPortalSummary } from '@/lib/public-home-summary';
 import {
-  Trophy, Shield, Award, Calendar, Sparkles, ChevronRight, Radio, Zap, Play,
+  Trophy, Shield, Award, Calendar, Sparkles, ChevronRight, Zap,
 } from 'lucide-react';
-
-interface MockMatch {
-  id: number;
-  home: string;
-  homeTag: string;
-  away: string;
-  awayTag: string;
-  date: string;
-  jornada: string;
-  status: string;
-  score: string;
-}
 
 interface GameHomeHeroProps {
   game: GameConfig;
-  brandColor: string;
-  mockMatches: MockMatch[];
+  summary?: PublicPortalSummary;
   onNavigate: (section: string) => void;
 }
 
-export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: GameHomeHeroProps) {
+const EMPTY_SUMMARY: PublicPortalSummary = { counts: { users: 0, organizations: 0, teams: 0, competitions: 0, liveMatches: 0 }, matches: [], competitions: [], organizations: [], teams: [] };
+
+export function GameHomeHero({ game, summary = EMPTY_SUMMARY, onNavigate }: GameHomeHeroProps) {
   const identityData = JSON.stringify({
     discipline: game.name,
     slug: game.slug,
@@ -46,26 +37,19 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
         {/* Top Status & Category Badges */}
         <div className="game-home-statusbar absolute top-0 left-0 w-full flex flex-wrap items-center justify-between gap-3 px-2 sm:px-0 z-10">
           <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className="px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-1.5 backdrop-blur-md border"
-              style={{
-                backgroundColor: `${brandColor}20`,
-                borderColor: `${brandColor}50`,
-                color: 'var(--text-heading)',
-              }}
-            >
-              <Sparkles className="w-3.5 h-3.5" style={{ color: brandColor }} />
+            <span className="game-home-brand-pill px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-1.5 backdrop-blur-md border">
+              <Sparkles className="w-3.5 h-3.5" />
               PORTAL OFICIAL
             </span>
-            <span className="px-3.5 py-1 rounded-full bg-[var(--bg-card)]/80 backdrop-blur-md text-[var(--text-muted)] border border-[var(--border-card)] text-xs font-mono font-bold uppercase tracking-wider shadow-md">
+            <span className="px-3.5 py-1 rounded-full bg-[var(--bg-card)]/80 backdrop-blur-md text-[var(--text-muted)] border border-[var(--border-card)] text-xs font-bold uppercase tracking-wider shadow-md">
               {game.category}
             </span>
             <span className="game-home-scene-label">
               <span /> {game.visualTheme.scene} · {game.visualTheme.motif}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-500 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/60 backdrop-blur-md px-3 py-1 rounded-full border border-emerald-500/30 shadow-md animate-pulse">
-            <Zap className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 fill-emerald-500 dark:fill-emerald-400" />
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--app-positive)] bg-[var(--app-positive-soft)] backdrop-blur-md px-3 py-1 rounded-full border border-[var(--app-positive)]/30 shadow-md animate-pulse">
+            <Zap className="w-3.5 h-3.5 text-[var(--app-positive)] fill-[var(--app-positive)] dark:fill-[var(--app-positive)]" />
             CIRCUITO ACTIVO 2026
           </div>
         </div>
@@ -73,26 +57,14 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
         {/* Title & Tagline Showcase (Massive Typography) */}
         <div className="game-home-copy relative z-10 max-w-5xl mt-auto px-2 sm:px-0">
           <div className="flex flex-col sm:flex-row sm:items-end gap-5 mb-5">
-            <div
-              className="game-home-logo w-16 h-16 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shadow-xl border-2 flex-shrink-0 backdrop-blur-xl transform hover:scale-105 transition-transform duration-500"
-              style={{
-                backgroundColor: `${brandColor}15`,
-                borderColor: `${brandColor}60`,
-              }}
-            >
+            <div className="game-home-logo w-16 h-16 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shadow-xl border-2 flex-shrink-0 backdrop-blur-xl transform hover:scale-105 transition-transform duration-500">
               <GameLogo game={game} size="xl" />
             </div>
             <div className="pb-1 sm:pb-2">
-              <h1
-                className="game-home-title text-4xl sm:text-6xl lg:text-[5.5rem] font-black tracking-tight uppercase leading-[0.9]"
-                style={{ 
-                  color: 'var(--text-heading)',
-                  textShadow: `0 4px 30px ${brandColor}80` 
-                }}
-              >
+              <h1 className="game-home-title text-4xl sm:text-6xl lg:text-[5.5rem] font-black tracking-tight uppercase leading-[0.9]">
                 {game.name}
               </h1>
-              <p className="text-base sm:text-xl text-[var(--text-primary)] font-extrabold mt-2 tracking-widest uppercase drop-shadow-md border-l-4 pl-3 sm:pl-4" style={{ borderColor: brandColor }}>
+              <p className="game-home-tagline text-base sm:text-xl text-[var(--text-primary)] font-extrabold mt-2 tracking-widest uppercase drop-shadow-md border-l-4 pl-3 sm:pl-4">
                 {game.tagline}
               </p>
             </div>
@@ -106,11 +78,7 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
         <div className="game-home-actions relative z-10 flex flex-wrap items-center gap-3 pt-6 sm:pt-8 px-2 sm:px-0">
           <Button
             onClick={() => onNavigate('partidos')}
-            className="font-black text-xs sm:text-sm h-11 sm:h-12 px-6 uppercase tracking-widest rounded-xl transition-all hover:scale-105 shadow-lg"
-            style={{
-              backgroundColor: brandColor,
-              color: '#FFFFFF',
-            }}
+            className="game-home-primary-action font-black text-xs sm:text-sm h-11 sm:h-12 px-6 uppercase tracking-widest rounded-xl transition-all hover:scale-105 shadow-lg"
           >
             <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Fixture de Partidos
@@ -118,8 +86,7 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
           <Button
             onClick={() => onNavigate('clasificacion')}
             variant="outline"
-            className="font-bold text-xs sm:text-sm h-11 sm:h-12 px-6 uppercase tracking-widest rounded-xl border-2 bg-[var(--bg-main)]/60 backdrop-blur-md transition-all hover:bg-[var(--bg-card)] text-[var(--text-heading)] shadow-md"
-            style={{ borderColor: `${brandColor}80` }}
+            className="game-home-secondary-action font-bold text-xs sm:text-sm h-11 sm:h-12 px-6 uppercase tracking-widest rounded-xl border-2 bg-[var(--bg-main)]/60 backdrop-blur-md transition-all hover:bg-[var(--bg-card)] text-[var(--text-heading)] shadow-md"
           >
             <Award className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Clasificación
@@ -141,13 +108,12 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
       </div>
 
       {/* 2. CYBERNETIC HUD METRICS STRIPE */}
-      <GameMetricsStripe brandColor={brandColor} />
+      <GameMetricsStripe summary={summary} />
 
-      {/* 3. FEATURED MATCHDAY VS CLASH SPOTLIGHT */}
-      <MatchdaySpotlight brandColor={brandColor} matches={mockMatches} />
+      <PublicPortalOverview summary={summary} gameSlug={game.slug} />
 
       {/* 4. INTERACTIVE DISCIPLINE MODULE CARDS GRID */}
-      <GameModuleCards game={game} brandColor={brandColor} onNavigate={onNavigate} />
+      <GameModuleCards game={game} onNavigate={onNavigate} />
 
       {/* 5. DISCIPLINE NEWS & PATCH NOTES FEED */}
       <div className="space-y-6">
@@ -158,29 +124,29 @@ export function GameHomeHero({ game, brandColor, mockMatches, onNavigate }: Game
 }
 
 // ── Metrics Stripe Sub-component ────────────────────────────────────────────
-function GameMetricsStripe({ brandColor }: { brandColor: string }) {
+function GameMetricsStripe({ summary }: { summary: PublicPortalSummary }) {
   const metrics = [
-    { label: 'Torneos Disputándose', value: '8', sub: '● Circuitos En Curso', color: brandColor, subColor: 'text-emerald-400' },
-    { label: 'Escuadras de Élite', value: '16', sub: 'Clubes Certificados', color: 'rgb(52, 211, 153)', subColor: 'text-emerald-500' },
-    { label: 'Atletas Inscritos', value: '248', sub: 'Jugadores Verificados', color: 'rgb(192, 132, 252)', subColor: 'text-purple-400' },
-    { label: 'Prize Pool Acumulado', value: '$2.5K', sub: '★ Premios de la Liga', color: 'rgb(251, 191, 36)', subColor: 'text-amber-400' },
-  ];
+    { label: 'Competencias', value: summary.counts.competitions, sub: `${summary.counts.liveMatches} encuentros activos`, tone: 'positive' },
+    { label: 'Escuadras', value: summary.counts.teams, sub: 'Clubes registrados', tone: 'positive' },
+    { label: 'Atletas', value: summary.counts.users, sub: 'Jugadores públicos', tone: 'secondary' },
+    { label: 'Organizaciones', value: summary.counts.organizations, sub: 'Circuitos de la disciplina', tone: 'warning' },
+  ] as const;
 
   return (
     <div className="game-home-metrics grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5">
       {metrics.map((m, i) => (
         <div
           key={i}
+          data-tone={m.tone}
           className="game-home-metric relative group p-4 sm:p-6 rounded-2xl border transition-all duration-300 hover:-translate-y-1 overflow-hidden"
-          style={{ borderColor: `${brandColor}30` }}
         >
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none" style={{ background: `radial-gradient(circle at top right, ${m.color}, transparent 70%)` }} />
-          <div className="absolute top-0 left-0 w-1 h-full opacity-50 group-hover:opacity-100 transition-opacity duration-300" style={{ backgroundColor: m.color }} />
+          <div className="game-home-metric-glow absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none" />
+          <div className="game-home-metric-bar absolute top-0 left-0 w-1 h-full opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
           
           <div className="space-y-1 relative z-10 pl-2">
-            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-[var(--text-muted)] block font-mono">{m.label}</span>
-            <span className="text-4xl sm:text-5xl font-black block tracking-tighter drop-shadow-md" style={{ color: m.color }}>{m.value}</span>
-            <span className={`text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider ${m.subColor}`}>{m.sub}</span>
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-[var(--text-muted)] block">{m.label}</span>
+            <span className="game-home-metric-value text-4xl sm:text-5xl font-black block tracking-tighter drop-shadow-md">{m.value}</span>
+            <span className="game-home-metric-sub text-[10px] sm:text-xs font-bold uppercase tracking-wider">{m.sub}</span>
           </div>
         </div>
       ))}
@@ -188,79 +154,8 @@ function GameMetricsStripe({ brandColor }: { brandColor: string }) {
   );
 }
 
-// ── Matchday Spotlight Sub-component ────────────────────────────────────────
-function MatchdaySpotlight({ brandColor, matches }: { brandColor: string; matches: MockMatch[] }) {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-rose-500/10 rounded-lg border border-rose-500/20">
-            <Radio className="w-5 h-5 text-rose-500 animate-pulse" />
-          </div>
-          <h3 className="font-black text-2xl sm:text-3xl uppercase tracking-tighter text-[var(--text-heading)] drop-shadow-md">
-            Encuentro Estelar
-          </h3>
-        </div>
-        <span className="text-[10px] sm:text-xs font-mono font-black tracking-widest text-rose-500 uppercase bg-rose-500/10 px-3 py-1.5 rounded-full border border-rose-500/30">
-          Transmisión Oficial
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {matches.map((m) => (
-          <div key={m.id} className="game-home-match group p-5 sm:p-8 rounded-3xl border border-[var(--border-card)] relative overflow-hidden transition-all">
-            
-            {/* Background Glow */}
-            <div className="absolute inset-0 opacity-5 group-hover:opacity-20 transition-opacity duration-700 pointer-events-none" style={{ background: `radial-gradient(circle at center, ${brandColor}, transparent 60%)` }} />
-
-            <div className="relative z-10 flex items-center justify-between text-xs font-mono mb-6">
-              <span className="px-3 py-1 rounded-full bg-[var(--bg-main)]/80 border border-[var(--border-card)] text-[var(--text-muted)] font-black tracking-widest uppercase shadow-md">{m.jornada}</span>
-              <span className="px-3 py-1 rounded-full font-black uppercase tracking-widest shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse" style={{ backgroundColor: `${brandColor}20`, color: brandColor, borderColor: `${brandColor}50`, borderWidth: '1px' }}>{m.status}</span>
-            </div>
-
-            <div className="relative z-10 grid grid-cols-[1fr,auto,1fr] items-center gap-4 py-4">
-              {/* Home Team */}
-              <div className="flex flex-col items-center space-y-3 sm:space-y-4">
-                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl bg-[var(--bg-main)]/80 backdrop-blur-md border-2 flex items-center justify-center font-black text-2xl sm:text-4xl text-[var(--text-heading)] shadow-xl transform transition-transform group-hover:scale-110" style={{ borderColor: `${brandColor}40` }}>
-                  {m.homeTag}
-                </div>
-                <span className="font-black text-xs sm:text-sm text-[var(--text-heading)] uppercase tracking-wider text-center">{m.home}</span>
-              </div>
-              
-              {/* Score / VS */}
-              <div className="flex flex-col items-center space-y-1 sm:space-y-2 px-1 sm:px-2">
-                <span className="text-3xl sm:text-5xl font-black tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]" style={{ color: brandColor }}>{m.score}</span>
-                <span className="text-[9px] sm:text-[10px] font-mono font-bold text-[var(--text-muted)] uppercase tracking-widest bg-[var(--bg-main)]/50 px-2 sm:px-3 py-1 rounded-full">{m.date}</span>
-              </div>
-              
-              {/* Away Team */}
-              <div className="flex flex-col items-center space-y-3 sm:space-y-4">
-                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl bg-[var(--bg-main)]/80 backdrop-blur-md border-2 flex items-center justify-center font-black text-2xl sm:text-4xl text-[var(--text-heading)] shadow-xl transform transition-transform group-hover:scale-110" style={{ borderColor: `${brandColor}40` }}>
-                  {m.awayTag}
-                </div>
-                <span className="font-black text-xs sm:text-sm text-[var(--text-heading)] uppercase tracking-wider text-center">{m.away}</span>
-              </div>
-            </div>
-
-            <div className="relative z-10 mt-8 pt-4 border-t border-[var(--border-card)]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <span className="text-xs font-mono text-[var(--text-muted)] font-bold tracking-widest uppercase flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-                Twitch TV
-              </span>
-              <Button className="w-full sm:w-auto font-black text-xs h-10 px-6 uppercase tracking-widest rounded-xl hover:scale-105 transition-transform shadow-lg" style={{ backgroundColor: brandColor, color: '#FFFFFF' }}>
-                <Play className="w-4 h-4 mr-2 fill-white" />
-                Ver Transmisión
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Module Cards Sub-component ──────────────────────────────────────────────
-function GameModuleCards({ game, brandColor, onNavigate }: { game: GameConfig; brandColor: string; onNavigate: (s: string) => void }) {
+function GameModuleCards({ game, onNavigate }: { game: GameConfig; onNavigate: (s: string) => void }) {
   const modules = [
     { key: 'competencias', icon: Trophy, title: 'Competencias Oficiales', desc: `Consulta todas las ligas activas, fixture de partidos, formatos de fase de grupos y playoffs de ${game.name}.`, cta: 'Explorar Torneos' },
     { key: 'clasificacion', icon: Award, title: 'Tabla de Posiciones', desc: 'Revisa las posiciones en tiempo real, puntos acumulados y estadísticas de rendimiento de cada equipo.', cta: 'Ver Clasificación' },
@@ -276,14 +171,14 @@ function GameModuleCards({ game, brandColor, onNavigate }: { game: GameConfig; b
           className="game-home-module relative p-6 sm:p-8 rounded-3xl border border-[var(--border-card)] transition-all duration-300 cursor-pointer group flex flex-col justify-between overflow-hidden hover:-translate-y-1"
         >
           {/* Animated Hover Background */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none" style={{ background: `radial-gradient(circle at bottom left, ${brandColor}, transparent 80%)` }} />
+          <div className="game-home-module-glow absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none" />
           
           {/* Top Border Beam */}
-          <div className="absolute top-0 left-0 w-0 h-1 transition-all duration-700 group-hover:w-full" style={{ backgroundColor: brandColor }} />
+          <div className="game-home-module-beam absolute top-0 left-0 w-0 h-1 transition-all duration-700 group-hover:w-full" />
 
           <div className="space-y-4 relative z-10">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center border-2 transition-transform duration-500 group-hover:scale-110 shadow-md" style={{ backgroundColor: `${brandColor}15`, borderColor: `${brandColor}40` }}>
-              <mod.icon className="w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-500" style={{ color: brandColor }} />
+            <div className="game-home-module-icon w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center border-2 transition-transform duration-500 group-hover:scale-110 shadow-md">
+              <mod.icon className="w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-500" />
             </div>
             <h3 className="font-black text-xl sm:text-2xl uppercase tracking-tighter text-[var(--text-heading)] transition-colors">
               {mod.title}
@@ -294,8 +189,8 @@ function GameModuleCards({ game, brandColor, onNavigate }: { game: GameConfig; b
           </div>
 
           <div className="pt-6 sm:pt-8 mt-auto flex items-center justify-between text-xs font-black uppercase tracking-widest relative z-10 text-[var(--text-primary)]">
-            <span className="transition-colors" style={{ color: brandColor }}>{mod.cta}</span>
-            <ChevronRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-2" style={{ color: brandColor }} />
+            <span className="game-home-module-cta transition-colors">{mod.cta}</span>
+            <ChevronRight className="game-home-module-cta w-5 h-5 transition-transform duration-300 group-hover:translate-x-2" />
           </div>
         </div>
       ))}

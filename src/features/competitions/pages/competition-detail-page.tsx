@@ -142,7 +142,7 @@ export default async function CompetitionDetailPage({ params }: DetailPageProps)
   const { competition, enrolledTeams, availableTeams, availableUsers, isIndividual, matches } = data;
   return (
     <div className="management-page">
-      <Suspense fallback={<div className="text-xs font-mono text-cyan-400 p-4">Cargando pestañas de competencia...</div>}>
+      <Suspense fallback={<div className="text-xs font-[family-name:var(--font-active)] text-[var(--app-accent)] p-4">Cargando pestañas de competencia...</div>}>
         <CompetitionTabs
           competition={competition}
           enrolledTeams={enrolledTeams}

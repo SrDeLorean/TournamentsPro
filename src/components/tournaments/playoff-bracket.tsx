@@ -108,7 +108,7 @@ function TeamRow({ name, tag, logoUrl, firstLeg, secondLeg, total, hasSecondLeg,
           <small>{placeholder ? 'Clasificación pendiente' : tag}</small>
         </span>
       </div>
-      <div className="game-bracket-score font-mono">
+      <div className="game-bracket-score font-[family-name:var(--font-active)]">
         {hasSecondLeg && (
           <span className="game-bracket-legs" title="Marcadores de ida y vuelta">
             <span>{firstLeg ?? '-'}</span><i>/</i><span>{secondLeg ?? '-'}</span>

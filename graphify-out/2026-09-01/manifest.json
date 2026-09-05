@@ -563,9 +563,9 @@
     "semantic_hash": ""
   },
   "src/components/teams/team-profile-view.tsx": {
-    "mtime": 1788299329.9792583,
-    "seen": 1788299667.0955534,
-    "ast_hash": "31eabd5aaff3d488a1b42f15ddec2026",
+    "mtime": 1788300167.9976134,
+    "seen": 1788300388.5212474,
+    "ast_hash": "9e65cf52a9792d1100e15d7152257be2",
     "semantic_hash": ""
   },
   "src/components/tournaments/tournament-hub-view.tsx": {
@@ -1415,9 +1415,9 @@
     "semantic_hash": ""
   },
   "src/features/design-system/components/components-showcase-client.tsx": {
-    "mtime": 1788297107.889118,
-    "seen": 1788297366.7195137,
-    "ast_hash": "fa27ddfc11482fabe63b3570d8c8ed56",
+    "mtime": 1788300265.4413712,
+    "seen": 1788300388.5384612,
+    "ast_hash": "3e17983931c522cc7dfba1b80030b819",
     "semantic_hash": ""
   },
   "src/features/design-system/components/game-ui-showcase-client.tsx": {
@@ -2633,9 +2633,9 @@
     "semantic_hash": ""
   },
   "src/app/equipos/[teamId]/page.tsx": {
-    "mtime": 1788298757.114725,
-    "seen": 1788298898.6824217,
-    "ast_hash": "01a21b7328ddde8e6be556268b1c3f60",
+    "mtime": 1788300173.3855104,
+    "seen": 1788300388.50074,
+    "ast_hash": "3f47bb378e7dfa31f0bdae7e5c8ff99f",
     "semantic_hash": ""
   },
   "src/app/organizaciones/[orgId]/competencias/[compId]/page.tsx": {
@@ -2849,9 +2849,9 @@
     "semantic_hash": ""
   },
   "src/components/workspaces/club-workspace-view.tsx": {
-    "mtime": 1788104821.5927677,
-    "seen": 1788279812.779591,
-    "ast_hash": "ddd86556698d3b227d2db731b1f4fe77",
+    "mtime": 1788300170.837572,
+    "seen": 1788300388.5351083,
+    "ast_hash": "23bb45ae4b079b9eb591e47ddaec66be",
     "semantic_hash": ""
   },
   "fix_mysql.js": {
@@ -13901,9 +13901,9 @@
     "semantic_hash": ""
   },
   "tests/team-public-experience.test.ts": {
-    "mtime": 1788299393.5007505,
-    "seen": 1788299667.130774,
-    "ast_hash": "dafa5a3b56a744dae5ad7ad5396c4374",
+    "mtime": 1788300211.0543158,
+    "seen": 1788300388.5611765,
+    "ast_hash": "98407b225cf1e4a94bf2d4f7835023ab",
     "semantic_hash": ""
   }
 }

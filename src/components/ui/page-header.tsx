@@ -1,76 +1,100 @@
-import React from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Flame } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+export interface PageHeaderMetric {
+  label: string;
+  value: ReactNode;
+  detail?: string;
+  icon?: ReactNode;
+}
 
 interface PageHeaderProps {
   badgeText?: string;
-  badgeIcon?: React.ReactNode;
+  badgeIcon?: ReactNode;
+  heroIcon?: ReactNode;
   title: string;
   highlightTitle?: string;
   description: string;
   brandColor?: string;
-  children?: React.ReactNode;
+  footer?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+  density?: 'compact' | 'comfortable' | 'cinematic';
+  headingLevel?: 1 | 2 | 3;
+}
+
+export function PageHeaderMetrics({ items }: { items: PageHeaderMetric[] }) {
+  return (
+    <div className="ui-page-header-metrics" aria-label="Resumen de la sección">
+      {items.map((item) => (
+        <div className="ui-page-header-metric" key={item.label}>
+          {item.icon ? <span className="ui-page-header-metric-icon">{item.icon}</span> : null}
+          <span className="ui-page-header-metric-copy">
+            <strong>{item.value}</strong>
+            <small>{item.label}</small>
+            {item.detail ? <em>{item.detail}</em> : null}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function PageHeader({
   badgeText,
   badgeIcon,
+  heroIcon,
   title,
   highlightTitle,
   description,
-  brandColor = 'var(--accent-cyan)',
+  brandColor = 'var(--app-accent)',
+  footer,
   children,
+  className,
+  density = 'comfortable',
+  headingLevel = 1,
 }: PageHeaderProps) {
-  const defaultIcon = <Flame className="w-3.5 h-3.5" style={{ color: brandColor, fill: brandColor }} />;
+  const defaultIcon = <Flame className="size-3.5" aria-hidden="true" />;
+  const Heading = `h${headingLevel}` as 'h1' | 'h2' | 'h3';
 
   return (
     <header
-      className="ui-page-header game-section-hero flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-8 p-5 sm:p-7 lg:p-9"
-      style={{ '--page-brand': brandColor } as React.CSSProperties}
+      className={cn('ui-page-header game-section-hero font-[family-name:var(--font-active)]', `is-${density}`, className)}
+      style={{ '--page-brand': brandColor } as CSSProperties}
     >
-      {/* Left Title & Description */}
-      <div className="relative z-10 space-y-4 max-w-2xl">
-        {badgeText && (
-          <div>
-            <div
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border backdrop-blur-md shadow-sm"
-              style={{
-                backgroundColor: `color-mix(in srgb, ${brandColor} 15%, transparent)`,
-                borderColor: `color-mix(in srgb, ${brandColor} 40%, transparent)`,
-                color: brandColor,
-              }}
-            >
-              {badgeIcon || defaultIcon}
-              {badgeText}
-            </div>
-          </div>
-        )}
-
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.035em] text-[var(--text-heading)] uppercase leading-[0.94] text-balance">
-          {title}{' '}
-          {highlightTitle && (
-            <span
-              className="block"
-              style={{
-                color: brandColor,
-                filter: `drop-shadow(0 0 24px color-mix(in srgb, ${brandColor} 38%, transparent))`,
-              }}
-            >
-              {highlightTitle}
-            </span>
-          )}
-        </h1>
-
-        <p className="max-w-xl text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed font-medium text-pretty">
-          {description}
-        </p>
+      <div className="ui-page-header-scene" aria-hidden="true">
+        <span className="ui-page-header-orbit" />
+        <span className="ui-page-header-beam" />
+        <span className="ui-page-header-grid" />
       </div>
 
-      {/* Right Side Slot (Telemetry / Stats / Quick Action) */}
-      {children && (
-        <div className="relative z-10 flex-shrink-0 w-full lg:w-auto">
-          {children}
+      <div className="ui-page-header-layout">
+        <div className="ui-page-header-intro">
+          {heroIcon ? <div className="ui-page-header-icon">{heroIcon}</div> : null}
+
+          <div className="ui-page-header-copy">
+            {badgeText ? (
+              <div className="ui-page-header-badge">
+                {badgeIcon || defaultIcon}
+                <span>{badgeText}</span>
+              </div>
+            ) : null}
+
+            <Heading>
+              <span>{title}</span>
+              {highlightTitle ? <strong>{highlightTitle}</strong> : null}
+            </Heading>
+
+            <p>{description}</p>
+            {footer ? <div className="ui-page-header-footer">{footer}</div> : null}
+          </div>
         </div>
-      )}
+
+        {children ? <aside className="ui-page-header-aside">{children}</aside> : null}
+      </div>
+
+      <div className="ui-page-header-edge" aria-hidden="true" />
     </header>
   );
 }

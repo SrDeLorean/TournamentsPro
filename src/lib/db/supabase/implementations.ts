@@ -38,6 +38,7 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
       platform: row.platform, position: row.position, secondaryPosition: row.secondary_position,
       rankBadge: row.rank_badge, rating: row.rating, status: row.status, avatarUrl: row.avatar_url,
       organizationId: row.organization_id, isBanned: Boolean(row.is_banned), banReason: row.ban_reason,
+      bannedAt: row.banned_at, gameProfiles: row.game_profiles,
       createdAt: row.created_at, updatedAt: row.updated_at, lastLoginAt: row.last_login_at
     };
   }
@@ -78,16 +79,60 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
   }
 
   async getAvailablePlayers(options?: { organizerOrgId?: string | null; searchQuery?: string }): Promise<any[]> {
-    let query = supabase.from(this.tableName).select('*').eq('status', 'Buscando Club');
-    if (options?.organizerOrgId) {
-      query = query.or(`organization_id.eq.${options.organizerOrgId},organization_id.is.null`);
-    }
-    if (options?.searchQuery) {
+    let query = supabase
+      .from(this.tableName)
+      .select('id, name, gamertag, email, position, primary_game_slug, organization_id, avatar_url, foto, role, status, is_banned')
+      .not('role', 'in', '("Administrador","Organizador")')
+      .or('is_banned.eq.0,is_banned.is.null');
+
+    if (options?.searchQuery && options.searchQuery.trim()) {
       const q = escapeIlikeLiteral(options.searchQuery.trim());
-      query = query.or(`name.ilike.%${q}%,gamertag.ilike.%${q}%,position.ilike.%${q}%`);
+      query = query.or(`name.ilike.%${q}%,gamertag.ilike.%${q}%,email.ilike.%${q}%,position.ilike.%${q}%`);
     }
-    const { data } = await query.limit(50);
-    return (data || []).map((row) => this.mapRow(row));
+
+    const { data, error } = await query.order('name', { ascending: true }).limit(60);
+    if (error || !data) return [];
+
+    const userIds = data.map((u) => u.id);
+    const orgIds = data.map((u) => u.organization_id).filter(Boolean);
+
+    let orgMap = new Map<string, string>();
+    if (orgIds.length > 0) {
+      const { data: orgs } = await supabase.from('organizations').select('id, name').in('id', orgIds);
+      if (orgs) orgMap = new Map(orgs.map((o) => [o.id, o.name]));
+    }
+
+    let teamMap = new Map<string, { id: string; name: string }>();
+    if (userIds.length > 0) {
+      const { data: members } = await supabase.from('team_members').select('user_id, team_id').in('user_id', userIds);
+      if (members && members.length > 0) {
+        const teamIds = members.map((m) => m.team_id);
+        const { data: teams } = await supabase.from('teams').select('id, name').in('id', teamIds);
+        const tNames = new Map((teams || []).map((t) => [t.id, t.name]));
+        for (const m of members) {
+          if (!teamMap.has(m.user_id)) {
+            teamMap.set(m.user_id, { id: m.team_id, name: tNames.get(m.team_id) || 'Club' });
+          }
+        }
+      }
+    }
+
+    return data.map((u) => ({
+      id: u.id,
+      name: u.name,
+      gamertag: u.gamertag,
+      email: u.email,
+      position: u.position,
+      primary_game_slug: u.primary_game_slug,
+      organization_id: u.organization_id,
+      organization_name: u.organization_id ? orgMap.get(u.organization_id) || null : null,
+      current_team_id: teamMap.get(u.id)?.id || null,
+      current_team_name: teamMap.get(u.id)?.name || null,
+      avatar_url: u.avatar_url,
+      foto: u.foto,
+      role: u.role,
+      status: u.status,
+    }));
   }
 }
 
@@ -340,7 +385,7 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
     return (orgs || []).map((o) => ({ org_id: o.id, org_name: o.name }));
   }
 
-  async addSquadMember(teamId: string, userId: string, tacticalPosition = 'DFC', roleInTeam = 'Jugador'): Promise<void> {
+  async addSquadMember(teamId: string, userId: string, tacticalPosition = 'DFC', roleInTeam = 'Jugador', orgName?: string): Promise<void> {
     await supabase.from('team_members').delete().eq('team_id', teamId).eq('user_id', userId);
     const memberId = `tm-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const normalizedRole = roleInTeam === 'Capitan' ? 'Capitán' : roleInTeam;
@@ -350,6 +395,7 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
       user_id: userId,
       tactical_position: tacticalPosition,
       role_in_team: normalizedRole,
+      organization_name: orgName || null,
     });
     if (error) throw error;
     await this.updateMembersCount(teamId);

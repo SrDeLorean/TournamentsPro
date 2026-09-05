@@ -5,6 +5,7 @@ import { GameConfig } from '@/lib/games-data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface CalendarDayItem {
   dateStr: string;
@@ -28,7 +29,7 @@ export function DateCarousel({
   selectedDate,
   onSelectDate,
 }: DateCarouselProps) {
-  const brandColor = game?.brandColor || '#FF4654';
+  const brandColor = game?.brandColor || 'var(--app-accent)';
   const carouselRef = useRef<HTMLDivElement>(null);
 
   // 1-by-1 item scroll helper (148px per card + gap)
@@ -76,16 +77,17 @@ export function DateCarousel({
   const currentIdx = calendarDays.findIndex((d) => d.dateStr === selectedDate);
 
   return (
-    <div className="game-calendar-panel space-y-4 bg-[var(--bg-card)] p-4 sm:p-5 rounded-3xl border border-[var(--border-card)] shadow-xl text-center font-mono backdrop-blur-md">
-      {/* Header centered */}
-      <div className="game-calendar-heading flex items-center justify-between gap-3 text-left">
+    <div className="space-y-4 bg-[var(--bg-card)] p-4 sm:p-5 rounded-3xl border border-[var(--border-card)] shadow-xl text-center backdrop-blur-md">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 text-left">
         <div className="flex min-w-0 items-center gap-2">
-        <Calendar className="w-5 h-5 shrink-0" style={{ color: brandColor }} />
-        <span className="text-xs sm:text-sm font-mono font-black text-[var(--text-heading)] uppercase tracking-wider">
-          FECHAS DISPONIBLES EN CALENDARIO
-        </span></div>
-        <Badge variant="cyan" className="text-[10px] font-mono font-bold px-2.5 py-0.5">
-          {calendarDays.length} FECHAS
+          <Calendar className="w-5 h-5 shrink-0 text-[var(--app-accent)]" />
+          <span className="text-xs sm:text-sm font-black text-[var(--text-heading)] uppercase tracking-wider">
+            Fechas Disponibles en Calendario
+          </span>
+        </div>
+        <Badge variant="cyan" is3D className="text-[10px] font-bold px-2.5 py-0.5">
+          {calendarDays.length} Fechas
         </Badge>
       </div>
 
@@ -94,24 +96,20 @@ export function DateCarousel({
         {/* Left Arrow Button */}
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           onClick={handlePrevDate}
           disabled={currentIdx <= 0}
-          className="p-2 sm:p-3 rounded-2xl border-2 border-[var(--border-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] hover:border-cyan-400 disabled:opacity-20 disabled:pointer-events-none shrink-0 shadow-lg"
+          className="rounded-2xl border border-[var(--border-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] hover:border-[var(--app-accent)] disabled:opacity-20 disabled:pointer-events-none shrink-0 shadow-sm size-11"
           title="Anterior Fecha"
         >
           <ChevronLeft className="w-5 h-5" />
         </Button>
 
-        {/* Interactive Scrollable Carousel container for dates — WITH VISIBLE BOTTOM SCROLLBAR */}
+        {/* Interactive Scrollable Carousel container for dates */}
         <div
           ref={carouselRef}
           data-date-carousel
-          className="game-calendar-track flex items-center justify-start gap-2.5 overflow-x-auto scroll-smooth py-2 pb-3 flex-1 px-1"
-          style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: `${brandColor}90 var(--bg-main)`,
-          }}
+          className="flex items-center justify-start gap-2.5 overflow-x-auto scroll-smooth py-2 pb-3 flex-1 px-1 no-scrollbar"
         >
           {calendarDays.map((day) => {
             const isActive = selectedDate === day.dateStr;
@@ -121,38 +119,46 @@ export function DateCarousel({
                 onClick={() => onSelectDate(day.dateStr)}
                 aria-pressed={isActive}
                 aria-label={`${day.label}, ${day.count} partidos`}
-                className={`game-calendar-day flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-center min-w-[124px] shrink-0 relative overflow-hidden group ${
+                className={cn(
+                  'flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-center min-w-[124px] shrink-0 relative overflow-hidden group cursor-pointer',
                   isActive
-                    ? 'game-calendar-day-active font-black'
-                    : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-primary)] hover:border-cyan-400/60 hover:bg-[var(--bg-card-hover)]'
-                }`}
+                    ? 'shadow-lg'
+                    : 'bg-[var(--bg-main)] border-[var(--border-card)] text-[var(--text-primary)] hover:border-[var(--app-accent)] hover:bg-[var(--bg-card-hover)]'
+                )}
                 style={
                   isActive
                     ? {
-                        background: `linear-gradient(135deg, ${brandColor}, #111827)`,
-                        borderColor: brandColor,
-                        boxShadow: `0 12px 28px -16px ${brandColor}`,
-                        color: 'var(--game-on-brand)',
+                        backgroundColor: 'var(--app-accent)',
+                        borderColor: 'var(--app-accent)',
+                        color: 'var(--accent-contrast)',
+                        boxShadow: '0 8px 24px -8px var(--app-accent)',
                       }
                     : {}
                 }
               >
                 <span
-                  className={`text-[11px] font-mono uppercase font-black tracking-wider ${
-                    isActive ? 'text-white' : 'text-cyan-400'
-                  }`}
+                  className={cn(
+                    'text-[11px] uppercase font-extrabold tracking-wider',
+                    isActive ? 'text-[var(--text-heading)]' : 'text-[var(--app-accent)]'
+                  )}
                 >
                   {day.dayName}
                 </span>
-                <span className={`text-2xl font-black font-mono my-0.5 tracking-tight ${isActive ? 'text-white' : 'text-[var(--text-heading)]'}`}>
+                <span
+                  className={cn(
+                    'text-2xl font-black my-0.5 tracking-tight font-[family-name:var(--font-active)]',
+                    isActive ? 'text-[var(--text-heading)]' : 'text-[var(--text-heading)]'
+                  )}
+                >
                   {day.dayDDMM}
                 </span>
                 <span
-                  className={`text-[9px] font-mono font-bold py-0.5 px-2.5 rounded-full uppercase mt-1 transition-colors ${
+                  className={cn(
+                    'text-[9px] font-bold py-0.5 px-2.5 rounded-full uppercase mt-1 transition-colors font-[family-name:var(--font-active)]',
                     isActive
-                      ? 'bg-slate-950 text-cyan-300 border border-slate-950 font-black'
-                      : 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/30'
-                  }`}
+                      ? 'bg-[var(--app-overlay)] text-[var(--text-heading)] border border-[var(--border-card)]'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-card)]'
+                  )}
                 >
                   {day.count} PARTIDO{day.count !== 1 ? 'S' : ''}
                 </span>
@@ -164,10 +170,10 @@ export function DateCarousel({
         {/* Right Arrow Button */}
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           onClick={handleNextDate}
           disabled={currentIdx >= calendarDays.length - 1}
-          className="p-2 sm:p-3 rounded-2xl border-2 border-[var(--border-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] hover:border-cyan-400 disabled:opacity-20 disabled:pointer-events-none shrink-0 shadow-lg"
+          className="rounded-2xl border border-[var(--border-card)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] hover:border-[var(--app-accent)] disabled:opacity-20 disabled:pointer-events-none shrink-0 shadow-sm size-11"
           title="Siguiente Fecha"
         >
           <ChevronRight className="w-5 h-5" />

@@ -16,7 +16,12 @@ import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
-import { SquadRosterModal } from '@/components/teams/squad-roster-modal';
+import dynamic from 'next/dynamic';
+
+const SquadRosterModal = dynamic(
+  () => import('@/components/teams/squad-roster-modal').then((m) => m.SquadRosterModal),
+  { ssr: false }
+);
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -158,7 +163,7 @@ export default function TeamsModulePage() {
 
     const teamName = (formData.get('name') || 'NuevoEquipo') as string;
     const gameSlug = (formData.get('gameSlug') as string) || 'eafc26';
-    const brandColor = GAMES_CATALOG[gameSlug]?.brandColor || '#00FF87';
+  const brandColor = GAMES_CATALOG[gameSlug]?.brandColor || 'var(--app-positive)';
 
     startOperation(`Creación de Escuadra eSports: ${teamName}`);
 
@@ -315,7 +320,7 @@ export default function TeamsModulePage() {
           <Avatar fallback={r.tag || r.name} src={r.logo_url || r.logoUrl} size="sm" alt={r.name} />
           <div>
             <div className="font-bold text-[var(--text-heading)] text-xs">{r.name}</div>
-            <div className="text-[10px] font-mono text-[var(--accent-cyan)]">[{r.tag}]</div>
+            <div className="text-[10px] font-[family-name:var(--font-active)] text-[var(--app-accent)]">[{r.tag}]</div>
           </div>
         </div>
       ),
@@ -327,15 +332,11 @@ export default function TeamsModulePage() {
       cell: (r) => {
         const gameConfig = GAMES_CATALOG[r.game_slug];
         const gName = gameConfig?.name || r.game_slug;
-        const gColor = gameConfig?.brandColor || '#A855F7';
+        const gColor = gameConfig?.brandColor || 'var(--app-accent-2)';
         return (
           <span
-            className="px-2.5 py-1 rounded-md text-[10px] font-mono font-black uppercase border"
-            style={{
-              backgroundColor: `color-mix(in srgb, ${gColor} 15%, transparent)`,
-              borderColor: `color-mix(in srgb, ${gColor} 40%, transparent)`,
-              color: gColor,
-            }}
+            className="ui-dynamic-brand-chip px-2.5 py-1 rounded-md text-[10px] font-[family-name:var(--font-active)] font-black uppercase border"
+            style={{ '--ui-dynamic-brand': gColor } as React.CSSProperties}
           >
             {gName}
           </span>
@@ -343,14 +344,14 @@ export default function TeamsModulePage() {
       },
     },
     { header: 'Capitán Oficial', accessorKey: 'captain_name', sortable: true, className: 'font-bold text-[var(--table-cell-text)] text-xs' },
-    { header: 'Plataforma', accessorKey: 'platform', sortable: true, className: 'font-mono text-[var(--accent-cyan)] text-xs' },
+    { header: 'Plataforma', accessorKey: 'platform', sortable: true, className: 'font-[family-name:var(--font-active)] text-[var(--app-accent)] text-xs' },
     {
       header: 'Plantilla',
       accessorKey: 'members_count',
       sortable: true,
-      className: 'font-mono text-xs text-[var(--table-cell-text)]',
+      className: 'font-[family-name:var(--font-active)] text-xs text-[var(--table-cell-text)]',
       cell: (r) => (
-        <span className="font-bold text-cyan-400">
+        <span className="font-bold text-[var(--app-accent)]">
           {r.members_count || 0} / {r.max_members || 45}
         </span>
       ),
@@ -360,7 +361,7 @@ export default function TeamsModulePage() {
       sortable: true,
       accessorKey: 'status',
       cell: (r) => (
-        <Badge className={`text-[10px] uppercase ${r.is_banned ? 'bg-rose-900 text-rose-200' : 'bg-emerald-950 text-emerald-300 border-emerald-500/40'}`}>
+        <Badge className={`text-[10px] uppercase ${r.is_banned ? 'bg-[var(--app-danger-soft-strong)] text-[var(--app-danger)]' : 'bg-[var(--app-positive-soft)] text-[var(--app-positive)] border-[var(--app-positive)]/40'}`}>
           {r.is_banned ? '🔴 Baneado' : `🟢 ${r.status || 'Activo'}`}
         </Badge>
       ),
@@ -411,7 +412,7 @@ export default function TeamsModulePage() {
         <TeamDirectory
           gameName="Todas las Escuadras eSports"
           gameSlug="ALL"
-          brandColor="#00F0FF"
+          brandColor="var(--app-accent)"
           hideHeader={true}
         />
       )}
@@ -420,14 +421,14 @@ export default function TeamsModulePage() {
       {activeTab === 'crud' && isAdminOrOrganizer && (
         <div className="space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-sm font-black uppercase text-purple-300 tracking-wider flex items-center gap-2">
-              <Shield className="w-4 h-4 text-purple-400" />
+            <h3 className="text-sm font-black uppercase text-[var(--app-accent-2)] tracking-wider flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[var(--app-accent-2)]" />
               Tabla General de Escuadras eSports ({teams.length})
             </h3>
 
             <Button
               onClick={openCreateModal}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-black text-white shadow-lg hover:bg-purple-500 sm:w-auto"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--app-accent-2)] px-4 py-2 text-xs font-black text-[var(--text-heading)] shadow-lg hover:bg-[var(--app-accent-2)] sm:w-auto"
             >
               <Plus className="w-4 h-4" />
               <span>Registrar Nueva Escuadra</span>
@@ -438,7 +439,7 @@ export default function TeamsModulePage() {
             columns={teamColumns}
             data={teams}
             searchPlaceholder="Buscar por escuadra, capitán o tag..."
-            brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
             actions={(row) => {
               const isAdmin = currentUser?.role === 'Administrador';
               const organizerOrgId = currentUser?.organizationId;
@@ -452,7 +453,7 @@ export default function TeamsModulePage() {
                       size="sm"
                       variant="ghost"
                       onClick={() => setManagingRosterTeam(row)}
-                      className="text-xs text-[var(--accent-violet)] hover:bg-[var(--accent-violet-bg)] p-2 rounded-xl transition-colors"
+                      className="text-xs text-[var(--app-accent-2)] hover:bg-[var(--app-accent-2-soft)] p-2 rounded-xl transition-colors"
                       title={isAdmin ? 'Gestionar Plantilla Global (Acceso Administrador)' : 'Gestionar Plantilla (Tu Organización)'}
                     >
                       <UserPlus className="w-3.5 h-3.5" />
@@ -462,7 +463,7 @@ export default function TeamsModulePage() {
                       size="sm"
                       variant="ghost"
                       disabled
-                      className="text-xs text-slate-600 opacity-40 cursor-not-allowed p-2 rounded-xl"
+                      className="text-xs text-[var(--text-muted)] opacity-40 cursor-not-allowed p-2 rounded-xl"
                       title="Solo lectura: Esta escuadra pertenece a otra organización"
                     >
                       <UserPlus className="w-3.5 h-3.5" />
@@ -472,7 +473,7 @@ export default function TeamsModulePage() {
                     size="sm"
                     variant="ghost"
                     onClick={() => openEditModal(row)}
-                    className="text-xs text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan-bg)] p-2 rounded-xl transition-colors"
+                    className="text-xs text-[var(--app-accent)] hover:bg-[var(--app-accent-soft)] p-2 rounded-xl transition-colors"
                     title="Editar Escuadra"
                   >
                     <Edit className="w-3.5 h-3.5" />
@@ -481,7 +482,7 @@ export default function TeamsModulePage() {
                     size="sm"
                     variant="ghost"
                     onClick={() => setBanConfirmTeam(row)}
-                    className="text-xs text-[var(--accent-crimson)] hover:bg-[var(--accent-crimson-bg)] p-2 rounded-xl transition-colors"
+                    className="text-xs text-[var(--app-danger)] hover:bg-[var(--app-danger-soft)] p-2 rounded-xl transition-colors"
                     title={row.is_banned ? 'Desbanear Escuadra' : 'Banear Escuadra'}
                   >
                     <ShieldAlert className="w-3.5 h-3.5" />
@@ -496,8 +497,8 @@ export default function TeamsModulePage() {
       {/* TAB 3: MENÚ DE DESBANEO DE CLUBES */}
       {activeTab === 'banned' && isAdminOrOrganizer && (
         <div className="space-y-6">
-          <h3 className="text-sm font-black uppercase text-rose-400 tracking-wider flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-rose-500" />
+          <h3 className="text-sm font-black uppercase text-[var(--app-danger)] tracking-wider flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-[var(--app-danger)]" />
             Escuadras eSports Sancionadas ({bannedTeams.length})
           </h3>
 
@@ -505,12 +506,12 @@ export default function TeamsModulePage() {
             columns={teamColumns}
             data={bannedTeams}
             searchPlaceholder="Buscar escuadra baneada..."
-            brandColor="#F43F5E"
+          brandColor="var(--app-danger)"
             actions={(row) => (
               <Button
                 size="sm"
                 onClick={() => setBanConfirmTeam(row)}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg flex items-center gap-1"
+                className="bg-[var(--app-positive)] hover:bg-[var(--app-positive)] text-[var(--accent-contrast)] font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg flex items-center gap-1"
               >
                 <Unlock className="w-3.5 h-3.5" />
                 Desbanear Escuadra
@@ -528,10 +529,10 @@ export default function TeamsModulePage() {
         subtitle="Alta de club en la base de datos MySQL"
         onSubmit={handleCreateTeam}
         isSubmitting={isSubmitting}
-        brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
         size="xl"
       >
-        <div className="space-y-4 font-mono">
+        <div className="space-y-4 font-[family-name:var(--font-active)]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
             <ImageUploadCard
               label="Escudo Oficial del Club"
@@ -540,7 +541,7 @@ export default function TeamsModulePage() {
               fallbackType="logo"
               uploadType="logo"
               maxDimension={512}
-              brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
               uploadButtonText="Subir Escudo"
               entityName="team-new"
               onUploadSuccess={(url) => setModalLogoUrl(url)}
@@ -552,7 +553,7 @@ export default function TeamsModulePage() {
               fallbackType="banner"
               uploadType="banner"
               maxDimension={1200}
-              brandColor="#A855F7"
+          brandColor="var(--app-accent-2)"
               uploadButtonText="Subir Banner"
               entityName="team-new"
               onUploadSuccess={(url) => setModalBannerUrl(url)}
@@ -561,7 +562,7 @@ export default function TeamsModulePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Nombre de la Escuadra:" name="name" required placeholder="ViperX Gaming" />
-            <Input label="Tag / Trigram:" name="tag" required maxLength={5} placeholder="VPX" className="uppercase text-[var(--accent-violet)]" />
+            <Input label="Tag / Trigram:" name="tag" required maxLength={5} placeholder="VPX" className="uppercase text-[var(--app-accent-2)]" />
 
             <Select
               label="Capitán Oficial (Seleccionar del listado de Jugadores):"
@@ -571,7 +572,7 @@ export default function TeamsModulePage() {
               required
             >
               {usersList.map((u) => (
-                <option key={u.id} value={u.id} className="bg-[#0b101b] text-slate-100 font-semibold">
+                <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">
                   👑 {u.name} (@{u.gamertag}) — {u.role}
                 </option>
               ))}
@@ -579,21 +580,21 @@ export default function TeamsModulePage() {
 
             <Select label="Disciplina eSports:" name="gameSlug" defaultValue="eafc26">
               {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
-                <option key={slug} value={slug} className="bg-[#0b101b] text-slate-100 font-semibold">{g.name}</option>
+                <option key={slug} value={slug} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">{g.name}</option>
               ))}
             </Select>
 
             <Select label="Plataforma:" name="platform" defaultValue="CROSSPLAY">
-              <option value="CROSSPLAY" className="bg-[#0b101b] text-slate-100 font-semibold">CROSSPLAY</option>
-              <option value="PS5" className="bg-[#0b101b] text-slate-100 font-semibold">PlayStation 5</option>
-              <option value="PC" className="bg-[#0b101b] text-slate-100 font-semibold">PC Gaming</option>
-              <option value="XBOX" className="bg-[#0b101b] text-slate-100 font-semibold">Xbox Series X</option>
+              <option value="CROSSPLAY" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">CROSSPLAY</option>
+              <option value="PS5" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">PlayStation 5</option>
+              <option value="PC" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">PC Gaming</option>
+              <option value="XBOX" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">Xbox Series X</option>
             </Select>
 
             <Select label="Estado del Club:" name="status" defaultValue="Reclutando">
-              <option value="Reclutando" className="bg-[#0b101b] text-slate-100 font-semibold">🟢 Reclutando</option>
-              <option value="Plantilla Completa" className="bg-[#0b101b] text-slate-100 font-semibold">🟡 Plantilla Completa</option>
-              <option value="Inactivo" className="bg-[#0b101b] text-slate-100 font-semibold">🔴 Inactivo</option>
+              <option value="Reclutando" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🟢 Reclutando</option>
+              <option value="Plantilla Completa" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🟡 Plantilla Completa</option>
+              <option value="Inactivo" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🔴 Inactivo</option>
             </Select>
 
             <Input label="ID EA / Tag Oficial:" name="clubIdEa" placeholder="ID Oficial EA / Faceit / Riot" />
@@ -602,13 +603,13 @@ export default function TeamsModulePage() {
           {/* SECCIÓN ASIGNACIÓN DE N ENCARGADOS */}
           <div className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-mono font-bold text-[var(--text-heading)] uppercase flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-purple-400" />
+              <label className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--text-heading)] uppercase flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-[var(--app-accent-2)]" />
                 <span>Encargados del Equipo (Asignar N Encargados / DTs):</span>
               </label>
-              <Badge variant="violet" className="text-[10px] uppercase font-mono">{createEncargados.length} Asignados</Badge>
+              <Badge variant="violet" className="text-[10px] uppercase font-[family-name:var(--font-active)]">{createEncargados.length} Asignados</Badge>
             </div>
-            <p className="text-[11px] text-[var(--text-muted)] font-mono">
+            <p className="text-[11px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">
               Selecciona sub-capitanes, administradores o encargados con permisos de gestión para esta escuadra.
             </p>
 
@@ -618,11 +619,11 @@ export default function TeamsModulePage() {
                 onChange={(e) => setCreateCandidateEncargadoId(e.target.value)}
                 className="flex-1 text-xs"
               >
-                <option value="" className="bg-[#0b101b] text-slate-100">-- Seleccionar Jugador para Asignar Encargado --</option>
+                <option value="" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">-- Seleccionar Jugador para Asignar Encargado --</option>
                 {usersList
                   .filter((u) => u.id !== createCaptainId && !createEncargados.some((e) => e.id === u.id))
                   .map((u) => (
-                    <option key={u.id} value={u.id} className="bg-[#0b101b] text-slate-100 font-semibold">
+                    <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">
                       👤 {u.name} (@{u.gamertag}) — {u.role}
                     </option>
                   ))}
@@ -638,7 +639,7 @@ export default function TeamsModulePage() {
                     setCreateCandidateEncargadoId('');
                   }
                 }}
-                className="flex w-full shrink-0 items-center justify-center gap-1 bg-purple-600 text-xs font-bold text-white hover:bg-purple-500 sm:w-auto"
+                className="flex w-full shrink-0 items-center justify-center gap-1 bg-[var(--app-accent-2)] text-xs font-bold text-[var(--text-heading)] hover:bg-[var(--app-accent-2)] sm:w-auto"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Añadir Encargado
@@ -649,20 +650,20 @@ export default function TeamsModulePage() {
               {createEncargados.map((enc) => (
                 <span
                   key={enc.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/10 border border-purple-500/30 text-purple-300 font-mono shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-[var(--app-accent-2)]/10 border border-[var(--app-accent-2)]/30 text-[var(--app-accent-2)] font-[family-name:var(--font-active)] shadow-sm"
                 >
                   <span>🛡️ {enc.name} (@{enc.gamertag})</span>
                   <button
                     type="button"
                     onClick={() => setCreateEncargados((prev) => prev.filter((e) => e.id !== enc.id))}
-                    className="text-purple-400 hover:text-rose-400 transition-colors p-0.5"
+                    className="text-[var(--app-accent-2)] hover:text-[var(--app-danger)] transition-colors p-0.5"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </span>
               ))}
               {createEncargados.length === 0 && (
-                <span className="text-[11px] text-[var(--text-muted)] italic font-mono">Sin encargados secundarios asignados.</span>
+                <span className="text-[11px] text-[var(--text-muted)] italic font-[family-name:var(--font-active)]">Sin encargados secundarios asignados.</span>
               )}
             </div>
           </div>
@@ -682,10 +683,10 @@ export default function TeamsModulePage() {
           subtitle={`Tag: [${editingTeam.tag}]`}
           onSubmit={handleEditTeam}
           isSubmitting={isSubmitting}
-          brandColor="#00F0FF"
+          brandColor="var(--app-accent)"
           size="xl"
         >
-          <div className="space-y-4 font-mono">
+          <div className="space-y-4 font-[family-name:var(--font-active)]">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
               <ImageUploadCard
                 label="Escudo Oficial del Club"
@@ -694,7 +695,7 @@ export default function TeamsModulePage() {
                 fallbackType="logo"
                 uploadType="logo"
                 maxDimension={512}
-                brandColor="#00F0FF"
+          brandColor="var(--app-accent)"
                 uploadButtonText="Cambiar Escudo"
                 entityName={editingTeam.name}
                 entityId={editingTeam.id}
@@ -707,7 +708,7 @@ export default function TeamsModulePage() {
                 fallbackType="banner"
                 uploadType="banner"
                 maxDimension={1200}
-                brandColor="#00F0FF"
+          brandColor="var(--app-accent)"
                 uploadButtonText="Cambiar Banner"
                 entityName={editingTeam.name}
                 entityId={editingTeam.id}
@@ -717,7 +718,7 @@ export default function TeamsModulePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="Nombre de la Escuadra:" name="name" defaultValue={editingTeam.name} required />
-              <Input label="Tag:" name="tag" defaultValue={editingTeam.tag} required maxLength={5} className="uppercase text-[var(--accent-cyan)]" />
+              <Input label="Tag:" name="tag" defaultValue={editingTeam.tag} required maxLength={5} className="uppercase text-[var(--app-accent)]" />
 
               <Select
                 label="Capitán Oficial (Seleccionar del listado de Jugadores):"
@@ -727,7 +728,7 @@ export default function TeamsModulePage() {
                 required
               >
                 {usersList.map((u) => (
-                  <option key={u.id} value={u.id} className="bg-[#0b101b] text-slate-100 font-semibold">
+                  <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">
                     👑 {u.name} (@{u.gamertag}) — {u.role}
                   </option>
                 ))}
@@ -735,34 +736,34 @@ export default function TeamsModulePage() {
               
               <Select label="Disciplina eSports:" name="gameSlug" defaultValue={editingTeam.game_slug || 'eafc26'}>
                 {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
-                  <option key={slug} value={slug} className="bg-[#0b101b] text-slate-100 font-semibold">{g.name}</option>
+                  <option key={slug} value={slug} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">{g.name}</option>
                 ))}
               </Select>
 
               <Select label="Plataforma:" name="platform" defaultValue={editingTeam.platform || 'CROSSPLAY'}>
-                <option value="CROSSPLAY" className="bg-[#0b101b] text-slate-100 font-semibold">CROSSPLAY</option>
-                <option value="PS5" className="bg-[#0b101b] text-slate-100 font-semibold">PlayStation 5</option>
-                <option value="PC" className="bg-[#0b101b] text-slate-100 font-semibold">PC Gaming</option>
-                <option value="XBOX" className="bg-[#0b101b] text-slate-100 font-semibold">Xbox Series X</option>
+                <option value="CROSSPLAY" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">CROSSPLAY</option>
+                <option value="PS5" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">PlayStation 5</option>
+                <option value="PC" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">PC Gaming</option>
+                <option value="XBOX" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">Xbox Series X</option>
               </Select>
 
               <Select label="Estado del Club:" name="status" defaultValue={editingTeam.status || 'Reclutando'}>
-                <option value="Reclutando" className="bg-[#0b101b] text-slate-100 font-semibold">🟢 Reclutando</option>
-                <option value="Plantilla Completa" className="bg-[#0b101b] text-slate-100 font-semibold">🟡 Plantilla Completa</option>
-                <option value="Inactivo" className="bg-[#0b101b] text-slate-100 font-semibold">🔴 Inactivo</option>
+                <option value="Reclutando" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🟢 Reclutando</option>
+                <option value="Plantilla Completa" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🟡 Plantilla Completa</option>
+                <option value="Inactivo" className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">🔴 Inactivo</option>
               </Select>
             </div>
 
             {/* SECCIÓN ASIGNACIÓN DE N ENCARGADOS PARA EDICIÓN */}
             <div className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-mono font-bold text-[var(--text-heading)] uppercase flex items-center gap-1.5">
-                  <Shield className="w-4 h-4 text-cyan-400" />
+                <label className="text-xs font-[family-name:var(--font-active)] font-bold text-[var(--text-heading)] uppercase flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-[var(--app-accent)]" />
                   <span>Encargados del Equipo (Asignar N Encargados / DTs):</span>
                 </label>
-                <Badge variant="cyan" className="text-[10px] uppercase font-mono">{editEncargados.length} Asignados</Badge>
+                <Badge variant="cyan" className="text-[10px] uppercase font-[family-name:var(--font-active)]">{editEncargados.length} Asignados</Badge>
               </div>
-              <p className="text-[11px] text-[var(--text-muted)] font-mono">
+              <p className="text-[11px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">
                 Modifica los sub-capitanes o encargados secundarios con permisos sobre la escuadra.
               </p>
 
@@ -772,11 +773,11 @@ export default function TeamsModulePage() {
                   onChange={(e) => setEditCandidateEncargadoId(e.target.value)}
                   className="flex-1 text-xs"
                 >
-                  <option value="" className="bg-[#0b101b] text-slate-100">-- Seleccionar Jugador para Asignar Encargado --</option>
+                  <option value="" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">-- Seleccionar Jugador para Asignar Encargado --</option>
                   {usersList
                     .filter((u) => u.id !== editCaptainId && !editEncargados.some((e) => e.id === u.id))
                     .map((u) => (
-                      <option key={u.id} value={u.id} className="bg-[#0b101b] text-slate-100 font-semibold">
+                      <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">
                         👤 {u.name} (@{u.gamertag}) — {u.role}
                       </option>
                     ))}
@@ -792,7 +793,7 @@ export default function TeamsModulePage() {
                       setEditCandidateEncargadoId('');
                     }
                   }}
-                  className="flex w-full shrink-0 items-center justify-center gap-1 bg-cyan-600 text-xs font-bold text-slate-950 hover:bg-cyan-500 sm:w-auto"
+                  className="flex w-full shrink-0 items-center justify-center gap-1 bg-[var(--app-accent)] text-xs font-bold text-[var(--accent-contrast)] hover:bg-[var(--app-accent)] sm:w-auto"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Añadir Encargado
@@ -803,20 +804,20 @@ export default function TeamsModulePage() {
                 {editEncargados.map((enc) => (
                   <span
                     key={enc.id}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono shadow-sm"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-[var(--app-accent)]/10 border border-[var(--app-accent)]/30 text-[var(--app-accent)] font-[family-name:var(--font-active)] shadow-sm"
                   >
                     <span>🛡️ {enc.name} (@{enc.gamertag})</span>
                     <button
                       type="button"
                       onClick={() => setEditEncargados((prev) => prev.filter((e) => e.id !== enc.id))}
-                      className="text-cyan-400 hover:text-rose-400 transition-colors p-0.5"
+                      className="text-[var(--app-accent)] hover:text-[var(--app-danger)] transition-colors p-0.5"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </span>
                 ))}
                 {editEncargados.length === 0 && (
-                  <span className="text-[11px] text-[var(--text-muted)] italic font-mono">Sin encargados secundarios asignados.</span>
+                  <span className="text-[11px] text-[var(--text-muted)] italic font-[family-name:var(--font-active)]">Sin encargados secundarios asignados.</span>
                 )}
               </div>
             </div>

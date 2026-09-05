@@ -20,7 +20,6 @@
   "src/features/design-system/components/game-ui-showcase-client.tsx": 469,
   "src/components/teams/create-team-modal.tsx": 465,
   "src/components/stats/esports-analytics-view.tsx": 432,
-  "src/features/design-system/components/components-showcase-client.tsx": 430,
   "src/components/game/new-squad-management.tsx": 410,
   "src/components/ui/esports-card.tsx": 396,
   "src/features/auth/components/register-page-client.tsx": 393,

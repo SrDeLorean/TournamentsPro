@@ -31,7 +31,7 @@ export default async function GameLayout({ children, params }: GameLayoutProps) 
 
   return (
     <div
-      className="game-portal game-slug-shell min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)]"
+      className="game-route-surface game-portal game-slug-shell min-h-screen"
       data-game={gameSlug}
       data-visual-scene={game.visualTheme.scene}
       style={getGamePortalStyle(game)}

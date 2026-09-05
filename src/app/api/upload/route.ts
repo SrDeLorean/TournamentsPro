@@ -50,17 +50,18 @@ export async function POST(request: Request) {
     if (rawTeamId && !isSpecialId && rawTeamId !== actor.userId) {
       const { dbProvider } = await import('@/lib/db/provider');
       const team = await dbProvider.teams.findById(rawTeamId);
-      if (team) {
-        const managers = await dbProvider.teams.getManagers(rawTeamId);
-        if (!canManageTeam(actor, {
-          captainId: team.captainId,
-          organizationId: team.organizationId,
-          managerIds: managers,
-        })) {
-          return apiError('No tienes permisos para modificar los archivos de este equipo', 403, 'FORBIDDEN');
-        }
-        mayReplaceExistingFile = true;
+      if (!team) {
+        return apiError('El equipo indicado no existe', 404, 'TEAM_NOT_FOUND');
       }
+      const managers = await dbProvider.teams.getManagers(rawTeamId);
+      if (!canManageTeam(actor, {
+        captainId: team.captainId,
+        organizationId: team.organizationId,
+        managerIds: managers,
+      })) {
+        return apiError('No tienes permisos para modificar los archivos de este equipo', 403, 'FORBIDDEN');
+      }
+      mayReplaceExistingFile = true;
     } else if (rawTeamId === actor.userId || isSpecialId) {
       mayReplaceExistingFile = true;
     }

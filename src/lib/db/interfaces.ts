@@ -7,7 +7,7 @@ export interface FindOptions {
 }
 
 export interface IRepository<T> {
-  findById(id: string): Promise<T | null>;
+  findById(id: string, options?: { forUpdate?: boolean }): Promise<T | null>;
   findAll(options?: FindOptions): Promise<T[]>;
   create(data: Partial<T>): Promise<T>;
   update(id: string, data: Partial<T>): Promise<T | null>;
@@ -47,16 +47,10 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string | null;
+  gameProfiles?: Record<string, unknown> | string | null;
 }
 
 export interface Organization {
-  isBanned?: boolean;
-  banReason?: string | null;
-  bannedAt?: string | null;
-  socialMedia?: Record<string, unknown> | null;
-  status?: string;
-  slug?: string;
-  foundedYear?: string | null;
   id: string;
   name: string;
   tag: string;
@@ -66,6 +60,15 @@ export interface Organization {
   description: string | null;
   country: string;
   allowedGames: string[];
+  slug?: string;
+  foundedYear?: string | null;
+  rating?: string | number | null;
+  website?: string | null;
+  socialMedia?: Record<string, unknown> | null;
+  status?: string;
+  isBanned?: boolean;
+  banReason?: string | null;
+  bannedAt?: string | null;
   createdAt: string;
 }
 
@@ -87,6 +90,7 @@ export interface Team {
   logoUrl: string | null;
   bannerUrl: string | null;
   status: string;
+  palmares?: string | null;
   clubIdEa: string | null;
   isBanned?: boolean;
   banReason?: string | null;
@@ -164,7 +168,7 @@ export interface ITeamRepository extends IRepository<Team> {
   getSquad(teamId: string): Promise<any[]>;
   getAcceptedOffers(teamId: string): Promise<any[]>;
   getTeamCompetitionOrganizations(teamId: string): Promise<Array<{ org_id: string; org_name: string }>>;
-  addSquadMember(teamId: string, userId: string, position: string, role: string): Promise<void>;
+  addSquadMember(teamId: string, userId: string, position?: string, role?: string, orgName?: string): Promise<void>;
   removeSquadMember(teamId: string, userId: string, orgName?: string): Promise<void>;
   updateSquadMemberRole(teamId: string, userId: string, newRole: string, userName?: string): Promise<void>;
   updateSquadMemberJersey(memberId: string, jerseyNumber: number | null): Promise<void>;
@@ -187,12 +191,12 @@ export interface ISeasonRepository extends IRepository<Season> {
 }
 
 export interface Match {
-  createdAt?: string;
   id: string;
   tournamentId: string | null;
   competitionId: string | null;
   round: number | null;
   matchday: number | null;
+  stage?: string | null;
   roundName: string | null;
   groupName: string | null;
   teamHomeId: string | null;
@@ -215,6 +219,7 @@ export interface Match {
   scheduledAt: string | null;
   scheduledTime: string | null;
   status: string;
+  createdAt?: string;
 }
 
 export interface IMatchRepository extends IRepository<Match> {

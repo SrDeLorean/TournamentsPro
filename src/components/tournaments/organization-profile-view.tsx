@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { GameConfig } from '@/lib/games-data';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import { SubSubNavbar, SubSubTabOption } from '@/components/layout/sub-sub-navbar';
+import { PublicProfileShell } from '@/components/public/public-profile-shell';
 import {
   Building2, Trophy, Shield, ArrowLeft, Gamepad2, Award,
   Globe, Star, ExternalLink, UserCheck, Activity, Mail, MapPin, BarChart2,
@@ -163,7 +164,7 @@ export function OrganizationProfileView({
   context = 'game',
 }: OrganizationProfileViewProps) {
   const [activeTab, setActiveTab] = useState<OrgTab>('competencias');
-  const brandColor = gameConfig?.brandColor || '#077D7E';
+  const brandColor = gameConfig?.brandColor || 'var(--app-accent)';
 
   const orgSubSubTabs: SubSubTabOption<OrgTab>[] = [
     { id: 'competencias', label: 'Torneos & Ligas', icon: <Trophy className="w-3.5 h-3.5" />, badge: competitions.length },
@@ -188,108 +189,43 @@ export function OrganizationProfileView({
   const teamBaseHref = context === 'global' ? '/equipos' : `/${gameSlug}/equipos`;
 
   return (
-    <div
-      className="org-profile animate-in fade-in duration-300 text-[var(--text-primary)]"
-      style={{
-        '--game-brand': brandColor,
-        '--game-accent': gameConfig.accentColor || '#00F0FF',
-      } as React.CSSProperties}
-    >
-      {/* ── IDENTIDAD PRINCIPAL: BANNER + LOGO ─────────────────────────── */}
-      <section className="org-profile-hero">
-        <div className="org-profile-banner">
-          <Image
-            src={orgBanner}
-            alt={`Banner de ${org.name}`}
-            fill
-            sizes="(min-width: 1440px) 1280px, 100vw"
-            priority
-            unoptimized={shouldBypassImageOptimization(orgBanner)}
-            onError={(e) => {
-              e.currentTarget.src = '/images/default/banner-default.jpg';
-            }}
-            className="object-cover"
-          />
-          <div className="org-profile-banner-shade" />
-          <div className="org-profile-banner-topline">
-            <Link href={directoryHref} className="org-profile-back-link">
-              <ArrowLeft className="size-4" /> Directorio
-            </Link>
-            <span className="org-profile-portal-label"><Radio className="size-3.5" /> Portal oficial {gameConfig.name}</span>
-          </div>
-        </div>
-
-        <div className="org-profile-identity">
-          <div className="org-profile-logo" style={{ borderColor: brandColor }}>
-            <Image
-              src={orgLogo}
-              alt={`Logo de ${org.name}`}
-              fill
-              sizes="144px"
-              priority
-              unoptimized={shouldBypassImageOptimization(orgLogo)}
-              onError={(event) => { event.currentTarget.src = '/images/default/logo-default.png'; }}
-              className="object-contain"
-            />
-          </div>
-
-          <div className="org-profile-copy">
-            <div className="org-profile-eyebrow">
-              {org.tag ? <span>[{org.tag}]</span> : null}
-              {isVerified ? <span className="is-verified"><CheckCircle2 className="size-3.5" /> Organización verificada</span> : null}
-              <span><MapPin className="size-3.5" /> {countryVal}</span>
-            </div>
-            <h1>{org.name}</h1>
-            <p>{org.description || `Comunidad oficial y sede de torneos eSports activa en el circuito competitivo de ${gameConfig.name}.`}</p>
-
-            {socialEntries.length ? (
-              <div className="org-profile-socials" aria-label="Redes sociales de la organización">
-                {socialEntries.slice(0, 6).map(([platform, value]) => (
-                  <a key={platform} href={normalizeExternalHref(value, platform)} target="_blank" rel="noopener noreferrer">
-                    <Link2 className="size-3.5" /><span>{platform}</span>
-                  </a>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="org-profile-actions">
+    <PublicProfileShell
+      entityId={org.id}
+      transitionPrefix="organization"
+      accentColor={brandColor}
+      bannerUrl={orgBanner}
+      bannerAlt={`Banner de ${org.name}`}
+      logoUrl={orgLogo}
+      logoAlt={`Logo de ${org.name}`}
+      logoFallback={<Building2 className="size-12" />}
+      logoFit="contain"
+      eyebrow={<>{isVerified ? <><CheckCircle2 className="size-3.5" />Organización verificada</> : <><Radio className="size-3.5" />Portal oficial</>}</>}
+      title={org.name}
+      badge={org.tag || countryVal}
+      description={org.description || `Comunidad oficial y sede de torneos eSports activa en el circuito competitivo de ${gameConfig.name}.`}
+      facts={<><span><MapPin className="size-3.5" />{countryVal}</span><span><Gamepad2 className="size-3.5" />{gameConfig.name}</span><span className="is-active"><CheckCircle2 className="size-3.5" />{org.status || 'Activa'}</span></>}
+      actions={<>
             {org.website && (
               <a
                 href={normalizeExternalHref(org.website)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="org-profile-primary-action"
+                className="public-team-primary-action"
               >
                 <Globe className="size-4" /> Sitio oficial <ExternalLink className="size-3.5" />
               </a>
             )}
-            <Link href={directoryHref} className="org-profile-secondary-action">
-              <ArrowLeft className="size-4" /> Volver
-            </Link>
-          </div>
-        </div>
-
-        <dl className="org-profile-metrics">
-          <div><dt><Trophy className="size-4" /> Competencias</dt><dd>{competitions.length}<span>{activeCompetitions} activas</span></dd></div>
-          <div><dt><Shield className="size-4" /> Clubes</dt><dd>{teams.length}<span>afiliados</span></dd></div>
-          <div><dt><Users className="size-4" /> Staff</dt><dd>{organizers.length}<span>organizadores</span></dd></div>
-          <div><dt><Activity className="size-4" /> Partidos</dt><dd>{matches.length}<span>{liveMatches} en vivo</span></dd></div>
-          <div><dt><Star className="size-4" /> Prestigio</dt><dd>{ratingVal}<span>rating oficial</span></dd></div>
-        </dl>
-      </section>
-
-      {/* ── 2. SUB-SUB-NAVBAR TABS ────────────────────────────────────────── */}
-      <SubSubNavbar
-        tabs={orgSubSubTabs}
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        brandColor={brandColor}
-        className="org-profile-tabs"
-      />
-
-      {/* ── 3. TAB CONTENTS ────────────────────────────────────────────── */}
-      <div className="org-profile-content pb-16">
+      </>}
+      metrics={[
+        { value: competitions.length, label: `${activeCompetitions} competencias activas` },
+        { value: teams.length, label: 'clubes afiliados' },
+        { value: organizers.length, label: 'organizadores' },
+        { value: matches.length, label: `${liveMatches} partidos en vivo` },
+        { value: ratingVal, label: 'prestigio oficial' },
+      ]}
+      tabs={<SubSubNavbar tabs={orgSubSubTabs} activeTab={activeTab} onSelectTab={setActiveTab} brandColor={brandColor} />}
+      contentClassName="org-profile-content pb-16"
+    >
         {/* ── TAB 1: TORNEOS & LIGAS ─────────────────────────────────── */}
         {activeTab === 'competencias' && (
           <div className="space-y-6">
@@ -314,6 +250,8 @@ export function OrganizationProfileView({
                 return (
                   <EsportsCard
                     key={comp.id}
+                    entityType="competition"
+                    gameSlug={comp.game_slug || gameSlug}
                     href={`${organizationBaseHref}/competencias/${comp.id}`}
                     title={comp.name}
                     subtitle={comp.mode_format || '11v11'}
@@ -328,8 +266,8 @@ export function OrganizationProfileView({
                         : { text: 'INSCRIPCIONES ABIERTAS', variant: 'cyan' },
                     ]}
                     stats={[
-                      { icon: <Award className="w-3.5 h-3.5 text-amber-400" />, label: 'Prize Pool', value: comp.prize_pool || 'Por Definir', highlight: true },
-                      { icon: <Shield className="w-3.5 h-3.5 text-emerald-400" />, label: 'Mercado', value: comp.transfer_market_mode || 'ABIERTO' },
+                      { icon: <Award className="w-3.5 h-3.5 text-[var(--app-warning)]" />, label: 'Prize Pool', value: comp.prize_pool || 'Por Definir', highlight: true },
+                      { icon: <Shield className="w-3.5 h-3.5 text-[var(--app-positive)]" />, label: 'Mercado', value: comp.transfer_market_mode || 'ABIERTO' },
                     ]}
                     progress={{
                       label: 'EQUIPOS REGISTRADOS',
@@ -338,12 +276,11 @@ export function OrganizationProfileView({
                     }}
                     footerLeft={
                       <span className="flex items-center gap-1.5 text-[11px]">
-                        <Activity className="w-3.5 h-3.5" style={{ color: brandColor }} />
+                        <Activity className="ui-dynamic-brand-ink w-3.5 h-3.5" />
                         <span>{comp.total_matches || 0} Partidos</span>
                       </span>
                     }
                     actionText="EXPLORAR FIXTURE"
-                    brandColor={brandColor}
                     animationDelay={index * 60}
                   />
                 );
@@ -425,6 +362,7 @@ export function OrganizationProfileView({
                   key={team.id}
                   href={`${teamBaseHref}/${team.id}`}
                   entityType="team"
+                  gameSlug={gameSlug}
                   title={team.name}
                   subtitle={`${gameConfig.name} · ${team.platform || 'CROSSPLAY'}`}
                   description={team.description || `Escuadra afiliada oficialmente a ${org.name}.`}
@@ -439,7 +377,6 @@ export function OrganizationProfileView({
                   ]}
                   footerLeft={<span className="flex items-center gap-1.5"><Shield className="size-3.5" /> {org.tag || org.name}</span>}
                   actionText="VER CLUB"
-                  brandColor={brandColor}
                   animationDelay={index * 60}
                 />
               ))}
@@ -516,7 +453,6 @@ export function OrganizationProfileView({
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PublicProfileShell>
   );
 }

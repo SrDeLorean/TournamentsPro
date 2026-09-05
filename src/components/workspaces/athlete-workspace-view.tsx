@@ -5,7 +5,6 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
   Activity,
-  ArrowRight,
   BarChart3,
   BriefcaseBusiness,
   CheckCircle2,
@@ -14,12 +13,10 @@ import {
   FileText,
   History,
   MessageSquare,
-  Shield,
   Sparkles,
   Star,
   Trophy,
   User,
-  Users,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
@@ -41,7 +38,9 @@ import {
   getPlayerContractOffersAction,
   respondPlayerContractOfferAction,
 } from '@/app/actions/transfers';
+import { getUserEnrolledTeamsAction } from '@/app/actions/squads';
 import type { AthleteWorkspaceSection } from '@/lib/workspace-sections';
+import { AthleteOverview, AthleteTeams, type AthleteMatchSummary, type AthleteTeamSummary } from '@/components/workspaces/athlete-dashboard-summary';
 
 const ChatSystem = dynamic(() => import('@/components/chat/chat-system').then((module) => module.ChatSystem), {
   loading: WorkspaceLoading,
@@ -99,12 +98,14 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
   const [offers, setOffers] = useState<ContractOffer[]>([]);
   const [history, setHistory] = useState<TransferHistoryEntry[]>([]);
   const [stats, setStats] = useState<AthleteStatsData | null>(null);
+  const [teams, setTeams] = useState<AthleteTeamSummary[]>([]);
+  const [matches, setMatches] = useState<AthleteMatchSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [offerDecision, setOfferDecision] = useState<{ offer: ContractOffer; accept: boolean } | null>(null);
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
   const loadMarketData = useCallback(async () => {
-    if (!currentUser?.id || !['ofertas', 'historial'].includes(section)) return;
+    if (!currentUser?.id || !['resumen', 'ofertas', 'historial'].includes(section)) return;
     try {
       const [offersResult, historyResult] = await Promise.all([
         getPlayerContractOffersAction(currentUser.id, game.slug),
@@ -118,6 +119,24 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
     } finally {
       setIsLoading(false);
     }
+  }, [currentUser?.id, game.slug, section]);
+
+  useEffect(() => {
+    if (!currentUser?.id || !['resumen', 'equipos'].includes(section)) return;
+    let active = true;
+    getUserEnrolledTeamsAction(currentUser.id, game.slug)
+      .then(async (result) => {
+        if (!active || !result.success) return;
+        const enrolled = (result.teams || []) as AthleteTeamSummary[];
+        setTeams(enrolled);
+        const response = await fetch(`/api/matches?gameSlug=${encodeURIComponent(game.slug)}`);
+        const payload = await response.json() as { matches?: AthleteMatchSummary[] };
+        if (!active) return;
+        const teamIds = new Set(enrolled.map((team) => team.id));
+        setMatches((payload.matches || []).filter((match) => teamIds.has(match.teamHomeId || match.homeTeamId || '') || teamIds.has(match.teamAwayId || match.awayTeamId || '')));
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
   }, [currentUser?.id, game.slug, section]);
 
   useEffect(() => {
@@ -217,11 +236,11 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
         </ManagementMetrics>
       ) : null}
 
-      {section === 'resumen' ? <AthleteOverview base={base} player={player} /> : null}
+      {section === 'resumen' ? <AthleteOverview base={base} player={player} teams={teams} matches={matches} offerCount={offers.length} /> : null}
       {section === 'ficha' ? <div className="context-workspace-embedded"><PlayerProfileView player={player} brandColor={game.brandColor} context="game" backHref={base} /></div> : null}
       {section === 'estadisticas' ? <AthleteStats stats={stats} /> : null}
       {section === 'ofertas' ? <AthleteOffers offers={offers} loading={isLoading} onDecision={(offer, accept) => setOfferDecision({ offer, accept })} /> : null}
-      {section === 'equipos' ? <AthleteTeams player={player} gameSlug={game.slug} /> : null}
+      {section === 'equipos' ? <AthleteTeams player={player} gameSlug={game.slug} teams={teams} /> : null}
       {section === 'historial' ? <AthleteHistory history={history} loading={isLoading} /> : null}
       {section === 'mensajes' ? <ManagementSection title="Conversaciones" description="Canales privados y soporte competitivo." icon={MessageSquare} tone="cyan" className="[&>div:last-child]:p-0"><ChatSystem /></ManagementSection> : null}
       {section === 'ajustes' ? <div className="context-workspace-embedded"><UserProfileSettingsView brandColor={game.brandColor} embedded /></div> : null}
@@ -240,26 +259,12 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
   );
 }
 
-function AthleteOverview({ base, player }: { base: string; player: PlayerData }) {
-  const shortcuts = [
-    { href: `${base}/ficha`, label: 'Ficha pública', detail: 'Revisa tu presentación', icon: User },
-    { href: `${base}/estadisticas`, label: 'Rendimiento', detail: 'Analiza tus métricas', icon: BarChart3 },
-    { href: `${base}/ofertas`, label: 'Contratos', detail: 'Gestiona propuestas', icon: FileText },
-    { href: `${base}/mensajes`, label: 'Mensajes', detail: 'Habla con clubes', icon: MessageSquare },
-  ];
-  return <div className="context-workspace-grid">{shortcuts.map(({ href, label, detail, icon: Icon }) => <Link key={href} href={href} className="context-workspace-shortcut"><Icon /><div><strong>{label}</strong><span>{detail}</span></div><ArrowRight /></Link>)}<ManagementSection title="Situación deportiva" description="Resumen visible para tu gestión personal." icon={Shield} tone="emerald" className="context-workspace-wide"><div className="context-workspace-facts"><div><span>Club actual</span><strong>{player.teamName}</strong></div><div><span>Plataforma</span><strong>{player.platform}</strong></div><div><span>Posición</span><strong>{player.position}</strong></div><div><span>Estado</span><strong>{player.status || 'Disponible'}</strong></div></div></ManagementSection></div>;
-}
-
 function AthleteStats({ stats }: { stats: AthleteStatsData | null }) {
   return <ManagementSection title="Rendimiento registrado" description="Datos agregados desde los reportes oficiales de encuentros." icon={BarChart3} tone="emerald">{stats && stats.matches > 0 ? <div className="context-workspace-facts"><div><span>Partidos</span><strong>{stats.matches}</strong></div><div><span>Goles / kills</span><strong>{stats.goals}</strong></div><div><span>Asistencias</span><strong>{stats.assists}</strong></div><div><span>Victorias</span><strong>{stats.winrate}</strong></div></div> : <WorkspaceEmpty icon={BarChart3} title="Aún no hay estadísticas verificadas" description="Los indicadores aparecerán cuando existan reportes oficiales vinculados a tu usuario." />}</ManagementSection>;
 }
 
 function AthleteOffers({ offers, loading, onDecision }: { offers: ContractOffer[]; loading: boolean; onDecision: (offer: ContractOffer, accept: boolean) => void }) {
   return <ManagementSection title="Propuestas recibidas" description="Contratos pendientes de una respuesta." icon={FileText} tone="violet">{loading ? <WorkspaceLoading /> : offers.length ? <div className="context-record-list">{offers.map((offer) => <article key={offer.id}><div className="context-record-icon">{offer.teamTag?.slice(0, 2) || 'CL'}</div><div><strong>{offer.teamName}</strong><span>{offer.position} · {offer.pitchMessage}</span><small><Clock3 />{new Date(offer.createdAt).toLocaleDateString('es-CL')}</small></div><div className="context-record-actions"><Button size="sm" onClick={() => onDecision(offer, true)}><CheckCircle2 className="size-3.5" />Aceptar</Button><Button size="sm" variant="ghost" onClick={() => onDecision(offer, false)}>Rechazar</Button></div></article>)}</div> : <WorkspaceEmpty icon={Sparkles} title="No tienes ofertas pendientes" description="Cuando un club envíe una propuesta contractual aparecerá aquí." />}</ManagementSection>;
-}
-
-function AthleteTeams({ player, gameSlug }: { player: PlayerData; gameSlug: string }) {
-  return <ManagementSection title="Vínculo de plantilla" description="Equipo registrado para la disciplina activa." icon={Users} tone="cyan">{player.teamId ? <div className="context-team-card"><Shield /><div><strong>{player.teamName}</strong><span>{player.role || 'Jugador'} · {player.position}</span></div><Link href={`/${gameSlug}/equipos/${player.teamId}`}><Button variant="outline">Abrir ficha pública<ArrowRight className="size-4" /></Button></Link></div> : <WorkspaceEmpty icon={BriefcaseBusiness} title="Actualmente eres agente libre" description="Mantén tu ficha actualizada para recibir propuestas de clubes." />}</ManagementSection>;
 }
 
 function AthleteHistory({ history, loading }: { history: TransferHistoryEntry[]; loading: boolean }) {

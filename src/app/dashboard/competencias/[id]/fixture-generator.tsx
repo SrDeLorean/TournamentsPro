@@ -412,14 +412,14 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="glass-panel p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-purple-950/80 border border-purple-500/40 text-purple-400">
+              <div className="p-2.5 rounded-xl bg-[var(--app-accent-2-soft)]/80 border border-[var(--app-accent-2)]/40 text-[var(--app-accent-2)]">
                 <Trophy className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center gap-2">
+                <h3 className="text-sm font-black uppercase text-[var(--text-heading)] tracking-wider flex items-center gap-2">
                   Fixture Oficial Publicado ({matches.length} Partidos)
                 </h3>
-                <p className="text-xs text-slate-400 font-mono">
+                <p className="text-xs text-[var(--text-muted)] font-[family-name:var(--font-active)]">
                   Enfrentamientos en simultáneo con soporte de Auto-Avance en llaves.
                 </p>
               </div>
@@ -427,9 +427,9 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
 
             <Button
               onClick={handleStartRegeneration}
-              className="bg-rose-950/80 text-rose-300 border border-rose-500/40 hover:bg-rose-900 font-black text-xs px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2"
+              className="bg-[var(--app-danger-soft)]/80 text-[var(--app-danger)] border border-[var(--app-danger)]/40 hover:bg-[var(--app-danger-soft-strong)] font-black text-xs px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2"
             >
-              <RefreshCw className="w-4 h-4 text-rose-400" />
+              <RefreshCw className="w-4 h-4 text-[var(--app-danger)]" />
               <span>Modificar / Regenerar Fixture</span>
             </Button>
           </div>
@@ -443,7 +443,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                   size="sm"
                   onClick={() => setCurrentMatchdayIndex((prev) => Math.max(0, prev - 1))}
                   disabled={currentMatchdayIndex === 0}
-                  className="px-3 border-white/10 bg-slate-900/50 hover:bg-slate-800 text-slate-300"
+                  className="px-3 border-[var(--text-heading)]/10 bg-[var(--app-surface-2)]/50 hover:bg-[var(--app-surface-2)] text-[var(--text-secondary)]"
                 >
                   {'<'}
                 </Button>
@@ -455,10 +455,10 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentMatchdayIndex(idx)}
-                      className={`w-10 h-10 p-0 border-white/10 ${
+                      className={`w-10 h-10 p-0 border-[var(--text-heading)]/10 ${
                         idx === currentMatchdayIndex
-                          ? 'bg-cyan-600 text-white font-black border-cyan-400'
-                          : 'bg-slate-900/50 hover:bg-slate-800 text-slate-400'
+                          ? 'bg-[var(--app-accent)] text-[var(--text-heading)] font-black border-[var(--app-accent)]'
+                          : 'bg-[var(--app-surface-2)]/50 hover:bg-[var(--app-surface-2)] text-[var(--text-muted)]'
                       }`}
                     >
                       {jornadaNum}
@@ -471,7 +471,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                   size="sm"
                   onClick={() => setCurrentMatchdayIndex((prev) => Math.min(matchdayKeys.length - 1, prev + 1))}
                   disabled={currentMatchdayIndex === matchdayKeys.length - 1}
-                  className="px-3 border-white/10 bg-slate-900/50 hover:bg-slate-800 text-slate-300"
+                  className="px-3 border-[var(--text-heading)]/10 bg-[var(--app-surface-2)]/50 hover:bg-[var(--app-surface-2)] text-[var(--text-secondary)]"
                 >
                   {'>'}
                 </Button>
@@ -487,19 +487,19 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
 
                 return (
                   <div className="glass-panel rounded-2xl p-4 space-y-3 shadow-xl overflow-x-auto">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                      <div className="flex items-center gap-2 text-xs font-black uppercase text-cyan-300 font-mono">
-                        <Calendar className="w-4 h-4 text-cyan-400" />
+                    <div className="flex items-center justify-between border-b border-[var(--text-heading)]/10 pb-2.5">
+                      <div className="flex items-center gap-2 text-xs font-black uppercase text-[var(--app-accent)] font-[family-name:var(--font-active)]">
+                        <Calendar className="w-4 h-4 text-[var(--app-accent)]" />
                         <span>Jornada {currentMatchdayNum} ({currentMatchGroup.length} Partidos)</span>
                       </div>
-                      <Badge variant="cyan" className="text-[10px] font-mono uppercase">
+                      <Badge variant="cyan" className="text-[10px] font-[family-name:var(--font-active)] uppercase">
                         {formattedDate}
                       </Badge>
                     </div>
 
-                    <table className="w-full text-left text-xs font-mono">
+                    <table className="w-full text-left text-xs font-[family-name:var(--font-active)]">
                       <thead>
-                        <tr className="border-b border-white/10 text-slate-400 text-[10px] uppercase">
+                        <tr className="border-b border-[var(--text-heading)]/10 text-[var(--text-muted)] text-[10px] uppercase">
                           <th className="p-2">ID</th>
                           <th className="p-2 text-right">Equipo Local</th>
                           <th className="p-2 text-center">Logo</th>
@@ -522,35 +522,35 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                           const isTerminado = m.status === 'TERMINADO' || m.status === 'FINALIZADO';
 
                           return (
-                            <tr key={m.id} className="border-b border-white/5 hover:bg-slate-900/40 transition-colors">
-                              <td className="p-2 text-slate-500 font-bold text-[10px]">{m.id.slice(-6)}</td>
-                              <td className="p-2 text-right font-black text-white">{homeName}</td>
+                            <tr key={m.id} className="border-b border-[var(--text-heading)]/5 hover:bg-[var(--app-surface-2)]/40 transition-colors">
+                              <td className="p-2 text-[var(--text-muted)] font-bold text-[10px]">{m.id.slice(-6)}</td>
+                              <td className="p-2 text-right font-black text-[var(--text-heading)]">{homeName}</td>
                               <td className="p-2 text-center">
-                                <div className="w-7 h-7 mx-auto rounded-lg bg-slate-900 border border-purple-500/40 flex items-center justify-center font-black text-[10px] text-purple-300">
+                                <div className="w-7 h-7 mx-auto rounded-lg bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/40 flex items-center justify-center font-black text-[10px] text-[var(--app-accent-2)]">
                                   {homeName.slice(0, 3).toUpperCase()}
                                 </div>
                               </td>
                               <td className="p-2 text-center font-black text-sm">
                                 {isTerminado ? (
-                                  <span className="text-emerald-400">{homeScore}</span>
+                                  <span className="text-[var(--app-positive)]">{homeScore}</span>
                                 ) : (
-                                  <span className="input-theme px-2 py-0.5 rounded text-slate-400 font-mono text-xs opacity-70">-</span>
+                                  <span className="input-theme px-2 py-0.5 rounded text-[var(--text-muted)] font-[family-name:var(--font-active)] text-xs opacity-70">-</span>
                                 )}
                               </td>
-                              <td className="p-2 text-center font-black text-slate-500 text-[10px]">VS</td>
+                              <td className="p-2 text-center font-black text-[var(--text-muted)] text-[10px]">VS</td>
                               <td className="p-2 text-center font-black text-sm">
                                 {isTerminado ? (
-                                  <span className="text-emerald-400">{awayScore}</span>
+                                  <span className="text-[var(--app-positive)]">{awayScore}</span>
                                 ) : (
-                                  <span className="input-theme px-2 py-0.5 rounded text-slate-400 font-mono text-xs opacity-70">-</span>
+                                  <span className="input-theme px-2 py-0.5 rounded text-[var(--text-muted)] font-[family-name:var(--font-active)] text-xs opacity-70">-</span>
                                 )}
                               </td>
                               <td className="p-2 text-center">
-                                <div className="w-7 h-7 mx-auto rounded-lg bg-slate-900 border border-cyan-500/40 flex items-center justify-center font-black text-[10px] text-cyan-300">
+                                <div className="w-7 h-7 mx-auto rounded-lg bg-[var(--app-surface-2)] border border-[var(--app-accent)]/40 flex items-center justify-center font-black text-[10px] text-[var(--app-accent)]">
                                   {awayName.slice(0, 3).toUpperCase()}
                                 </div>
                               </td>
-                              <td className="p-2 text-left font-black text-white">{awayName}</td>
+                              <td className="p-2 text-left font-black text-[var(--text-heading)]">{awayName}</td>
                               <td className="p-2 text-center">
                                 <div className="flex items-center justify-center gap-1.5">
                                   {homeId && homeId !== 'BYE' && (
@@ -559,7 +559,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                                       variant="ghost"
                                       onClick={() => handleAdvanceWinner(m.id, homeId, homeName)}
                                       disabled={isPending}
-                                      className="text-[10px] text-purple-300 hover:bg-purple-950 px-2 py-1 h-auto"
+                                      className="text-[10px] text-[var(--app-accent-2)] hover:bg-[var(--app-accent-2-soft)] px-2 py-1 h-auto"
                                     >
                                       Gana {homeName.slice(0, 6)}
                                     </Button>
@@ -570,7 +570,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                                       variant="ghost"
                                       onClick={() => handleAdvanceWinner(m.id, awayId, awayName)}
                                       disabled={isPending}
-                                      className="text-[10px] text-cyan-300 hover:bg-cyan-950 px-2 py-1 h-auto"
+                                      className="text-[10px] text-[var(--app-accent)] hover:bg-[var(--app-accent-soft)] px-2 py-1 h-auto"
                                     >
                                       Gana {awayName.slice(0, 6)}
                                     </Button>
@@ -598,7 +598,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
               <Button
                 variant="ghost"
                 onClick={() => setIsFormMode(false)}
-                className="text-xs font-bold text-slate-400 hover:text-white"
+                className="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-heading)]"
               >
                 ← Cancelar y Volver a Tabla de Partidos
               </Button>
@@ -606,30 +606,30 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
           )}
 
           <Card className="glass-panel p-6 space-y-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="flex items-center justify-between border-b border-[var(--text-heading)]/10 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-purple-950 border border-purple-500/40 text-purple-400">
+                <div className="p-2.5 rounded-xl bg-[var(--app-accent-2-soft)] border border-[var(--app-accent-2)]/40 text-[var(--app-accent-2)]">
                   <Settings className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-black uppercase text-white tracking-wider">
+                  <h2 className="text-base font-black uppercase text-[var(--text-heading)] tracking-wider">
                     ⚙️ Motor de Configuración del Fixture
                   </h2>
-                  <p className="text-xs text-slate-400 font-mono">
+                  <p className="text-xs text-[var(--text-muted)] font-[family-name:var(--font-active)]">
                     Define formato, reparto asimétrico de grupos y llaves de playoff eSports.
                   </p>
                 </div>
               </div>
 
-              <Badge className="bg-purple-950 text-purple-300 border-purple-500/40 font-mono text-[10px] uppercase">
+              <Badge className="bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] border-[var(--app-accent-2)]/40 font-[family-name:var(--font-active)] text-[10px] uppercase">
                 {enrolledTeams.length} Clubes Inscritos
               </Badge>
             </div>
 
             {/* Formato del Torneo */}
             <div className="space-y-3">
-              <label className="text-xs font-black uppercase text-slate-300 tracking-wider block flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-purple-400" /> Formato del Torneo:
+              <label className="text-xs font-black uppercase text-[var(--text-secondary)] tracking-wider block flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-[var(--app-accent-2)]" /> Formato del Torneo:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
@@ -642,14 +642,14 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                     type="button"
                     onClick={() => setFormat(opt.id as TournamentFormat)}
                     className={`p-3.5 rounded-xl text-left border transition-all ${
-                      format === opt.id ? 'bg-purple-950/80 border-purple-500 text-white shadow-lg scale-[1.02]' : 'glass-panel-hover text-slate-400'
+                      format === opt.id ? 'bg-[var(--app-accent-2-soft)]/80 border-[var(--app-accent-2)] text-[var(--text-heading)] shadow-lg scale-[1.02]' : 'glass-panel-hover text-[var(--text-muted)]'
                     }`}
                   >
                     <div className="flex items-center justify-between font-black text-xs">
                       <span>{opt.label}</span>
-                      {format === opt.id && <Check className="w-4 h-4 text-purple-400" />}
+                      {format === opt.id && <Check className="w-4 h-4 text-[var(--app-accent-2)]" />}
                     </div>
-                    <p className="text-[10px] text-slate-400 font-normal mt-1">{opt.desc}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] font-normal mt-1">{opt.desc}</p>
                   </button>
                 ))}
               </div>
@@ -657,13 +657,13 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
 
             {/* 📌 1. CONFIGURACIÓN DINÁMICA HÍBRIDA & PREVISUALIZACIÓN DE REPARTO ASIMÉTRICO */}
             {format === 'Hibrido' && (
-              <div className="p-5 rounded-2xl bg-purple-950/30 border border-purple-500/30 space-y-5 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
-                  <span className="text-xs font-black uppercase text-purple-300 tracking-wider flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-purple-400" />
+              <div className="p-5 rounded-2xl bg-[var(--app-accent-2-soft)]/30 border border-[var(--app-accent-2)]/30 space-y-5 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between border-b border-[var(--app-accent-2)]/20 pb-3">
+                  <span className="text-xs font-black uppercase text-[var(--app-accent-2)] tracking-wider flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[var(--app-accent-2)]" />
                     Configuración de Fase de Grupos Híbrida:
                   </span>
-                  <Badge className="bg-purple-900/60 text-purple-300 text-[10px] font-mono">
+                  <Badge className="bg-[var(--app-accent-2-soft-strong)] text-[var(--app-accent-2)] text-[10px] font-[family-name:var(--font-active)]">
                     Soporte de Asimetría Activo
                   </Badge>
                 </div>
@@ -671,7 +671,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Input Cantidad de Grupos */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-300 uppercase block font-mono">
+                    <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase block font-[family-name:var(--font-active)]">
                       Cantidad de Grupos:
                     </label>
                     <input
@@ -680,13 +680,13 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                       max={16}
                       value={groupCount}
                       onChange={(e) => setGroupCount(Math.max(2, Number(e.target.value)))}
-                      className="input-theme w-full p-2.5 rounded-xl font-mono text-xs font-bold text-cyan-300"
+                      className="input-theme w-full p-2.5 rounded-xl font-[family-name:var(--font-active)] text-xs font-bold text-[var(--app-accent)]"
                     />
                   </div>
 
                   {/* Input Clasificados por Grupo */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-300 uppercase block font-mono">
+                    <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase block font-[family-name:var(--font-active)]">
                       Clasificados por Grupo (a Playoffs):
                     </label>
                     <input
@@ -695,28 +695,28 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                       max={8}
                       value={qualifiersPerGroup}
                       onChange={(e) => setQualifiersPerGroup(Math.max(1, Number(e.target.value)))}
-                      className="input-theme w-full p-2.5 rounded-xl font-mono text-xs font-bold text-emerald-400"
+                      className="input-theme w-full p-2.5 rounded-xl font-[family-name:var(--font-active)] text-xs font-bold text-[var(--app-positive)]"
                     />
                   </div>
                 </div>
 
                 {/* Previsualización del Reparto Asimétrico de Cupos por Grupo */}
-                <div className="p-4 rounded-xl bg-slate-950/80 border border-white/10 space-y-3">
-                  <span className="text-[11px] font-mono font-bold uppercase text-slate-300 block flex items-center gap-2">
+                <div className="p-4 rounded-xl bg-[var(--app-canvas)]/80 border border-[var(--text-heading)]/10 space-y-3">
+                  <span className="text-[11px] font-[family-name:var(--font-active)] font-bold uppercase text-[var(--text-secondary)] block flex items-center gap-2">
                     📊 Previsualización de Distribución Asimétrica ({enrolledTeams.length} Equipos en {groupDistributionPreview.length} Grupos):
                   </span>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {groupDistributionPreview.map((g) => (
-                      <div key={g.groupName} className="p-3 rounded-lg bg-slate-900/90 border border-white/10 space-y-1">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                          <span className="text-xs font-black uppercase text-cyan-400">{g.groupName}</span>
-                          <span className="text-[10px] font-mono text-slate-400 font-bold">{g.count} Equipos</span>
+                      <div key={g.groupName} className="p-3 rounded-lg bg-[var(--app-surface-2)]/90 border border-[var(--text-heading)]/10 space-y-1">
+                        <div className="flex items-center justify-between border-b border-[var(--text-heading)]/10 pb-1">
+                          <span className="text-xs font-black uppercase text-[var(--app-accent)]">{g.groupName}</span>
+                          <span className="text-[10px] font-[family-name:var(--font-active)] text-[var(--text-muted)] font-bold">{g.count} Equipos</span>
                         </div>
                         <div className="space-y-1 pt-1">
                           {g.teams.map((t, idx) => (
-                            <div key={t.id} className="text-[10px] font-mono text-slate-300 truncate">
-                              #{idx + 1} {t.name} <span className="text-slate-500">[{t.tag || 'TEAM'}]</span>
+                            <div key={t.id} className="text-[10px] font-[family-name:var(--font-active)] text-[var(--text-secondary)] truncate">
+                              #{idx + 1} {t.name} <span className="text-[var(--text-muted)]">[{t.tag || 'TEAM'}]</span>
                             </div>
                           ))}
                         </div>
@@ -726,14 +726,14 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                 </div>
 
                 {/* Previsualización de Cruces Híbridos */}
-                <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/30 space-y-2">
-                  <span className="text-[10px] font-mono font-bold uppercase text-purple-300 block">
+                <div className="p-3.5 rounded-xl bg-[var(--app-accent-2-soft)]/40 border border-[var(--app-accent-2)]/30 space-y-2">
+                  <span className="text-[10px] font-[family-name:var(--font-active)] font-bold uppercase text-[var(--app-accent-2)] block">
                     ⚔️ Cruces Sembrados de Playoff ({hybridSeedings.length} Enfrentamientos Iniciales):
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {hybridSeedings.map((s, idx) => (
-                      <span key={idx} className="px-2.5 py-1 rounded bg-slate-900 border border-purple-500/40 text-[10px] font-mono text-white">
-                        <strong className="text-cyan-300">{s.homeSeed}</strong> VS <strong className="text-emerald-300">{s.awaySeed}</strong>
+                      <span key={idx} className="px-2.5 py-1 rounded bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/40 text-[10px] font-[family-name:var(--font-active)] text-[var(--text-heading)]">
+                        <strong className="text-[var(--app-accent)]">{s.homeSeed}</strong> VS <strong className="text-[var(--app-positive)]">{s.awaySeed}</strong>
                       </span>
                     ))}
                   </div>
@@ -743,21 +743,21 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
 
             {/* Modalidad de Encuentro */}
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase text-slate-300 tracking-wider block flex items-center gap-2">
-                <Swords className="w-4 h-4 text-cyan-400" /> Modalidad de Encuentro:
+              <label className="text-xs font-black uppercase text-[var(--text-secondary)] tracking-wider block flex items-center gap-2">
+                <Swords className="w-4 h-4 text-[var(--app-accent)]" /> Modalidad de Encuentro:
               </label>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setMatchMode('PartidoUnico')}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border ${matchMode === 'PartidoUnico' ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md' : 'glass-panel-hover text-slate-300'}`}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border ${matchMode === 'PartidoUnico' ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] border-[var(--app-accent)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
                 >
                   Partido Único
                 </button>
                 <button
                   type="button"
                   onClick={() => setMatchMode('IdaVuelta')}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border ${matchMode === 'IdaVuelta' ? 'bg-purple-600 text-white border-purple-400 shadow-md' : 'glass-panel-hover text-slate-300'}`}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border ${matchMode === 'IdaVuelta' ? 'bg-[var(--app-accent-2)] text-[var(--text-heading)] border-[var(--app-accent-2)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
                 >
                   Ida y Vuelta
                 </button>
@@ -765,26 +765,26 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
             </div>
 
             {/* Calendario Oficial */}
-            <div className="space-y-4 pt-2 border-t border-white/10">
+            <div className="space-y-4 pt-2 border-t border-[var(--text-heading)]/10">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-400 uppercase block">Fecha Oficial de Inicio:</label>
+                  <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase block">Fecha Oficial de Inicio:</label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="input-theme w-full p-2.5 rounded-xl font-mono text-xs"
+                    className="input-theme w-full p-2.5 rounded-xl font-[family-name:var(--font-active)] text-xs"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase block">Días de Enfrentamiento:</label>
+                  <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase block">Días de Enfrentamiento:</label>
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
                     {daysOfWeekOptions.map((d) => (
                       <button
                         key={d.id}
                         type="button"
                         onClick={() => handleToggleDay(d.label)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border ${selectedDays.includes(d.label) ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50' : 'glass-panel-hover text-slate-400'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-[family-name:var(--font-active)] font-bold border ${selectedDays.includes(d.label) ? 'bg-[var(--app-positive-soft)] text-[var(--app-positive)] border-[var(--app-positive)]/50' : 'glass-panel-hover text-[var(--text-muted)]'}`}
                       >
                         {d.label}
                       </button>
@@ -794,8 +794,8 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
               </div>
 
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-cyan-400" /> Horarios Simultáneos Disponibles:
+                <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[var(--app-accent)]" /> Horarios Simultáneos Disponibles:
                 </label>
                 <div className="flex flex-wrap items-center gap-2">
                   {availableTimes.map((time) => (
@@ -803,7 +803,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                       key={time}
                       type="button"
                       onClick={() => handleToggleTime(time)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border ${selectedTimes.includes(time) ? 'bg-cyan-950 text-cyan-300 border-cyan-500/60' : 'glass-panel-hover text-slate-400'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-[family-name:var(--font-active)] font-bold border ${selectedTimes.includes(time) ? 'bg-[var(--app-accent-soft)] text-[var(--app-accent)] border-[var(--app-accent)]/60' : 'glass-panel-hover text-[var(--text-muted)]'}`}
                     >
                       {time} hrs
                     </button>
@@ -812,15 +812,15 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
               </div>
             </div>
 
-            <div className="pt-4 border-t border-white/10 flex justify-end">
+            <div className="pt-4 border-t border-[var(--text-heading)]/10 flex justify-end">
               <Button
                 onClick={() => {
                   const elem = document.getElementById('matchmaking-preview-container');
                   if (elem) elem.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs px-6 py-3 rounded-xl shadow-xl flex items-center gap-2"
+                className="bg-[var(--app-accent-2)] hover:bg-[var(--app-accent-2)] text-[var(--text-heading)] font-black text-xs px-6 py-3 rounded-xl shadow-xl flex items-center gap-2"
               >
-                <Sparkles className="w-4 h-4 text-cyan-300 animate-pulse" /> <span>Previsualización en Vivo (Activa) ⚡</span>
+                <Sparkles className="w-4 h-4 text-[var(--app-accent)] animate-pulse" /> <span>Previsualización en Vivo (Activa) ⚡</span>
               </Button>
             </div>
           </Card>

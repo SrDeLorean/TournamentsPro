@@ -1,7 +1,92 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
+import { isNavigationItemActive } from '../src/components/layout/management-navigation-model';
+
+async function collectSourceFiles(root: string): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const path = `${root}/${entry.name}`;
+    if (entry.isDirectory()) return collectSourceFiles(path);
+    return /\.(?:ts|tsx)$/.test(entry.name) ? [path] : [];
+  }));
+  return nested.flat();
+}
 
 describe('management workspace UI', () => {
+  it('keeps dashboard color and font decisions inside semantic CSS and UI tokens', async () => {
+    const visualRoots = [
+      'src/app/dashboard',
+      'src/components/admin',
+      'src/components/organizer',
+      'src/components/dashboard',
+      'src/components/layout',
+      'src/components/ui',
+      'src/components/teams',
+      'src/components/players',
+      'src/components/matches',
+      'src/components/tournaments',
+      'src/components/transfers',
+      'src/components/chat',
+      'src/components/notifications',
+      'src/features/dashboard',
+      'src/features/organizations',
+      'src/features/users',
+      'src/features/teams',
+      'src/features/competitions',
+    ];
+    const visualFiles = (await Promise.all(visualRoots.map(collectSourceFiles))).flat();
+    const sources = await Promise.all(visualFiles.map(async (file) => ({
+      file,
+      source: await readFile(file, 'utf8'),
+    })));
+    const legacyColorClass = /(?:text|bg|border|from|via|to|ring|shadow|fill|stroke)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|black|white)(?:-[0-9]+)?(?:\/[0-9]+)?/;
+    const legacyColorToken = /var\(--accent-(?:cyan|violet|emerald|gold|crimson|success|warning|info)(?:-bg|-hover)?\)/;
+    const literalColor = /#[0-9a-f]{3,8}\b/i;
+    const fixedFontFamily = /\bfont-(?:mono|sans|serif|display|outfit|jakarta|sora|inter)\b/;
+
+    const offenders = sources.filter(({ source }) => (
+      legacyColorClass.test(source)
+      || legacyColorToken.test(source)
+      || literalColor.test(source)
+      || fixedFontFamily.test(source)
+    )).map(({ file }) => file);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('transfers the final design-system contract to every dashboard route', async () => {
+    const [layout, managementUi, organizer, organizerHero, organizerModel, styles] = await Promise.all([
+      readFile('src/app/dashboard/layout.tsx', 'utf8'),
+      readFile('src/components/dashboard/management-ui.tsx', 'utf8'),
+      readFile('src/components/organizer/organizer-dashboard-view.tsx', 'utf8'),
+      readFile('src/components/organizer/organizer-dashboard-hero.tsx', 'utf8'),
+      readFile('src/components/organizer/organizer-dashboard-model.ts', 'utf8'),
+      readFile('src/app/globals.css', 'utf8'),
+    ]);
+
+    expect(layout).toContain('dashboard-route-surface');
+    expect(layout).toContain('dashboard-route-content');
+    expect(managementUi).toContain("cyan: { accent: 'var(--app-accent)'");
+    expect(managementUi).toContain("violet: { accent: 'var(--app-accent-2)'");
+    expect(managementUi).toContain("emerald: { accent: 'var(--app-positive)'");
+    expect(managementUi).toContain("gold: { accent: 'var(--app-warning)'");
+    expect(managementUi).toContain("crimson: { accent: 'var(--app-danger)'");
+    expect(managementUi).toContain('management-hero-grid');
+    expect(styles).toContain('.dashboard-route-surface');
+    expect(styles).toContain('.management-page::before');
+    expect(styles).toContain('font-family: var(--font-active');
+    expect(styles).toContain('content-visibility: auto');
+
+    expect(organizer).toContain('<OrganizerDashboardHero');
+    expect(organizer).not.toContain('activeGame.brandColor');
+    expect(organizer).not.toMatch(/brandColor="var\(--app-(?:positive|warning)\)"/);
+    expect(organizer).not.toContain('Header Banner with Organization Identity');
+    expect(organizer.split(/\r?\n/).length).toBeLessThan(525);
+    expect(organizerHero).toContain('<ManagementHero');
+    expect(organizerHero).not.toContain('game.brandColor');
+    expect(organizerModel).toContain('export { GAME_MODES }');
+  });
+
   it('shares the management primitives across admin and organizer dashboards', async () => {
     const [admin, organizer] = await Promise.all([
       readFile('src/components/admin/admin-dashboard-view.tsx', 'utf8'),
@@ -10,8 +95,9 @@ describe('management workspace UI', () => {
 
     for (const source of [admin, organizer]) {
       expect(source).toContain('<ManagementPage>');
-      expect(source).toContain('<MetricCard');
+      expect(source).toMatch(/<(?:MetricCard|DashboardInsightMetrics)/);
       expect(source).toContain('<ManagementTabs');
+      expect(source).not.toMatch(/brandColor="var\(--app-(?:positive|warning)\)"/);
     }
   });
 
@@ -96,17 +182,18 @@ describe('management workspace UI', () => {
       readFile('src/app/globals.css', 'utf8'),
     ]);
 
-    expect(layout).toContain('<Footer compact={showRoleAwareChrome} />');
+    expect(layout).toMatch(/<Footer compact=\{showRoleAwareChrome\}(?:\s+brandColor=\{[^}]+\})?\s*\/>/);
     expect(layout).not.toContain('key={`management-header-${pathname}`}');
     expect(layout).not.toContain('<Navbar key={pathname} />');
     expect(layout).not.toContain("['/dashboard', '/admin']");
-    expect(footer).toContain("compact && 'app-footer-management'");
-    expect(footer).toContain('aria-label="Información institucional"');
-    expect(footer).toContain('Misión y visión');
-    expect(footer).toContain('Quiénes somos');
+    expect(footer).toContain('if (compact)');
+    expect(footer).toContain('app-footer app-footer-management');
+    expect(footer).toContain('aria-label="Enlaces rápidos de administración"');
+    expect(footer).toContain('Misión y Visión');
+    expect(footer).toContain('Quiénes Somos');
     expect(footer).not.toContain("label: 'Equipos'");
     expect(footer).not.toContain("label: 'Jugadores'");
-    expect(styles).toContain('.app-footer-inner');
+    expect(styles).toContain('.app-footer-main');
     expect(styles).toContain('.app-footer-management');
   });
 
@@ -320,7 +407,8 @@ describe('management workspace UI', () => {
     expect(styles).toContain('.ui-modal-form > .ui-modal-content');
     expect(styles).toContain('touch-action: pan-y');
     expect(styles).toContain('-webkit-overflow-scrolling: touch');
-    expect(filterBar).toContain('xl:flex-wrap');
+    expect(filterBar).toContain('ui-filter-options-group');
+    expect(styles).toContain('.ui-filter-bar');
     expect(dataTable).toContain('sm:grid-cols-2');
     expect(dataTable).toContain('xl:flex-row');
 
@@ -331,9 +419,10 @@ describe('management workspace UI', () => {
   });
 
   it('closes mobile navigation deterministically without leaking body scroll locks', async () => {
-    const [layout, navbar, sidebar, modal, scrollLock] = await Promise.all([
+    const [layout, navbar, mobileNavigation, sidebar, modal, scrollLock] = await Promise.all([
       readFile('src/components/layout/app-layout-wrapper.tsx', 'utf8'),
       readFile('src/components/layout/navbar.tsx', 'utf8'),
+      readFile('src/components/layout/mobile-public-navigation.tsx', 'utf8'),
       readFile('src/components/layout/admin-organizer-sidebar.tsx', 'utf8'),
       readFile('src/components/ui/modal.tsx', 'utf8'),
       readFile('src/hooks/use-body-scroll-lock.ts', 'utf8'),
@@ -352,9 +441,29 @@ describe('management workspace UI', () => {
     expect(navbar).toContain("useBodyScrollLock(isMobileMenuOpen, 'public-navigation')");
     expect(navbar).toContain('closeAtDesktopBreakpoint');
     expect(navbar).toContain("event.key === 'Escape'");
-    expect(navbar).toContain('aria-label="Cerrar menú principal"');
+    expect(navbar).toContain('<MobilePublicNavigation');
+    expect(mobileNavigation).toContain('aria-label="Cerrar menú principal"');
     expect(sidebar).toContain("useBodyScrollLock(isMobileOpen, 'management-navigation')");
     expect(sidebar).toContain('closeAtDesktopBreakpoint');
     expect(sidebar).not.toContain('document.body.style.overflow');
+  });
+
+  it('matches discipline and dashboard navigation items accurately without sticking on Portada or Dashboard root', () => {
+    // Portada should only match when exactly on the discipline root
+    expect(isNavigationItemActive('/valorant', '/valorant')).toBe(true);
+    expect(isNavigationItemActive('/valorant/', '/valorant')).toBe(true);
+    expect(isNavigationItemActive('/valorant/organizaciones', '/valorant')).toBe(false);
+    expect(isNavigationItemActive('/valorant/competencias', '/valorant')).toBe(false);
+    expect(isNavigationItemActive('/valorant/equipos', '/valorant')).toBe(false);
+
+    // Discipline subpages match their own links and nested paths
+    expect(isNavigationItemActive('/valorant/organizaciones', '/valorant/organizaciones')).toBe(true);
+    expect(isNavigationItemActive('/valorant/organizaciones/org-123', '/valorant/organizaciones')).toBe(true);
+    expect(isNavigationItemActive('/valorant/competencias', '/valorant/organizaciones')).toBe(false);
+
+    // Dashboard root should only match exactly
+    expect(isNavigationItemActive('/dashboard', '/dashboard')).toBe(true);
+    expect(isNavigationItemActive('/dashboard/organizaciones', '/dashboard')).toBe(false);
+    expect(isNavigationItemActive('/dashboard/organizaciones', '/dashboard/organizaciones')).toBe(true);
   });
 });

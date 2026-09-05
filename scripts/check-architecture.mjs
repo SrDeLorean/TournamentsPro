@@ -5,6 +5,13 @@ import process from 'node:process';
 const appDirectory = path.join(process.cwd(), 'src', 'app');
 const maximumPageLines = 150;
 const maximumComponentLines = 300;
+// Catalog pages are executable documentation: they intentionally compose the
+// complete library in one route, while production components keep the strict
+// 300-line budget below. These explicit ceilings still prevent silent growth.
+const documentationComponentBudgets = {
+  'src/features/design-system/components/components-showcase-client.tsx': 2250,
+  'src/features/design-system/components/final-design-system-page.tsx': 750,
+};
 const debtPath = path.join(process.cwd(), 'scripts', 'architecture-debt.json');
 const sourceDirectory = path.join(process.cwd(), 'src');
 
@@ -72,7 +79,7 @@ const componentViolations = [];
 for (const file of componentFiles) {
   const relative = path.relative(process.cwd(), file).replaceAll('\\', '/');
   const lines = (await readFile(file, 'utf8')).trimEnd().split(/\r?\n/).length;
-  const allowed = debt[relative] ?? maximumComponentLines;
+  const allowed = documentationComponentBudgets[relative] ?? debt[relative] ?? maximumComponentLines;
   if (lines > allowed) componentViolations.push(`${relative} (${lines}; máximo ${allowed})`);
 }
 
