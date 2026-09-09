@@ -2,7 +2,7 @@
 // TournamentsPro — Competitions, Seasons & Fixtures Service
 // =============================================================================
 
-import type { Competition, IDatabaseProvider } from '@/lib/db/interfaces';
+import type { Competition, IDatabaseProvider, Match } from '@/lib/db/interfaces';
 import { dbProvider } from '@/lib/db/provider';
 import { validateSchema } from '@/lib/validation';
 import { GAMES_CATALOG } from '@/lib/games-data';
@@ -12,6 +12,8 @@ export interface CreateCompetitionInput {
   name: string;
   gameSlug: 'eafc26' | 'valorant' | 'csgo' | 'lol' | 'rocketleague' | 'fortnite';
   modeFormat: string;
+  format?: 'Liga' | 'Playoff' | 'Hibrido';
+  matchMode?: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3';
   fechaLimiteInscripcion?: string | null;
   fechaInicio: string;
   fechaTermino?: string | null;
@@ -45,7 +47,7 @@ export async function createCompetitionService(
     return { success: false, error: validation.errors.join(', '), code: 'VALIDATION_ERROR' };
   }
 
-  const { name, gameSlug, modeFormat, fechaLimiteInscripcion, fechaInicio, fechaTermino, description, prizePool, transferMarketMode, seasonId, newSeasonName } = validation.data;
+  const { name, gameSlug, modeFormat, format, matchMode, fechaLimiteInscripcion, fechaInicio, fechaTermino, description, prizePool, transferMarketMode, seasonId, newSeasonName } = validation.data;
 
   let finalSeasonId = seasonId;
   if (newSeasonName && newSeasonName.trim()) {
@@ -66,6 +68,8 @@ export async function createCompetitionService(
     prizePool,
     transferMarketMode,
     modeFormat,
+    format: format || 'Liga',
+    matchMode: matchMode || 'PartidoUnico',
     status: data.status || 'Inscripcion',
     fechaLimiteInscripcion: fechaLimiteInscripcion ? new Date(fechaLimiteInscripcion).toISOString().slice(0, 19).replace('T', ' ') : null,
     fechaInicio: new Date(fechaInicio).toISOString().slice(0, 19).replace('T', ' '),
@@ -80,7 +84,8 @@ export interface FixtureConfig {
   startDate: string;
   selectedDays: string[];
   selectedTimes: string[];
-  matchMode: 'PartidoUnico' | 'IdaVuelta';
+  matchMode: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3';
+  playoffMatchMode?: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3';
   format: 'Liga' | 'Playoff' | 'Hibrido';
   groupCount: number;
   qualifiersPerGroup: number;
@@ -115,57 +120,48 @@ export async function generateFixtureService(
   config: FixtureConfig
 ): Promise<FixtureGenerationResult> {
   return dbProvider.withTransaction(async (transaction) => {
-    const competitions = await transaction.query<{ id: string }>(
-      'SELECT id FROM competitions WHERE id = ? FOR UPDATE',
-      [competitionId],
-    );
-    if (competitions.length === 0) {
+    const competition = await transaction.competitions.findById(competitionId);
+    if (!competition) {
       return { success: false, error: 'Competencia no encontrada', code: 'NOT_FOUND' };
     }
 
-    const enrolledTeamsData = await transaction.query<{
-      team_id: string;
-      team_name: string;
-      team_tag: string | null;
-    }>(
-      "SELECT team_id, team_name, team_tag FROM competition_teams WHERE competition_id = ? AND status = 'CONFIRMADO' FOR UPDATE",
-      [competitionId],
-    );
+    const enrolledTeamsData = await transaction.competitions.getEnrolledTeams(competitionId);
     if (enrolledTeamsData.length < 2) {
       return { success: false, error: 'Se requieren al menos 2 equipos confirmados', code: 'NOT_ENOUGH_TEAMS' };
     }
 
-    const teams = enrolledTeamsData.map((team) => ({
-      id: team.team_id,
-      name: team.team_name,
-      tag: team.team_tag,
+    const teams = enrolledTeamsData.map((team: any) => ({
+      id: String(team.team_id || team.teamId || team.id),
+      name: String(team.team_name || team.teamName || team.name),
+      tag: (team.team_tag || team.teamTag || team.tag || null) as string | null,
     }));
 
-    await transaction.execute(
-      'DELETE FROM matches WHERE competition_id = ? OR tournament_id = ?',
-      [competitionId, competitionId],
-    );
+    await transaction.matches.deleteByCompetition(competitionId);
 
-    const { startDate, selectedDays, selectedTimes, matchMode, format, groupCount, qualifiersPerGroup } = config;
+    const { startDate, selectedDays, selectedTimes, matchMode, playoffMatchMode, format, groupCount, qualifiersPerGroup } = config;
+    const effectiveMatchMode = format === 'Liga' && matchMode === 'MejorDe3' ? 'PartidoUnico' : matchMode;
+
     const totalSavedMatches = await generateMatchesForFormat(
       transaction,
       competitionId,
       teams,
       format,
-      matchMode,
+      effectiveMatchMode,
       startDate,
       selectedDays,
       selectedTimes,
       groupCount,
       qualifiersPerGroup,
+      playoffMatchMode,
     );
 
-    await transaction.execute(
-      `UPDATE competitions
-          SET status = 'Activo', format = ?, match_mode = ?, group_count = ?, qualifiers_per_group = ?
-        WHERE id = ?`,
-      [config.format, config.matchMode, config.groupCount, config.qualifiersPerGroup, competitionId],
-    );
+    await transaction.competitions.update(competitionId, {
+      status: 'Activo',
+      format: config.format,
+      matchMode: effectiveMatchMode,
+      groupCount: config.groupCount,
+      qualifiersPerGroup: config.qualifiersPerGroup,
+    });
 
     return { success: true, matchesCreated: totalSavedMatches };
   });
@@ -176,18 +172,18 @@ async function generateMatchesForFormat(
   competitionId: string,
   teams: { id: string; name: string; tag: string | null }[],
   format: 'Liga' | 'Playoff' | 'Hibrido',
-  matchMode: 'PartidoUnico' | 'IdaVuelta',
+  matchMode: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3',
   startDate: string,
   selectedDays: string[],
   selectedTimes: string[],
   groupCount: number,
-  qualifiersPerGroup: number
+  qualifiersPerGroup: number,
+  playoffMatchMode?: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3'
 ): Promise<number> {
   const { getMatchdayDateTime } = await import('@/lib/fixture-date-scheduler');
   const { distributeTeamsIntoGroups, generatePlayoffBracket } = await import('@/lib/matchmaking-bracket');
   
-  let totalSavedMatches = 0;
-  const compClean = competitionId.replace(/[^a-zA-Z0-9]/g, '');
+  const compClean = competitionId.replace(/[^a-zA-Z0-9]/g, '').slice(-12);
   
   const days = selectedDays.length > 0 ? selectedDays : ['Martes', 'Jueves'];
   const times = selectedTimes.length > 0 ? selectedTimes : ['20:00'];
@@ -200,30 +196,42 @@ async function generateMatchesForFormat(
     return { scheduledTime: info.timeStr, scheduledDateTimeISO: info.iso };
   };
 
+  const matchesToInsert: Partial<Match>[] = [];
+
   const insertMatch = async (matchData: GeneratedMatchData) => {
-    await transaction.execute(
-      `INSERT INTO matches
-        (id, tournament_id, competition_id, matchday, round, stage, round_name, group_name,
-         next_match_id, next_match_slot, team_home_id, home_team_id, team_away_id, away_team_id,
-         home_team_name, away_team_name, status, scheduled_time, scheduled_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?, NOW())`,
-      [
-        matchData.id, competitionId, competitionId, matchData.matchdayNumber, matchData.matchdayNumber,
-        matchData.stage, matchData.roundName || null, matchData.groupName || null,
-        matchData.nextMatchId || null, matchData.nextMatchSlot || null,
-        matchData.homeTeamId, matchData.homeTeamId, matchData.awayTeamId, matchData.awayTeamId,
-        matchData.homeTeamName, matchData.awayTeamName, matchData.scheduledTime, matchData.scheduledDateTimeISO,
-      ],
-    );
-    totalSavedMatches++;
+    matchesToInsert.push({
+      id: matchData.id,
+      tournamentId: competitionId,
+      competitionId: competitionId,
+      matchday: matchData.matchdayNumber,
+      round: matchData.matchdayNumber,
+      stage: matchData.stage,
+      roundName: matchData.roundName || null,
+      groupName: matchData.groupName || null,
+      nextMatchId: matchData.nextMatchId || null,
+      nextMatchSlot: matchData.nextMatchSlot || null,
+      teamHomeId: matchData.homeTeamId,
+      homeTeamId: matchData.homeTeamId,
+      teamAwayId: matchData.awayTeamId,
+      awayTeamId: matchData.awayTeamId,
+      homeTeamName: matchData.homeTeamName,
+      awayTeamName: matchData.awayTeamName,
+      status: 'PENDIENTE',
+      scheduledTime: matchData.scheduledTime,
+      scheduledAt: matchData.scheduledDateTimeISO,
+    });
   };
 
   if (format === 'Playoff') {
-    const playoffNodes = generatePlayoffBracket(competitionId, teams, matchMode);
+    const playoffMode = playoffMatchMode || matchMode;
+    const playoffNodes = generatePlayoffBracket(competitionId, teams, playoffMode);
     for (const node of playoffNodes.reverse()) {
       let matchdayNumber = node.roundOrder;
-      if (matchMode === 'IdaVuelta') {
+      if (playoffMode === 'IdaVuelta') {
         matchdayNumber = (node.roundOrder - 1) * 2 + (node.legType === 'VUELTA' ? 2 : 1);
+      } else if (playoffMode === 'MejorDe3') {
+        const jNum = /-j([123])$/i.exec(node.id)?.[1] || '1';
+        matchdayNumber = (node.roundOrder - 1) * 3 + Number(jNum);
       }
       const timing = getScheduledDateTime(matchdayNumber);
       
@@ -238,6 +246,9 @@ async function generateMatchesForFormat(
   } else if (format === 'Hibrido') {
     const groups = distributeTeamsIntoGroups(teams, groupCount);
     let maxGroupMatchday = 1;
+    // Fase de grupos: SOLO IDA o IDA Y VUELTA (nunca Bo3)
+    const groupMatchMode = matchMode === 'IdaVuelta' ? 'IdaVuelta' : 'PartidoUnico';
+    const totalLegs = groupMatchMode === 'IdaVuelta' ? 2 : 1;
 
     for (const [groupIndex, group] of groups.entries()) {
       const groupTeams = [...group.teams];
@@ -246,7 +257,6 @@ async function generateMatchesForFormat(
       const numTeams = groupTeams.length;
       const singleRoundMatchesCount = numTeams - 1;
       const matchesPerRound = numTeams / 2;
-      const totalLegs = matchMode === 'IdaVuelta' ? 2 : 1;
 
       for (let leg = 0; leg < totalLegs; leg++) {
         for (let round = 0; round < singleRoundMatchesCount; round++) {
@@ -280,12 +290,17 @@ async function generateMatchesForFormat(
     }
 
     const playoffTeamCount = groupCount * qualifiersPerGroup;
-    const playoffNodes = generatePlayoffBracket(competitionId, teams.slice(0, playoffTeamCount), matchMode, true, groupCount, qualifiersPerGroup);
+    // Fase de Playoffs en formato Híbrido: soporta PartidoUnico, IdaVuelta o MejorDe3
+    const playoffMode = playoffMatchMode || matchMode;
+    const playoffNodes = generatePlayoffBracket(competitionId, teams.slice(0, playoffTeamCount), playoffMode, true, groupCount, qualifiersPerGroup);
 
     for (const node of playoffNodes.reverse()) {
       let playoffRoundOffset = node.roundOrder;
-      if (matchMode === 'IdaVuelta') {
+      if (playoffMode === 'IdaVuelta') {
         playoffRoundOffset = (node.roundOrder - 1) * 2 + (node.legType === 'VUELTA' ? 2 : 1);
+      } else if (playoffMode === 'MejorDe3') {
+        const jNum = /-j([123])$/i.exec(node.id)?.[1] || '1';
+        playoffRoundOffset = (node.roundOrder - 1) * 3 + Number(jNum);
       }
       const matchdayNumber = maxGroupMatchday + playoffRoundOffset;
       const timing = getScheduledDateTime(matchdayNumber);
@@ -299,13 +314,15 @@ async function generateMatchesForFormat(
       });
     }
   } else {
+    // Liga: SOLO IDA o IDA Y VUELTA (nunca Bo3)
     const teamsCopy = [...teams];
     if (teamsCopy.length % 2 !== 0) teamsCopy.push({ id: 'BYE', name: 'DESCANSO (BYE)', tag: null });
     
     const numTeams = teamsCopy.length;
     const singleRoundMatchesCount = numTeams - 1;
     const matchesPerRound = numTeams / 2;
-    const totalLegs = matchMode === 'IdaVuelta' ? 2 : 1;
+    const leagueMatchMode = matchMode === 'IdaVuelta' ? 'IdaVuelta' : 'PartidoUnico';
+    const totalLegs = leagueMatchMode === 'IdaVuelta' ? 2 : 1;
 
     for (let leg = 0; leg < totalLegs; leg++) {
       for (let round = 0; round < singleRoundMatchesCount; round++) {
@@ -337,7 +354,8 @@ async function generateMatchesForFormat(
     }
   }
 
-  return totalSavedMatches;
+  await transaction.matches.createMany(matchesToInsert);
+  return matchesToInsert.length;
 }
 
 export interface CreateSeasonResult {

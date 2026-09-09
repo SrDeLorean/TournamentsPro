@@ -29,6 +29,7 @@ import {
   SlidersHorizontal,
   RotateCcw,
 } from 'lucide-react';
+import { evaluateBo3Series, parseBo3GameInfo } from '@/lib/bo3-series';
 import dynamic from 'next/dynamic';
 
 const MatchReportModal = dynamic(
@@ -280,7 +281,7 @@ export function FixtureScheduleView({
             awayLogoUrl: m.away_team_logo_url || m.away_team_logo || m.away_logo_url || m.awayLogoUrl || m.away_logo || m.awayLogo,
             homeScore: m.score_home !== undefined && m.score_home !== null ? Number(m.score_home) : null,
             awayScore: m.score_away !== undefined && m.score_away !== null ? Number(m.score_away) : null,
-            status: m.status === 'EN_VIVO' ? 'EN_VIVO' : m.status === 'FINALIZADO' ? 'FINALIZADO' : 'PROGRAMADO',
+            status: m.status === 'EN_VIVO' ? 'EN_VIVO' : (m.status === 'FINALIZADO' || m.status === 'TERMINADO') ? 'FINALIZADO' : m.status === 'CANCELADO' ? 'CANCELADO' : 'PROGRAMADO',
             transmissionTime: timeStr,
             exactDateDisplay,
             matchDate: dateStr,
@@ -291,6 +292,19 @@ export function FixtureScheduleView({
             groupJornada: m.round_name || `JORNADA ${m.matchday || m.matchday_number || 1}`,
           };
         });
+
+        // Evaluate Bo3 series across mapped matches to lock Game 3 if series is already defined (2-0)
+        for (const item of mapped) {
+          const info = parseBo3GameInfo(item);
+          if (info.isBo3) {
+            const seriesMatches = mapped.filter((other) => parseBo3GameInfo(other).baseSeriesId === info.baseSeriesId);
+            const evalResult = evaluateBo3Series(seriesMatches);
+            if (info.gameNumber === 3 && (evalResult.isGame3Locked || evalResult.isDefined || item.status === 'CANCELADO')) {
+              item.isLockedByBo3 = true;
+            }
+          }
+        }
+
         setMatches(mapped);
       } else {
         setMatches([]);
@@ -1286,7 +1300,8 @@ export function FixtureScheduleView({
                               match.awayTeam.toLowerCase() === currentUser.teamName.toLowerCase()
                             );
 
-                            const canReport = isAdminOrOrganizer || (isCaptainOrCoach && isUserTeamInMatch);
+                            const isMatchLockedByBo3 = match.status === 'CANCELADO' || Boolean(match.isLockedByBo3);
+                            const canReport = (isAdminOrOrganizer || (isCaptainOrCoach && isUserTeamInMatch)) && !isMatchLockedByBo3;
 
                             return (
                               <tr key={match.id} className="hover:bg-[var(--bg-card-hover)] transition-all duration-300 group relative">
@@ -1376,7 +1391,11 @@ export function FixtureScheduleView({
 
                                 {/* 4. ESTADO */}
                                 <td className="p-3.5 text-center whitespace-nowrap">
-                                  {match.status === 'EN_VIVO' ? (
+                                  {isMatchLockedByBo3 ? (
+                                    <Badge variant="slate" className="text-[10px] font-bold opacity-80">
+                                      NO REQUERIDO (2-0)
+                                    </Badge>
+                                  ) : match.status === 'EN_VIVO' ? (
                                     <span
                                       className="animate-pulse text-[10px] font-black px-2.5 py-1 rounded-full border shadow-sm inline-flex items-center gap-1"
                                       style={{
@@ -1407,7 +1426,11 @@ export function FixtureScheduleView({
 
                                 {/* 5. ACCIONES (Reportar Ficha vs Analizar) */}
                                 <td className="p-3.5 text-right whitespace-nowrap">
-                                  {canReport ? (
+                                  {isMatchLockedByBo3 ? (
+                                    <span className="text-[11px] font-bold text-[var(--text-muted)] italic pr-2">
+                                      Serie definida (2-0)
+                                    </span>
+                                  ) : canReport ? (
                                     <Button
                                       variant="primary"
                                       size="sm"

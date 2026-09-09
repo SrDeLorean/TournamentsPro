@@ -21,7 +21,7 @@ const ConfirmModal = dynamic(
   () => import('@/components/ui/confirm-modal').then((m) => m.ConfirmModal),
   { ssr: false }
 );
-import { ImageUploadCard } from '@/components/ui/image-upload-card';
+import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { EsportsCard, type EsportsSocialLinks } from '@/components/ui/esports-card';
@@ -192,67 +192,6 @@ export default function OrganizationsModulePage() {
     { id: 'rocketleague', label: 'ROCKET LEAGUE' },
     { id: 'fortnite', label: 'FORTNITE' },
   ];
-
-  const handleCreateOrg = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-    const orgName = (formData.get('name') || 'NuevaOrganización') as string;
-
-    startOperation(`Creación de Organización Madre: ${orgName}`);
-
-    const selectedGames: string[] = [];
-    Object.keys(GAMES_CATALOG).forEach((slug) => {
-      if (formData.get(`game_${slug}`)) selectedGames.push(slug);
-    });
-
-    const selectedOrganizerIds: string[] = [];
-    availableOrganizers.forEach((orgUser) => {
-      if (formData.get(`organizer_${orgUser.id}`)) selectedOrganizerIds.push(orgUser.id);
-    });
-
-    try {
-      const res = await fetch('/api/admin/organizations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.get('name'),
-          tag: formData.get('tag'),
-          ownerId: currentUser?.id,
-          allowedGames: selectedGames,
-          logoUrl: modalLogoUrl,
-          bannerUrl: modalBannerUrl,
-          country: formData.get('country'),
-          foundedYear: formData.get('foundedYear'),
-          rating: formData.get('rating'),
-          website: formData.get('website'),
-          organizerIds: selectedOrganizerIds,
-          socialMedia: {
-            twitter: formData.get('social_twitter'),
-            instagram: formData.get('social_instagram'),
-            twitch: formData.get('social_twitch'),
-            youtube: formData.get('social_youtube'),
-          },
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setIsCreateModalOpen(false);
-        setModalLogoUrl('');
-        setModalBannerUrl('');
-        endSuccess(`La organización "${orgName}" y sus organizadores asignados fueron registrados correctamente.`);
-        refreshOrganizations();
-      } else {
-        endError(data.error || 'Error al crear la organización.');
-      }
-    } catch (e: unknown) {
-      endError(errorMessage(e, 'Error de conexión al crear organización.'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleEditOrg = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -590,34 +529,10 @@ export default function OrganizationsModulePage() {
           brandColor="var(--app-accent)"
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10">
-              <ImageUploadCard
-                label="Logo / Escudo Oficial"
-                subtitle="Formato WebP"
-                currentUrl={modalLogoUrl || editingOrg.logo_url}
-                fallbackType="logo"
-                uploadType="logo"
-                maxDimension={512}
-          brandColor="var(--app-accent)"
-                uploadButtonText="Cambiar Escudo"
-                entityName={editingOrg.name}
-                entityId={editingOrg.id}
-                onUploadSuccess={(url) => setModalLogoUrl(url)}
-              />
-              <ImageUploadCard
-                label="Banner de Portada"
-                subtitle="Formato HD WebP"
-                currentUrl={modalBannerUrl || editingOrg.banner_url}
-                fallbackType="banner"
-                uploadType="banner"
-                maxDimension={1200}
-          brandColor="var(--app-accent)"
-                uploadButtonText="Cambiar Banner"
-                entityName={editingOrg.name}
-                entityId={editingOrg.id}
-                onUploadSuccess={(url) => setModalBannerUrl(url)}
-              />
-            </div>
+            <BrandedImageUploadSection title="Identidad visual de la organización" brandColor="var(--app-accent)" entityType="organization" items={[
+              { label: 'Logo / Escudo Oficial', currentUrl: modalLogoUrl || editingOrg.logo_url, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Cambiar Escudo', entityName: editingOrg.name, entityId: editingOrg.id, onUploadSuccess: (url) => setModalLogoUrl(url) },
+              { label: 'Banner de Portada', currentUrl: modalBannerUrl || editingOrg.banner_url, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Cambiar Banner', entityName: editingOrg.name, entityId: editingOrg.id, onUploadSuccess: (url) => setModalBannerUrl(url) },
+            ]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
               <div className="space-y-1">

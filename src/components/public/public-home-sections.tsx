@@ -16,9 +16,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { GameLogo } from '@/components/ui/game-logo';
+import { PageHeader, PageHeaderMetrics } from '@/components/ui/page-header';
 import type { GameConfig } from '@/lib/games-data';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import type { PublicPortalMatch, PublicPortalSummary } from '@/lib/public-home-summary';
+import { PublicLiveTicker } from '@/components/public/public-live-ticker';
 
 const GLOBAL_LINKS = [
   { href: '/equipos', label: 'Equipos', description: 'Clubes, plantillas y capitanes', icon: Shield },
@@ -27,46 +29,36 @@ const GLOBAL_LINKS = [
 ];
 
 export function PublicLiveStrip({ matches }: { matches: PublicPortalMatch[] }) {
-  return (
-    <section className="public-live-strip" aria-label="Partidos en vivo">
-      <div className="public-live-label">
-        <Badge variant="rose" is3D className="animate-pulse"><Radio className="mr-1 size-3" /> En vivo</Badge>
-      </div>
-      <div className="public-live-matches">
-        {matches.slice(0, 3).map((match) => <PublicLiveMatchChip key={match.id} match={match} />)}
-        {!matches.length ? (
-          <div className="public-live-match" data-reactive-card>
-            <Radio className="size-4 text-[var(--app-accent)]" /><span>Calendario competitivo</span><strong>Próximamente</strong>
-          </div>
-        ) : null}
-      </div>
-    </section>
-  );
+  return <PublicLiveTicker initialMatches={matches} />;
 }
 
 export function PublicHomeHero({ summary, gamesCount }: { summary: PublicPortalSummary; gamesCount: number }) {
-  const metrics = [
-    { icon: Globe2, value: summary.counts.organizations, label: 'Organizaciones verificadas' },
-    { icon: Gamepad2, value: gamesCount, label: 'Disciplinas conectadas' },
-    { icon: Users, value: summary.counts.users, label: 'Atletas públicos' },
-  ];
-
   return (
-    <section className="public-home-hero">
-      <div className="public-home-hero-glow" />
-      <div className="public-home-hero-copy">
-        <Badge variant="cyan" is3D className="self-start"><Sparkles className="mr-1 size-3.5" /> Ecosistema competitivo multidisciplina</Badge>
-        <h1>Tu escena competitiva, <span>en un solo lugar.</span></h1>
-        <p className="public-home-description">Descubre clubes, atletas, organizaciones y circuitos sin elegir una disciplina primero. Cuando quieras competir, entra al portal de tu juego.</p>
+    <PageHeader
+      className="public-home-header"
+      badgeText="Ecosistema competitivo multidisciplina"
+      badgeIcon={<Sparkles className="size-3.5" />}
+      heroIcon={<Globe2 />}
+      title="Tu escena competitiva"
+      highlightTitle="en un solo lugar"
+      description="Descubre clubes, atletas, organizaciones y circuitos sin elegir una disciplina primero. Cuando quieras competir, entra al portal de tu juego."
+      brandColor="var(--app-accent)"
+      density="cinematic"
+      footer={(
         <div className="public-home-actions">
           <Link href="/equipos"><Button variant="primary" size="lg">Explorar equipos <ArrowRight className="ml-2 size-4" /></Button></Link>
           <Link href="/organizaciones"><Button variant="outline" size="lg">Ver organizaciones</Button></Link>
         </div>
-      </div>
-      <div className="public-home-overview" aria-label="Resumen del ecosistema">
-        {metrics.map((metric) => <PublicSummaryMetric key={metric.label} {...metric} />)}
-      </div>
-    </section>
+      )}
+    >
+      <PageHeaderMetrics
+        items={[
+          { icon: <Globe2 />, value: summary.counts.organizations, label: 'Organizaciones' },
+          { icon: <Gamepad2 />, value: gamesCount, label: 'Disciplinas' },
+          { icon: <Users />, value: summary.counts.users, label: 'Atletas' },
+        ]}
+      />
+    </PageHeader>
   );
 }
 

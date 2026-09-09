@@ -68,6 +68,20 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No tienes permisos para reportar este partido' }, { status: 403 });
       }
 
+      const { parseBo3GameInfo, evaluateBo3Series } = await import('@/lib/bo3-series');
+      const gameInfo = parseBo3GameInfo(match);
+      if (gameInfo.isBo3 && gameInfo.gameNumber === 3 && competitionId) {
+        const compMatches = await dbProvider.matches.findByCompetition(competitionId);
+        const seriesMatches = compMatches.filter((m: any) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
+        const evalResult = evaluateBo3Series(seriesMatches);
+        if (evalResult.isGame3Locked || evalResult.isDefined) {
+          return NextResponse.json({
+            error: `La serie al Mejor de 3 ya fue definida (${evalResult.scoreSummary}). El Juego 3 no es requerido y no puede ser reportado.`,
+            code: 'BO3_SERIES_ALREADY_DEFINED',
+          }, { status: 400 });
+        }
+      }
+
       await dbProvider.withTransaction(async (transaction) => {
         const lockedMatch = await transaction.matches.findById(matchId);
         if (!lockedMatch) throw new Error('Partido no encontrado');
@@ -124,28 +138,77 @@ export async function POST(request: Request) {
           status: 'TERMINADO'
         });
 
-        if (lockedMatch.nextMatchId && winnerId) {
-          const teamObj = await transaction.teams.findById(winnerId);
-          let winnerName = teamObj?.name;
+        const { parseBo3GameInfo, evaluateBo3Series } = await import('@/lib/bo3-series');
+        const gameInfo = parseBo3GameInfo(lockedMatch);
+        let seriesWinnerId = winnerId;
+        let seriesWinnerName = '';
+        let shouldAdvance = Boolean(lockedMatch.nextMatchId && winnerId);
+
+        if (gameInfo.isBo3 && competitionId) {
+          const compMatches = await transaction.matches.findByCompetition(competitionId);
+          const seriesMatches = compMatches
+            .map((m: any) => m.id === matchId ? { ...m, scoreHome: finalHome, scoreAway: finalAway, status: 'TERMINADO', winnerTeamId: winnerId } : m)
+            .filter((m: any) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
+          const evalResult = evaluateBo3Series(seriesMatches);
+
+          if (evalResult.isDefined && evalResult.winnerTeamId) {
+            seriesWinnerId = evalResult.winnerTeamId;
+            seriesWinnerName = evalResult.winnerTeamName || '';
+            shouldAdvance = Boolean(lockedMatch.nextMatchId && seriesWinnerId);
+
+            // Auto-cancel Game 3 if not already finished
+            const game3 = evalResult.game3;
+            if (game3 && game3.status !== 'TERMINADO' && game3.status !== 'FINALIZADO') {
+              await transaction.matches.update(game3.id, {
+                status: 'CANCELADO'
+              });
+            }
+          } else {
+            // Bo3 series not defined yet (e.g. 1-0 or 1-1)
+            shouldAdvance = false;
+          }
+        }
+
+        if (shouldAdvance && lockedMatch.nextMatchId && seriesWinnerId) {
+          let winnerName = seriesWinnerName;
           if (!winnerName) {
-            winnerName = (winnerId === lockedMatch.teamHomeId || winnerId === lockedMatch.homeTeamId)
+            const teamObj = await transaction.teams.findById(seriesWinnerId);
+            winnerName = teamObj?.name || ((seriesWinnerId === lockedMatch.teamHomeId || seriesWinnerId === lockedMatch.homeTeamId)
               ? lockedMatch.homeTeamName || ''
-              : lockedMatch.awayTeamName || '';
+              : lockedMatch.awayTeamName || '');
           }
           const isAwaySlot = lockedMatch.nextMatchSlot === 'AWAY';
-          
-          if (isAwaySlot) {
-            await transaction.matches.update(lockedMatch.nextMatchId, {
-              teamAwayId: winnerId,
-              awayTeamId: winnerId,
-              awayTeamName: winnerName
-            });
+          const targetNextId = lockedMatch.nextMatchId;
+          const isBo3NextTarget = /-j1$/i.test(targetNextId);
+
+          if (isBo3NextTarget) {
+            const nextJ1 = targetNextId;
+            const nextJ2 = targetNextId.replace(/-j1$/i, '-j2');
+            const nextJ3 = targetNextId.replace(/-j1$/i, '-j3');
+
+            if (isAwaySlot) {
+              await transaction.matches.update(nextJ1, { teamAwayId: seriesWinnerId, awayTeamId: seriesWinnerId, awayTeamName: winnerName });
+              await transaction.matches.update(nextJ3, { teamAwayId: seriesWinnerId, awayTeamId: seriesWinnerId, awayTeamName: winnerName });
+              await transaction.matches.update(nextJ2, { teamHomeId: seriesWinnerId, homeTeamId: seriesWinnerId, homeTeamName: winnerName });
+            } else {
+              await transaction.matches.update(nextJ1, { teamHomeId: seriesWinnerId, homeTeamId: seriesWinnerId, homeTeamName: winnerName });
+              await transaction.matches.update(nextJ3, { teamHomeId: seriesWinnerId, homeTeamId: seriesWinnerId, homeTeamName: winnerName });
+              await transaction.matches.update(nextJ2, { teamAwayId: seriesWinnerId, awayTeamId: seriesWinnerId, awayTeamName: winnerName });
+            }
           } else {
-            await transaction.matches.update(lockedMatch.nextMatchId, {
-              teamHomeId: winnerId,
-              homeTeamId: winnerId,
-              homeTeamName: winnerName
-            });
+            if (isAwaySlot) {
+              await transaction.matches.update(targetNextId, {
+                teamAwayId: seriesWinnerId,
+                awayTeamId: seriesWinnerId,
+                awayTeamName: winnerName
+              });
+            } else {
+              await transaction.matches.update(targetNextId, {
+                teamHomeId: seriesWinnerId,
+                homeTeamId: seriesWinnerId,
+                homeTeamName: winnerName
+              });
+            }
           }
         }
 

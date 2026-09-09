@@ -5,15 +5,14 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { getSectionMetadata } from '@/lib/section-config';
+import { getSectionMetadata, isPublicGameSection } from '@/lib/section-config';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
-import { PageHeader } from '@/components/ui/page-header';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { GameExplorerPanel } from '@/components/ui/game-explorer-panel';
 import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
 import { PlayerData } from '@/components/players/player-profile-view';
 import { Button } from '@/components/ui/button';
-import { Flame, LoaderCircle, Trophy, Users } from 'lucide-react';
+import { LoaderCircle, Trophy, Users } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useGamePlayers } from '@/features/game-portal/hooks/use-game-players';
 import { NewUserMyTeamsView as UserMyTeamsView } from '@/components/user/new-user-my-teams';
@@ -21,6 +20,7 @@ import type { PublicPortalSummary } from '@/lib/public-home-summary';
 
 // ── Extracted Components ────────────────────────────────────────────────────
 import { GameHomeHero } from '@/components/game/game-home-hero';
+import { GamePortalSectionHeader } from '@/components/game/game-portal-section-header';
 import { PlayerCardGrid } from '@/components/game/player-card-grid';
 import {
   PlayerStatsSection,
@@ -119,21 +119,11 @@ export default function GamePortalClient({ gameSlug, initialSection, initialOver
   return (
     <div className="min-h-screen pb-20 relative text-[var(--text-primary)]">
         <div className="standard-page-wrapper pt-0">
-          {/* Section Header (excluded for sections that have their own PageHeader) */}
-          {activeSection !== 'home' &&
-            !['dashboard', 'club-dashboard', 'ficha', 'atleta-ajustes', 'partidos', 'clasificacion', 'organizaciones', 'competencias', 'datos', 'infografia', 'traspasos'].includes(activeSection as string) &&
-            !selectedPlayer && (
-              <div key={`header-${activeSection}`} className="pt-4 sm:pt-6">
-                <PageHeader
-                  badgeText={meta.badgeText}
-                  badgeIcon={<Flame className="w-3.5 h-3.5 text-[var(--app-accent)] fill-[var(--app-accent)]" />}
-                  title={meta.title}
-                  highlightTitle={meta.highlightTitle}
-                  description={meta.description}
-                  brandColor={brandColor}
-                />
-              </div>
-          )}
+          {activeSection !== 'home' && isPublicGameSection(activeSection) && !selectedPlayer ? (
+            <div key={`header-${activeSection}`} className="pt-3 sm:pt-4">
+              <GamePortalSectionHeader game={game} section={activeSection} summary={initialOverview} />
+            </div>
+          ) : null}
 
           {/* ── HOME ──────────────────────────────────────────────────── */}
           {activeSection === 'home' && (
@@ -143,21 +133,21 @@ export default function GamePortalClient({ gameSlug, initialSection, initialOver
           {/* ── PARTIDOS (Fixture & Calendario) ────────────────────────── */}
           {activeSection === 'partidos' && (
             <div className="pt-3 sm:pt-4">
-              <FixtureScheduleView game={game} />
+              <FixtureScheduleView game={game} hideHeader />
             </div>
           )}
 
           {/* ── COMPETENCIAS ──────────────────────────────────────────── */}
           {activeSection === 'competencias' && (
             <div className="pt-3 sm:pt-4">
-              <CompetitionDirectory gameSlug={game.slug} gameConfig={game} />
+              <CompetitionDirectory gameSlug={game.slug} gameConfig={game} hideHeader />
             </div>
           )}
 
           {/* ── CLASIFICACION (Posiciones, Tablas & Brackets) ───────────── */}
           {activeSection === 'clasificacion' && (
             <div className="pt-3 sm:pt-4">
-              <ClassificationView game={game} />
+              <ClassificationView game={game} hideHeader />
             </div>
           )}
 
@@ -171,14 +161,14 @@ export default function GamePortalClient({ gameSlug, initialSection, initialOver
           {/* ── DATOS / INFOGRAFIA / TOPS (Analytics) ─────────────────── */}
           {activeSection === 'infografia' && (
             <div className="pt-3 sm:pt-4">
-              <EsportsAnalyticsView game={game} />
+              <EsportsAnalyticsView game={game} hideHeader />
             </div>
           )}
 
           {/* ── TRASPASOS ─────────────────────────────────────────────── */}
           {activeSection === 'traspasos' && (
             <div className="pt-3 sm:pt-4">
-              <TransferMarket game={game} />
+              <TransferMarket game={game} hideHeader />
             </div>
           )}
 
@@ -194,7 +184,7 @@ export default function GamePortalClient({ gameSlug, initialSection, initialOver
 
           {/* ── ORGANIZACIONES (TORNEOS) ──────────────────────────────── */}
           {activeSection === 'organizaciones' && (
-            <OrganizationDirectory gameSlug={game.slug} gameConfig={game} />
+            <OrganizationDirectory gameSlug={game.slug} gameConfig={game} hideHeader />
           )}
 
           {/* ── JUGADORES ─────────────────────────────────────────────── */}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ModalForm } from '@/components/ui/modal-form';
-import { ImageUploadCard } from '@/components/ui/image-upload-card';
+import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { Avatar } from '@/components/ui/avatar';
 import { Users } from 'lucide-react';
@@ -29,8 +29,6 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
 
   useEffect(() => {
     if (isOpen) {
-      setModalLogoUrl('');
-      setModalBannerUrl('');
       fetch('/api/admin/users?role=Organizador&unassignedOrg=true')
         .then((res) => res.json())
         .then((data) => {
@@ -41,6 +39,12 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
         .catch(console.error);
     }
   }, [isOpen]);
+
+  const handleClose = () => {
+    setModalLogoUrl('');
+    setModalBannerUrl('');
+    onClose();
+  };
 
   const handleCreateOrg = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,6 +85,8 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
 
       if (res.ok && data.success) {
         form.reset();
+        setModalLogoUrl('');
+        setModalBannerUrl('');
         onSuccess();
         onClose();
       } else {
@@ -97,7 +103,7 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
   return (
     <ModalForm
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Crear Nueva Organización eSports"
       subtitle="Registrar organización en la base de datos MySQL"
       onSubmit={handleCreateOrg}
@@ -105,32 +111,10 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
       brandColor="var(--app-accent-2)"
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--border-card)]">
-          <ImageUploadCard
-            label="Logo / Escudo Oficial"
-            subtitle="Formato WebP"
-            currentUrl={modalLogoUrl}
-            fallbackType="logo"
-            uploadType="logo"
-            maxDimension={512}
-            brandColor="var(--app-accent-2)"
-            uploadButtonText="Subir Escudo"
-            entityName="org-new"
-            onUploadSuccess={(url) => setModalLogoUrl(url)}
-          />
-          <ImageUploadCard
-            label="Banner de Portada"
-            subtitle="Formato HD WebP"
-            currentUrl={modalBannerUrl}
-            fallbackType="banner"
-            uploadType="banner"
-            maxDimension={1200}
-            brandColor="var(--app-accent-2)"
-            uploadButtonText="Subir Banner"
-            entityName="org-new"
-            onUploadSuccess={(url) => setModalBannerUrl(url)}
-          />
-        </div>
+        <BrandedImageUploadSection title="Identidad visual de la organización" brandColor="var(--app-accent-2)" entityType="organization" items={[
+          { label: 'Logo / Escudo Oficial', currentUrl: modalLogoUrl, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Subir Escudo', entityName: 'org-new', entityId: 'new-organization', onUploadSuccess: (url) => setModalLogoUrl(url) },
+          { label: 'Banner de Portada', currentUrl: modalBannerUrl, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Subir Banner', entityName: 'org-new', entityId: 'new-organization', onUploadSuccess: (url) => setModalBannerUrl(url) },
+        ]} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
           <div className="space-y-1">

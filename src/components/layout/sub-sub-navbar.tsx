@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export interface SubSubTabOption<T extends string = string> {
   id: T;
@@ -24,11 +24,24 @@ export function SubSubNavbar<T extends string = string>({
   brandColor = 'var(--app-accent)',
   className = '',
 }: SubSubNavbarProps<T>) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const navStyle = { '--subtab-brand': brandColor } as React.CSSProperties;
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const container = scrollRef.current;
+      const activeTabElement = container?.querySelector<HTMLElement>('[data-active="true"]');
+      if (!container || !activeTabElement || container.clientWidth === 0) return;
+
+      const centeredLeft = activeTabElement.offsetLeft - (container.clientWidth - activeTabElement.offsetWidth) / 2;
+      container.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'smooth' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeTab]);
 
   return (
     <nav className={`ui-sub-tabs ui-navigation-tier ${className}`} style={navStyle} aria-label="Secciones del perfil">
-      <div className="ui-sub-tabs-scroll">
+      <div ref={scrollRef} className="ui-sub-tabs-scroll">
         <div className="ui-sub-tabs-track">
           {tabs.map((t) => {
             const isActive = t.id === activeTab;
@@ -37,6 +50,7 @@ export function SubSubNavbar<T extends string = string>({
                 key={t.id}
                 type="button"
                 onClick={() => onSelectTab(t.id)}
+                data-active={isActive}
                 aria-current={isActive ? 'page' : undefined}
                 className={`ui-sub-tab${isActive ? ' is-active' : ''}`}
               >

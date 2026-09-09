@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Upload, ImageIcon, Shield, AlertCircle } from 'lucide-react';
 import { compressImageToWebP } from '@/lib/image-compressor';
+import type { UploadEntityType } from '@/lib/upload-storage';
 
 export interface ImageUploadCardProps {
   label: string;
@@ -17,6 +18,7 @@ export interface ImageUploadCardProps {
   uploadButtonText?: string;
   entityName?: string;
   entityId?: string;
+  entityType?: UploadEntityType;
   uploadType?: 'logo' | 'banner' | 'avatar';
   mode?: 'persist' | 'preview';
   onUploadSuccess: (url: string, statsMessage: string) => Promise<void> | void;
@@ -33,6 +35,7 @@ export function ImageUploadCard({
   uploadButtonText,
   entityName = 'upload',
   entityId = 'id',
+  entityType = 'team',
   uploadType = 'logo',
   mode = 'persist',
   onUploadSuccess,
@@ -91,6 +94,9 @@ export function ImageUploadCard({
         body: JSON.stringify({
           fileBase64: base64Data,
           fileName: `${uploadType}-${Date.now()}.webp`,
+          entityType,
+          entityName: cleanSlug,
+          entityId,
           teamName: cleanSlug,
           teamId: entityId,
           type: uploadType,
@@ -101,8 +107,8 @@ export function ImageUploadCard({
       const resultUrl = data.data?.url || data.url;
       if (data.success && resultUrl) {
         setStats(statsMsg);
-        setLocalPreview(resultUrl);
         await onUploadSuccess(resultUrl, statsMsg);
+        setLocalPreview(resultUrl);
       } else {
         throw new Error('No se recibió la URL de la imagen guardada');
       }

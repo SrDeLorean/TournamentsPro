@@ -27,7 +27,10 @@ export interface CompetitionData {
   prize_pool: string | null;
   transfer_market_mode: 'ABIERTO' | 'CERRADO' | 'SIN_MERCADO';
   mode_format: string;
+  format?: string;
   match_mode?: string;
+  group_count?: number;
+  qualifiers_per_group?: number;
   status: CompetitionStatus;
   fecha_limite_inscripcion: string | null;
   fecha_inicio: string;
@@ -72,6 +75,9 @@ export async function createCompetitionAction(formData: FormData): Promise<{
       description: stringFormValue(formData, 'description')?.trim() || null,
       prizePool: stringFormValue(formData, 'prizePool')?.trim() || null,
       transferMarketMode: stringFormValue(formData, 'transferMarketMode') || 'ABIERTO',
+      format: stringFormValue(formData, 'format') || 'Liga',
+      matchMode: stringFormValue(formData, 'matchMode') || 'PartidoUnico',
+      playoffMatchMode: stringFormValue(formData, 'playoffMatchMode') || undefined,
       seasonId: stringFormValue(formData, 'seasonId') || null,
       newSeasonName: stringFormValue(formData, 'newSeasonName')?.trim(),
     };
@@ -272,7 +278,8 @@ export interface FixtureConfig {
   startDate: string;
   selectedDays: string[];
   selectedTimes: string[];
-  matchMode: 'PartidoUnico' | 'IdaVuelta';
+  matchMode: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3';
+  playoffMatchMode?: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3';
   format: 'Liga' | 'Playoff' | 'Hibrido';
   groupCount: number;
   qualifiersPerGroup: number;
@@ -295,9 +302,13 @@ export async function generateFixtureAction(
     if (!competition) {
       return { success: false, error: 'Competencia no encontrada.', code: 'NOT_FOUND' };
     }
-    const parsedFormat = z.enum(['Liga', 'Playoff', 'Hibrido']).safeParse(configOptions?.format || competition.modeFormat);
+    const parsedFormat = z.enum(['Liga', 'Playoff', 'Hibrido']).safeParse(configOptions?.format || competition.format || competition.modeFormat);
     const format: FixtureConfig['format'] = parsedFormat.success ? parsedFormat.data : 'Liga';
-    const matchMode = configOptions?.matchMode || 'PartidoUnico';
+    let matchMode = configOptions?.matchMode || (competition.matchMode as any) || 'PartidoUnico';
+    if (format === 'Liga' && matchMode === 'MejorDe3') {
+      matchMode = 'PartidoUnico';
+    }
+    const playoffMatchMode = configOptions?.playoffMatchMode;
     const startDateBase = configOptions?.startDate || competition.fechaInicio || new Date().toISOString();
 
     const config: FixtureConfig = {
@@ -305,6 +316,7 @@ export async function generateFixtureAction(
       selectedDays: configOptions?.selectedDays?.length ? configOptions.selectedDays : ['Martes', 'Jueves'],
       selectedTimes: configOptions?.selectedTimes?.length ? configOptions.selectedTimes : ['20:00'],
       matchMode,
+      playoffMatchMode,
       format,
       groupCount: configOptions?.groupCount || 3,
       qualifiersPerGroup: configOptions?.qualifiersPerGroup || 2,
@@ -314,16 +326,17 @@ export async function generateFixtureAction(
 
     if (result.success) {
       revalidatePath(`/dashboard/competencias/${competitionId}`);
+      const modeLabel = matchMode === 'IdaVuelta' ? 'Ida y Vuelta' : matchMode === 'MejorDe3' ? 'Mejor de 3 (Bo3)' : 'Partido Único';
       return {
         success: true,
-        message: `¡Fixture guardado en MySQL (${format} - ${matchMode === 'IdaVuelta' ? 'Ida y Vuelta' : 'Partido Único'})! Se crearon ${result.matchesCreated} partidos de forma exitosa.`,
+        message: `¡Fixture guardado (${format} - ${modeLabel})! Se crearon ${result.matchesCreated} partidos de forma exitosa.`,
       };
     }
 
     return result;
   } catch (error: unknown) {
     console.error('Error en generateFixtureAction:', error);
-    return { success: false, error: getActionErrorMessage(error, 'Error al guardar el fixture en MySQL.'), code: 'INTERNAL_ERROR' };
+    return { success: false, error: getActionErrorMessage(error, 'Error al guardar el fixture.'), code: 'INTERNAL_ERROR' };
   }
 }
 
@@ -413,15 +426,45 @@ export async function advancePlayoffWinnerAction(
           ],
         );
       } else if (nextSlot === 'HOME') {
-        await transaction.execute(
-          'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
-          [winnerTeamId, winnerTeamName, winnerTeamId, nextMatchId],
-        );
+        const isBo3Target = /-j1$/i.test(nextMatchId);
+        if (isBo3Target) {
+          const nextJ1 = nextMatchId;
+          const nextJ2 = nextMatchId.replace(/-j1$/i, '-j2');
+          const nextJ3 = nextMatchId.replace(/-j1$/i, '-j3');
+          await transaction.execute(
+            'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id IN (?, ?)',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextJ1, nextJ3]
+          );
+          await transaction.execute(
+            'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextJ2]
+          );
+        } else {
+          await transaction.execute(
+            'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextMatchId],
+          );
+        }
       } else if (nextSlot === 'AWAY') {
-        await transaction.execute(
-          'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?',
-          [winnerTeamId, winnerTeamName, winnerTeamId, nextMatchId],
-        );
+        const isBo3Target = /-j1$/i.test(nextMatchId);
+        if (isBo3Target) {
+          const nextJ1 = nextMatchId;
+          const nextJ2 = nextMatchId.replace(/-j1$/i, '-j2');
+          const nextJ3 = nextMatchId.replace(/-j1$/i, '-j3');
+          await transaction.execute(
+            'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id IN (?, ?)',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextJ1, nextJ3]
+          );
+          await transaction.execute(
+            'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextJ2]
+          );
+        } else {
+          await transaction.execute(
+            'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextMatchId],
+          );
+        }
       }
       return { success: true, message: `¡Auto-avance exitoso! "${winnerTeamName}" avanza a la siguiente llave (${nextMatchId}).` };
     });
@@ -440,10 +483,100 @@ export async function reportMatchResultAction(matchId: string, homeScore: number
     if (!competitionId) throw new Error('Partido no encontrado');
     await requireCompetitionManager(competitionId);
     const result = await dbProvider.withTransaction(async (transaction) => {
+      const lockedMatches = await transaction.query<any>('SELECT * FROM matches WHERE id = ? FOR UPDATE', [matchId]);
+      if (lockedMatches.length === 0) return { success: false, error: 'Partido no encontrado.', code: 'NOT_FOUND' };
+      const currentMatch = lockedMatches[0];
+
+      const { parseBo3GameInfo, evaluateBo3Series } = await import('@/lib/bo3-series');
+      const gameInfo = parseBo3GameInfo(currentMatch);
+
+      if (gameInfo.isBo3 && gameInfo.gameNumber === 3) {
+        const compMatches = await transaction.query<any>('SELECT * FROM matches WHERE competition_id = ? OR tournament_id = ?', [competitionId, competitionId]);
+        const seriesMatches = compMatches.filter((m: any) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
+        const evalResult = evaluateBo3Series(seriesMatches);
+        if (evalResult.isGame3Locked || evalResult.isDefined) {
+          return {
+            success: false,
+            error: `La serie al Mejor de 3 ya fue definida (${evalResult.scoreSummary}). El Juego 3 no es requerido y no puede ser reportado.`,
+            code: 'BO3_SERIES_ALREADY_DEFINED',
+          };
+        }
+      }
+
+      const winnerId = homeScore > awayScore
+        ? (currentMatch.team_home_id || currentMatch.home_team_id)
+        : awayScore > homeScore
+          ? (currentMatch.team_away_id || currentMatch.away_team_id)
+          : null;
+
       await transaction.execute(
-        "UPDATE matches SET home_score = ?, away_score = ?, status = 'TERMINADO' WHERE id = ?",
-        [homeScore, awayScore, matchId]
+        "UPDATE matches SET home_score = ?, away_score = ?, winner_team_id = ?, status = 'TERMINADO' WHERE id = ?",
+        [homeScore, awayScore, winnerId, matchId]
       );
+
+      // Check if Bo3 series is now defined (e.g. 2-0 sweep or 2-1)
+      if (gameInfo.isBo3) {
+        const compMatches = await transaction.query<any>('SELECT * FROM matches WHERE competition_id = ? OR tournament_id = ?', [competitionId, competitionId]);
+        const seriesMatches = compMatches
+          .map((m: any) => m.id === matchId ? { ...m, score_home: homeScore, score_away: awayScore, status: 'TERMINADO', winner_team_id: winnerId } : m)
+          .filter((m: any) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
+        const evalResult = evaluateBo3Series(seriesMatches);
+
+        if (evalResult.isDefined && evalResult.winnerTeamId) {
+          const game3 = evalResult.game3;
+          if (game3 && game3.status !== 'TERMINADO' && game3.status !== 'FINALIZADO') {
+            await transaction.execute(
+              "UPDATE matches SET status = 'CANCELADO' WHERE id = ?",
+              [game3.id]
+            );
+          }
+
+          // Auto advance winner if nextMatchId exists
+          const anchorNextMatchId = (game3 as any)?.next_match_id || currentMatch.next_match_id;
+          const anchorNextSlot = (game3 as any)?.next_match_slot || currentMatch.next_match_slot || 'HOME';
+          if (anchorNextMatchId) {
+            const seriesWinnerName = evalResult.winnerTeamName || '';
+            const isBo3Next = /-j1$/i.test(anchorNextMatchId);
+            if (isBo3Next) {
+              const nextJ1 = anchorNextMatchId;
+              const nextJ2 = anchorNextMatchId.replace(/-j1$/i, '-j2');
+              const nextJ3 = anchorNextMatchId.replace(/-j1$/i, '-j3');
+              if (anchorNextSlot === 'AWAY') {
+                await transaction.execute(
+                  'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id IN (?, ?)',
+                  [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, nextJ1, nextJ3]
+                );
+                await transaction.execute(
+                  'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
+                  [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, nextJ2]
+                );
+              } else {
+                await transaction.execute(
+                  'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id IN (?, ?)',
+                  [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, nextJ1, nextJ3]
+                );
+                await transaction.execute(
+                  'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?',
+                  [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, nextJ2]
+                );
+              }
+            } else {
+              if (anchorNextSlot === 'AWAY') {
+                await transaction.execute(
+                  'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?',
+                  [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, anchorNextMatchId]
+                );
+              } else {
+                await transaction.execute(
+                  'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
+                  [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, anchorNextMatchId]
+                );
+              }
+            }
+          }
+        }
+      }
+
       return { success: true, message: 'Resultado registrado correctamente.' };
     });
 

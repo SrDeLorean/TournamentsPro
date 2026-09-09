@@ -39,7 +39,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
       ? 'club'
       : null;
   const activeSegment = routeSegment ?? preferredSegment;
-  const linksRef = useRef<HTMLDivElement>(null);
+  const linksRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -110,7 +110,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
       style={{ '--game-brand': game.brandColor } as React.CSSProperties}
     >
       {/* 1. Top Mobile Segmented Controller (1 Row) */}
-      {showSegmentSwitcher ? <div className="game-portal-mobile-segments flex items-center justify-around border-b border-[var(--border-card)] p-1 text-xs font-black" role="tablist" aria-label="Cambiar contexto de navegación">
+      {showSegmentSwitcher ? <div className="game-portal-mobile-segments" role="tablist" aria-label="Cambiar contexto de navegación">
         
         {/* Segment 1: JUEGO */}
         <Link
@@ -118,7 +118,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
           role="tab"
           aria-selected={activeSegment === 'game'}
           onClick={() => setPreferredSegment('game')}
-          className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+          className={`game-portal-mobile-segment ${
             activeSegment === 'game'
               ? 'game-portal-mobile-segment-active shadow-md font-black'
               : 'text-[var(--text-muted)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)]'
@@ -135,7 +135,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
             role="tab"
             aria-selected={activeSegment === 'athlete'}
             onClick={() => setPreferredSegment('athlete')}
-            className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+            className={`game-portal-mobile-segment ${
               activeSegment === 'athlete'
                 ? 'game-portal-mobile-segment-active shadow-md font-black'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)]'
@@ -153,7 +153,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
             role="tab"
             aria-selected={activeSegment === 'club'}
             onClick={() => setPreferredSegment('club')}
-            className={`flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+            className={`game-portal-mobile-segment ${
               activeSegment === 'club'
                 ? 'game-portal-mobile-segment-active shadow-md font-black'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-heading)] hover:bg-[var(--bg-card-hover)]'
@@ -167,7 +167,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
           <button
             type="button"
             onClick={() => setIsCreateClubOpen(true)}
-            className="game-portal-mobile-create-club flex-1 py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5"
+            className="game-portal-mobile-segment game-portal-mobile-create-club"
             aria-label={`Crear club en ${game.name}`}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -177,7 +177,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
       </div> : null}
 
       {/* 2. Active Segment Scrollable Options Bar */}
-      <div ref={linksRef} className="game-portal-mobile-links mobile-scroll-row py-2 px-3 flex items-center gap-1.5 overflow-x-auto touch-pan-x" aria-label="Secciones del portal">
+      <nav ref={linksRef} className="game-portal-mobile-links mobile-scroll-row" aria-label="Secciones del portal">
         
         {/* Render JUEGO Options */}
         {(activeSegment === 'game' || !showSegmentSwitcher) &&
@@ -190,7 +190,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
                 data-active={isActive}
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => onSelectSection && onSelectSection(sec.id as GameSection)}
-                className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
+                className={`game-portal-mobile-link ${
                   isActive
                     ? 'game-portal-mobile-link-active shadow-md font-black'
                     : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:bg-[var(--bg-card-hover)]'
@@ -212,7 +212,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
                 href={opt.href}
                 data-active={isActive}
                 aria-current={isActive ? 'page' : undefined}
-                className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
+                className={`game-portal-mobile-link ${
                   isActive
                     ? 'game-portal-mobile-link-active shadow-md font-black'
                     : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:bg-[var(--bg-card-hover)]'
@@ -234,7 +234,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
                 href={opt.href}
                 data-active={isActive}
                 aria-current={isActive ? 'page' : undefined}
-                className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 border transition-all ${
+                className={`game-portal-mobile-link ${
                   isActive
                     ? 'game-portal-mobile-link-active shadow-md font-black'
                     : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-card)] hover:bg-[var(--bg-card-hover)]'
@@ -246,7 +246,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
             );
           })}
 
-      </div>
+      </nav>
       <CreateTeamModal
         isOpen={isCreateClubOpen}
         onClose={() => setIsCreateClubOpen(false)}

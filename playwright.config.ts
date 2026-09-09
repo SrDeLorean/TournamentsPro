@@ -13,7 +13,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
+  webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER === '1' ? undefined : {
     command: 'node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3100',
     url: baseURL,
     reuseExistingServer: !process.env.CI,

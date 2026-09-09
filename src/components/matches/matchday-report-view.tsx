@@ -403,6 +403,7 @@ export function MatchdayReportView() {
             awayTeam: selectedMatchForReport.awayTeam,
             gameSlug: selectedMatchForReport.gameSlug,
             tournamentName: selectedMatchForReport.tournamentName,
+            competitionId: selectedMatchForReport.tournamentId,
           }}
         />
       )}

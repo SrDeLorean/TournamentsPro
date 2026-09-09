@@ -38,6 +38,10 @@ function mapCompToData(c: Competition): CompetitionData {
     prize_pool: c.prizePool,
     transfer_market_mode: c.transferMarketMode as any,
     mode_format: c.modeFormat,
+    format: c.format || undefined,
+    match_mode: c.matchMode || undefined,
+    group_count: c.groupCount ?? undefined,
+    qualifiers_per_group: c.qualifiersPerGroup ?? undefined,
     status: c.status as any,
     fecha_limite_inscripcion: c.fechaLimiteInscripcion,
     fecha_inicio: c.fechaInicio,
@@ -102,6 +106,14 @@ async function getCompetitionDetails(id: string) {
       score_away: m.scoreAway,
       matchday_number: m.matchday,
       matchday: m.matchday,
+      stage: m.stage,
+      round_name: m.roundName,
+      group_name: m.groupName,
+      next_match_id: m.nextMatchId,
+      next_match_slot: m.nextMatchSlot,
+      winner_team_id: m.winnerTeamId,
+      scheduled_time: m.scheduledTime,
+      scheduled_at: m.scheduledAt,
     }));
 
     return {

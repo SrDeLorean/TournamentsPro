@@ -1,0 +1,44 @@
+/* Dense workspaces remain usable with touch, virtual keyboards and safe areas. */
+.ui-data-table-shell,
+.ui-data-table-toolbar,
+.fixture-schedule-view,
+.classification-view {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ui-modal-layer {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+}
+
+.ui-modal-shell {
+  max-height: calc(100dvh - max(1.5rem, env(safe-area-inset-top)) - max(1.5rem, env(safe-area-inset-bottom)));
+  scroll-padding-block: 1rem calc(5rem + env(safe-area-inset-bottom));
+}
+
+.ui-modal-form-actions {
+  position: sticky;
+  z-index: 2;
+  bottom: 0;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 639px) {
+  .ui-modal-layer { align-items: flex-end; padding-inline: 0; padding-bottom: 0; }
+  .ui-modal-shell {
+    width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    border-bottom-right-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+  }
+  .ui-modal-content :where(input, select, textarea) { font-size: 1rem; }
+  .ui-data-table-toolbar :where(input, select, button) { min-height: 2.75rem; }
+}
+
+@media (pointer: coarse) {
+  .ui-data-table-shell :where(button, a),
+  .ui-modal-shell :where(button, a) { min-height: 2.75rem; }
+}

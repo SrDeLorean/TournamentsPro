@@ -21,7 +21,18 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
       rankBadge: row.rank_badge,
       rating: row.rating,
       status: row.status,
-      avatarUrl: row.avatar_url,
+      avatarUrl: row.avatar_url || row.foto || null,
+      foto: row.foto || row.avatar_url || null,
+      bannerUrl: row.banner_url || null,
+      biografia: row.biografia || row.bio || null,
+      country: row.country || null,
+      phone: row.phone || null,
+      instagram: row.instagram || null,
+      twitter: row.twitter || null,
+      twitch: row.twitch || null,
+      youtube: row.youtube || null,
+      discord: row.discord || null,
+      whatsapp: row.whatsapp || null,
       organizationId: row.organization_id,
       isBanned: Boolean(row.is_banned),
       banReason: row.ban_reason,
@@ -115,7 +126,9 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
     const allowedFields = [
       'email', 'password_hash', 'google_id', 'name', 'gamertag', 'role',
       'primary_game_slug', 'platform', 'position', 'secondary_position',
-      'rank_badge', 'rating', 'status', 'avatar_url', 'organization_id', 'is_banned', 'ban_reason'
+      'rank_badge', 'rating', 'status', 'avatar_url', 'foto', 'banner_url',
+      'biografia', 'bio', 'country', 'phone', 'instagram', 'twitter', 'twitch',
+      'youtube', 'discord', 'whatsapp', 'organization_id', 'is_banned', 'ban_reason'
     ];
     
     for (const [key, value] of Object.entries(data)) {

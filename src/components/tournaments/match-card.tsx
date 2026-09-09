@@ -32,7 +32,8 @@ export function MatchCard({
   const brandColor = game?.brandColor || 'var(--game-brand)';
   const isLive = match.status === 'EN_VIVO';
   const isFinished = match.status === 'FINALIZADO';
-  const canReport = isAdminOrOrganizer || isCaptainOrCoach;
+  const isCanceled = match.status === 'CANCELADO' || Boolean(match.isLockedByBo3);
+  const canReport = (isAdminOrOrganizer || isCaptainOrCoach) && !isCanceled;
   const homeWon = isFinished && match.homeScore !== null && match.awayScore !== null && match.homeScore > match.awayScore;
   const awayWon = isFinished && match.homeScore !== null && match.awayScore !== null && match.awayScore > match.homeScore;
 
@@ -47,9 +48,9 @@ export function MatchCard({
           <Trophy className="size-4" />
           <span>{match.competitionName}</span>
         </div>
-        <span className={`fixture-match-status is-${match.status.toLowerCase()}`}>
-          {isLive ? <Radio className="size-3" /> : isFinished ? <CheckCircle2 className="size-3" /> : <Clock3 className="size-3" />}
-          {isLive ? 'En vivo' : isFinished ? 'Finalizado' : 'Programado'}
+        <span className={`fixture-match-status is-${isCanceled ? 'cancelado' : match.status.toLowerCase()}`}>
+          {isLive ? <Radio className="size-3" /> : isCanceled ? <CheckCircle2 className="size-3" /> : isFinished ? <CheckCircle2 className="size-3" /> : <Clock3 className="size-3" />}
+          {isLive ? 'En vivo' : isCanceled ? 'No requerido (2-0)' : isFinished ? 'Finalizado' : 'Programado'}
         </span>
       </header>
 
@@ -80,11 +81,15 @@ export function MatchCard({
 
       <footer className="fixture-match-card-footer">
         <span className="fixture-match-round">{match.groupJornada}</span>
-        {canReport && (
+        {isCanceled ? (
+          <span className="text-[11px] font-bold text-[var(--text-muted)] bg-[var(--bg-subtle)] px-2.5 py-1 rounded-md border border-[var(--border-card)]">
+            Serie definida (2-0) • No requerido
+          </span>
+        ) : canReport ? (
           <Button variant="outline" size="sm" onClick={() => onOpenReportModal(match)} className="fixture-match-report">
             <Edit3 className="size-3.5" /> <span>Reportar resultado</span>
           </Button>
-        )}
+        ) : null}
       </footer>
     </article>
   );

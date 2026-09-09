@@ -14,7 +14,11 @@ export interface UserRow extends RowDataPacket {
   id: string; email: string; password_hash: string | null; google_id: string | null; name: string;
   gamertag: string; role: string; primary_game_slug: string; platform: string; position: string;
   secondary_position: string | null; rank_badge: string; rating: number; status: string;
-  avatar_url: string | null; organization_id: string | null; is_banned: number; ban_reason: string | null;
+  avatar_url: string | null; foto?: string | null; banner_url?: string | null;
+  biografia?: string | null; bio?: string | null; country?: string | null; phone?: string | null;
+  instagram?: string | null; twitter?: string | null; twitch?: string | null;
+  youtube?: string | null; discord?: string | null; whatsapp?: string | null;
+  organization_id: string | null; is_banned: number; ban_reason: string | null;
   banned_at?: string | null; game_profiles?: string | null; last_login_at?: string | null;
   created_at: string; updated_at: string;
 }

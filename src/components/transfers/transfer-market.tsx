@@ -37,6 +37,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 
 interface TransferMarketProps {
   game?: GameConfig;
+  hideHeader?: boolean;
 }
 
 type MarketTab = 'ALL' | 'JUGADOR_BUSCA_CLUB' | 'CLUB_RECLUTA_JUGADOR' | 'REALIZADOS';
@@ -57,7 +58,7 @@ interface LegacyTeamFields {
   team_id?: string;
 }
 
-export function TransferMarket({ game }: TransferMarketProps) {
+export function TransferMarket({ game, hideHeader = false }: TransferMarketProps) {
   const { activeGameSlug, currentUser } = useAuth();
   const currentGameSlug = game?.slug || activeGameSlug || 'eafc26';
   const currentGameObj = GAMES_CATALOG[currentGameSlug] || GAMES_CATALOG['eafc26'];
@@ -274,16 +275,18 @@ export function TransferMarket({ game }: TransferMarketProps) {
     >
       {/* 🚀 Top Control Strip & Page Header */}
       <div className="space-y-4">
-        <PageHeader
-          badgeText="MERCADO DE TRASPASOS"
-          badgeIcon={
-            <ArrowRightLeft className="ui-dynamic-brand-icon w-3.5 h-3.5" />
-          }
-          title="Agencia Libre & Fichajes"
-          highlightTitle="Transferencias"
-          description={`Conecta directamente atletas disponibles y escuadras en búsqueda de fichajes para competir al más alto nivel en ${currentGameObj.name}.`}
-          brandColor={currentGameObj.brandColor}
-        />
+        {!hideHeader ? (
+          <PageHeader
+            badgeText="MERCADO DE TRASPASOS"
+            badgeIcon={
+              <ArrowRightLeft className="ui-dynamic-brand-icon w-3.5 h-3.5" />
+            }
+            title="Agencia Libre & Fichajes"
+            highlightTitle="Transferencias"
+            description={`Conecta directamente atletas disponibles y escuadras en búsqueda de fichajes para competir al más alto nivel en ${currentGameObj.name}.`}
+            brandColor={currentGameObj.brandColor}
+          />
+        ) : null}
 
         {/* Squad Cap Rule & Expiry Banner - Loaded Dynamically from MySQL */}
         <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm backdrop-blur-md">

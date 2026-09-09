@@ -46,9 +46,6 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
     const updatedLogo = type === 'logo' ? newUrl : logoUrl;
     const updatedBanner = type === 'banner' ? newUrl : bannerUrl;
 
-    if (type === 'logo') setLogoUrl(newUrl);
-    if (type === 'banner') setBannerUrl(newUrl);
-
     try {
       const putRes = await fetch('/api/teams', {
         method: 'PUT',
@@ -89,10 +86,19 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
           if (newId) setCurrentTeamId(newId);
           if (updateCurrentUser && newId) updateCurrentUser({ teamId: newId });
           if (refetchTeams) await refetchTeams();
+        } else {
+          const postData = await postRes.json().catch(() => ({}));
+          throw new Error(postData.error || 'No se pudo crear el club para guardar la imagen');
         }
+      } else {
+        const putData = await putRes.json().catch(() => ({}));
+        throw new Error(putData.error || 'No se pudo vincular la imagen al club');
       }
+      if (type === 'logo') setLogoUrl(newUrl);
+      if (type === 'banner') setBannerUrl(newUrl);
     } catch (err) {
       console.error('Error persisting image update:', err);
+      throw err;
     }
   };
 
@@ -210,9 +216,10 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
         <BrandedImageUploadSection
           title="Imágenes Institucionales del Club (Logo Oficial & Banner de Portada):"
           brandColor={brandColor}
+          entityType="team"
           items={[
-            { label: 'Logo Oficial / Escudo', subtitle: 'Formato WebP optimizado', currentUrl: logoUrl, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Subir / Cambiar Logo', entityName: team?.name || currentUser?.teamName || 'club', entityId: currentTeamId, onUploadSuccess: (url) => persistImageUpdate('logo', url) },
-            { label: 'Banner de Portada', subtitle: 'Formato HD WebP panorámico', currentUrl: bannerUrl, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Subir / Cambiar Banner', entityName: team?.name || currentUser?.teamName || 'club', entityId: currentTeamId, onUploadSuccess: (url) => persistImageUpdate('banner', url) },
+            { label: 'Logo Oficial / Escudo', subtitle: 'Formato WebP optimizado', currentUrl: logoUrl, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Subir / Cambiar Logo', entityName: team?.name || currentUser?.teamName || 'club', entityId: team?.id || 'new-team', onUploadSuccess: (url) => persistImageUpdate('logo', url) },
+            { label: 'Banner de Portada', subtitle: 'Formato HD WebP panorámico', currentUrl: bannerUrl, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Subir / Cambiar Banner', entityName: team?.name || currentUser?.teamName || 'club', entityId: team?.id || 'new-team', onUploadSuccess: (url) => persistImageUpdate('banner', url) },
           ]}
         />
 

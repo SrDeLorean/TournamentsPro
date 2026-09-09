@@ -83,7 +83,7 @@ export function getRoundNameByTeamCount(teamCount: number): string {
 export function generatePlayoffBracket(
   competitionId: string,
   qualifiedTeams: TeamItem[],
-  matchMode: 'PartidoUnico' | 'IdaVuelta' = 'PartidoUnico',
+  matchMode: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3' = 'PartidoUnico',
   isHybrid: boolean = false,
   groupCount = 4,
   qualifiersPerGroup = 2
@@ -158,7 +158,62 @@ export function generatePlayoffBracket(
         }
       }
 
-      if (matchMode === 'IdaVuelta') {
+      if (matchMode === 'MejorDe3') {
+        const matchIdJ1 = `p-${compClean}-r${roundInfo.roundOrder}-m${m + 1}-j1`;
+        const matchIdJ2 = `p-${compClean}-r${roundInfo.roundOrder}-m${m + 1}-j2`;
+        const matchIdJ3 = `p-${compClean}-r${roundInfo.roundOrder}-m${m + 1}-j3`;
+        const targetNextRoundId = !isLastRound
+          ? `p-${compClean}-r${nextRoundOrder}-m${nextMatchIndex}-j1`
+          : null;
+
+        // Nodo Juego 1: Local vs Visitante
+        bracketMatches.push({
+          id: matchIdJ1,
+          competitionId,
+          roundName: `${roundInfo.roundName} (Juego 1)`,
+          roundOrder: roundInfo.roundOrder,
+          legType: 'UNICO',
+          homeTeamName,
+          awayTeamName,
+          homeTeamId,
+          awayTeamId,
+          nextMatchId: matchIdJ2,
+          nextMatchSlot: 'HOME',
+          status: 'PENDIENTE',
+        });
+
+        // Nodo Juego 2: Localía invertida
+        bracketMatches.push({
+          id: matchIdJ2,
+          competitionId,
+          roundName: `${roundInfo.roundName} (Juego 2)`,
+          roundOrder: roundInfo.roundOrder,
+          legType: 'UNICO',
+          homeTeamName: awayTeamName,
+          awayTeamName: homeTeamName,
+          homeTeamId: awayTeamId,
+          awayTeamId: homeTeamId,
+          nextMatchId: targetNextRoundId,
+          nextMatchSlot: !isLastRound ? nextSlotChoice : null,
+          status: 'PENDIENTE',
+        });
+
+        // Nodo Juego 3: Desempate condicional
+        bracketMatches.push({
+          id: matchIdJ3,
+          competitionId,
+          roundName: `${roundInfo.roundName} (Juego 3)`,
+          roundOrder: roundInfo.roundOrder,
+          legType: 'UNICO',
+          homeTeamName,
+          awayTeamName,
+          homeTeamId,
+          awayTeamId,
+          nextMatchId: targetNextRoundId,
+          nextMatchSlot: !isLastRound ? nextSlotChoice : null,
+          status: 'PENDIENTE',
+        });
+      } else if (matchMode === 'IdaVuelta') {
         const matchIdIda = `p-${compClean}-r${roundInfo.roundOrder}-m${m + 1}-ida`;
         const matchIdVuelta = `p-${compClean}-r${roundInfo.roundOrder}-m${m + 1}-vuelta`;
         const targetNextRoundId = !isLastRound

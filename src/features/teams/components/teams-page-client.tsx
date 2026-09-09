@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { TeamDirectory } from '@/components/teams/team-directory';
 import { Avatar } from '@/components/ui/avatar';
@@ -13,7 +12,7 @@ import { getDirectoryEndpoint } from '@/lib/directory-endpoints';
 import { DataTable, ColumnDef } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
-import { ImageUploadCard } from '@/components/ui/image-upload-card';
+import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import dynamic from 'next/dynamic';
@@ -25,7 +24,6 @@ const SquadRosterModal = dynamic(
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import {
   ManagementHero,
   ManagementMetrics,
@@ -533,32 +531,10 @@ export default function TeamsModulePage() {
         size="xl"
       >
         <div className="space-y-4 font-[family-name:var(--font-active)]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
-            <ImageUploadCard
-              label="Escudo Oficial del Club"
-              subtitle="Formato WebP"
-              currentUrl={modalLogoUrl}
-              fallbackType="logo"
-              uploadType="logo"
-              maxDimension={512}
-          brandColor="var(--app-accent-2)"
-              uploadButtonText="Subir Escudo"
-              entityName="team-new"
-              onUploadSuccess={(url) => setModalLogoUrl(url)}
-            />
-            <ImageUploadCard
-              label="Banner de Portada"
-              subtitle="Formato HD WebP"
-              currentUrl={modalBannerUrl}
-              fallbackType="banner"
-              uploadType="banner"
-              maxDimension={1200}
-          brandColor="var(--app-accent-2)"
-              uploadButtonText="Subir Banner"
-              entityName="team-new"
-              onUploadSuccess={(url) => setModalBannerUrl(url)}
-            />
-          </div>
+          <BrandedImageUploadSection title="Identidad visual del club" brandColor="var(--app-accent-2)" entityType="team" items={[
+            { label: 'Escudo Oficial del Club', currentUrl: modalLogoUrl, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Subir Escudo', entityName: 'team-new', entityId: 'new-team', onUploadSuccess: (url) => setModalLogoUrl(url) },
+            { label: 'Banner de Portada', currentUrl: modalBannerUrl, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Subir Banner', entityName: 'team-new', entityId: 'new-team', onUploadSuccess: (url) => setModalBannerUrl(url) },
+          ]} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Nombre de la Escuadra:" name="name" required placeholder="ViperX Gaming" />
@@ -687,34 +663,10 @@ export default function TeamsModulePage() {
           size="xl"
         >
           <div className="space-y-4 font-[family-name:var(--font-active)]">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
-              <ImageUploadCard
-                label="Escudo Oficial del Club"
-                subtitle="Formato WebP"
-                currentUrl={modalLogoUrl || editingTeam.logo_url}
-                fallbackType="logo"
-                uploadType="logo"
-                maxDimension={512}
-          brandColor="var(--app-accent)"
-                uploadButtonText="Cambiar Escudo"
-                entityName={editingTeam.name}
-                entityId={editingTeam.id}
-                onUploadSuccess={(url) => setModalLogoUrl(url)}
-              />
-              <ImageUploadCard
-                label="Banner de Portada"
-                subtitle="Formato HD WebP"
-                currentUrl={modalBannerUrl || editingTeam.banner_url}
-                fallbackType="banner"
-                uploadType="banner"
-                maxDimension={1200}
-          brandColor="var(--app-accent)"
-                uploadButtonText="Cambiar Banner"
-                entityName={editingTeam.name}
-                entityId={editingTeam.id}
-                onUploadSuccess={(url) => setModalBannerUrl(url)}
-              />
-            </div>
+            <BrandedImageUploadSection title="Identidad visual del club" brandColor="var(--app-accent)" entityType="team" items={[
+              { label: 'Escudo Oficial del Club', currentUrl: modalLogoUrl || editingTeam.logo_url, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Cambiar Escudo', entityName: editingTeam.name, entityId: editingTeam.id, onUploadSuccess: (url) => setModalLogoUrl(url) },
+              { label: 'Banner de Portada', currentUrl: modalBannerUrl || editingTeam.banner_url, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Cambiar Banner', entityName: editingTeam.name, entityId: editingTeam.id, onUploadSuccess: (url) => setModalBannerUrl(url) },
+            ]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="Nombre de la Escuadra:" name="name" defaultValue={editingTeam.name} required />

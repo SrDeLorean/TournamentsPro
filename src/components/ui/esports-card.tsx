@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ViewTransition } from 'react';
+import React, { useCallback, useEffect, useRef, ViewTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowUpRight, Globe, MessageCircle, MessageSquare, Tv } from 'lucide-react';
@@ -116,12 +116,58 @@ export function EsportsCard({
   actionText = 'Ver perfil', brandColor = 'var(--app-accent)', animationDelay = 0,
   transitionName, transitionTypes, children,
 }: EsportsCardProps) {
+  const cardRef = useRef<HTMLElement>(null);
+  const pointerFrameRef = useRef<number | null>(null);
+  const pointerPositionRef = useRef({ x: 0, y: 0 });
   const bannerImg = bannerUrl || '/images/default/banner-default.jpg';
   const logoImg = logoUrl || '/images/default/logo-default.png';
   const derivedCode = countryCode || (country ? COUNTRY_MAP[country.toLowerCase().trim()] || 'cl' : undefined);
   const activeSocials = socials ? Object.entries(socials).filter((entry): entry is [string, string] => Boolean(entry[1]?.trim())) : [];
   const progressPercent = progress ? Math.min(100, Math.round((progress.current / Math.max(progress.max, 1)) * 100)) : 0;
   const isInteractive = Boolean(href || onClick);
+
+  const resetPointerEffect = useCallback(() => {
+    if (pointerFrameRef.current !== null) {
+      cancelAnimationFrame(pointerFrameRef.current);
+      pointerFrameRef.current = null;
+    }
+
+    const cardElement = cardRef.current;
+    if (!cardElement) return;
+
+    cardElement.removeAttribute('data-pointer-active');
+    cardElement.style.setProperty('--card-pointer-x', '50%');
+    cardElement.style.setProperty('--card-pointer-y', '50%');
+    cardElement.style.setProperty('--card-tilt-x', '0deg');
+    cardElement.style.setProperty('--card-tilt-y', '0deg');
+  }, []);
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    if (!isInteractive || event.pointerType !== 'mouse') return;
+
+    pointerPositionRef.current = { x: event.clientX, y: event.clientY };
+    if (pointerFrameRef.current !== null) return;
+
+    const cardElement = event.currentTarget;
+    pointerFrameRef.current = requestAnimationFrame(() => {
+      pointerFrameRef.current = null;
+      const bounds = cardElement.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+
+      const pointerX = Math.min(1, Math.max(0, (pointerPositionRef.current.x - bounds.left) / bounds.width));
+      const pointerY = Math.min(1, Math.max(0, (pointerPositionRef.current.y - bounds.top) / bounds.height));
+      const tiltX = (0.5 - pointerY) * 4.5;
+      const tiltY = (pointerX - 0.5) * 5.5;
+
+      cardElement.dataset.pointerActive = 'true';
+      cardElement.style.setProperty('--card-pointer-x', `${(pointerX * 100).toFixed(2)}%`);
+      cardElement.style.setProperty('--card-pointer-y', `${(pointerY * 100).toFixed(2)}%`);
+      cardElement.style.setProperty('--card-tilt-x', `${tiltX.toFixed(2)}deg`);
+      cardElement.style.setProperty('--card-tilt-y', `${tiltY.toFixed(2)}deg`);
+    });
+  }, [isInteractive]);
+
+  useEffect(() => resetPointerEffect, [resetPointerEffect]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     if (!href && onClick && (event.key === 'Enter' || event.key === ' ')) {
@@ -132,6 +178,7 @@ export function EsportsCard({
 
   const card = (
     <article
+      ref={cardRef}
       className={`esports-entity-card is-${entityType}${isInteractive ? ' is-interactive' : ''} font-[family-name:var(--font-active)]`}
       data-game={gameSlug}
       data-reactive-card={isInteractive ? '' : undefined}
@@ -142,6 +189,9 @@ export function EsportsCard({
       } as React.CSSProperties}
       onClick={!href ? onClick : undefined}
       onKeyDown={handleKeyDown}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={resetPointerEffect}
+      onPointerCancel={resetPointerEffect}
       role={!href && onClick ? 'button' : undefined}
       tabIndex={!href && onClick ? 0 : undefined}
     >

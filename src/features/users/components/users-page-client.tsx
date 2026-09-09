@@ -35,7 +35,7 @@ const ConfirmModal = dynamic(
 
 import { DataTable, ColumnDef } from '@/components/ui/data-table';
 import { ModalForm } from '@/components/ui/modal-form';
-import { ImageUploadCard } from '@/components/ui/image-upload-card';
+import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { GAMES_CATALOG } from '@/lib/games-data';
@@ -720,32 +720,10 @@ export default function UsersModulePage() {
         size="xl"
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10">
-            <ImageUploadCard
-              label="Foto de Perfil"
-              subtitle="Formato WebP"
-              currentUrl={modalAvatarUrl}
-              fallbackType="avatar"
-              uploadType="logo"
-              maxDimension={400}
-          brandColor="var(--app-accent-2)"
-              uploadButtonText="Subir Foto"
-              entityName="usr-new"
-              onUploadSuccess={(url) => setModalAvatarUrl(url)}
-            />
-            <ImageUploadCard
-              label="Banner Portada"
-              subtitle="Formato HD WebP"
-              currentUrl={modalBannerUrl}
-              fallbackType="banner"
-              uploadType="banner"
-              maxDimension={1200}
-          brandColor="var(--app-accent-2)"
-              uploadButtonText="Subir Banner"
-              entityName="usr-new"
-              onUploadSuccess={(url) => setModalBannerUrl(url)}
-            />
-          </div>
+          <BrandedImageUploadSection title="Identidad visual del usuario" brandColor="var(--app-accent-2)" entityType="user" items={[
+            { label: 'Foto de Perfil', currentUrl: modalAvatarUrl, fallbackType: 'avatar', uploadType: 'avatar', maxDimension: 400, uploadButtonText: 'Subir Foto', entityName: 'usr-new', entityId: 'new-user', onUploadSuccess: (url) => setModalAvatarUrl(url) },
+            { label: 'Banner Portada', currentUrl: modalBannerUrl, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Subir Banner', entityName: 'usr-new', entityId: 'new-user', onUploadSuccess: (url) => setModalBannerUrl(url) },
+          ]} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
             <div className="space-y-1">
@@ -805,34 +783,10 @@ export default function UsersModulePage() {
           size="xl"
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10">
-              <ImageUploadCard
-                label="Foto de Perfil"
-                subtitle="Formato WebP"
-                currentUrl={modalAvatarUrl || editingUser.avatar_url}
-                fallbackType="avatar"
-                uploadType="logo"
-                maxDimension={400}
-                brandColor="var(--app-accent)"
-                uploadButtonText="Cambiar Foto"
-                entityName={editingUser.gamertag}
-                entityId={editingUser.id}
-                onUploadSuccess={(url) => setModalAvatarUrl(url)}
-              />
-              <ImageUploadCard
-                label="Banner Portada"
-                subtitle="Formato HD WebP"
-                currentUrl={modalBannerUrl || editingUser.banner_url}
-                fallbackType="banner"
-                uploadType="banner"
-                maxDimension={1200}
-                brandColor="var(--app-accent)"
-                uploadButtonText="Cambiar Banner"
-                entityName={editingUser.gamertag}
-                entityId={editingUser.id}
-                onUploadSuccess={(url) => setModalBannerUrl(url)}
-              />
-            </div>
+            <BrandedImageUploadSection title="Identidad visual del usuario" brandColor="var(--app-accent)" entityType="user" items={[
+              { label: 'Foto de Perfil', currentUrl: modalAvatarUrl || editingUser.avatar_url, fallbackType: 'avatar', uploadType: 'avatar', maxDimension: 400, uploadButtonText: 'Cambiar Foto', entityName: editingUser.gamertag, entityId: editingUser.id, onUploadSuccess: (url) => setModalAvatarUrl(url) },
+              { label: 'Banner Portada', currentUrl: modalBannerUrl || editingUser.banner_url, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Cambiar Banner', entityName: editingUser.gamertag, entityId: editingUser.id, onUploadSuccess: (url) => setModalBannerUrl(url) },
+            ]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
               <div className="space-y-1">

@@ -8,7 +8,7 @@ export interface FixtureMatchItem {
   awayLogoUrl?: string;
   homeScore: number | null;
   awayScore: number | null;
-  status: 'FINALIZADO' | 'EN_VIVO' | 'PROGRAMADO' | 'PENDIENTE';
+  status: 'FINALIZADO' | 'EN_VIVO' | 'PROGRAMADO' | 'PENDIENTE' | 'CANCELADO';
   transmissionTime: string;
   exactDateDisplay: string;
   matchDate: string;
@@ -17,6 +17,7 @@ export interface FixtureMatchItem {
   circuitName: string;
   competitionName: string;
   groupJornada: string;
+  isLockedByBo3?: boolean;
 }
 
 export interface OrganizationOption {

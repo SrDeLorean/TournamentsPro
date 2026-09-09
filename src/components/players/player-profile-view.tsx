@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PublicProfileShell } from '@/components/public/public-profile-shell';
 import { SubSubNavbar } from '@/components/layout/sub-sub-navbar';
+import { GAMES_CATALOG } from '@/lib/games-data';
 import {
   User, Shield, Trophy, Star, ArrowRightLeft, BarChart3, MessageSquare, Sparkles, Send, Globe, Share2, Video, Tv, Phone, Gamepad2, Monitor, CheckCircle2
 } from 'lucide-react';
@@ -52,9 +54,10 @@ interface PlayerProfileViewProps {
   brandColor?: string;
   context?: 'global' | 'game';
   backHref?: string;
+  isOwner?: boolean;
 }
 
-export function PlayerProfileView({ player, brandColor = 'var(--app-accent)' }: PlayerProfileViewProps) {
+export function PlayerProfileView({ player, brandColor = 'var(--app-accent)', isOwner = false }: PlayerProfileViewProps) {
   const [activeTab, setActiveTab] = useState<'ficha' | 'stats' | 'palmares' | 'ofertas'>('ficha');
 
   const activeColor = brandColor || 'var(--app-accent)';
@@ -66,6 +69,17 @@ export function PlayerProfileView({ player, brandColor = 'var(--app-accent)' }: 
   const playerNacionalidad = player.nacionalidad || 'Chile';
   const playerTeam = player.teamName || 'Agencia Libre';
   const playerRating = player.rating || 88;
+
+  const gameCatalogEntry = GAMES_CATALOG[player.gameSlug];
+  const defaultGameBanner = gameCatalogEntry?.bannerUrl || '/images/games-background/eafc.jpg';
+  const effectiveBannerUrl = (player.bannerUrl && player.bannerUrl !== '/images/default/banner-default.jpg')
+    ? player.bannerUrl
+    : defaultGameBanner;
+
+  const fallbackAvatar = (player.id === 'usr-srdelorean' || player.gamertag?.toLowerCase() === 'srdelorean')
+    ? '/uploads/usuarios/0ANkDShbpFOHqdj7b6bg_1783718412.webp'
+    : undefined;
+  const effectiveLogoUrl = player.avatarUrl || fallbackAvatar;
 
   const stats = player.stats || {
     matches: 34,
@@ -87,9 +101,9 @@ export function PlayerProfileView({ player, brandColor = 'var(--app-accent)' }: 
       entityId={player.id}
       transitionPrefix="player"
       accentColor={activeColor}
-      bannerUrl={player.bannerUrl || '/images/default/banner-default.jpg'}
+      bannerUrl={effectiveBannerUrl}
       bannerAlt={playerName}
-      logoUrl={player.avatarUrl}
+      logoUrl={effectiveLogoUrl}
       logoAlt={playerName}
       logoFallback={playerName.slice(0, 2).toUpperCase()}
       eyebrow={<><Sparkles className="size-3.5" />Ficha competitiva verificada</>}
@@ -97,7 +111,29 @@ export function PlayerProfileView({ player, brandColor = 'var(--app-accent)' }: 
       badge={playerPos}
       description={player.bio || `Atleta oficial de ${playerTeam}.`}
       facts={<><span><Gamepad2 className="size-3.5" />@{playerTag}</span><span><Monitor className="size-3.5" />{player.platform || 'CROSSPLAY'}</span><span className="is-active"><CheckCircle2 className="size-3.5" />{player.status || 'Activo'}</span></>}
-      actions={<Button className="public-team-primary-action"><Send className="size-4" />Proponer fichaje</Button>}
+      actions={
+        isOwner ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/${player.gameSlug}/atleta/ajustes`}>
+              <Button className="public-team-primary-action">
+                <Sparkles className="size-4" />
+                Editar perfil
+              </Button>
+            </Link>
+            <Link href={`/${player.gameSlug}/jugadores/${player.id}`}>
+              <Button variant="outline" className="text-xs">
+                <Globe className="size-3.5" />
+                Enlace público
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <Button className="public-team-primary-action">
+            <Send className="size-4" />
+            Proponer fichaje
+          </Button>
+        )
+      }
       metrics={[{ value: playerRating, label: 'rating' }, { value: stats.matches, label: 'partidos' }, { value: stats.goals, label: 'goles / kills' }, { value: stats.winrate, label: 'victorias' }]}
       tabs={<SubSubNavbar tabs={profileTabs} activeTab={activeTab} onSelectTab={setActiveTab} brandColor={activeColor} />}
       contentClassName="public-player-content space-y-6"

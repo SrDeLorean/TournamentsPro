@@ -21,7 +21,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Calendar, Clock, Sparkles, Trophy, Swords, Layers, Settings, Check, RefreshCw
+  Calendar, Clock, Sparkles, Trophy, Swords, Layers, Settings, Check, RefreshCw, Plus, X
 } from 'lucide-react';
 
 interface FixtureGeneratorProps {
@@ -47,10 +47,15 @@ interface StoredMatch {
   team_away_id?: string | null;
   score_home?: number | null;
   score_away?: number | null;
+  stage?: string | null;
+  round_name?: string | null;
+  group_name?: string | null;
+  next_match_id?: string | null;
+  next_match_slot?: string | null;
 }
 
 export type TournamentFormat = 'Liga' | 'Playoff' | 'Hibrido';
-export type MatchMode = 'IdaVuelta' | 'PartidoUnico';
+export type MatchMode = 'IdaVuelta' | 'PartidoUnico' | 'MejorDe3';
 
 export interface TimeSlotConfig {
   dayLabel: string;
@@ -82,7 +87,8 @@ export function generateFixtureSchedule(
   groupCount = 3,
   qualifiersPerGroup = 2,
   selectedDays?: string[],
-  selectedTimes?: string[]
+  selectedTimes?: string[],
+  playoffMatchMode?: MatchMode
 ): MatchScheduled[] {
   if (teamsList.length < 2 || timeSlots.length === 0) {
     return [];
@@ -108,11 +114,15 @@ export function generateFixtureSchedule(
 
   // 🏆 PREVISUALIZACIÓN DE PLAYOFF
   if (format === 'Playoff') {
-    const playoffNodes = generatePlayoffBracket('preview', teamsList, matchMode);
+    const playoffMode = playoffMatchMode || matchMode;
+    const playoffNodes = generatePlayoffBracket('preview', teamsList, playoffMode);
     playoffNodes.forEach((node) => {
       let matchdayNumber = node.roundOrder;
-      if (matchMode === 'IdaVuelta') {
+      if (playoffMode === 'IdaVuelta') {
         matchdayNumber = (node.roundOrder - 1) * 2 + (node.legType === 'VUELTA' ? 2 : 1);
+      } else if (playoffMode === 'MejorDe3') {
+        const jNum = /-j([123])$/i.exec(node.id)?.[1] || '1';
+        matchdayNumber = (node.roundOrder - 1) * 3 + Number(jNum);
       }
       const timing = getScheduledInfo(matchdayNumber);
 
@@ -135,6 +145,9 @@ export function generateFixtureSchedule(
   if (format === 'Hibrido') {
     const groups = distributeTeamsIntoGroups(teamsList, groupCount);
     let maxGroupMatchday = 1;
+    // Grupos: SOLO IDA o IDA Y VUELTA (nunca Bo3)
+    const groupMatchMode = matchMode === 'IdaVuelta' ? 'IdaVuelta' : 'PartidoUnico';
+    const totalLegs = groupMatchMode === 'IdaVuelta' ? 2 : 1;
 
     groups.forEach((group) => {
       const groupTeams = [...group.teams];
@@ -143,7 +156,6 @@ export function generateFixtureSchedule(
       const numTeams = groupTeams.length;
       const singleRoundMatchesCount = numTeams - 1;
       const matchesPerRound = numTeams / 2;
-      const totalLegs = matchMode === 'IdaVuelta' ? 2 : 1;
 
       for (let leg = 0; leg < totalLegs; leg++) {
         for (let round = 0; round < singleRoundMatchesCount; round++) {
@@ -180,18 +192,23 @@ export function generateFixtureSchedule(
     });
 
     const playoffTeamCount = groupCount * qualifiersPerGroup;
+    // Playoff de Híbrido: soporta PartidoUnico, IdaVuelta o MejorDe3
+    const effectivePlayoffMatchMode = playoffMatchMode || matchMode;
     const playoffNodes = generatePlayoffBracket(
       'preview',
       teamsList.slice(0, playoffTeamCount),
-      matchMode,
+      effectivePlayoffMatchMode,
       true,
       groupCount,
       qualifiersPerGroup
     );
     playoffNodes.forEach((node) => {
       let playoffRoundOffset = node.roundOrder;
-      if (matchMode === 'IdaVuelta') {
+      if (effectivePlayoffMatchMode === 'IdaVuelta') {
         playoffRoundOffset = (node.roundOrder - 1) * 2 + (node.legType === 'VUELTA' ? 2 : 1);
+      } else if (effectivePlayoffMatchMode === 'MejorDe3') {
+        const jNum = /-j([123])$/i.exec(node.id)?.[1] || '1';
+        playoffRoundOffset = (node.roundOrder - 1) * 3 + Number(jNum);
       }
       const matchdayNumber = maxGroupMatchday + playoffRoundOffset;
       const timing = getScheduledInfo(matchdayNumber);
@@ -211,14 +228,15 @@ export function generateFixtureSchedule(
     return matches;
   }
 
-  // 📌 PREVISUALIZACIÓN DE LIGA
+  // 📌 PREVISUALIZACIÓN DE LIGA (solo PartidoUnico o IdaVuelta, nunca Bo3)
   const teams = [...teamsList];
   if (teams.length % 2 !== 0) teams.push({ id: 'BYE', name: 'DESCANSO (BYE)' });
 
   const numTeams = teams.length;
   const singleRoundMatchesCount = numTeams - 1;
   const matchesPerRound = numTeams / 2;
-  const totalLegs = matchMode === 'IdaVuelta' ? 2 : 1;
+  const leagueMatchMode = matchMode === 'IdaVuelta' ? 'IdaVuelta' : 'PartidoUnico';
+  const totalLegs = leagueMatchMode === 'IdaVuelta' ? 2 : 1;
 
   for (let leg = 0; leg < totalLegs; leg++) {
     for (let round = 0; round < singleRoundMatchesCount; round++) {
@@ -261,10 +279,22 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
   const [isWarningModalOpen, setIsWarningModalOpen] = useState<boolean>(false);
 
   // Form State
-  const [format, setFormat] = useState<TournamentFormat>('Liga');
+  const initialFormat = ((competition.format || competition.mode_format) as TournamentFormat) || 'Liga';
+  const initialMatchMode = ((competition.match_mode || (competition as any).matchMode) as MatchMode) || 'PartidoUnico';
+  const initialPlayoffMatchMode = (((competition as any).playoff_match_mode || (competition as any).playoffMatchMode) as MatchMode) || 'PartidoUnico';
+
+  const [format, setFormat] = useState<TournamentFormat>(
+    initialFormat === 'Playoff' || initialFormat === 'Hibrido' ? initialFormat : 'Liga'
+  );
   const [groupCount, setGroupCount] = useState<number>(3); // Ej. 3 grupos para probar asimetría
   const [qualifiersPerGroup, setQualifiersPerGroup] = useState<number>(2);
-  const [matchMode, setMatchMode] = useState<MatchMode>('PartidoUnico');
+  const [matchMode, setMatchMode] = useState<MatchMode>(() => {
+    if (initialFormat === 'Liga' && initialMatchMode === 'MejorDe3') return 'PartidoUnico';
+    return initialMatchMode === 'IdaVuelta' || initialMatchMode === 'MejorDe3' ? initialMatchMode : 'PartidoUnico';
+  });
+  const [playoffMatchMode, setPlayoffMatchMode] = useState<MatchMode>(
+    initialPlayoffMatchMode === 'IdaVuelta' || initialPlayoffMatchMode === 'MejorDe3' ? initialPlayoffMatchMode : 'PartidoUnico'
+  );
 
   const [startDate, setStartDate] = useState<string>(
     competition.fecha_inicio
@@ -283,8 +313,33 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
   ];
   const [selectedDays, setSelectedDays] = useState<string[]>(['Martes', 'Jueves']);
 
-  const availableTimes = ['19:00', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30'];
+  // Horarios de Partidos interactivos
   const [selectedTimes, setSelectedTimes] = useState<string[]>(['20:00', '21:30']);
+  const [newTimeInput, setNewTimeInput] = useState<string>('');
+  const [timeError, setTimeError] = useState<string | null>(null);
+
+  const handleAddTime = () => {
+    const raw = newTimeInput.trim();
+    if (!raw) return;
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(raw)) {
+      setTimeError('Formato inválido. Ingresa hora 24h ej. 22:40');
+      return;
+    }
+    const [h, m] = raw.split(':');
+    const formatted = `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+    if (selectedTimes.includes(formatted)) {
+      setTimeError('El horario ya está en la lista');
+      return;
+    }
+    setTimeError(null);
+    setSelectedTimes((prev) => [...prev, formatted].sort());
+    setNewTimeInput('');
+  };
+
+  const handleRemoveTime = (timeToRemove: string) => {
+    setSelectedTimes((prev) => prev.filter((t) => t !== timeToRemove));
+  };
 
   const [isPending, startTransition] = useTransition();
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
@@ -323,17 +378,6 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
     }
   };
 
-  const handleToggleTime = (time: string) => {
-    if (selectedTimes.includes(time)) {
-      if (selectedTimes.length > 1) {
-        setSelectedTimes(selectedTimes.filter((t) => t !== time));
-      }
-    } else {
-      const updated = [...selectedTimes, time].sort();
-      setSelectedTimes(updated);
-    }
-  };
-
   const handleStartRegeneration = () => {
     if (hasReportedResults) {
       setIsWarningModalOpen(true);
@@ -354,6 +398,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
         selectedTimes,
         confirmedNameCheck,
         matchMode,
+        playoffMatchMode: format === 'Hibrido' ? playoffMatchMode : undefined,
         format,
         groupCount,
         qualifiersPerGroup,
@@ -485,12 +530,16 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                   ? new Date(dateStr).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
                   : 'Fecha por definir';
 
+                const stageOrGroupLabel = currentMatchGroup.some(m => m.stage === 'PLAYOFF' || m.round_name)
+                  ? (currentMatchGroup[0]?.round_name || 'Playoffs')
+                  : currentMatchGroup[0]?.group_name ? currentMatchGroup[0]?.group_name : 'Fase Regular';
+
                 return (
                   <div className="glass-panel rounded-2xl p-4 space-y-3 shadow-xl overflow-x-auto">
                     <div className="flex items-center justify-between border-b border-[var(--text-heading)]/10 pb-2.5">
                       <div className="flex items-center gap-2 text-xs font-black uppercase text-[var(--app-accent)] font-[family-name:var(--font-active)]">
                         <Calendar className="w-4 h-4 text-[var(--app-accent)]" />
-                        <span>Jornada {currentMatchdayNum} ({currentMatchGroup.length} Partidos)</span>
+                        <span>Jornada {currentMatchdayNum} · {stageOrGroupLabel} ({currentMatchGroup.length} Partidos)</span>
                       </div>
                       <Badge variant="cyan" className="text-[10px] font-[family-name:var(--font-active)] uppercase">
                         {formattedDate}
@@ -501,6 +550,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                       <thead>
                         <tr className="border-b border-[var(--text-heading)]/10 text-[var(--text-muted)] text-[10px] uppercase">
                           <th className="p-2">ID</th>
+                          <th className="p-2 text-center">Fase / Grupo</th>
                           <th className="p-2 text-right">Equipo Local</th>
                           <th className="p-2 text-center">Logo</th>
                           <th className="p-2 text-center">Resultado</th>
@@ -524,6 +574,19 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                           return (
                             <tr key={m.id} className="border-b border-[var(--text-heading)]/5 hover:bg-[var(--app-surface-2)]/40 transition-colors">
                               <td className="p-2 text-[var(--text-muted)] font-bold text-[10px]">{m.id.slice(-6)}</td>
+                              <td className="p-2 text-center">
+                                {m.stage === 'PLAYOFF' || m.round_name ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] border border-[var(--app-accent-2)]/30 whitespace-nowrap">
+                                    {m.round_name || 'Playoff'}
+                                  </span>
+                                ) : m.group_name ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase bg-[var(--app-accent-soft)] text-[var(--app-accent)] border border-[var(--app-accent)]/30 whitespace-nowrap">
+                                    {m.group_name}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-[var(--text-muted)] uppercase">Regular</span>
+                                )}
+                              </td>
                               <td className="p-2 text-right font-black text-[var(--text-heading)]">{homeName}</td>
                               <td className="p-2 text-center">
                                 <div className="w-7 h-7 mx-auto rounded-lg bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/40 flex items-center justify-center font-black text-[10px] text-[var(--app-accent-2)]">
@@ -640,7 +703,13 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => setFormat(opt.id as TournamentFormat)}
+                    onClick={() => {
+                      const nextFormat = opt.id as TournamentFormat;
+                      setFormat(nextFormat);
+                      if (nextFormat === 'Liga' && matchMode === 'MejorDe3') {
+                        setMatchMode('PartidoUnico');
+                      }
+                    }}
                     className={`p-3.5 rounded-xl text-left border transition-all ${
                       format === opt.id ? 'bg-[var(--app-accent-2-soft)]/80 border-[var(--app-accent-2)] text-[var(--text-heading)] shadow-lg scale-[1.02]' : 'glass-panel-hover text-[var(--text-muted)]'
                     }`}
@@ -741,28 +810,112 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
               </div>
             )}
 
-            {/* Modalidad de Encuentro */}
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase text-[var(--text-secondary)] tracking-wider block flex items-center gap-2">
-                <Swords className="w-4 h-4 text-[var(--app-accent)]" /> Modalidad de Encuentro:
-              </label>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setMatchMode('PartidoUnico')}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border ${matchMode === 'PartidoUnico' ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] border-[var(--app-accent)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
-                >
-                  Partido Único
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMatchMode('IdaVuelta')}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border ${matchMode === 'IdaVuelta' ? 'bg-[var(--app-accent-2)] text-[var(--text-heading)] border-[var(--app-accent-2)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
-                >
-                  Ida y Vuelta
-                </button>
+            {/* Modalidad de Encuentro (Adaptada por Formato) */}
+            {format === 'Hibrido' ? (
+              <div className="p-4 rounded-xl bg-[var(--app-accent-2-soft)]/20 border border-[var(--app-accent-2)]/30 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase text-[var(--app-accent)] tracking-wider block flex items-center gap-2">
+                    <Swords className="w-4 h-4 text-[var(--app-accent)]" /> 1. Modalidad de Fase de Grupos:
+                  </label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMatchMode('PartidoUnico')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase border transition-all ${matchMode === 'PartidoUnico' ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] border-[var(--app-accent)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                    >
+                      Solo Ida
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMatchMode('IdaVuelta')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase border transition-all ${matchMode === 'IdaVuelta' ? 'bg-[var(--app-accent-2)] text-[var(--text-heading)] border-[var(--app-accent-2)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                    >
+                      Ida y Vuelta
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-[var(--app-accent-2)]/20">
+                  <label className="text-xs font-black uppercase text-[var(--app-warning)] tracking-wider block flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-[var(--app-warning)]" /> 2. Modalidad de Fase Playoff:
+                  </label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPlayoffMatchMode('PartidoUnico')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase border transition-all ${playoffMatchMode === 'PartidoUnico' ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] border-[var(--app-accent)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                    >
+                      Partido Único
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlayoffMatchMode('IdaVuelta')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase border transition-all ${playoffMatchMode === 'IdaVuelta' ? 'bg-[var(--app-accent-2)] text-[var(--text-heading)] border-[var(--app-accent-2)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                    >
+                      Ida y Vuelta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlayoffMatchMode('MejorDe3')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase border transition-all ${playoffMatchMode === 'MejorDe3' ? 'bg-[var(--app-warning)] text-[var(--app-canvas)] border-[var(--app-warning)] shadow-md font-extrabold' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                    >
+                      🎮 Mejor de 3 (Bo3)
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : format === 'Liga' ? (
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase text-[var(--text-secondary)] tracking-wider block flex items-center gap-2">
+                  <Swords className="w-4 h-4 text-[var(--app-accent)]" /> Modalidad de Encuentro (Liga Regular):
+                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setMatchMode('PartidoUnico')}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border transition-all ${matchMode === 'PartidoUnico' ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] border-[var(--app-accent)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                  >
+                    Solo Ida
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchMode('IdaVuelta')}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border transition-all ${matchMode === 'IdaVuelta' ? 'bg-[var(--app-accent-2)] text-[var(--text-heading)] border-[var(--app-accent-2)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                  >
+                    Ida y Vuelta
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase text-[var(--text-secondary)] tracking-wider block flex items-center gap-2">
+                  <Swords className="w-4 h-4 text-[var(--app-accent)]" /> Modalidad de Llaves (Playoff):
+                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setMatchMode('PartidoUnico')}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border transition-all ${matchMode === 'PartidoUnico' ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] border-[var(--app-accent)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                  >
+                    Partido Único
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchMode('IdaVuelta')}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border transition-all ${matchMode === 'IdaVuelta' ? 'bg-[var(--app-accent-2)] text-[var(--text-heading)] border-[var(--app-accent-2)] shadow-md' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                  >
+                    Ida y Vuelta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchMode('MejorDe3')}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase border transition-all ${matchMode === 'MejorDe3' ? 'bg-[var(--app-warning)] text-[var(--app-canvas)] border-[var(--app-warning)] shadow-md font-extrabold' : 'glass-panel-hover text-[var(--text-secondary)]'}`}
+                  >
+                    🎮 Mejor de 3 (Bo3)
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Calendario Oficial */}
             <div className="space-y-4 pt-2 border-t border-[var(--text-heading)]/10">
@@ -793,21 +946,101 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                 </div>
               </div>
 
-              <div className="space-y-2">
+              {/* Horarios Dinámicos con Input y Lista Eliminable */}
+              <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[var(--app-accent)]" /> Horarios Simultáneos Disponibles:
+                  <Clock className="w-3.5 h-3.5 text-[var(--app-accent)]" /> Horarios de Partidos (Personalizados):
                 </label>
-                <div className="flex flex-wrap items-center gap-2">
-                  {availableTimes.map((time) => (
-                    <button
-                      key={time}
-                      type="button"
-                      onClick={() => handleToggleTime(time)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-[family-name:var(--font-active)] font-bold border ${selectedTimes.includes(time) ? 'bg-[var(--app-accent-soft)] text-[var(--app-accent)] border-[var(--app-accent)]/60' : 'glass-panel-hover text-[var(--text-muted)]'}`}
-                    >
-                      {time} hrs
-                    </button>
-                  ))}
+
+                {/* Input para escribir horario y agregar a la lista */}
+                <div className="flex items-center gap-2 max-w-sm">
+                  <input
+                    type="time"
+                    value={newTimeInput}
+                    onChange={(e) => {
+                      setNewTimeInput(e.target.value);
+                      if (timeError) setTimeError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddTime();
+                      }
+                    }}
+                    placeholder="22:40"
+                    className="input-theme flex-1 p-2 rounded-xl font-[family-name:var(--font-active)] text-xs text-[var(--text-heading)]"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddTime}
+                    className="bg-[var(--app-accent)] hover:bg-[var(--app-accent)]/80 text-[var(--accent-contrast)] font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Agregar
+                  </Button>
+                </div>
+                {timeError && (
+                  <p className="text-[10px] text-[var(--app-danger)] font-bold">{timeError}</p>
+                )}
+
+                {/* Lista de horarios configurados con botón Eliminar (X) */}
+                <div className="space-y-1 pt-1">
+                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase block">
+                    Horarios configurados para rotación ({selectedTimes.length}):
+                  </span>
+                  {selectedTimes.length === 0 ? (
+                    <p className="text-xs text-[var(--app-warning)] italic">
+                      Escribe un horario (ej. 22:40) y agrégalo para generar los partidos.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selectedTimes.map((time) => (
+                        <div
+                          key={time}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-[family-name:var(--font-active)] font-black bg-[var(--app-accent-soft)] text-[var(--app-accent)] border border-[var(--app-accent)]/60 shadow-sm"
+                        >
+                          <Clock className="w-3 h-3 text-[var(--app-accent)]" />
+                          <span>{time} hrs</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTime(time)}
+                            className="p-0.5 rounded-full hover:bg-[var(--app-accent)]/20 text-[var(--app-accent)] hover:text-[var(--app-danger)] transition-colors"
+                            title={`Eliminar ${time}`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sugerencias Rápidas */}
+                <div className="pt-1">
+                  <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase block mb-1">
+                    Sugerencias rápidas:
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {['19:00', '20:00', '20:30', '21:00', '21:30', '22:00', '22:40', '23:10'].map((time) => (
+                      <button
+                        key={time}
+                        type="button"
+                        onClick={() => {
+                          if (!selectedTimes.includes(time)) {
+                            setSelectedTimes((prev) => [...prev, time].sort());
+                          }
+                        }}
+                        disabled={selectedTimes.includes(time)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                          selectedTimes.includes(time)
+                            ? 'opacity-30 cursor-not-allowed border-[var(--text-heading)]/10 text-[var(--text-muted)]'
+                            : 'border-[var(--text-heading)]/20 hover:border-[var(--app-accent)] text-[var(--text-secondary)] hover:text-[var(--app-accent)]'
+                        }`}
+                      >
+                        + {time}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -837,6 +1070,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                 selectedDays={selectedDays}
                 selectedTimes={selectedTimes}
                 matchMode={matchMode}
+                playoffMatchMode={format === 'Hibrido' ? playoffMatchMode : undefined}
                 isSubmitting={isPending}
                 onConfirmSave={() => {
                   if (hasReportedResults) {

@@ -1,0 +1,54 @@
+.ui-route-state {
+  width: min(100%, 96rem);
+  min-height: calc(100dvh - 3.5rem);
+  margin-inline: auto;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-active);
+}
+
+.ui-route-loading { display: grid; align-content: start; gap: 1rem; }
+.ui-route-loading-hero,
+.ui-route-loading-toolbar {
+  display: flex;
+  min-width: 0;
+  gap: 0.75rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--bg-card);
+  padding: clamp(1rem, 3vw, 2rem);
+  box-shadow: var(--shadow-soft);
+}
+.ui-route-loading-hero { flex-direction: column; }
+.ui-route-loading-toolbar { align-items: center; }
+.ui-route-loading-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+.ui-route-loading-card { min-height: 12rem; }
+.ui-route-loading[data-variant='auth'] { width: min(100%, 34rem); align-content: center; }
+.ui-route-loading[data-variant='auth'] .ui-route-loading-card { min-height: 23rem; }
+
+.ui-route-error {
+  display: flex;
+  min-height: 60dvh;
+  max-width: 48rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.ui-route-state-icon { display: grid; width: 4rem; height: 4rem; place-items: center; border: 1px solid color-mix(in srgb, var(--app-danger) 35%, var(--border-card)); border-radius: var(--radius-card); background: color-mix(in srgb, var(--app-danger) 10%, var(--bg-card)); color: var(--app-danger); }
+.ui-route-state-icon svg { width: 1.75rem; height: 1.75rem; }
+.ui-route-state-eyebrow { margin-top: 1rem; color: var(--app-danger); font-size: 0.7rem; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; }
+.ui-route-error h1 { margin-top: 0.5rem; color: var(--text-heading); font-size: clamp(1.75rem, 5vw, 2.75rem); font-weight: 950; letter-spacing: -0.04em; }
+.ui-route-error > p:not(.ui-route-state-eyebrow) { max-width: 36rem; margin-top: 0.75rem; color: var(--text-secondary); line-height: 1.65; }
+.ui-route-state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin-top: 1.5rem; }
+
+@media (min-width: 640px) {
+  .ui-route-loading-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .ui-route-loading-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ui-route-loading[data-variant='game'] .ui-route-loading-grid,
+  .ui-route-loading[data-variant='directory'] .ui-route-loading-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

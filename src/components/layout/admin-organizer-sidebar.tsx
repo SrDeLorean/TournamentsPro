@@ -168,7 +168,7 @@ export function AdminOrganizerSidebar({ isMobileOpen, isDesktopCollapsed, onMobi
           </div>
 
           {/* Public shortcuts preserve the same pages an anonymous visitor sees. */}
-          <div className="management-public-shortcuts hidden space-y-2 border-t border-[var(--border-card)] pt-3 lg:block">
+          <div className="management-public-shortcuts space-y-2 border-t border-[var(--border-card)] pt-3">
             <div className="space-y-1">
               <span className="text-[10px] font-black uppercase text-[var(--app-accent-2)] tracking-wider px-2 block flex items-center gap-1">
                 <Gamepad2 className="w-3 h-3 text-[var(--app-accent-2)]" />

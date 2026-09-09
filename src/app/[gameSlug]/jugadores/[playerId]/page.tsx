@@ -93,8 +93,8 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
     discord: activeUser?.discord,
     whatsapp: activeUser?.whatsapp,
     website: activeUser?.website,
-    avatarUrl: activeUser?.avatarUrl || activeUser?.foto || matchedKnown?.avatarUrl || '/images/default/logo-default.png',
-    bannerUrl: activeUser?.bannerUrl || matchedKnown?.bannerUrl || '/images/default/banner-default.jpg',
+    avatarUrl: activeUser?.avatarUrl || activeUser?.foto || matchedKnown?.avatarUrl || (normalizedId === 'usr-srdelorean' || normalizedId === 'srdelorean' ? '/uploads/usuarios/0ANkDShbpFOHqdj7b6bg_1783718412.webp' : undefined) || '/images/default/logo-default.png',
+    bannerUrl: activeUser?.bannerUrl || matchedKnown?.bannerUrl || game?.bannerUrl || '/images/games-background/eafc.jpg',
     stats: {
       ...((activeUser as (UserProfile & { aggregatedStats?: PlayerData['stats'] }) | null)?.aggregatedStats || {
         matches: 42,
@@ -120,7 +120,7 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
 
   return (
     <div className="w-full min-h-screen pt-0 pb-6 relative">
-      <PlayerProfileView player={player} brandColor={game.brandColor} context="game" />
+      <PlayerProfileView player={player} brandColor={game.brandColor} context="game" isOwner={Boolean(isSelf)} />
     </div>
   );
 }

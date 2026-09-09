@@ -73,6 +73,14 @@ export interface CompetitionMatch {
   score_away?: number | null;
   matchday_number?: number | null;
   matchday?: number | null;
+  stage?: string | null;
+  round_name?: string | null;
+  group_name?: string | null;
+  next_match_id?: string | null;
+  next_match_slot?: string | null;
+  winner_team_id?: string | null;
+  scheduled_time?: string | null;
+  scheduled_at?: string | null;
 }
 
 export type CompetitionTabType = 'dashboard' | 'fixture' | 'standings' | 'teams' | 'settings';
@@ -309,8 +317,8 @@ export function CompetitionTabs({
           <ManagementSection title="Reglas y sistema" description="Configuración competitiva vigente" icon={Shield} tone="violet">
             <dl className="competition-detail-list">
               <div><dt>Modalidad</dt><dd>{competition.mode_format}</dd></div>
-              <div><dt>Tipo de torneo</dt><dd>{competition.mode_format?.toLowerCase().includes('playoff') ? 'Playoff' : competition.mode_format?.toLowerCase().includes('hibrid') ? 'Liga híbrida' : 'Liga'}</dd></div>
-              <div><dt>Formato de partido</dt><dd>{competition.match_mode === 'IdaVuelta' ? 'Ida y vuelta' : 'Partido único'}</dd></div>
+              <div><dt>Tipo de torneo</dt><dd>{(competition.format === 'Hibrido' || competition.mode_format?.toLowerCase().includes('hibrid')) ? 'Liga híbrida (Grupos + Playoffs)' : (competition.format === 'Playoff' || competition.mode_format?.toLowerCase().includes('playoff')) ? 'Playoff' : 'Liga'}</dd></div>
+              <div><dt>Formato de partido</dt><dd>{competition.match_mode === 'IdaVuelta' ? 'Ida y vuelta' : competition.match_mode === 'MejorDe3' ? 'Mejor de 3 (Bo3)' : 'Partido único'}</dd></div>
               <div><dt>Mercado</dt><dd>{competition.transfer_market_mode?.replaceAll('_', ' ')}</dd></div>
             </dl>
           </ManagementSection>

@@ -23,6 +23,7 @@ interface TeamAdminSubnavbarProps {
 
 export function TeamAdminSubnavbar({
   team,
+  activeSection,
   onSelectSection,
   brandColor = 'var(--app-accent)',
 }: TeamAdminSubnavbarProps) {
@@ -51,14 +52,12 @@ export function TeamAdminSubnavbar({
   return (
     <>
       <div
-        className="ui-navigation-tier w-full z-40 py-1.5 px-4 sm:px-6 lg:px-8"
+        className="team-admin-navbar ui-navigation-tier z-40 w-full"
         style={{
           '--navigation-brand': activeColor,
-          backgroundColor: `color-mix(in srgb, ${activeColor} 18%, var(--bg-nav))`,
-          borderColor: `${activeColor}50`,
         } as React.CSSProperties}
       >
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+        <div className="team-admin-navbar-frame ui-navigation-frame">
           
           {/* Left Team Badge + Theme Color Accent */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
@@ -86,22 +85,24 @@ export function TeamAdminSubnavbar({
           </div>
 
           {/* Separated Management Bars: 🛡️ GESTIÓN DE EQUIPO vs 👤 GESTIÓN DE SÍ MISMO */}
-          <div className="flex items-center gap-3 overflow-x-auto scrollbar-none">
+          <div className="team-admin-navbar-groups scrollbar-none">
             
             {/* GROUP 1: 🛡️ GESTIÓN DE SU EQUIPO (MODAL INDEPENDIENTE) */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--app-canvas)] border border-[var(--navigation-brand)]">
+            <div className="team-admin-navbar-group">
               <span className="text-[9px] font-black uppercase tracking-wider text-[var(--navigation-brand)] px-2 hidden lg:inline-block">
                 🛡️ Club:
               </span>
               {equipoSections.map((sec) => (
                 <button
                   key={sec.id}
+                  type="button"
                   onClick={() => {
                     setActiveTeamTab(sec.id as TeamTabOption);
                     setIsTeamModalOpen(true);
                     if (onSelectSection) onSelectSection(sec.id);
                   }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-heading)] hover:bg-[var(--app-accent-soft)] transition-all flex items-center gap-1.5 flex-shrink-0"
+                  aria-pressed={activeSection === sec.id}
+                  className={`team-admin-navbar-link${activeSection === sec.id ? ' is-active' : ''}`}
                 >
                   {sec.icon}
                   <span>{sec.label}</span>
@@ -117,19 +118,21 @@ export function TeamAdminSubnavbar({
             <div className="w-px h-6 bg-[var(--border-card)] hidden md:block" />
 
             {/* GROUP 2: 👤 GESTIÓN DE SÍ MISMO - ATLETA (MODAL INDEPENDIENTE) */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--app-canvas)] border border-[var(--app-accent)]">
-              <span className="text-[9px] font-black uppercase tracking-wider text-[var(--app-accent)] px-2 hidden lg:inline-block">
+            <div className="team-admin-navbar-group">
+              <span className="text-[9px] font-black uppercase tracking-wider text-[var(--navigation-brand)] px-2 hidden lg:inline-block">
                 👤 Atleta:
               </span>
               {atletaSections.map((sec) => (
                 <button
                   key={sec.id}
+                  type="button"
                   onClick={() => {
                     setActiveAthleteTab(sec.id as AthleteTabOption);
                     setIsAthleteModalOpen(true);
                     if (onSelectSection) onSelectSection(sec.id);
                   }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-heading)] hover:bg-[var(--app-accent-soft)] transition-all flex items-center gap-1.5 flex-shrink-0"
+                  aria-pressed={activeSection === sec.id}
+                  className={`team-admin-navbar-link${activeSection === sec.id ? ' is-active' : ''}`}
                 >
                   {sec.icon}
                   <span>{sec.label}</span>

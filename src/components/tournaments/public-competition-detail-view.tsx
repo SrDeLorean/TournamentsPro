@@ -74,13 +74,15 @@ export interface CompetitionMatch {
   score_home?: number | null;
   score_away?: number | null;
   status?: string;
-  scheduled_at?: string;
+  scheduled_at?: string | null;
+  scheduled_time?: string | null;
   reported_score_home?: number | null;
   reported_score_away?: number | null;
   matchday_number?: number | null;
   matchday?: number | null;
   round_name?: string | null;
   group_name?: string | null;
+  stage?: string | null;
 }
 
 interface PublicCompetitionDetailViewProps {
@@ -242,7 +244,7 @@ export function PublicCompetitionDetailView({
                 {matches.length > 0 ? (
                   <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-3xl p-6 shadow-xl overflow-x-auto relative backdrop-blur-xl">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--app-accent-2-soft)] rounded-full blur-[80px] pointer-events-none" />
-                    <PlayoffBracket matches={playoffMatches} brandColor={brandColor} />
+                    <PlayoffBracket matches={playoffMatches} brandColor={brandColor} matchMode={competition.match_mode} />
                   </div>
                 ) : (
                   <div className="py-12 text-center border border-dashed border-[var(--border-card)] rounded-3xl glass-panel">
@@ -310,7 +312,7 @@ export function PublicCompetitionDetailView({
                   </div>
                   <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-1">
                     <span className="text-[var(--text-muted)]">FORMATO DE PARTIDOS</span>
-                    <p className="font-bold text-[var(--text-primary)]">{competition.match_mode === 'IdaVuelta' ? 'Ida y Vuelta' : 'Partido Único'}</p>
+                    <p className="font-bold text-[var(--text-primary)]">{competition.match_mode === 'IdaVuelta' ? 'Ida y Vuelta' : competition.match_mode === 'MejorDe3' ? 'Mejor de 3 (Bo3)' : 'Partido Único'}</p>
                   </div>
                   <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-1">
                     <span className="text-[var(--text-muted)]">CANTIDAD DE GRUPOS</span>

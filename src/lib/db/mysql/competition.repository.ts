@@ -88,12 +88,13 @@ export class CompetitionRepository extends BaseRepository<Competition> implement
     const id = data.id || `comp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     
     await this.runCommand(
-      `INSERT INTO competitions (id, name, game_slug, organizer_id, organizer_name, organization_id, season_id, prize_pool, transfer_market_mode, mode_format, status, fecha_limite_inscripcion, fecha_inicio, fecha_termino, description, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo', ?, ?, ?, ?, NOW())`,
+      `INSERT INTO competitions (id, name, game_slug, organizer_id, organizer_name, organization_id, season_id, prize_pool, transfer_market_mode, mode_format, format, match_mode, status, fecha_limite_inscripcion, fecha_inicio, fecha_termino, description, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo', ?, ?, ?, ?, NOW())`,
       [
         id, data.name, data.gameSlug, data.organizerId, data.organizerName,
         data.organizationId || null, data.seasonId || null, data.prizePool || null,
         data.transferMarketMode || 'ABIERTO', data.modeFormat,
+        data.format || 'Liga', data.matchMode || 'PartidoUnico',
         data.fechaLimiteInscripcion || null, data.fechaInicio, data.fechaTermino || null, data.description || null
       ]
     );

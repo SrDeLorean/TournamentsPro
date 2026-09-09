@@ -29,6 +29,8 @@ export function AdminNavbar() {
   const userRoleStr = (currentUser?.role || '').toLowerCase();
   const isAdmin = userRoleStr === 'administrador' || userRoleStr === 'admin';
   const isOrganizer = userRoleStr === 'organizador';
+  const routeGameSlug = pathname.split('/').filter(Boolean)[0];
+  const routeGameObj = GAMES_CATALOG[routeGameSlug];
   const currentGameObj = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG['eafc26'];
 
   const [isTeamsOpen, setIsTeamsOpen] = useState(false);
@@ -89,12 +91,16 @@ export function AdminNavbar() {
 
   return (
     <>
-      <header className="app-navbar ui-navigation-bar sticky top-0 z-50 h-14 w-full">
-        <div className="ui-navigation-frame max-w-[96rem] h-full gap-1 sm:gap-2.5">
+      <header
+        className="admin-app-navbar app-navbar ui-navigation-bar sticky top-0 z-50 h-14 w-full"
+        data-game={routeGameObj?.slug}
+        style={{ '--navigation-brand': routeGameObj?.brandColor || 'var(--app-accent)' } as React.CSSProperties}
+      >
+        <div className="admin-navbar-frame ui-navigation-frame h-full max-w-[96rem] gap-1 sm:gap-2.5">
           
           {/* 1. Left Brand & Admin Badge */}
-          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
-            <Link href={`/${activeGameSlug}`} className="flex items-center gap-2 group">
+          <div className="admin-navbar-brand hidden sm:flex items-center gap-3 flex-shrink-0">
+            <Link href={`/${activeGameSlug}`} className="ui-navigation-brand group">
               <div className="ui-navigation-brand-mark">
                 <div>
                   <Trophy className="size-4" />
@@ -102,7 +108,7 @@ export function AdminNavbar() {
               </div>
               <div className="hidden md:flex flex-col text-left">
                 <span className="text-base font-black tracking-tight text-[var(--text-heading)] uppercase leading-none">
-                  TOURNAMENTS<span className="text-[var(--app-accent)]">PRO</span>
+                  TOURNAMENTS<span className="text-[var(--navigation-brand)]">PRO</span>
                 </span>
                 <span className="text-[9px] text-[var(--text-muted)] font-[family-name:var(--font-active)] font-bold uppercase">
                   {isCaptain ? 'Portal de capitán' : 'Portal del atleta'}
@@ -111,10 +117,7 @@ export function AdminNavbar() {
             </Link>
 
             {/* Dynamic Role Badge */}
-            <Badge
-              variant={isOrganizer ? 'emerald' : isCaptain ? 'violet' : 'cyan'}
-              className="hidden 2xl:inline-flex text-[10px] uppercase font-black"
-            >
+            <Badge variant="neutral" className="navigation-role-badge hidden 2xl:inline-flex text-[10px] uppercase font-black">
               {isOrganizer ? 'Organizador' : isCaptain ? 'Capitán / DT' : 'Atleta Libre'}
             </Badge>
           </div>
@@ -123,7 +126,7 @@ export function AdminNavbar() {
             <NavLinks />
           </div>
 
-          <div className="relative min-w-0 flex-1 sm:flex-none" ref={teamsRef}>
+          <div className="admin-navbar-context relative min-w-0 flex-1 sm:flex-none" ref={teamsRef}>
             <button
               type="button"
               onClick={() => {
@@ -180,7 +183,7 @@ export function AdminNavbar() {
                       setIsTeamsOpen(false);
                       setIsCreateTeamOpen(true);
                     }}
-                    className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] px-2 py-1.5 text-[10px] font-bold text-[var(--app-accent)] hover:bg-[var(--bg-card-hover)]"
+                    className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] px-2 py-1.5 text-[10px] font-bold text-[var(--navigation-brand)] hover:bg-[var(--bg-card-hover)]"
                   >
                     <Plus className="w-3 h-3" />
                     Crear Club
@@ -244,6 +247,8 @@ export function AdminNavbar() {
               }}
               aria-expanded={isExploreOpen}
               aria-controls="authenticated-explore-menu"
+              aria-label="Explorar destinos globales"
+              title="Explorar"
               className="ui-navigation-link"
             >
               <Compass className="h-4 w-4" />
@@ -264,7 +269,7 @@ export function AdminNavbar() {
                       aria-current={isActive ? 'page' : undefined}
                       className={`flex min-w-0 items-center gap-2 rounded-xl border p-2.5 transition-colors ${
                         isActive
-                          ? 'border-[var(--app-accent)] bg-[var(--app-accent-soft)] text-[var(--app-accent)]'
+                          ? 'border-[var(--navigation-brand)] bg-[color-mix(in_srgb,var(--navigation-brand)_12%,var(--bg-card))] text-[var(--navigation-brand)]'
                           : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-heading)]'
                       }`}
                     >
@@ -281,18 +286,20 @@ export function AdminNavbar() {
           </div>
 
           {/* 3. Right Action Controls & User Profile Dropdown */}
-          <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
+          <div className="admin-navbar-actions flex min-w-0 flex-shrink-0 items-center gap-1 sm:gap-2">
             
             {/* eSports Real-time Notification Center Bell */}
-            <NotificationCenter onOpen={() => {
-              setIsTeamsOpen(false);
-              setIsExploreOpen(false);
-              setIsSettingsOpen(false);
-              setIsUserMenuOpen(false);
-            }} />
+            <div className="admin-navbar-notifications">
+              <NotificationCenter onOpen={() => {
+                setIsTeamsOpen(false);
+                setIsExploreOpen(false);
+                setIsSettingsOpen(false);
+                setIsUserMenuOpen(false);
+              }} />
+            </div>
 
             {/* Settings Gear Dropdown */}
-            <div className="relative" ref={settingsRef}>
+            <div className="admin-navbar-settings relative" ref={settingsRef}>
               <button
                 type="button"
                 onClick={() => {
@@ -307,14 +314,14 @@ export function AdminNavbar() {
                 className="ui-navigation-icon-button"
                 title="Configuración de Tema e Idioma"
               >
-                <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-[var(--app-accent)]' : ''}`} />
+                <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-[var(--navigation-brand)]' : ''}`} />
               </button>
 
               {isSettingsOpen && (
                 <div id="player-preferences-menu" className="management-popover ui-navigation-popover fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 max-h-[85vh] overflow-y-auto p-4 space-y-4 z-50 animate-in fade-in zoom-in-95">
                   <div className="pb-2.5 border-b border-[var(--border-card)] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-[var(--app-accent-soft)] border border-[var(--app-accent)]/40 text-[var(--app-accent)]">
+                      <div className="navigation-accent-surface p-1.5 rounded-lg border">
                         <Settings className="w-4 h-4" />
                       </div>
                       <div>
@@ -346,7 +353,7 @@ export function AdminNavbar() {
                     onClick={() => setIsSettingsOpen(false)}
                     className="management-profile-action border-[var(--border-card)] bg-[var(--bg-card)] text-xs font-bold"
                   >
-                    <UserRoundCog className="w-4 h-4 text-[var(--app-accent)]" />
+                    <UserRoundCog className="w-4 h-4 text-[var(--navigation-brand)]" />
                     <span className="min-w-0 flex-1">
                       <strong className="block text-[var(--text-heading)]">Configuración de la cuenta</strong>
                       <small className="block truncate font-medium text-[var(--text-muted)]">Perfil, seguridad y datos personales</small>
@@ -369,18 +376,18 @@ export function AdminNavbar() {
                 aria-label="Abrir menú de usuario"
                 aria-expanded={isUserMenuOpen}
                 aria-controls="player-user-menu"
-                className="flex items-center gap-2 p-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--app-accent)] transition-all shadow-sm"
+                className="admin-navbar-user flex items-center gap-2 p-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--navigation-brand)] transition-all shadow-sm"
               >
                 <Avatar fallback={currentUser?.name || 'User'} size="sm" status="online" />
                 <div className="text-left hidden md:block leading-none">
                   <span className="text-xs font-black text-[var(--text-heading)] block truncate max-w-[110px]">
                     {currentUser?.gamertag}
                   </span>
-                  <span className="text-[9px] text-[var(--app-accent)] font-[family-name:var(--font-active)] font-bold">
+                  <span className="text-[9px] text-[var(--navigation-brand)] font-[family-name:var(--font-active)] font-bold">
                     ★ {currentUser?.rating || '9.8'}
                   </span>
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] hidden md:block transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180 text-[var(--app-accent)]' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] hidden md:block transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180 text-[var(--navigation-brand)]' : ''}`} />
               </button>
 
               {isUserMenuOpen && (
@@ -394,7 +401,7 @@ export function AdminNavbar() {
                         <span className="font-black text-sm text-[var(--text-heading)] block truncate">
                           {currentUser?.name}
                         </span>
-                        <span className="text-xs text-[var(--app-accent)] font-[family-name:var(--font-active)] font-bold block truncate">
+                        <span className="text-xs text-[var(--navigation-brand)] font-[family-name:var(--font-active)] font-bold block truncate">
                           @{currentUser?.gamertag}
                         </span>
                         <span className="mt-0.5 block truncate text-[10px] text-[var(--text-muted)]">{currentUser?.email}</span>
@@ -402,7 +409,7 @@ export function AdminNavbar() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 pt-2 text-[10px] font-bold border-t border-[var(--border-card)]">
-                      <Badge variant={isOrganizer ? 'emerald' : isCaptain ? 'violet' : 'cyan'}>
+                      <Badge variant="neutral" className="navigation-role-badge">
                         {currentUser?.role}
                       </Badge>
 
@@ -425,7 +432,7 @@ export function AdminNavbar() {
                       onClick={() => setIsUserMenuOpen(false)}
                       className="management-profile-action"
                     >
-                      <UserRoundCog className="w-4 h-4 text-[var(--app-accent)]" />
+                      <UserRoundCog className="w-4 h-4 text-[var(--navigation-brand)]" />
                       Configuración de la cuenta
                     </Link>
 

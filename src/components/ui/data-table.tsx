@@ -262,7 +262,7 @@ export function DataTable<T extends { id: string | number }>({
             <tbody className="divide-y divide-[var(--border-card)]">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td data-empty="true" colSpan={columns.length + (actions ? 1 : 0)} className="p-10 text-center text-[var(--text-muted)] text-sm">
+                  <td data-empty="true" data-ui-state="empty" role="status" aria-live="polite" colSpan={columns.length + (actions ? 1 : 0)} className="p-10 text-center text-[var(--text-muted)] text-sm">
                     <Inbox className="mx-auto mb-3 size-8 opacity-60" />
                     <p className="font-bold not-italic text-[var(--text-heading)]">Sin resultados</p>
                     <p className="mt-1 text-xs not-italic">{emptyMessage}</p>

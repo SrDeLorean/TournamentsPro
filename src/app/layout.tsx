@@ -1,7 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import { Outfit, Inter, JetBrains_Mono, Plus_Jakarta_Sans, Sora, Space_Grotesk } from 'next/font/google';
 import Script from 'next/script';
+import '../styles/tokens.css';
+import '../styles/navigation.css';
+import '../styles/accessibility.css';
+import '../styles/responsive-data.css';
+import '../styles/route-states.css';
 import './globals.css';
+import '../styles/dashboard-entry.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageProvider } from '@/components/providers/language-provider';
 import { AuthProvider } from '@/components/providers/auth-provider';

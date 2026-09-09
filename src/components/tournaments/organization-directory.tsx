@@ -16,6 +16,7 @@ interface OrganizationDirectoryProps {
   gameSlug: string;
   gameConfig: GameConfig;
   mode?: 'organizations' | 'competitions';
+  hideHeader?: boolean;
 }
 
 type OrganizationDisplayData = OrgWithStats & {
@@ -33,7 +34,7 @@ type OrganizationDisplayData = OrgWithStats & {
   website?: string;
 };
 
-export function OrganizationDirectory({ gameSlug, gameConfig, mode = 'organizations' }: OrganizationDirectoryProps) {
+export function OrganizationDirectory({ gameSlug, gameConfig, mode = 'organizations', hideHeader = false }: OrganizationDirectoryProps) {
   const [orgs, setOrgs] = useState<OrgWithStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,18 +78,20 @@ export function OrganizationDirectory({ gameSlug, gameConfig, mode = 'organizati
       className="animate-in fade-in duration-300"
       style={{ '--ui-dynamic-brand': gameConfig.brandColor } as React.CSSProperties}
     >
-      <div className="pt-4 sm:pt-6">
-        <PageHeader
-          badgeText={isCompetitionDirectory ? 'CIRCUITO COMPETITIVO OFICIAL' : 'DIRECTORIO DE TORNEOS'}
-          badgeIcon={<Trophy className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
-          title={isCompetitionDirectory ? 'COMPETENCIAS POR' : 'ORGANIZACIONES &'}
-          highlightTitle={isCompetitionDirectory ? 'ORGANIZACIÓN' : 'TORNEOS'}
-          description={isCompetitionDirectory
-            ? `Explora todas las organizaciones activas en ${gameConfig.name} y accede a sus ligas, copas, playoffs y calendarios oficiales.`
-            : `Explora las comunidades oficiales, ligas verificadas y organizadores que administran el ecosistema competitivo de ${gameConfig.name}.`}
-          brandColor={gameConfig.brandColor}
-        />
-      </div>
+      {!hideHeader ? (
+        <div className="pt-4 sm:pt-6">
+          <PageHeader
+            badgeText={isCompetitionDirectory ? 'CIRCUITO COMPETITIVO OFICIAL' : 'DIRECTORIO DE TORNEOS'}
+            badgeIcon={<Trophy className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
+            title={isCompetitionDirectory ? 'COMPETENCIAS POR' : 'ORGANIZACIONES &'}
+            highlightTitle={isCompetitionDirectory ? 'ORGANIZACIÓN' : 'TORNEOS'}
+            description={isCompetitionDirectory
+              ? `Explora todas las organizaciones activas en ${gameConfig.name} y accede a sus ligas, copas, playoffs y calendarios oficiales.`
+              : `Explora las comunidades oficiales, ligas verificadas y organizadores que administran el ecosistema competitivo de ${gameConfig.name}.`}
+            brandColor={gameConfig.brandColor}
+          />
+        </div>
+      ) : null}
 
       {isLoading ? (
         <div className="pt-8">

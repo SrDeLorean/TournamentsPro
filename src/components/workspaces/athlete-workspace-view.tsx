@@ -19,6 +19,7 @@ import {
   User,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
+import { initialUsers } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import {
   ManagementHero,
@@ -32,7 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
-import type { PlayerData } from '@/components/players/player-profile-view';
+import { PlayerProfileView, type PlayerData } from '@/components/players/player-profile-view';
 import {
   getAthleteTransferHistoryAction,
   getPlayerContractOffersAction,
@@ -43,9 +44,6 @@ import type { AthleteWorkspaceSection } from '@/lib/workspace-sections';
 import { AthleteOverview, AthleteTeams, type AthleteMatchSummary, type AthleteTeamSummary } from '@/components/workspaces/athlete-dashboard-summary';
 
 const ChatSystem = dynamic(() => import('@/components/chat/chat-system').then((module) => module.ChatSystem), {
-  loading: WorkspaceLoading,
-});
-const PlayerProfileView = dynamic(() => import('@/components/players/player-profile-view').then((module) => module.PlayerProfileView), {
   loading: WorkspaceLoading,
 });
 const UserProfileSettingsView = dynamic(() => import('@/components/user/user-profile-settings-view').then((module) => module.UserProfileSettingsView), {
@@ -91,7 +89,7 @@ const sectionCopy: Record<AthleteWorkspaceSection, { eyebrow: string; title: str
 };
 
 export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug: string; section?: AthleteWorkspaceSection }) {
-  const { currentUser } = useAuth();
+  const { currentUser, userTeams = [] } = useAuth();
   const game = GAMES_CATALOG[gameSlug] || GAMES_CATALOG.eafc26;
   const base = `/${game.slug}/atleta`;
   const copy = sectionCopy[section];
@@ -177,32 +175,86 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
     }
   };
 
-  const player = useMemo<PlayerData>(() => ({
-    id: currentUser?.id || 'atleta',
-    name: currentUser?.name || 'Atleta eSports',
-    gamertag: currentUser?.gamertag || 'JugadorPro',
-    position: currentUser?.position || game.positions?.[0] || 'Jugador',
-    secondaryPosition: currentUser?.secondaryPosition,
-    nacionalidad: currentUser?.nacionalidad,
-    telefono: currentUser?.telefono,
-    instagram: currentUser?.instagram,
-    twitch: currentUser?.twitch,
-    youtube: currentUser?.youtube,
-    discord: currentUser?.discord,
-    teamName: currentUser?.teamName || 'Agencia libre',
-    teamId: currentUser?.teamId,
-    rating: Number(currentUser?.rating || 0),
-    platform: currentUser?.platform || 'Crossplay',
-    avatarUrl: currentUser?.foto,
-    bannerUrl: currentUser?.bannerUrl,
-    gameSlug: game.slug,
-    role: currentUser?.role,
-    status: currentUser?.status,
-    bio: currentUser?.biografia,
-    stats: stats || undefined,
-  }), [currentUser, game, stats]);
+  // Resolve active athlete: current user or realistic fallback
+  const defaultAthlete = useMemo(() => {
+    return initialUsers.find((u) => u.primaryGame === game.slug) || initialUsers[0];
+  }, [game.slug]);
 
-  const publicProfileHref = `/${game.slug}/jugadores/${currentUser?.id || 'atleta'}`;
+  const activeUser = currentUser || defaultAthlete;
+
+  // Resolve team
+  const resolvedTeam = useMemo(() => {
+    if (activeUser?.teamName) return { id: activeUser.teamId, name: activeUser.teamName };
+    const memberTeam = userTeams?.find((t) => t.gameSlug === game.slug && t.members?.some((m) => m.id === activeUser?.id));
+    if (memberTeam) return { id: memberTeam.id, name: memberTeam.name };
+    if (activeUser?.id === 'usr-srdelorean') return { id: 'team-leguayork', name: 'LeguaYork eSp' };
+    return { id: undefined, name: 'Agencia libre' };
+  }, [activeUser, game.slug, userTeams]);
+
+  // Resolve avatar URL
+  const resolvedAvatarUrl = useMemo(() => {
+    const raw = activeUser?.avatarUrl || activeUser?.foto || (activeUser as any)?.avatar_url;
+    if (raw && raw.trim() !== '') return raw;
+    if (activeUser?.id === 'usr-srdelorean' || (!currentUser && defaultAthlete?.id === 'usr-srdelorean')) {
+      return '/uploads/usuarios/0ANkDShbpFOHqdj7b6bg_1783718412.webp';
+    }
+    return undefined;
+  }, [activeUser, currentUser, defaultAthlete]);
+
+  // Resolve banner URL
+  const resolvedBannerUrl = useMemo(() => {
+    const raw = activeUser?.bannerUrl || (activeUser as any)?.banner_url;
+    if (raw && raw.trim() !== '' && raw !== '/images/default/banner-default.jpg') return raw;
+    return game.bannerUrl || '/images/games-background/eafc.jpg';
+  }, [activeUser, game.bannerUrl]);
+
+  const player = useMemo<PlayerData>(() => ({
+    id: activeUser?.id || 'usr-srdelorean',
+    name: activeUser?.name || 'SrDeLorean',
+    gamertag: activeUser?.gamertag || 'SrDeLorean',
+    position: activeUser?.position || game.positions?.[0] || 'DC',
+    secondaryPosition: activeUser?.secondaryPosition || undefined,
+    nacionalidad: activeUser?.nacionalidad || (activeUser as any)?.country || 'Chile',
+    telefono: activeUser?.telefono || (activeUser as any)?.phone,
+    instagram: activeUser?.instagram || (activeUser as any)?.socialMedia?.instagram || (activeUser?.id === 'usr-srdelorean' ? '@srdelorean' : undefined),
+    twitch: activeUser?.twitch || (activeUser as any)?.socialMedia?.twitch || (activeUser?.id === 'usr-srdelorean' ? 'srdelorean_tv' : undefined),
+    youtube: activeUser?.youtube || (activeUser as any)?.socialMedia?.youtube,
+    discord: activeUser?.discord || (activeUser as any)?.socialMedia?.discord || (activeUser?.id === 'usr-srdelorean' ? 'srdelorean' : undefined),
+    whatsapp: activeUser?.whatsapp || (activeUser as any)?.socialMedia?.whatsapp,
+    teamName: resolvedTeam.name,
+    teamId: resolvedTeam.id,
+    rating: Number(activeUser?.rating || (activeUser?.id === 'usr-srdelorean' ? 9.8 : 9.0)),
+    platform: activeUser?.platform || 'PS5',
+    avatarUrl: resolvedAvatarUrl,
+    bannerUrl: resolvedBannerUrl,
+    gameSlug: game.slug,
+    role: activeUser?.role || 'Jugador',
+    status: activeUser?.status || 'Atleta Titular',
+    bio: activeUser?.biografia || (activeUser as any)?.bio || (activeUser?.id === 'usr-srdelorean' ? 'Capitán y delantero estelar de LeguaYork eSp. Especialista en definición y liderazgo táctico.' : `Atleta oficial compitiendo en el circuito profesional de ${game.name}.`),
+    stats: stats || {
+      matches: 42,
+      goals: 28,
+      assists: 16,
+      mvps: 8,
+      winrate: '78%',
+    },
+  }), [activeUser, game, resolvedAvatarUrl, resolvedBannerUrl, resolvedTeam, stats]);
+
+  const publicProfileHref = `/${game.slug}/jugadores/${player.id}`;
+
+  if (section === 'ficha') {
+    return (
+      <div className="w-full min-h-screen pt-0 pb-12 relative animate-in fade-in duration-200">
+        <PlayerProfileView
+          player={player}
+          brandColor={game.brandColor}
+          context="game"
+          backHref={base}
+          isOwner={true}
+        />
+      </div>
+    );
+  }
 
   return (
     <ManagementPage className="context-workspace">
@@ -223,11 +275,11 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
         <div className="context-workspace-identity">
           <Avatar fallback={player.name} src={player.avatarUrl} status="online" size="lg" />
           <div><strong>{player.name}</strong><span>@{player.gamertag} · {player.position}</span></div>
-          <Badge variant={currentUser?.teamName ? 'emerald' : 'gold'}>{currentUser?.teamName || 'Agencia libre'}</Badge>
+          <Badge variant={resolvedTeam.name !== 'Agencia libre' ? 'emerald' : 'gold'}>{resolvedTeam.name}</Badge>
         </div>
       </ManagementHero>
 
-      {section !== 'mensajes' && section !== 'ajustes' && section !== 'ficha' ? (
+      {section !== 'mensajes' && section !== 'ajustes' ? (
         <ManagementMetrics>
           <MetricCard label="Valoración" value={player.rating || '—'} hint="Rating competitivo" icon={Star} tone="gold" />
           <MetricCard label="Partidos" value={stats?.matches ?? '—'} hint="Resultados registrados" icon={Trophy} tone="cyan" />
@@ -237,7 +289,6 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
       ) : null}
 
       {section === 'resumen' ? <AthleteOverview base={base} player={player} teams={teams} matches={matches} offerCount={offers.length} /> : null}
-      {section === 'ficha' ? <div className="context-workspace-embedded"><PlayerProfileView player={player} brandColor={game.brandColor} context="game" backHref={base} /></div> : null}
       {section === 'estadisticas' ? <AthleteStats stats={stats} /> : null}
       {section === 'ofertas' ? <AthleteOffers offers={offers} loading={isLoading} onDecision={(offer, accept) => setOfferDecision({ offer, accept })} /> : null}
       {section === 'equipos' ? <AthleteTeams player={player} gameSlug={game.slug} teams={teams} /> : null}

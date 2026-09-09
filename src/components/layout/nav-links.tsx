@@ -13,6 +13,18 @@ export function NavLinks() {
   const pathname = usePathname();
   const [isGamesOpen, setIsGamesOpen] = useState(false);
   const gamesRef = useRef<HTMLDivElement>(null);
+  const gamesCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openGamesMenu = () => {
+    if (gamesCloseTimerRef.current) clearTimeout(gamesCloseTimerRef.current);
+    gamesCloseTimerRef.current = null;
+    setIsGamesOpen(true);
+  };
+
+  const scheduleGamesClose = () => {
+    if (gamesCloseTimerRef.current) clearTimeout(gamesCloseTimerRef.current);
+    gamesCloseTimerRef.current = setTimeout(() => setIsGamesOpen(false), 220);
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -26,12 +38,15 @@ export function NavLinks() {
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
     return () => {
+      if (gamesCloseTimerRef.current) clearTimeout(gamesCloseTimerRef.current);
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
   }, []);
 
   const isCurrent = (href: string) => href === '/' ? pathname === href : pathname.startsWith(href);
+  const routeGameSlug = pathname.split('/').filter(Boolean)[0];
+  const isGameRoute = Boolean(GAMES_CATALOG[routeGameSlug]);
 
   return (
     <nav className="ui-navigation-list hidden lg:flex" aria-label="Navegación principal">
@@ -45,14 +60,25 @@ export function NavLinks() {
       </Link>
 
       {/* Juegos Dropdown */}
-      <div className="relative font-[family-name:var(--font-active)]" ref={gamesRef}>
+      <div
+        className="relative font-[family-name:var(--font-active)]"
+        ref={gamesRef}
+        onMouseEnter={openGamesMenu}
+        onMouseLeave={scheduleGamesClose}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setIsGamesOpen(false);
+        }}
+      >
         <button
           type="button"
           onClick={() => setIsGamesOpen(!isGamesOpen)}
-          onMouseEnter={() => setIsGamesOpen(true)}
+          onMouseEnter={openGamesMenu}
+          onFocus={() => setIsGamesOpen(true)}
           aria-expanded={isGamesOpen}
+          aria-haspopup="menu"
+          aria-current={isGameRoute ? 'page' : undefined}
           aria-controls="public-games-menu"
-          className="ui-navigation-link"
+          className={`ui-navigation-link${isGameRoute ? ' is-active' : ''}`}
         >
           <Gamepad2 className="size-3.5" />
           {t('nav.games')}
@@ -63,8 +89,9 @@ export function NavLinks() {
         {isGamesOpen && (
           <div
             id="public-games-menu"
+            role="menu"
+            aria-label="Disciplinas eSports"
             className="ui-navigation-popover absolute left-0 top-full z-50 mt-2 w-64 p-2 animate-in fade-in zoom-in-95 duration-150"
-            onMouseLeave={() => setIsGamesOpen(false)}
           >
             <div className="px-2 py-1 mb-1 border-b border-[var(--border-card)] flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] font-[family-name:var(--font-active)]">Disciplinas eSports</span>
@@ -76,6 +103,7 @@ export function NavLinks() {
                   key={game.id}
                   href={`/${game.slug}`}
                   onClick={() => setIsGamesOpen(false)}
+                  role="menuitem"
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors group"
                 >
                   <div className="flex items-center gap-2.5">

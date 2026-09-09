@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import GamePortalClient from '@/features/game-portal/components/game-portal-client';
 import { GAMES_CATALOG } from '@/lib/games-data';
+import { getPublicPortalSummary } from '@/lib/public-home-data';
 import { getSectionMetadata, isPublicGameSection, PUBLIC_GAME_SECTIONS } from '@/lib/section-config';
 
 interface GameSectionPageProps {
@@ -29,11 +30,13 @@ export async function generateMetadata({ params }: GameSectionPageProps): Promis
 export default async function GameSectionDynamicPage({ params }: GameSectionPageProps) {
   const resolvedParams = await params;
   if (!GAMES_CATALOG[resolvedParams.gameSlug] || !isPublicGameSection(resolvedParams.section)) notFound();
+  const summary = await getPublicPortalSummary(resolvedParams.gameSlug);
 
   return (
     <GamePortalClient
       gameSlug={resolvedParams.gameSlug}
       initialSection={resolvedParams.section}
+      initialOverview={summary}
     />
   );
 }

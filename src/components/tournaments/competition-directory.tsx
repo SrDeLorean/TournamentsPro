@@ -16,9 +16,10 @@ import { useRouter } from 'next/navigation';
 interface CompetitionDirectoryProps {
   gameSlug: string;
   gameConfig: GameConfig;
+  hideHeader?: boolean;
 }
 
-export function CompetitionDirectory({ gameSlug, gameConfig }: CompetitionDirectoryProps) {
+export function CompetitionDirectory({ gameSlug, gameConfig, hideHeader = false }: CompetitionDirectoryProps) {
   const [competitions, setCompetitions] = useState<CompetitionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,16 +62,18 @@ export function CompetitionDirectory({ gameSlug, gameConfig }: CompetitionDirect
       className="animate-in fade-in duration-300"
       style={{ '--ui-dynamic-brand': gameConfig.brandColor } as React.CSSProperties}
     >
-      <div className="pt-4 sm:pt-6">
-        <PageHeader
-          badgeText="CIRCUITO COMPETITIVO OFICIAL"
-          badgeIcon={<Trophy className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
-          title="COMPETENCIAS POR"
-          highlightTitle="DISCIPLINA"
-          description={`Explora todas las competencias activas en ${gameConfig.name} de todas las organizaciones y comunidades.`}
-          brandColor={gameConfig.brandColor}
-        />
-      </div>
+      {!hideHeader ? (
+        <div className="pt-4 sm:pt-6">
+          <PageHeader
+            badgeText="CIRCUITO COMPETITIVO OFICIAL"
+            badgeIcon={<Trophy className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
+            title="COMPETENCIAS POR"
+            highlightTitle="DISCIPLINA"
+            description={`Explora todas las competencias activas en ${gameConfig.name} de todas las organizaciones y comunidades.`}
+            brandColor={gameConfig.brandColor}
+          />
+        </div>
+      ) : null}
 
       {isLoading ? (
         <div className="pt-8">

@@ -47,6 +47,55 @@ export class MatchRepository extends BaseRepository<Match> implements IMatchRepo
     return rows.map((row) => this.mapRow(row));
   }
 
+  async deleteByCompetition(competitionId: string): Promise<void> {
+    await this.runCommand(
+      'DELETE FROM matches WHERE competition_id = ? OR tournament_id = ?',
+      [competitionId, competitionId]
+    );
+  }
+
+  async createMany(matches: Partial<Match>[]): Promise<void> {
+    if (matches.length === 0) return;
+    const chunkSize = 50;
+    for (let i = 0; i < matches.length; i += chunkSize) {
+      const chunk = matches.slice(i, i + chunkSize);
+      const values: any[] = [];
+      const placeholders = chunk.map((m) => {
+        values.push(
+          m.id || `match-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          m.tournamentId || null,
+          m.competitionId || null,
+          m.matchday ?? 1,
+          m.round ?? 1,
+          m.stage || 'GROUP',
+          m.roundName || null,
+          m.groupName || null,
+          m.nextMatchId || null,
+          m.nextMatchSlot || null,
+          m.teamHomeId || m.homeTeamId || null,
+          m.homeTeamId || m.teamHomeId || null,
+          m.teamAwayId || m.awayTeamId || null,
+          m.awayTeamId || m.teamAwayId || null,
+          m.homeTeamName || '',
+          m.awayTeamName || '',
+          m.status || 'PENDIENTE',
+          m.scheduledTime || null,
+          m.scheduledAt || null
+        );
+        return '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
+      }).join(', ');
+
+      await this.runCommand(
+        `INSERT INTO matches
+          (id, tournament_id, competition_id, matchday, round, stage, round_name, group_name,
+           next_match_id, next_match_slot, team_home_id, home_team_id, team_away_id, away_team_id,
+           home_team_name, away_team_name, status, scheduled_time, scheduled_at, created_at)
+         VALUES ${placeholders}`,
+        values
+      );
+    }
+  }
+
   async addPlayerStat(statsId: string, matchId: string, playerId: string, gameSlug: string, statsJson: string): Promise<void> {
     await this.runCommand(
       'INSERT INTO match_player_stats (id, match_id, player_id, game_slug, stats_json) VALUES (?, ?, ?, ?, ?)',

@@ -579,6 +579,7 @@ export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> imple
       competitionId: row.competition_id,
       round: row.round,
       matchday: row.matchday,
+      stage: row.stage,
       roundName: row.round_name,
       groupName: row.group_name,
       teamHomeId: row.team_home_id,
@@ -614,6 +615,32 @@ export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> imple
       .or(`competition_id.eq.${competitionId},tournament_id.eq.${competitionId}`)
       .order('scheduled_at', { ascending: true });
     return (data || []).map(row => this.mapRow(row));
+  }
+
+  async deleteByCompetition(competitionId: string): Promise<void> {
+    const { error } = await supabase
+      .from(this.tableName)
+      .delete()
+      .or(`competition_id.eq.${competitionId},tournament_id.eq.${competitionId}`);
+    if (error) throw error;
+  }
+
+  async createMany(matches: Partial<Match>[]): Promise<void> {
+    if (matches.length === 0) return;
+    const records = matches.map((m) => {
+      const dbObj = this.mapToDb(m);
+      if (m.matchday !== undefined && dbObj.matchday_number === undefined) {
+        dbObj.matchday_number = m.matchday;
+      }
+      return dbObj;
+    });
+
+    const chunkSize = 50;
+    for (let i = 0; i < records.length; i += chunkSize) {
+      const chunk = records.slice(i, i + chunkSize);
+      const { error } = await supabase.from(this.tableName).insert(chunk);
+      if (error) throw error;
+    }
   }
 
   async addPlayerStat(statsId: string, matchId: string, playerId: string, gameSlug: string, statsJson: string): Promise<void> {

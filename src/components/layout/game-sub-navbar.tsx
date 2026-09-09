@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GameConfig } from '@/lib/games-data';
@@ -36,9 +36,9 @@ interface GameSubNavbarProps {
 export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubNavbarProps) {
   const pathname = usePathname();
   const { currentUser, isAuthenticated } = useAuth();
-  const navRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const sectionIcons: Record<(typeof PUBLIC_GAME_NAV_ITEMS)[number]['id'], React.ReactNode> = {
     home: <Home className="w-3.5 h-3.5" />,
@@ -72,24 +72,36 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
     return 'home';
   })();
 
-  const checkScroll = () => {
-    if (navRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = navRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
-    }
-  };
+  const checkScroll = useCallback(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = nav;
+    const nextCanScrollLeft = scrollLeft > 4;
+    const nextCanScrollRight = scrollLeft < scrollWidth - clientWidth - 4;
+    setCanScrollLeft((current) => current === nextCanScrollLeft ? current : nextCanScrollLeft);
+    setCanScrollRight((current) => current === nextCanScrollRight ? current : nextCanScrollRight);
+  }, []);
 
   useEffect(() => {
     checkScroll();
     const observer = new ResizeObserver(checkScroll);
     if (navRef.current) observer.observe(navRef.current);
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', checkScroll);
-    };
-  }, []);
+    return () => observer.disconnect();
+  }, [checkScroll]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const nav = navRef.current;
+      const activeLink = nav?.querySelector<HTMLElement>('[data-active="true"]');
+      if (!nav || !activeLink || nav.clientWidth === 0) return;
+
+      const centeredLeft = activeLink.offsetLeft - (nav.clientWidth - activeLink.offsetWidth) / 2;
+      nav.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'smooth' });
+      checkScroll();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [checkScroll, currentSection]);
 
   const scroll = (direction: 'left' | 'right') => {
     if (navRef.current) {
@@ -109,7 +121,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
         <div
           className="game-portal-navbar ui-navigation-tier w-full z-40"
         >
-          <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-11 flex items-center justify-between gap-2 relative">
+          <div className="game-portal-navbar-frame ui-navigation-frame h-11 gap-1.5 sm:gap-2">
             {/* Game Identifier Badge on Left */}
             <div className="flex items-center gap-1.5 flex-shrink-0 z-20 bg-inherit pr-1">
               <GameSwitcher game={game} compact />
@@ -123,7 +135,8 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
             {canScrollLeft && (
               <button
                 onClick={() => scroll('left')}
-                className="p-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--game-brand)] shadow-md hover:scale-110 transition-all flex-shrink-0 z-10"
+                type="button"
+                className="game-portal-scroll-button ui-navigation-icon-button"
                 aria-label="Desplazar a la izquierda"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -131,10 +144,11 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
             )}
 
             {/* 10 Navigation Items Container with Next.js Links */}
-            <div
+            <nav
               ref={navRef}
               onScroll={checkScroll}
-              className="flex items-center gap-1 overflow-x-auto scrollbar-none scroll-smooth h-full py-1 w-full touch-pan-x"
+              className="game-portal-desktop-links scrollbar-none"
+              aria-label={`Secciones de ${game.name}`}
             >
               {sections.map((sec) => {
                 const isActive = currentSection === sec.id;
@@ -144,6 +158,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
                   <Link
                     key={sec.id}
                     href={href}
+                    data-active={isActive}
                     aria-current={isActive ? 'page' : undefined}
                     onClick={(event) => {
                       if (onSelectSection) {
@@ -162,13 +177,14 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
                   </Link>
                 );
               })}
-            </div>
+            </nav>
 
             {/* Scroll Right Arrow Indicator */}
             {canScrollRight && (
               <button
                 onClick={() => scroll('right')}
-                className="p-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-card)] text-[var(--game-brand)] shadow-md hover:scale-110 transition-all flex-shrink-0 z-10"
+                type="button"
+                className="game-portal-scroll-button ui-navigation-icon-button"
                 aria-label="Desplazar a la derecha"
               >
                 <ChevronRight className="w-3.5 h-3.5" />

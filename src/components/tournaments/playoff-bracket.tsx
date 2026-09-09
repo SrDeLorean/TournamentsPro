@@ -18,7 +18,13 @@ interface PlayoffMatch {
   scheduled_time?: string | null;
 }
 
-interface PlayoffPair { ida: PlayoffMatch; vuelta?: PlayoffMatch }
+interface PlayoffPair {
+  ida: PlayoffMatch;
+  vuelta?: PlayoffMatch;
+  game3?: PlayoffMatch;
+  isBo3?: boolean;
+}
+
 interface PlayoffBracketProps { matches: PlayoffMatch[]; brandColor?: string; matchMode?: string }
 
 const ROUND_ORDER_MAP: Record<string, number> = {
@@ -52,7 +58,10 @@ export function buildRoundPairs(matches: PlayoffMatch[]): Map<string, PlayoffPai
     const roundName = match.round_name || 'Ronda Única';
     const isPlayoff = Object.keys(ROUND_ORDER_MAP).some((key) => roundName.toLowerCase().includes(key));
     if (!isPlayoff) return;
-    const baseRound = roundName.replace(/ \((Ida|Vuelta)\)/i, '').trim();
+    const baseRound = roundName
+      .replace(/ \((Ida|Vuelta)\)/i, '')
+      .replace(/ \((Juego \d+)\)/i, '')
+      .trim();
     matchesByRound.set(baseRound, [...(matchesByRound.get(baseRound) || []), match]);
   });
 
@@ -63,28 +72,48 @@ export function buildRoundPairs(matches: PlayoffMatch[]): Map<string, PlayoffPai
 
     roundMatches.forEach((match) => {
       if (used.has(match.id)) return;
-      const isTwoLegged = /\((ida|vuelta)\)/i.test(match.round_name || '');
-      let ida = match;
-      let vuelta: PlayoffMatch | undefined;
 
-      if (isTwoLegged) {
+      const isBo3 = /-j[123]$/i.test(String(match.id)) || /\(juego\s*[123]\)/i.test(match.round_name || '');
+      const isTwoLegged = !isBo3 && /\((ida|vuelta)\)/i.test(match.round_name || '');
+
+      if (isBo3) {
+        const baseId = String(match.id).replace(/-j[123]$/i, '');
+        const seriesMatches = roundMatches.filter(
+          (candidate) => !used.has(candidate.id) && String(candidate.id).replace(/-j[123]$/i, '') === baseId,
+        );
+
+        let j1 = seriesMatches.find((m) => /-j1$/i.test(String(m.id)) || /\(juego\s*1\)/i.test(m.round_name || '')) || seriesMatches[0];
+        let j2 = seriesMatches.find((m) => /-j2$/i.test(String(m.id)) || /\(juego\s*2\)/i.test(m.round_name || '')) || seriesMatches[1];
+        let j3 = seriesMatches.find((m) => /-j3$/i.test(String(m.id)) || /\(juego\s*3\)/i.test(m.round_name || '')) || seriesMatches[2];
+
+        if (j1) used.add(j1.id);
+        if (j2) used.add(j2.id);
+        if (j3) used.add(j3.id);
+
+        pairs.push({ ida: j1 || match, vuelta: j2, game3: j3, isBo3: true });
+      } else if (isTwoLegged) {
         const baseId = String(match.id).replace(/-ida|-vuelta/i, '');
         const counterpart = roundMatches.find((candidate) =>
           candidate.id !== match.id && !used.has(candidate.id) &&
           (String(candidate.id).replace(/-ida|-vuelta/i, '') === baseId ||
             (candidate.home_team_name === match.away_team_name && candidate.away_team_name === match.home_team_name)),
         );
+        let ida = match;
+        let vuelta: PlayoffMatch | undefined;
         if (/\(vuelta\)/i.test(match.round_name || '') && counterpart) {
           ida = counterpart;
           vuelta = match;
         } else {
           vuelta = counterpart;
         }
-      }
 
-      used.add(ida.id);
-      if (vuelta) used.add(vuelta.id);
-      pairs.push({ ida, vuelta });
+        used.add(ida.id);
+        if (vuelta) used.add(vuelta.id);
+        pairs.push({ ida, vuelta, isBo3: false });
+      } else {
+        used.add(match.id);
+        pairs.push({ ida: match, isBo3: false });
+      }
     });
     rounds.set(roundName, pairs);
   });
@@ -93,11 +122,12 @@ export function buildRoundPairs(matches: PlayoffMatch[]): Map<string, PlayoffPai
 
 interface TeamRowProps {
   name: string; tag: string; logoUrl?: string | null;
-  firstLeg: number | null; secondLeg: number | null; total: number | null;
-  hasSecondLeg: boolean; winner: boolean;
+  firstLeg: number | null; secondLeg: number | null; thirdLeg?: number | null;
+  total: number | null;
+  hasSecondLeg: boolean; isBo3?: boolean; winner: boolean;
 }
 
-function TeamRow({ name, tag, logoUrl, firstLeg, secondLeg, total, hasSecondLeg, winner }: TeamRowProps) {
+function TeamRow({ name, tag, logoUrl, firstLeg, secondLeg, thirdLeg, total, hasSecondLeg, isBo3, winner }: TeamRowProps) {
   const placeholder = isPlaceholderTeam(name);
   return (
     <div className={`game-bracket-team ${winner ? 'is-winner' : ''} ${placeholder ? 'is-placeholder' : ''}`}>
@@ -109,7 +139,13 @@ function TeamRow({ name, tag, logoUrl, firstLeg, secondLeg, total, hasSecondLeg,
         </span>
       </div>
       <div className="game-bracket-score font-[family-name:var(--font-active)]">
-        {hasSecondLeg && (
+        {isBo3 ? (
+          <span className="game-bracket-legs" title="Marcadores de cada juego (J1 / J2 / J3)">
+            <span>{firstLeg ?? '-'}</span><i>/</i>
+            <span>{secondLeg ?? '-'}</span><i>/</i>
+            <span>{thirdLeg ?? '-'}</span>
+          </span>
+        ) : hasSecondLeg && (
           <span className="game-bracket-legs" title="Marcadores de ida y vuelta">
             <span>{firstLeg ?? '-'}</span><i>/</i><span>{secondLeg ?? '-'}</span>
           </span>
@@ -121,13 +157,14 @@ function TeamRow({ name, tag, logoUrl, firstLeg, secondLeg, total, hasSecondLeg,
 }
 
 function isFinished(status: string): boolean {
-  return ['FINALIZADO', 'TERMINADO'].includes(status.toUpperCase());
+  return ['FINALIZADO', 'TERMINADO'].includes((status || '').toUpperCase());
 }
 
 export function PlayoffBracket({ matches, brandColor = 'var(--game-brand)', matchMode }: PlayoffBracketProps) {
   const rounds = buildRoundPairs(matches);
   const sortedRounds = [...rounds.keys()].sort((a, b) => getRoundWeight(a) - getRoundWeight(b));
-  const hasTwoLeggedSeries = matchMode === 'IdaVuelta' || matches.some((match) => /\((ida|vuelta)\)/i.test(match.round_name));
+  const isBo3SeriesFormat = matchMode === 'MejorDe3' || matches.some((match) => /\(juego\s*[123]\)/i.test(match.round_name) || /-j[123]$/i.test(String(match.id)));
+  const hasTwoLeggedSeries = !isBo3SeriesFormat && (matchMode === 'IdaVuelta' || matches.some((match) => /\((ida|vuelta)\)/i.test(match.round_name)));
   const totalSeries = [...rounds.values()].reduce((total, pairs) => total + pairs.length, 0);
 
   if (sortedRounds.length === 0) {
@@ -143,8 +180,8 @@ export function PlayoffBracket({ matches, brandColor = 'var(--game-brand)', matc
           <small>{sortedRounds.length} rondas · {totalSeries} cruces</small>
         </div>
         <div className="game-bracket-guide-actions">
-          <span className={`game-bracket-format ${hasTwoLeggedSeries ? 'is-two-legged' : ''}`}>
-            {hasTwoLeggedSeries ? 'Ida y vuelta · marcador global' : 'Partido único'}
+          <span className={`game-bracket-format ${isBo3SeriesFormat ? 'is-bo3' : hasTwoLeggedSeries ? 'is-two-legged' : ''}`}>
+            {isBo3SeriesFormat ? '🎮 Mejor de 3 (Bo3) · al ganador de 2' : hasTwoLeggedSeries ? 'Ida y vuelta · marcador global' : 'Partido único'}
           </span>
           <span className="game-bracket-swipe-hint">Desliza para recorrer las rondas <ChevronRight className="size-4" /></span>
         </div>
@@ -159,7 +196,79 @@ export function PlayoffBracket({ matches, brandColor = 'var(--game-brand)', matc
                 <div><h3 id={`round-${roundIndex}`}>{roundName}</h3><p>{roundPairs.length} {roundPairs.length === 1 ? 'cruce' : 'cruces'} · Ronda {roundIndex + 1}</p></div>
               </header>
               <div className="game-bracket-round-matches">
-                {roundPairs.map(({ ida, vuelta }, index) => {
+                {roundPairs.map(({ ida, vuelta, game3, isBo3 }, index) => {
+                  if (isBo3) {
+                    const j1Played = isFinished(ida.status) && ida.score_home !== null && ida.score_away !== null;
+                    const homeJ1 = j1Played ? Number(ida.score_home) : null;
+                    const awayJ1 = j1Played ? Number(ida.score_away) : null;
+                    const homeWonJ1 = j1Played && homeJ1! > awayJ1!;
+                    const awayWonJ1 = j1Played && awayJ1! > homeJ1!;
+
+                    const j2Played = Boolean(vuelta && isFinished(vuelta.status) && vuelta.score_home !== null && vuelta.score_away !== null);
+                    // Localía invertida en J2: vuelta.home es Team B, vuelta.away es Team A
+                    const homeJ2 = j2Played ? Number(vuelta!.score_away) : null;
+                    const awayJ2 = j2Played ? Number(vuelta!.score_home) : null;
+                    const homeWonJ2 = j2Played && homeJ2! > awayJ2!;
+                    const awayWonJ2 = j2Played && awayJ2! > homeJ2!;
+
+                    const isGame3Cancelled = game3?.status === 'CANCELADO' || (homeWonJ1 && homeWonJ2) || (awayWonJ1 && awayWonJ2);
+                    const j3Played = Boolean(game3 && isFinished(game3.status) && game3.score_home !== null && game3.score_away !== null);
+                    const homeJ3 = j3Played ? Number(game3!.score_home) : null;
+                    const awayJ3 = j3Played ? Number(game3!.score_away) : null;
+                    const homeWonJ3 = j3Played && homeJ3! > awayJ3!;
+                    const awayWonJ3 = j3Played && awayJ3! > homeJ3!;
+
+                    const homeSeriesWins = (homeWonJ1 ? 1 : 0) + (homeWonJ2 ? 1 : 0) + (homeWonJ3 ? 1 : 0);
+                    const awaySeriesWins = (awayWonJ1 ? 1 : 0) + (awayWonJ2 ? 1 : 0) + (awayWonJ3 ? 1 : 0);
+                    const finished = homeSeriesWins >= 2 || awaySeriesWins >= 2 || (j1Played && j2Played && (j3Played || isGame3Cancelled));
+                    const homeWinner = homeSeriesWins >= 2 || (finished && homeSeriesWins > awaySeriesWins);
+                    const awayWinner = awaySeriesWins >= 2 || (finished && awaySeriesWins > homeSeriesWins);
+
+                    return (
+                      <article key={ida.id || index} className="game-bracket-match">
+                        <div className="game-bracket-card">
+                          <div className="game-bracket-match-meta">
+                            <span>Cruce {String(index + 1).padStart(2, '0')} <b>Mejor de 3 (Bo3)</b></span>
+                            <span className={finished ? 'is-finished' : ''}>
+                              {finished ? <CheckCircle2 className="size-3" /> : <Clock3 className="size-3" />}
+                              {finished ? (isGame3Cancelled && (homeSeriesWins === 2 || awaySeriesWins === 2) ? 'Serie 2-0' : 'Finalizado') : 'Pendiente'}
+                            </span>
+                          </div>
+                          <div className="game-bracket-schedule">
+                            <CalendarDays />Jornada {ida.matchday || roundIndex + 1}{ida.scheduled_time ? ` · ${ida.scheduled_time}` : ''}
+                          </div>
+                          <div className="game-bracket-leg-labels">
+                            <span>J1</span><span>J2</span><span>J3</span><strong>Serie</strong>
+                          </div>
+                          <TeamRow
+                            name={ida.home_team_name || 'Por Definir'}
+                            tag={ida.home_team_tag || 'LOC'}
+                            logoUrl={ida.home_team_logo_url}
+                            firstLeg={homeJ1}
+                            secondLeg={homeJ2}
+                            thirdLeg={homeJ3}
+                            total={homeSeriesWins}
+                            hasSecondLeg={true}
+                            isBo3={true}
+                            winner={homeWinner}
+                          />
+                          <TeamRow
+                            name={ida.away_team_name || 'Por Definir'}
+                            tag={ida.away_team_tag || 'VIS'}
+                            logoUrl={ida.away_team_logo_url}
+                            firstLeg={awayJ1}
+                            secondLeg={awayJ2}
+                            thirdLeg={awayJ3}
+                            total={awaySeriesWins}
+                            hasSecondLeg={true}
+                            isBo3={true}
+                            winner={awayWinner}
+                          />
+                        </div>
+                      </article>
+                    );
+                  }
+
                   const idaPlayed = isFinished(ida.status) && ida.score_home !== null && ida.score_away !== null;
                   const vueltaPlayed = Boolean(vuelta && isFinished(vuelta.status) && vuelta.score_home !== null && vuelta.score_away !== null);
                   const homeFirst = idaPlayed ? Number(ida.score_home) : null;

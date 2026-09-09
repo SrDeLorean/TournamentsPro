@@ -26,6 +26,9 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <motion.div
+      role="status"
+      aria-live="polite"
+      data-ui-state="empty"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 260, damping: 20 }}

@@ -40,13 +40,16 @@ export const platformSchema = z.enum(['PS5', 'PS4', 'XBOX', 'PC', 'CROSSPLAY']);
 export const competitionStatusSchema = z.enum(['Borrador', 'Activo', 'Finalizado', 'Deshabilitado']);
 export const transferMarketModeSchema = z.enum(['ABIERTO', 'CERRADO', 'SIN_MERCADO']);
 export const matchFormatSchema = z.string().min(1).max(50);
-export const matchModeSchema = z.enum(['PartidoUnico', 'IdaVuelta']);
+export const matchModeSchema = z.enum(['PartidoUnico', 'IdaVuelta', 'MejorDe3']);
 export const tournamentFormatSchema = z.enum(['Liga', 'Playoff', 'Hibrido']);
 
 export const createCompetitionSchema = z.object({
   name: z.string().min(3, 'Mínimo 3 caracteres').max(150),
   gameSlug: gameSlugSchema,
   modeFormat: matchFormatSchema,
+  format: tournamentFormatSchema.default('Liga'),
+  matchMode: matchModeSchema.default('PartidoUnico'),
+  playoffMatchMode: matchModeSchema.optional(),
   fechaLimiteInscripcion: flexDatetimeSchema,
   fechaInicio: requiredDatetimeSchema,
   fechaTermino: flexDatetimeSchema,
@@ -109,9 +112,13 @@ export const fixtureConfigSchema = z.object({
   selectedDays: z.array(z.string()).min(1),
   selectedTimes: z.array(z.string()).min(1),
   matchMode: matchModeSchema.default('PartidoUnico'),
+  playoffMatchMode: matchModeSchema.optional(),
   format: tournamentFormatSchema.default('Liga'),
   groupCount: z.number().int().min(2).max(16).default(3),
   qualifiersPerGroup: z.number().int().min(1).max(8).default(2),
+}).refine((data) => !(data.format === 'Liga' && data.matchMode === 'MejorDe3'), {
+  message: 'El formato Liga no soporta la modalidad Mejor de 3 (Bo3)',
+  path: ['matchMode'],
 });
 
 export const addPlayerToSquadSchema = z.object({

@@ -34,6 +34,9 @@ export interface User {
   foto?: string | null;
   bannerUrl?: string | null;
   biografia?: string | null;
+  bio?: string | null;
+  country?: string | null;
+  phone?: string | null;
   twitter?: string | null;
   instagram?: string | null;
   twitch?: string | null;
@@ -110,7 +113,8 @@ export interface Competition {
   transferMarketMode: string;
   modeFormat: string;
   format?: 'Liga' | 'Playoff' | 'Hibrido' | string | null;
-  matchMode?: 'PartidoUnico' | 'IdaVuelta' | string | null;
+  matchMode?: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3' | string | null;
+  playoffMatchMode?: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3' | string | null;
   groupCount?: number | null;
   qualifiersPerGroup?: number | null;
   status: string;
@@ -224,6 +228,8 @@ export interface Match {
 
 export interface IMatchRepository extends IRepository<Match> {
   findByCompetition(competitionId: string): Promise<Match[]>;
+  deleteByCompetition(competitionId: string): Promise<void>;
+  createMany(matches: Partial<Match>[]): Promise<void>;
   addPlayerStat(statsId: string, matchId: string, playerId: string, gameSlug: string, statsJson: string): Promise<void>;
 }
 

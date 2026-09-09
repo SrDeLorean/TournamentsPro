@@ -52,6 +52,8 @@ export async function GET(request: Request) {
       avatar_url: user.avatarUrl || user.foto || null,
       avatarUrl: user.avatarUrl || user.foto || null,
       foto: user.avatarUrl || user.foto || null,
+      banner_url: user.bannerUrl || null,
+      bannerUrl: user.bannerUrl || null,
       primary_game_slug: user.primaryGameSlug || 'eafc26',
       primaryGame: user.primaryGameSlug || 'eafc26',
       position: user.position || 'DFC',
@@ -62,6 +64,13 @@ export async function GET(request: Request) {
       ban_reason: user.banReason,
       banned_at: user.bannedAt || user.updatedAt,
       created_at: user.createdAt,
+      biografia: user.biografia || null,
+      twitter: user.twitter || null,
+      instagram: user.instagram || null,
+      twitch: user.twitch || null,
+      discord: user.discord || null,
+      youtube: user.youtube || null,
+      whatsapp: user.whatsapp || null,
     }));
 
     return NextResponse.json({ success: true, users: safeUsers });

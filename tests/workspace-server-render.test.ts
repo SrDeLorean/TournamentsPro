@@ -37,6 +37,16 @@ describe('authenticated workspaces server rendering', () => {
     }
   }, 15_000);
 
+  it('renders athlete public ficha with real banner and profile shell without duplicate hero', async () => {
+    const { AthleteWorkspaceView } = await import('@/components/workspaces/athlete-workspace-view');
+    const markup = renderToStaticMarkup(createElement(AthleteWorkspaceView, { gameSlug: 'eafc26', section: 'ficha' }));
+    
+    // Expect the public profile shell and real banner to be rendered
+    expect(markup).toContain('public-profile-shell');
+    expect(markup).toContain('eafc.jpg');
+    expect(markup).not.toContain('Mi ficha de atleta');
+  });
+
   it('renders every club section without a Server Components exception', async () => {
     const { ClubWorkspaceView } = await import('@/components/workspaces/club-workspace-view');
 

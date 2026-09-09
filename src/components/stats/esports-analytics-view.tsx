@@ -12,6 +12,7 @@ import {
 
 interface EsportsAnalyticsViewProps {
   game: GameConfig;
+  hideHeader?: boolean;
 }
 
 // Game-specific role & position selector options mapping
@@ -269,7 +270,7 @@ const ROLE_ANALYTICS_DATA: Record<string, Record<string, {
   },
 };
 
-export function EsportsAnalyticsView({ game }: EsportsAnalyticsViewProps) {
+export function EsportsAnalyticsView({ game, hideHeader = false }: EsportsAnalyticsViewProps) {
   const gameSlug = game.slug || 'eafc26';
 
   // Load game specific selector options
@@ -287,14 +288,16 @@ export function EsportsAnalyticsView({ game }: EsportsAnalyticsViewProps) {
     >
       
       {/* 1. Header Hero Banner */}
-      <PageHeader
-        badgeText={`INFOGRAFÍA OFICIAL ${game.name}`}
-        badgeIcon={<Flame className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
-        title="Métricas & Análisis Gráfico"
-        highlightTitle="por Posición"
-        description={`Selecciona una posición o rol táctico a continuación para filtrar e inspeccionar las métricas gráficas independientes de ${game.name}.`}
-        brandColor="var(--game-brand)"
-      />
+      {!hideHeader ? (
+        <PageHeader
+          badgeText={`INFOGRAFÍA OFICIAL ${game.name}`}
+          badgeIcon={<Flame className="ui-dynamic-brand-icon w-3.5 h-3.5" />}
+          title="Métricas & Análisis Gráfico"
+          highlightTitle="por Posición"
+          description={`Selecciona una posición o rol táctico a continuación para filtrar e inspeccionar las métricas gráficas independientes de ${game.name}.`}
+          brandColor="var(--game-brand)"
+        />
+      ) : null}
 
       {/* 2. GAME-SPECIFIC POSITION / ROLE SELECTOR BAR */}
       <div className="p-3 rounded-2xl glass-panel border border-[var(--border-card)] space-y-3 shadow-xl">

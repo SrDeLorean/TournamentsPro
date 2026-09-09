@@ -157,9 +157,12 @@ describe('management workspace UI', () => {
     expect(playerNavbar).toContain('authenticated-global-menu relative flex-shrink-0 xl:hidden');
     expect(playerNavbar).toContain('max-w-[96rem]');
     expect(publicNavbar).toContain('Abrir navegación global');
-    expect(publicNavbar).toContain('Abrir panel de gestión');
-    expect(sidebar).toContain('management-public-shortcuts hidden space-y-2');
-    expect(sidebar).toContain('lg:block');
+    expect(publicNavbar).toContain('Abrir o cerrar panel de gestión');
+    expect(publicNavbar.match(/className="management-navbar-toggle/g)).toHaveLength(1);
+    expect(publicNavbar).toContain('{!managementNavigation ? (');
+    expect(publicNavbar).toContain('isPublicMobileMenuOpen');
+    expect(sidebar).toContain('management-public-shortcuts space-y-2');
+    expect(sidebar).not.toContain('management-public-shortcuts hidden');
   });
 
   it('renders table cells with labels for the phone card layout', async () => {
@@ -438,7 +441,7 @@ describe('management workspace UI', () => {
     expect(layout).toContain('<Navbar');
     expect(layout).not.toContain('<Navbar key={pathname} />');
     expect(navbar).toContain('mobileMenuState.pathname === pathname');
-    expect(navbar).toContain("useBodyScrollLock(isMobileMenuOpen, 'public-navigation')");
+    expect(navbar).toContain("useBodyScrollLock(isPublicMobileMenuOpen, 'public-navigation')");
     expect(navbar).toContain('closeAtDesktopBreakpoint');
     expect(navbar).toContain("event.key === 'Escape'");
     expect(navbar).toContain('<MobilePublicNavigation');

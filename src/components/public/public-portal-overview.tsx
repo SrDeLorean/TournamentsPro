@@ -15,12 +15,12 @@ import { GameLogo } from '@/components/ui/game-logo';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import type { PublicPortalSummary } from '@/lib/public-home-summary';
 
-interface PublicPortalProps { summary: PublicPortalSummary; gameSlug?: string }
+interface PublicPortalProps { summary: PublicPortalSummary; gameSlug?: string; showMetrics?: boolean }
 
 const DISCIPLINE_ORDER = ['eafc26', 'csgo', 'valorant', 'lol', 'rocketleague', 'fortnite'];
 const ROTATION_INTERVAL_MS = 5_000;
 
-export function PublicPortalOverview({ summary, gameSlug }: PublicPortalProps) {
+export function PublicPortalOverview({ summary, gameSlug, showMetrics = true }: PublicPortalProps) {
   const availableSlugs = useMemo(() => {
     if (gameSlug) return [gameSlug];
     const withContent = DISCIPLINE_ORDER.filter((slug) => hasDisciplineContent(summary, slug));
@@ -53,7 +53,7 @@ export function PublicPortalOverview({ summary, gameSlug }: PublicPortalProps) {
   const move = (direction: -1 | 1) => setActiveIndex((current) => (current + direction + availableSlugs.length) % availableSlugs.length);
 
   return <div className="public-portal-overview">
-    <PublicPortalMetrics counts={summary.counts} />
+    {showMetrics ? <PublicPortalMetrics counts={summary.counts} /> : null}
     {canRotate ? <PublicDisciplineCarousel
       slugs={availableSlugs}
       activeSlug={activeSlug}
@@ -141,13 +141,86 @@ export function PublicPortalMetrics({ counts }: { counts: PublicPortalSummary['c
 }
 
 export function PublicMatchesSection({ summary, gameSlug, activeGameSlug }: PublicPortalProps & { activeGameSlug: string }) {
+  const [matchFilter, setMatchFilter] = useState<'ALL' | 'LIVE' | 'FINISHED' | 'UPCOMING'>('ALL');
   const sectionId = `${gameSlug || 'global'}-matches-title`;
-  return <section className="public-home-section public-portal-section" aria-labelledby={sectionId}>
-    <PublicSectionHeading eyebrow="Actividad competitiva" title="Resultados y próximos encuentros" id={sectionId}>
-      <Link href={`/${activeGameSlug}/partidos`}>Ver calendario <ArrowRight /></Link>
-    </PublicSectionHeading>
-    {summary.matches.length ? <div className="public-portal-match-grid">{summary.matches.slice(0, 4).map((match) => <PublicMatchCard key={match.id} match={match} />)}</div> : <EmptyPublicBlock icon={CalendarDays} text={`Todavía no hay encuentros publicados de ${GAMES_CATALOG[activeGameSlug]?.name}.`} />}
-  </section>;
+
+  const filteredMatches = useMemo(() => {
+    if (matchFilter === 'LIVE') {
+      return summary.matches.filter((m) => {
+        const s = (m.status || '').toUpperCase();
+        return s === 'EN_VIVO' || s === 'EN_CURSO';
+      });
+    }
+    if (matchFilter === 'FINISHED') {
+      return summary.matches.filter((m) => (m.status || '').toUpperCase().includes('FINAL'));
+    }
+    if (matchFilter === 'UPCOMING') {
+      return summary.matches.filter((m) => {
+        const s = (m.status || '').toUpperCase();
+        return s.includes('PROG') || s.includes('PEND');
+      });
+    }
+    return summary.matches;
+  }, [summary.matches, matchFilter]);
+
+  return (
+    <section className="public-home-section public-portal-section" aria-labelledby={sectionId}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <PublicSectionHeading eyebrow="Actividad competitiva" title="Resultados y próximos encuentros" id={sectionId}>
+          <Link href={`/${activeGameSlug}/partidos`}>Ver calendario <ArrowRight /></Link>
+        </PublicSectionHeading>
+
+        {/* Filter Pills */}
+        <div className="live-ticker-pills self-start sm:self-center">
+          <button
+            type="button"
+            onClick={() => setMatchFilter('ALL')}
+            className={`live-ticker-pill ${matchFilter === 'ALL' ? 'is-active' : ''}`}
+          >
+            Todos ({summary.matches.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMatchFilter('LIVE')}
+            className={`live-ticker-pill ${matchFilter === 'LIVE' ? 'is-live-active' : ''}`}
+          >
+            En vivo
+          </button>
+          <button
+            type="button"
+            onClick={() => setMatchFilter('FINISHED')}
+            className={`live-ticker-pill ${matchFilter === 'FINISHED' ? 'is-finished-active' : ''}`}
+          >
+            Resultados
+          </button>
+          <button
+            type="button"
+            onClick={() => setMatchFilter('UPCOMING')}
+            className={`live-ticker-pill ${matchFilter === 'UPCOMING' ? 'is-upcoming-active' : ''}`}
+          >
+            Próximos
+          </button>
+        </div>
+      </div>
+
+      {filteredMatches.length ? (
+        <div className="public-portal-match-grid">
+          {filteredMatches.slice(0, 6).map((match) => (
+            <PublicMatchCard key={match.id} match={match} />
+          ))}
+        </div>
+      ) : (
+        <EmptyPublicBlock
+          icon={CalendarDays}
+          text={
+            matchFilter === 'LIVE'
+              ? `No hay partidos en vivo de ${GAMES_CATALOG[activeGameSlug]?.name} en este momento.`
+              : `Todavía no hay encuentros publicados de ${GAMES_CATALOG[activeGameSlug]?.name}.`
+          }
+        />
+      )}
+    </section>
+  );
 }
 
 export function PublicCircuitSection({ summary, gameSlug, activeGameSlug }: PublicPortalProps & { activeGameSlug: string }) {

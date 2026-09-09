@@ -1,0 +1,36 @@
+/* Shared disclosure behavior kept outside the global token sheet. */
+.management-navbar-toggle {
+  flex: 0 0 auto;
+}
+
+.management-toggle-icon { display: none; }
+.management-navbar-toggle[data-mobile-open='false'] .management-toggle-icon-open,
+.management-navbar-toggle[data-mobile-open='true'] .management-toggle-icon-close { display: block; }
+
+#public-games-menu {
+  isolation: isolate;
+}
+
+#public-games-menu::before {
+  position: absolute;
+  inset: -0.5rem 0 auto;
+  height: 0.5rem;
+  content: '';
+}
+
+@media (min-width: 1024px) {
+  .management-navbar-toggle .management-toggle-icon { display: none; }
+  .management-navbar-toggle[data-desktop-collapsed='true'] .management-toggle-icon-open,
+  .management-navbar-toggle[data-desktop-collapsed='false'] .management-toggle-icon-close { display: block; }
+}
+
+@media (max-width: 1023px) {
+  .app-navbar-inner,
+  .admin-navbar-frame {
+    gap: 0.4rem;
+    padding-inline: max(0.55rem, env(safe-area-inset-left));
+  }
+
+  .app-navbar-actions,
+  .admin-navbar-actions { gap: 0.3rem; }
+}

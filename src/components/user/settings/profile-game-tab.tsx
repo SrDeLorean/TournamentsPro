@@ -7,6 +7,7 @@ import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { Gamepad2, Tag, Sparkles, Hash } from 'lucide-react';
 import type { UserProfile } from '@/lib/data-store';
+import { fetchJson } from '@/lib/fetch-utils';
 
 export interface GameProfileEntry {
   gamertag: string;
@@ -66,9 +67,11 @@ export function ProfileGameTab({
   const gameInfo = GAMES_CATALOG[configuredGame];
 
   const persistProfileImage = async (type: 'avatar' | 'banner', url: string) => {
-    if (type === 'avatar') setAvatarUrl(url);
-    else setBannerUrl(url);
-    if (!currentUser?.id) return;
+    if (!currentUser?.id) {
+      if (type === 'avatar') setAvatarUrl(url);
+      else setBannerUrl(url);
+      return;
+    }
 
     const payload = {
       id: currentUser.id,
@@ -78,11 +81,12 @@ export function ProfileGameTab({
       foto: type === 'avatar' ? url : avatarUrl || currentUser.avatarUrl || '',
       bannerUrl: type === 'banner' ? url : bannerUrl || currentUser.bannerUrl || '',
     };
-    await fetch('/api/users', {
+    await fetchJson('/api/users', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (type === 'avatar') setAvatarUrl(url);
+    else setBannerUrl(url);
     updateCurrentUser(type === 'avatar' ? { avatarUrl: url, foto: url } : { bannerUrl: url });
     await refetchUser();
   };
@@ -138,8 +142,9 @@ export function ProfileGameTab({
       <BrandedImageUploadSection
         title="Imágenes del Atleta (Foto de Perfil & Banner de Portada):"
         brandColor={brandColor}
+        entityType="user"
         items={[
-          { label: 'Foto de Perfil / Logo', subtitle: 'Formato WebP optimizado', currentUrl: avatarUrl, fallbackType: 'avatar', uploadType: 'logo', maxDimension: 400, uploadButtonText: 'Subir / Cambiar Foto de Perfil', entityName: gamertag || name || 'user', entityId: currentUser?.id, onUploadSuccess: (url) => persistProfileImage('avatar', url) },
+          { label: 'Foto de Perfil / Logo', subtitle: 'Formato WebP optimizado', currentUrl: avatarUrl, fallbackType: 'avatar', uploadType: 'avatar', maxDimension: 400, uploadButtonText: 'Subir / Cambiar Foto de Perfil', entityName: gamertag || name || 'user', entityId: currentUser?.id, onUploadSuccess: (url) => persistProfileImage('avatar', url) },
           { label: 'Banner de Portada', subtitle: 'Formato HD WebP panorámico', currentUrl: bannerUrl, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Subir / Cambiar Banner Portada', entityName: gamertag || name || 'user', entityId: currentUser?.id, onUploadSuccess: (url) => persistProfileImage('banner', url) },
         ]}
       />

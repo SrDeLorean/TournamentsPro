@@ -39,6 +39,17 @@ const config = {
       backdropBlur: {
         glass: '18px',
       },
+      keyframes: {
+        marquee: {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-100%)' },
+        },
+      },
+      animation: {
+        'marquee-slow': 'marquee 280s linear infinite',
+        marquee: 'marquee 180s linear infinite',
+        'marquee-fast': 'marquee 110s linear infinite',
+      },
       fontFamily: {
         sans: ['var(--font-outfit)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ['var(--font-outfit)', 'ui-sans-serif', 'sans-serif'],

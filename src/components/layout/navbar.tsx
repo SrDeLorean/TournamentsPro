@@ -39,13 +39,14 @@ export function Navbar({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [mobileMenuState, setMobileMenuState] = useState({ pathname, open: false });
   const isMobileMenuOpen = mobileMenuState.pathname === pathname && mobileMenuState.open;
+  const isPublicMobileMenuOpen = !managementNavigation && isMobileMenuOpen;
   const setIsMobileMenuOpen = useCallback((next: SetStateAction<boolean>) => {
     setMobileMenuState((current) => ({
       pathname,
       open: typeof next === 'function' ? next(current.pathname === pathname && current.open) : next,
     }));
   }, [pathname]);
-  useBodyScrollLock(isMobileMenuOpen, 'public-navigation');
+  useBodyScrollLock(isPublicMobileMenuOpen, 'public-navigation');
 
   const settingsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -98,44 +99,24 @@ export function Navbar({
       {/* Thin Banner Stripe (h-12 / 48px) */}
       <div className="app-navbar-inner ui-navigation-frame h-full">
         {managementNavigation ? (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                setIsSettingsOpen(false);
-                setIsUserMenuOpen(false);
-                managementNavigation.onToggle();
-              }}
-              aria-controls="management-navigation"
-              aria-expanded={!managementNavigation.isDesktopCollapsed}
-              aria-label={managementNavigation.isDesktopCollapsed ? 'Abrir panel de gestión' : 'Ocultar panel de gestión'}
-              title="Panel de gestión"
-              className="management-navbar-toggle ui-navigation-icon-button hidden size-9 lg:inline-flex"
-            >
-              {managementNavigation.isDesktopCollapsed
-                ? <PanelLeftOpen className="size-4" />
-                : <PanelLeftClose className="size-4" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                setIsSettingsOpen(false);
-                setIsUserMenuOpen(false);
-                managementNavigation.onToggle();
-              }}
-              aria-controls="management-navigation"
-              aria-expanded={managementNavigation.isMobileOpen}
-              aria-label={managementNavigation.isMobileOpen ? 'Cerrar panel de gestión' : 'Abrir panel de gestión'}
-              title="Panel de gestión"
-              className="management-navbar-toggle ui-navigation-icon-button inline-flex size-9 lg:hidden"
-            >
-              {managementNavigation.isMobileOpen
-                ? <PanelLeftClose className="size-4" />
-                : <PanelLeftOpen className="size-4" />}
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              setIsSettingsOpen(false);
+              setIsUserMenuOpen(false);
+              managementNavigation.onToggle();
+            }}
+            aria-controls="management-navigation"
+            aria-label="Abrir o cerrar panel de gestión"
+            title="Panel de gestión"
+            data-mobile-open={managementNavigation.isMobileOpen}
+            data-desktop-collapsed={managementNavigation.isDesktopCollapsed}
+            className="management-navbar-toggle ui-navigation-icon-button size-9"
+          >
+            <PanelLeftOpen className="management-toggle-icon management-toggle-icon-open size-4" />
+            <PanelLeftClose className="management-toggle-icon management-toggle-icon-close size-4" />
+          </button>
         ) : null}
 
         {/* Brand Logo */}
@@ -159,7 +140,7 @@ export function Navbar({
         <NavLinks />
 
         {/* Right Controls: Settings Gear & Auth Buttons */}
-        <div className="flex items-center gap-1.5 font-[family-name:var(--font-active)]">
+        <div className="app-navbar-actions flex min-w-0 items-center gap-1.5 font-[family-name:var(--font-active)]">
           {isAuthenticated ? (
             <div className="hidden sm:block">
               <NotificationCenter onOpen={() => {
@@ -179,7 +160,7 @@ export function Navbar({
               title="Configuración de Plataforma (Tema e Idioma)"
               className="ui-navigation-icon-button"
             >
-              <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-[var(--app-accent)]' : ''}`} />
+              <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-[var(--navigation-brand)]' : ''}`} />
             </button>
 
             {/* Settings Dropdown Container */}
@@ -187,7 +168,7 @@ export function Navbar({
               <div className="ui-navigation-popover absolute right-0 top-full z-50 mt-2 w-72 space-y-3 p-3 animate-in fade-in zoom-in-95 duration-150">
                 <div className="pb-2 border-b border-[var(--border-card)] flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-heading)] font-[family-name:var(--font-active)]">Preferencias</span>
-                  <Sparkles className="w-3.5 h-3.5 text-[var(--app-accent)]" />
+                  <Sparkles className="w-3.5 h-3.5 text-[var(--navigation-brand)]" />
                 </div>
 
                 {/* Theme Switcher */}
@@ -218,7 +199,7 @@ export function Navbar({
                 aria-label="Abrir menú de usuario"
                 aria-expanded={isUserMenuOpen}
                 aria-controls="public-authenticated-user-menu"
-                className="flex h-9 items-center gap-2 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-1 pr-1.5 shadow-sm transition-colors hover:border-[var(--app-accent)]"
+                className="flex h-9 items-center gap-2 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-1 pr-1.5 shadow-sm transition-colors hover:border-[var(--navigation-brand)]"
               >
                 <Avatar fallback={currentUser?.name || currentUser?.gamertag || 'Usuario'} status="online" size="sm" />
                 <span className="hidden max-w-28 truncate text-xs font-black text-[var(--text-heading)] md:inline font-[family-name:var(--font-active)]">{currentUser?.gamertag}</span>
@@ -232,18 +213,18 @@ export function Navbar({
                       <Avatar fallback={currentUser?.name || 'Usuario'} status="online" size="md" />
                       <div className="min-w-0 flex-1">
                         <strong className="block truncate text-sm text-[var(--text-heading)] font-[family-name:var(--font-active)]">{currentUser?.name}</strong>
-                        <span className="block truncate font-[family-name:var(--font-active)] text-xs font-bold text-[var(--app-accent)]">@{currentUser?.gamertag}</span>
+                        <span className="block truncate font-[family-name:var(--font-active)] text-xs font-bold text-[var(--navigation-brand)]">@{currentUser?.gamertag}</span>
                         <span className="block truncate text-[10px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">{currentUser?.email}</span>
                       </div>
                     </div>
-                    <Badge variant="secondary">{currentUser?.role}</Badge>
+                    <Badge variant="neutral" className="navigation-role-badge">{currentUser?.role}</Badge>
                   </div>
                   <div className="space-y-1 text-xs font-bold font-[family-name:var(--font-active)]">
                     <Link href="/dashboard" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
                       <LayoutDashboard className="size-4 text-[var(--navigation-brand)]" />Panel de gestión
                     </Link>
                     <Link href="/cuenta/ajustes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
-                      <UserRoundCog className="size-4 text-[var(--app-accent)]" />Configuración de la cuenta
+                      <UserRoundCog className="size-4 text-[var(--navigation-brand)]" />Configuración de la cuenta
                     </Link>
                     <Link href="/mensajes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
                       <Mail className="size-4 text-[var(--navigation-brand)]" />Centro de mensajes
@@ -267,15 +248,15 @@ export function Navbar({
             <>
               {/* Iniciar Sesión Link Button */}
               <Link href="/login" className="hidden sm:inline-flex">
-                <Button variant="ghost" size="sm" className="text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--app-accent)] h-8 px-2.5">
-                  <LogIn className="w-3.5 h-3.5 mr-1 text-[var(--app-accent)]" />
+                <Button variant="ghost" size="sm" className="text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--navigation-brand)] h-8 px-2.5">
+                  <LogIn className="w-3.5 h-3.5 mr-1 text-[var(--navigation-brand)]" />
                   Ingresar
                 </Button>
               </Link>
 
               {/* Registrarse Link Button */}
               <Link href="/registro" className="hidden sm:inline-flex">
-                <Button variant="primary" size="sm" className="text-xs font-black h-8 px-3 text-[var(--accent-contrast)]">
+                <Button variant="primary" size="sm" className="navigation-primary-action text-xs font-black h-8 px-3">
                   <UserPlus className="w-3.5 h-3.5 mr-1" />
                   Registro
                 </Button>
@@ -284,26 +265,27 @@ export function Navbar({
           )}
 
           {/* Mobile Hamburger Toggle */}
-          <button
-            onClick={() => {
-              setIsSettingsOpen(false);
-              setIsUserMenuOpen(false);
-              if (managementNavigation?.isMobileOpen) managementNavigation.onToggle();
-              setIsMobileMenuOpen((open) => !open);
-            }}
-            className="app-navbar-mobile-toggle ui-navigation-icon-button lg:hidden"
-            type="button"
-            aria-label={isMobileMenuOpen ? 'Cerrar navegación global' : 'Abrir navegación global'}
-            aria-expanded={isMobileMenuOpen}
-            aria-controls="public-mobile-navigation"
-          >
-            {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-          </button>
+          {!managementNavigation ? (
+            <button
+              onClick={() => {
+                setIsSettingsOpen(false);
+                setIsUserMenuOpen(false);
+                setIsMobileMenuOpen((open) => !open);
+              }}
+              className="app-navbar-mobile-toggle ui-navigation-icon-button lg:hidden"
+              type="button"
+              aria-label={isMobileMenuOpen ? 'Cerrar navegación global' : 'Abrir navegación global'}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="public-mobile-navigation"
+            >
+              {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {isMobileMenuOpen ? (
-        <MobilePublicNavigation currentGame={currentGame} isAuthenticated={isAuthenticated} onClose={() => setIsMobileMenuOpen(false)} />
+      {isPublicMobileMenuOpen ? (
+        <MobilePublicNavigation currentGame={currentGame} currentPath={pathname} isAuthenticated={isAuthenticated} onClose={() => setIsMobileMenuOpen(false)} />
       ) : null}
     </header>
   );

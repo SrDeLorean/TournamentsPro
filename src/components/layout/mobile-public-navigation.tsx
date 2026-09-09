@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { Flag, Home, Info, LogIn, Shield, User, UserPlus, Users } from 'lucide-react';
+import { Flag, Home, Info, LogIn, Shield, User, UserPlus, Users, X } from 'lucide-react';
 import { GameLogo } from '@/components/ui/game-logo';
 import { GAMES_CATALOG, type GameConfig } from '@/lib/games-data';
 
 interface MobilePublicNavigationProps {
   currentGame: GameConfig;
+  currentPath: string;
   isAuthenticated: boolean;
   onClose: () => void;
 }
@@ -17,11 +18,21 @@ const publicLinks = [
   { href: '/informacion', label: 'Información & Reglamento', Icon: Info },
 ] as const;
 
-export function MobilePublicNavigation({ currentGame, isAuthenticated, onClose }: MobilePublicNavigationProps) {
+export function MobilePublicNavigation({ currentGame, currentPath, isAuthenticated, onClose }: MobilePublicNavigationProps) {
   return (
     <>
       <button type="button" aria-label="Cerrar menú principal" onClick={onClose} className="fixed inset-0 top-14 z-30 bg-[var(--app-overlay)] backdrop-blur-sm lg:hidden" />
-      <div id="public-mobile-navigation" className="app-navbar-mobile-menu ui-navigation-popover fixed bottom-0 left-0 right-0 top-14 z-40 space-y-3 overflow-y-auto overscroll-contain rounded-none border-x-0 border-t-0 p-3 touch-pan-y lg:hidden">
+      <div id="public-mobile-navigation" className="app-navbar-mobile-menu fixed bottom-0 right-0 top-14 z-40 space-y-3 overflow-y-auto overscroll-contain touch-pan-y lg:hidden">
+        <div className="app-navbar-mobile-heading">
+          <span>
+            <strong>Navegación</strong>
+            <small>Explora la plataforma y sus disciplinas</small>
+          </span>
+          <button type="button" onClick={onClose} className="ui-navigation-icon-button" aria-label="Cerrar navegación global">
+            <X className="size-4" />
+          </button>
+        </div>
+
         <section className="mobile-games-panel" aria-labelledby="mobile-games-title" style={{ '--mobile-game-color': currentGame.brandColor } as React.CSSProperties}>
           <div className="mobile-games-heading">
             <div>
@@ -43,21 +54,24 @@ export function MobilePublicNavigation({ currentGame, isAuthenticated, onClose }
           </div>
         </section>
 
-        <div className="app-navbar-mobile-links space-y-1">
-          {publicLinks.map(({ href, label, Icon }) => (
-            <Link key={href} href={href} onClick={onClose} className="ui-navigation-link w-full justify-start">
-              <Icon className="size-4" />{label}
-            </Link>
-          ))}
+        <nav className="app-navbar-mobile-links space-y-1" aria-label="Navegación pública móvil">
+          {publicLinks.map(({ href, label, Icon }) => {
+            const isActive = href === '/' ? currentPath === href : currentPath.startsWith(href);
+            return (
+              <Link key={href} href={href} onClick={onClose} aria-current={isActive ? 'page' : undefined} className={`ui-navigation-link w-full justify-start${isActive ? ' is-active' : ''}`}>
+                <Icon className="size-4" />{label}
+              </Link>
+            );
+          })}
           {!isAuthenticated ? (
-            <div className="grid grid-cols-2 gap-2 border-t border-[var(--border-card)] pt-2">
-              <Link href="/login" onClick={onClose} className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card-hover)] p-2 text-xs font-bold text-[var(--text-primary)]"><LogIn className="h-3.5 w-3.5 text-[var(--app-accent)]" />Ingresar</Link>
-              <Link href="/registro" onClick={onClose} className="flex items-center justify-center gap-1.5 rounded-lg bg-[var(--app-accent)] p-2 text-xs font-black text-[var(--text-heading)]"><UserPlus className="h-3.5 w-3.5" />Registro</Link>
+            <div className="app-navbar-mobile-auth grid grid-cols-2 gap-2 border-t border-[var(--border-card)] pt-2">
+              <Link href="/login" onClick={onClose} className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card-hover)] p-2 text-xs font-bold text-[var(--text-primary)]"><LogIn className="h-3.5 w-3.5 text-[var(--navigation-brand)]" />Ingresar</Link>
+              <Link href="/registro" onClick={onClose} className="navigation-primary-action flex items-center justify-center gap-1.5 rounded-lg p-2 text-xs font-black"><UserPlus className="h-3.5 w-3.5" />Registro</Link>
             </div>
           ) : (
-            <Link href="/dashboard" onClick={onClose} className="flex items-center justify-center gap-2 rounded-xl bg-[var(--app-accent)] p-2.5 text-xs font-black text-[var(--text-heading)]"><User className="h-4 w-4" />Ir a mi panel</Link>
+            <Link href="/dashboard" onClick={onClose} className="navigation-primary-action flex items-center justify-center gap-2 rounded-xl p-2.5 text-xs font-black"><User className="h-4 w-4" />Ir a mi panel</Link>
           )}
-        </div>
+        </nav>
       </div>
     </>
   );

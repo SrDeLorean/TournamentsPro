@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -62,6 +62,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
 
   const [preferredContext, setPreferredContext] = useState<Context>(() => (myTeam ? 'club' : 'athlete'));
   const [isCreateClubOpen, setIsCreateClubOpen] = useState(false);
+  const linksRef = useRef<HTMLElement>(null);
   const routeContext: Context | null = pathname.startsWith(`/${gameSlug}/club`)
     ? 'club'
     : pathname.startsWith(`/${gameSlug}/atleta`)
@@ -69,16 +70,28 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
       : null;
   const context = routeContext ?? preferredContext;
 
-  if (!currentUser) return null;
-
-  const athleteItems = getAthleteNavigation(gameSlug, currentUser.id);
+  const athleteItems = currentUser ? getAthleteNavigation(gameSlug, currentUser.id) : [];
   const clubItems = myTeam ? getClubNavigation(gameSlug, myTeam.id) : [];
   const items = context === 'club' && myTeam ? clubItems : athleteItems;
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const container = linksRef.current;
+      const activeLink = container?.querySelector<HTMLElement>('[data-active="true"]');
+      if (!container || !activeLink || container.clientWidth === 0) return;
+
+      const centeredLeft = activeLink.offsetLeft - (container.clientWidth - activeLink.offsetWidth) / 2;
+      container.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'smooth' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [context, pathname]);
+
+  if (!currentUser) return null;
+
   return (
     <div className="authenticated-context-nav ui-navigation-tier">
-      <div className="mx-auto flex h-12 max-w-[96rem] items-center gap-2 px-3 sm:px-4 lg:px-6">
-        <div className="flex flex-shrink-0 items-center rounded-xl border border-[var(--border-card)] bg-[var(--bg-main)] p-1" role="tablist" aria-label="Cambiar espacio de trabajo">
+      <div className="authenticated-context-frame ui-navigation-frame h-12">
+        <div className="authenticated-context-switcher" role="tablist" aria-label="Cambiar espacio de trabajo">
           <Link
             href={`/${gameSlug}/atleta`}
             role="tab"
@@ -115,7 +128,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
 
         <div className="h-5 w-px flex-shrink-0 bg-[var(--border-card)]" />
 
-        <nav className="scrollbar-none flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" aria-label={context === 'club' ? 'Gestión del club' : 'Espacio del atleta'}>
+        <nav ref={linksRef} className="authenticated-context-links scrollbar-none" aria-label={context === 'club' ? 'Gestión del club' : 'Espacio del atleta'}>
           {items.map((item) => {
             const isActive = isAuthenticatedNavItemActive(pathname, item);
             return (
@@ -123,6 +136,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
                 {NAV_GROUP_STARTS.has(item.id) ? <span className="authenticated-context-divider" aria-hidden="true" /> : null}
                 <Link
                   href={item.href}
+                  data-active={isActive}
                   aria-current={isActive ? 'page' : undefined}
                   title={item.label}
                   className={`authenticated-context-link ${isActive ? 'authenticated-context-link-active' : ''}`}

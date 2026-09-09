@@ -122,6 +122,11 @@ export default async function PublicCompetitionDetailPage({
       reported_score_home: m.reportedScoreHome, reported_score_away: m.reportedScoreAway,
       score_home: m.scoreHome, score_away: m.scoreAway,
       matchday_number: m.matchday, matchday: m.matchday,
+      stage: m.stage,
+      round_name: m.roundName,
+      group_name: m.groupName,
+      scheduled_time: m.scheduledTime,
+      scheduled_at: m.scheduledAt,
     };
   });
 

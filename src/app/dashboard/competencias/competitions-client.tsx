@@ -42,6 +42,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
   const [isCreatingNewSeason, setIsCreatingNewSeason] = useState<boolean>(false);
 
   const [selectedGameSlug, setSelectedGameSlug] = useState<string>('eafc26');
+  const [creationFormat, setCreationFormat] = useState<'Liga' | 'Playoff' | 'Hibrido'>('Liga');
   const [defaultDates] = useState(() => {
     const now = Date.now();
     const format = (days: number) => new Date(now + 86400000 * days).toISOString().slice(0, 16);
@@ -142,8 +143,14 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
               <Link href={`/dashboard/competencias/${r.id}`} className="font-black text-[var(--table-cell-heading)] text-xs hover:underline block">
                 {r.name}
               </Link>
-              <div className="text-[10px] font-[family-name:var(--font-active)] text-[var(--table-cell-muted)]">
-                Formato: <strong className="text-[var(--app-accent)]">{r.mode_format}</strong>
+              <div className="text-[10px] font-[family-name:var(--font-active)] text-[var(--table-cell-muted)] flex flex-wrap items-center gap-1.5 mt-0.5">
+                <span>Modo: <strong className="text-[var(--app-accent)]">{r.mode_format}</strong></span>
+                <span>•</span>
+                <span>{r.format || 'Liga'}</span>
+                <span>•</span>
+                <span className="text-[var(--app-accent-2)]">
+                  {r.match_mode === 'IdaVuelta' ? 'Ida y Vuelta' : r.match_mode === 'MejorDe3' ? 'Mejor de 3 (Bo3)' : 'Solo Ida'}
+                </span>
               </div>
             </div>
           </div>
@@ -479,6 +486,87 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
               </select>
             </div>
           </div>
+
+          {/* Formato y Modalidad de Encuentro */}
+          {creationFormat === 'Hibrido' ? (
+            <div className="space-y-3 p-3.5 rounded-xl bg-[var(--app-accent-2-soft)]/20 border border-[var(--app-accent-2)]/30">
+              <div className="space-y-1">
+                <label className="text-[var(--text-secondary)] uppercase block">Formato del Torneo:</label>
+                <select
+                  name="format"
+                  value={creationFormat}
+                  onChange={(e) => setCreationFormat(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]"
+                >
+                  <option value="Liga">🏆 Liga (Tabla de Posiciones)</option>
+                  <option value="Playoff">⚔️ Playoff (Eliminación Directa)</option>
+                  <option value="Hibrido">🌐 Híbrido (Grupos + Playoff)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[var(--text-secondary)] uppercase block text-[11px]">
+                    Modalidad Fase de Grupos:
+                  </label>
+                  <select
+                    name="matchMode"
+                    defaultValue="PartidoUnico"
+                    className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--app-accent)]/50 text-[var(--app-accent)] font-[family-name:var(--font-active)] font-bold"
+                  >
+                    <option value="PartidoUnico">⚡ Solo Ida</option>
+                    <option value="IdaVuelta">🔁 Ida y Vuelta</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[var(--text-secondary)] uppercase block text-[11px]">
+                    Modalidad Fase Playoff:
+                  </label>
+                  <select
+                    name="playoffMatchMode"
+                    defaultValue="PartidoUnico"
+                    className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--app-warning)]/50 text-[var(--app-warning)] font-[family-name:var(--font-active)] font-bold"
+                  >
+                    <option value="PartidoUnico">⚡ Partido Único</option>
+                    <option value="IdaVuelta">🔁 Ida y Vuelta</option>
+                    <option value="MejorDe3">🎮 Mejor de 3 (Bo3)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[var(--text-secondary)] uppercase block">Formato del Torneo:</label>
+                <select
+                  name="format"
+                  value={creationFormat}
+                  onChange={(e) => setCreationFormat(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]"
+                >
+                  <option value="Liga">🏆 Liga (Tabla de Posiciones)</option>
+                  <option value="Playoff">⚔️ Playoff (Eliminación Directa)</option>
+                  <option value="Hibrido">🌐 Híbrido (Grupos + Playoff)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[var(--text-secondary)] uppercase block">Modalidad de Encuentro:</label>
+                <select
+                  name="matchMode"
+                  defaultValue="PartidoUnico"
+                  className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--app-accent)]/50 text-[var(--app-accent)] font-[family-name:var(--font-active)] font-bold"
+                >
+                  <option value="PartidoUnico">⚡ Solo Ida (Partido Único)</option>
+                  <option value="IdaVuelta">🔁 Ida y Vuelta (Global)</option>
+                  {creationFormat === 'Playoff' && (
+                    <option value="MejorDe3">🎮 Mejor de 3 (Bo3)</option>
+                  )}
+                </select>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">

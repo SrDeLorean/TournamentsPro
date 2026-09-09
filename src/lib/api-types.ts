@@ -21,6 +21,8 @@ export interface UserRow {
   birth_date?: string | null;
   phone?: string | null;
   bio?: string | null;
+  biografia?: string | null;
+  foto?: string | null;
   instagram?: string | null;
   facebook?: string | null;
   twitch?: string | null;
@@ -160,9 +162,13 @@ export interface UserProfile {
   rating: number;
   status: string;
   avatarUrl: string | null;
+  foto?: string | null;
   bannerUrl: string | null;
   country: string | null;
   bio: string | null;
+  biografia?: string | null;
+  teamId?: string;
+  teamName?: string;
   socialMedia: {
     whatsapp?: string;
     instagram?: string;
@@ -373,9 +379,13 @@ export function mapUserRowToProfile(row: any): UserProfile {
     rating: typeof row.rating === 'number' ? row.rating : parseFloat(row.rating || '9.0') || 9.0,
     status: row.status || 'Activo',
     avatarUrl: avatar,
+    foto: avatar,
     bannerUrl: banner,
     country: row.country || row.pais || 'Chile',
     bio: row.bio || row.biografia || null,
+    biografia: row.biografia || row.bio || null,
+    teamId: row.team_id || row.teamId || undefined,
+    teamName: row.team_name || row.teamName || undefined,
     socialMedia: {
       whatsapp: row.whatsapp || undefined,
       instagram: row.instagram || undefined,

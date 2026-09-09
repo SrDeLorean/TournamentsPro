@@ -35,11 +35,31 @@ export async function submitMatchReportService(data: {
   const reportId = `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
   return dbProvider.withTransaction(async (transaction) => {
-    const matches = await transaction.query<{ id: string; status: string }>(
-      'SELECT id, status FROM matches WHERE id = ? FOR UPDATE',
+    const matches = await transaction.query<{ id: string; status: string; competition_id?: string; tournament_id?: string; round_name?: string }>(
+      'SELECT id, status, competition_id, tournament_id, round_name FROM matches WHERE id = ? FOR UPDATE',
       [matchId],
     );
     if (matches.length === 0) return { success: false, error: 'Partido no encontrado', code: 'NOT_FOUND' };
+
+    const currentMatch = matches[0];
+    const { parseBo3GameInfo, evaluateBo3Series } = await import('@/lib/bo3-series');
+    const gameInfo = parseBo3GameInfo(currentMatch as any);
+
+    if (gameInfo.isBo3 && gameInfo.gameNumber === 3) {
+      const compId = currentMatch.competition_id || currentMatch.tournament_id;
+      if (compId) {
+        const compMatches = await transaction.matches.findByCompetition(compId);
+        const seriesMatches = compMatches.filter((m) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
+        const evalResult = evaluateBo3Series(seriesMatches);
+        if (evalResult.isGame3Locked || evalResult.isDefined) {
+          return {
+            success: false,
+            error: `La serie al Mejor de 3 ya fue definida (${evalResult.scoreSummary}). El Juego 3 no es requerido y no puede ser reportado.`,
+            code: 'BO3_SERIES_ALREADY_DEFINED',
+          };
+        }
+      }
+    }
 
     await transaction.execute(
       `INSERT INTO match_reports (id, match_id, reported_by_user_id, score_home, score_away, proof_url, status)

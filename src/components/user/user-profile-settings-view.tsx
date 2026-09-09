@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import type { UserProfile } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { compressImageToWebP } from '@/lib/image-compressor';
 import { getAuthHeaders } from '@/lib/fetch-utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +13,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import { ManagementTabs, type ManagementTab } from '@/components/dashboard/management-ui';
 import {
-  User, Settings, Upload, CheckCircle2, AlertCircle, Sparkles, Globe, Save, ArrowLeft, Gamepad2,
+  User, Settings, CheckCircle2, AlertCircle, Sparkles, Globe, Save, ArrowLeft, Gamepad2,
 } from 'lucide-react';
 import {
   ProfileGameTab,
@@ -97,10 +96,6 @@ export function UserProfileSettingsView({ onBack, brandColor = 'var(--app-accent
   // Media Images State
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatarUrl || currentUser?.foto || '');
   const [bannerUrl, setBannerUrl] = useState(currentUser?.bannerUrl || '');
-  const [avatarStats, setAvatarStats] = useState('');
-  const [bannerStats, setBannerStats] = useState('');
-  const [isCompressingAvatar, setIsCompressingAvatar] = useState(false);
-  const [isCompressingBanner, setIsCompressingBanner] = useState(false);
 
   const [savingMsg, setSavingMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -171,115 +166,6 @@ export function UserProfileSettingsView({ onBack, brandColor = 'var(--app-accent
     }));
     if (gameSlug === primaryGame) {
       setSecondaryPosition(newSecondaryPos);
-    }
-  };
-
-  // Handle Image Upload & Fast WebP Compression
-  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setIsCompressingAvatar(true);
-      setAvatarStats('Optimizando foto a WebP...');
-      const result = await compressImageToWebP(file, 400, 0.85);
-
-      const formData = new FormData();
-      formData.append('file', result.file);
-      formData.append('type', 'logo');
-      formData.append('entityName', gamertag || name || 'user');
-      if (currentUser?.id) {
-        formData.append('entityId', currentUser.id);
-      }
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.url) {
-        const savedPct = Math.round(((result.originalSize - result.compressedSize) / result.originalSize) * 100);
-        setAvatarUrl(data.url);
-        setAvatarStats(`${savedPct}% menos peso (${(result.compressedSize / 1024).toFixed(0)}KB)`);
-        if (currentUser?.id) {
-          const payload = {
-            id: currentUser.id,
-            name,
-            gamertag,
-            avatarUrl: data.url,
-            foto: data.url,
-            bannerUrl: bannerUrl || currentUser.bannerUrl || '',
-          };
-          await fetch('/api/users', {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(payload),
-          });
-          updateCurrentUser({ avatarUrl: data.url, foto: data.url });
-          await refetchUser();
-        }
-      }
-    } catch (err: unknown) {
-      console.error(err);
-      setAvatarStats('Error al subir foto');
-    } finally {
-      setIsCompressingAvatar(false);
-    }
-  };
-
-  const handleBannerFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setIsCompressingBanner(true);
-      setBannerStats('Optimizando portada a WebP HD...');
-      const result = await compressImageToWebP(file, 1200, 0.85);
-
-      const formData = new FormData();
-      formData.append('file', result.file);
-      formData.append('type', 'banner');
-      formData.append('entityName', gamertag || name || 'user');
-      if (currentUser?.id) {
-        formData.append('entityId', currentUser.id);
-      }
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.url) {
-        const savedPct = Math.round(((result.originalSize - result.compressedSize) / result.originalSize) * 100);
-        setBannerUrl(data.url);
-        setBannerStats(`${savedPct}% optimizado`);
-        if (currentUser?.id) {
-          const payload = {
-            id: currentUser.id,
-            name,
-            gamertag,
-            avatarUrl: avatarUrl || currentUser.avatarUrl || '',
-            foto: avatarUrl || currentUser.avatarUrl || '',
-            bannerUrl: data.url,
-          };
-          await fetch('/api/users', {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(payload),
-          });
-          updateCurrentUser({ bannerUrl: data.url });
-          await refetchUser();
-        }
-      }
-    } catch (err: unknown) {
-      console.error(err);
-      setBannerStats('Error al subir portada');
-    } finally {
-      setIsCompressingBanner(false);
     }
   };
 
@@ -382,12 +268,6 @@ export function UserProfileSettingsView({ onBack, brandColor = 'var(--app-accent
             />
             <div className="absolute inset-0 account-settings-cover-scrim" />
 
-            <label className="absolute top-4 right-4 z-20 cursor-pointer px-3 py-1.5 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-elevated)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-heading)] shadow-xl flex items-center gap-1.5 backdrop-blur-md transition-all">
-              <Upload className="w-3.5 h-3.5 text-[var(--app-accent)]" />
-              <span>{isCompressingBanner ? 'Procesando...' : 'Cambiar Portada'}</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleBannerFileSelect} disabled={isCompressingBanner} />
-            </label>
-            {bannerStats && <span className="absolute top-14 right-4 z-20 text-[10px]  font-bold text-[var(--app-accent)] bg-[var(--bg-card)] px-2 py-0.5 rounded border border-[var(--app-accent)]">{bannerStats}</span>}
           </div>
 
           <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -412,11 +292,6 @@ export function UserProfileSettingsView({ onBack, brandColor = 'var(--app-accent
                     <Avatar fallback={name} size="lg" status="online" />
                   )}
                 </div>
-                <label className="absolute inset-0 bg-[var(--bg-card)] opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center cursor-pointer text-[var(--text-heading)] font-bold text-[10px]">
-                  <Upload className="w-4 h-4 mb-1 text-[var(--app-accent)]" />
-                  <span>{isCompressingAvatar ? 'Procesando...' : 'Cambiar Foto'}</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarFileSelect} disabled={isCompressingAvatar} />
-                </label>
               </div>
 
               <div className="space-y-1">
@@ -436,7 +311,6 @@ export function UserProfileSettingsView({ onBack, brandColor = 'var(--app-accent
                     {gameProfiles[configuredGame]?.position || position || 'DFC'} ({platform})
                   </span>
                 </p>
-                {avatarStats && <p className="text-[10px]  text-[var(--app-positive)]">{avatarStats}</p>}
               </div>
             </div>
 

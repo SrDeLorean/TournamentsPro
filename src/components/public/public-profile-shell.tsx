@@ -1,8 +1,10 @@
 'use client';
 
-import React, { ViewTransition, type CSSProperties, type ReactNode } from 'react';
+import React, { type CSSProperties, type ReactNode } from 'react';
 import Image from 'next/image';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
+
+const SafeViewTransition = ((React as unknown as { ViewTransition?: React.ComponentType<{ children?: ReactNode; name?: string; share?: string; default?: string }> }).ViewTransition) || (({ children }: { children?: ReactNode }) => <>{children}</>);
 
 export interface PublicProfileMetric {
   value: ReactNode;
@@ -66,7 +68,7 @@ export function PublicProfileShell({
 
   return (
     <div className={`public-team-profile public-profile-shell animate-in fade-in duration-300 ${className}`} style={profileStyle}>
-      <ViewTransition name={`${transitionPrefix}-identity-${entityId}`} share="public-profile-morph" default="none">
+      <SafeViewTransition name={`${transitionPrefix}-identity-${entityId}`} share="public-profile-morph" default="none">
         <section className="public-team-hero public-profile-hero">
           <div className="public-team-banner">
             <Image
@@ -123,7 +125,7 @@ export function PublicProfileShell({
             </div>
           </div>
         </section>
-      </ViewTransition>
+      </SafeViewTransition>
 
       <div className="public-profile-tabs-slot">{tabs}</div>
       <div className={`public-team-content public-profile-content ${contentClassName}`}>{children}</div>

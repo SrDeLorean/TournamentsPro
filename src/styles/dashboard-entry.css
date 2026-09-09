@@ -1,0 +1,98 @@
+/* Public system and game dashboards share the cinematic directory entrance. */
+.public-home-header {
+  width: calc(100% - 2rem);
+  max-width: 90rem;
+  margin: 1rem auto 0;
+}
+
+.public-home-header .public-home-actions {
+  margin-top: 0;
+}
+
+.game-portal .game-dashboard-header {
+  container-type: inline-size;
+  min-height: clamp(14rem, calc(11.5rem + 4vw), 18rem);
+  padding: 0 !important;
+  border-radius: clamp(1rem, 2.2vw, 1.65rem);
+}
+
+.game-portal .game-dashboard-header .ui-page-header-layout {
+  gap: clamp(0.9rem, calc(0.65rem + 0.75vw), 1.4rem);
+  padding: clamp(0.9rem, calc(0.7rem + 0.75vw), 1.4rem);
+}
+
+.game-portal .game-dashboard-header .ui-page-header-intro {
+  gap: clamp(0.75rem, calc(0.55rem + 0.75vw), 1.15rem);
+}
+
+.game-portal .game-dashboard-header .ui-page-header-copy {
+  max-width: 52rem;
+  gap: clamp(0.5rem, calc(0.42rem + 0.3vw), 0.7rem);
+}
+
+.game-portal .game-dashboard-header h1 {
+  display: grid;
+  max-width: 24ch;
+  gap: 0.08em;
+  font-size: clamp(1.75rem, calc(1.3rem + 1.65vw), 2.85rem);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+}
+
+.game-portal .game-dashboard-header h1 span { display: block; }
+.game-portal .game-dashboard-header p { max-width: 44rem; font-size: clamp(0.73rem, calc(0.68rem + 0.22vw), 0.84rem); line-height: 1.5; }
+.game-dashboard-header .ui-page-header-icon { width: clamp(2.8rem, calc(2.55rem + 0.8vw), 3.5rem); }
+.game-dashboard-header .ui-page-header-icon > span { width: 68%; height: 68%; }
+
+.game-portal .game-dashboard-header .ui-page-header-aside {
+  width: min(23rem, 29vw);
+}
+
+.game-portal .game-dashboard-header .ui-page-header-metric {
+  gap: clamp(0.32rem, 0.45vw, 0.48rem);
+  padding: clamp(0.48rem, calc(0.4rem + 0.3vw), 0.62rem);
+}
+
+.game-portal .game-dashboard-header .ui-page-header-metric-icon {
+  width: clamp(1.45rem, 1.8vw, 1.7rem);
+  height: clamp(1.45rem, 1.8vw, 1.7rem);
+  border-radius: 0.5rem;
+}
+
+.game-portal .game-dashboard-header .ui-page-header-metric-copy strong {
+  font-size: clamp(0.8rem, calc(0.72rem + 0.35vw), 0.95rem);
+}
+
+.game-portal .game-dashboard-header .ui-page-header-metric-copy small {
+  font-size: clamp(0.44rem, 0.48vw, 0.5rem);
+  letter-spacing: 0.055em;
+}
+
+@media (min-width: 640px) {
+  .public-home-header { width: calc(100% - 3rem); }
+}
+
+@media (max-width: 639px) {
+  .game-portal .game-dashboard-header { min-height: 0; padding: 0 !important; border-radius: clamp(0.9rem, 4vw, 1.15rem); }
+  .game-portal .game-dashboard-header .ui-page-header-layout { gap: clamp(0.8rem, 3vw, 1rem); padding: clamp(0.8rem, calc(0.55rem + 2.2vw), 1.05rem); }
+  .game-portal .game-dashboard-header .ui-page-header-intro { gap: clamp(0.55rem, 2vw, 0.75rem); }
+  .game-portal .game-dashboard-header .ui-page-header-copy { gap: clamp(0.5rem, 2vw, 0.68rem); }
+  .game-portal .game-dashboard-header .ui-page-header-icon { width: clamp(2.6rem, 12vw, 3rem); border-radius: clamp(0.75rem, 3vw, 0.9rem); }
+  .game-portal .game-dashboard-header .ui-page-header-badge { max-width: 100%; padding: 0.32rem 0.55rem; font-size: clamp(0.5rem, 2.25vw, 0.58rem); letter-spacing: 0.075em; }
+  .game-portal .game-dashboard-header h1 { max-width: 100%; font-size: clamp(1.65rem, calc(1.15rem + 4.6vw), 2.15rem); line-height: 0.96; letter-spacing: -0.038em; }
+  .game-portal .game-dashboard-header p { font-size: clamp(0.7rem, calc(0.63rem + 0.45vw), 0.75rem); line-height: 1.52; }
+  .game-portal .game-dashboard-header .ui-page-header-aside { width: 100%; }
+  .game-portal .game-dashboard-header .ui-page-header-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: hidden; border-radius: clamp(0.75rem, 3vw, 0.95rem); }
+  .game-portal .game-dashboard-header .ui-page-header-metric { min-width: 0; gap: clamp(0.25rem, 1.5vw, 0.4rem); padding: clamp(0.48rem, 2vw, 0.65rem) clamp(0.3rem, 1.5vw, 0.5rem); }
+  .game-portal .game-dashboard-header .ui-page-header-metric-icon { width: clamp(1.35rem, 7vw, 1.65rem); height: clamp(1.35rem, 7vw, 1.65rem); border-radius: 0.48rem; }
+  .game-portal .game-dashboard-header .ui-page-header-metric-icon svg { width: 0.8rem; height: 0.8rem; }
+  .game-portal .game-dashboard-header .ui-page-header-metric-copy strong { font-size: clamp(0.78rem, 3.5vw, 0.92rem); }
+  .game-portal .game-dashboard-header .ui-page-header-metric-copy small { font-size: clamp(0.42rem, 1.75vw, 0.5rem); letter-spacing: 0.04em; }
+  .public-home-header .public-home-actions { width: 100%; }
+  .public-home-header .public-home-actions a,
+  .public-home-header .public-home-actions button { width: 100%; }
+}
+
+@media (max-width: 359px) {
+  .game-portal .game-dashboard-header .ui-page-header-metric-icon { display: none; }
+}

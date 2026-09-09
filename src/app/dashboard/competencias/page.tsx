@@ -19,6 +19,8 @@ function mapCompToData(c: Competition): CompetitionData {
     prize_pool: c.prizePool,
     transfer_market_mode: c.transferMarketMode as any,
     mode_format: c.modeFormat,
+    format: c.format || 'Liga',
+    match_mode: c.matchMode || 'PartidoUnico',
     status: c.status as any,
     fecha_limite_inscripcion: c.fechaLimiteInscripcion,
     fecha_inicio: c.fechaInicio,

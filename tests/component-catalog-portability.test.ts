@@ -33,12 +33,12 @@ describe('component catalog portability contract', () => {
     expect(oauthModal).not.toContain('.innerHTML =');
   });
 
-  it('rejects uploads for nonexistent team identifiers before writing files', async () => {
+  it('authorizes the target entity before using shared persistent storage', async () => {
     const uploadRoute = await source('src/app/api/upload/route.ts');
 
     expect(uploadRoute).toContain("if (!team)");
     expect(uploadRoute).toContain("'TEAM_NOT_FOUND'");
-    expect(uploadRoute.indexOf("if (!team)")).toBeLessThan(uploadRoute.indexOf('fs.writeFile'));
+    expect(uploadRoute.indexOf('authorizeEntityUpload')).toBeLessThan(uploadRoute.indexOf('persistUploadCopies({'));
   });
 
   it('preserves accessible dialog scrolling, tabs, labels, and target sizes', async () => {
