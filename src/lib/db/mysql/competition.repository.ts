@@ -59,10 +59,14 @@ export class CompetitionRepository extends BaseRepository<Competition> implement
   async getReportedMatchesCount(competitionId: string): Promise<number> {
     const rows = await this.queryRows<{ count: number }>(
       `SELECT COUNT(*) as count FROM matches 
-       WHERE competition_id = ?
+       WHERE (competition_id = ? OR tournament_id = ?)
        AND (status IN ('POR_REVISAR', 'TERMINADO', 'DISPUTADO', 'FINALIZADO') 
-            OR reported_score_home IS NOT NULL OR reported_score_away IS NOT NULL)`,
-      [competitionId]
+            OR reported_score_home IS NOT NULL OR reported_score_away IS NOT NULL)
+       AND NOT (
+         (LOWER(home_team_name) LIKE '%bye%' OR LOWER(home_team_name) LIKE '%descanso%' OR LOWER(away_team_name) LIKE '%bye%' OR LOWER(away_team_name) LIKE '%descanso%')
+         AND reported_score_home IS NULL AND reported_score_away IS NULL
+       )`,
+      [competitionId, competitionId]
     );
     return rows[0]?.count || 0;
   }

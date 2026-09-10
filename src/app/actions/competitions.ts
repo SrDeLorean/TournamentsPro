@@ -412,6 +412,9 @@ export async function advancePlayoffWinnerAction(
 
       const nextMatchId = currentMatch.next_match_id;
       const nextSlot = currentMatch.next_match_slot || 'HOME';
+      const isBo3Target = /-j1$/i.test(nextMatchId);
+      const isTwoLegTarget = /-ida$/i.test(nextMatchId);
+
       if (nextSlot === 'VUELTA_TARGET') {
         await transaction.execute(
           `UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ?, away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?`,
@@ -426,7 +429,6 @@ export async function advancePlayoffWinnerAction(
           ],
         );
       } else if (nextSlot === 'HOME') {
-        const isBo3Target = /-j1$/i.test(nextMatchId);
         if (isBo3Target) {
           const nextJ1 = nextMatchId;
           const nextJ2 = nextMatchId.replace(/-j1$/i, '-j2');
@@ -439,6 +441,17 @@ export async function advancePlayoffWinnerAction(
             'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?',
             [winnerTeamId, winnerTeamName, winnerTeamId, nextJ2]
           );
+        } else if (isTwoLegTarget) {
+          const nextIda = nextMatchId;
+          const nextVuelta = nextMatchId.replace(/-ida$/i, '-vuelta');
+          await transaction.execute(
+            'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextIda]
+          );
+          await transaction.execute(
+            'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextVuelta]
+          );
         } else {
           await transaction.execute(
             'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
@@ -446,7 +459,6 @@ export async function advancePlayoffWinnerAction(
           );
         }
       } else if (nextSlot === 'AWAY') {
-        const isBo3Target = /-j1$/i.test(nextMatchId);
         if (isBo3Target) {
           const nextJ1 = nextMatchId;
           const nextJ2 = nextMatchId.replace(/-j1$/i, '-j2');
@@ -458,6 +470,17 @@ export async function advancePlayoffWinnerAction(
           await transaction.execute(
             'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
             [winnerTeamId, winnerTeamName, winnerTeamId, nextJ2]
+          );
+        } else if (isTwoLegTarget) {
+          const nextIda = nextMatchId;
+          const nextVuelta = nextMatchId.replace(/-ida$/i, '-vuelta');
+          await transaction.execute(
+            'UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextIda]
+          );
+          await transaction.execute(
+            'UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?',
+            [winnerTeamId, winnerTeamName, winnerTeamId, nextVuelta]
           );
         } else {
           await transaction.execute(
@@ -537,6 +560,7 @@ export async function reportMatchResultAction(matchId: string, homeScore: number
           if (anchorNextMatchId) {
             const seriesWinnerName = evalResult.winnerTeamName || '';
             const isBo3Next = /-j1$/i.test(anchorNextMatchId);
+            const isTwoLegNext = /-ida$/i.test(anchorNextMatchId);
             if (isBo3Next) {
               const nextJ1 = anchorNextMatchId;
               const nextJ2 = anchorNextMatchId.replace(/-j1$/i, '-j2');
@@ -560,6 +584,16 @@ export async function reportMatchResultAction(matchId: string, homeScore: number
                   [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, nextJ2]
                 );
               }
+            } else if (isTwoLegNext) {
+              const nextIda = anchorNextMatchId;
+              const nextVuelta = anchorNextMatchId.replace(/-ida$/i, '-vuelta');
+              if (anchorNextSlot === 'AWAY') {
+                await transaction.execute('UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?', [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, nextIda]);
+                await transaction.execute('UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?', [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, nextVuelta]);
+              } else {
+                await transaction.execute('UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?', [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, nextIda]);
+                await transaction.execute('UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?', [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, nextVuelta]);
+              }
             } else {
               if (anchorNextSlot === 'AWAY') {
                 await transaction.execute(
@@ -572,6 +606,62 @@ export async function reportMatchResultAction(matchId: string, homeScore: number
                   [evalResult.winnerTeamId, seriesWinnerName, evalResult.winnerTeamId, anchorNextMatchId]
                 );
               }
+            }
+          }
+        }
+      } else if (currentMatch.next_match_id) {
+        // Auto-avance para Partido Único e Ida y Vuelta
+        const nextMatchId = currentMatch.next_match_id;
+        const nextSlot = currentMatch.next_match_slot || 'HOME';
+        const isBo3Next = /-j1$/i.test(nextMatchId);
+        const isTwoLegNext = /-ida$/i.test(nextMatchId);
+
+        if (nextSlot === 'VUELTA_TARGET') {
+          // IDA completada: poblar partido de VUELTA con localía invertida
+          await transaction.execute(
+            `UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ?, away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?`,
+            [
+              currentMatch.away_team_id || currentMatch.team_away_id,
+              currentMatch.away_team_name,
+              currentMatch.away_team_id || currentMatch.team_away_id,
+              currentMatch.home_team_id || currentMatch.team_home_id,
+              currentMatch.home_team_name,
+              currentMatch.home_team_id || currentMatch.team_home_id,
+              nextMatchId,
+            ]
+          );
+        } else if (winnerId) {
+          // Partido con ganador definido: avanzar automáticamente a la siguiente ronda
+          const winnerTeamName = winnerId === (currentMatch.home_team_id || currentMatch.team_home_id)
+            ? currentMatch.home_team_name
+            : currentMatch.away_team_name;
+
+          if (isBo3Next) {
+            const nextJ1 = nextMatchId;
+            const nextJ2 = nextMatchId.replace(/-j1$/i, '-j2');
+            const nextJ3 = nextMatchId.replace(/-j1$/i, '-j3');
+            if (nextSlot === 'AWAY') {
+              await transaction.execute('UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id IN (?, ?)', [winnerId, winnerTeamName, winnerId, nextJ1, nextJ3]);
+              await transaction.execute('UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?', [winnerId, winnerTeamName, winnerId, nextJ2]);
+            } else {
+              await transaction.execute('UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id IN (?, ?)', [winnerId, winnerTeamName, winnerId, nextJ1, nextJ3]);
+              await transaction.execute('UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?', [winnerId, winnerTeamName, winnerId, nextJ2]);
+            }
+          } else if (isTwoLegNext) {
+            const nextIda = nextMatchId;
+            const nextVuelta = nextMatchId.replace(/-ida$/i, '-vuelta');
+            if (nextSlot === 'AWAY') {
+              await transaction.execute('UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?', [winnerId, winnerTeamName, winnerId, nextIda]);
+              await transaction.execute('UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?', [winnerId, winnerTeamName, winnerId, nextVuelta]);
+            } else {
+              await transaction.execute('UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?', [winnerId, winnerTeamName, winnerId, nextIda]);
+              await transaction.execute('UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?', [winnerId, winnerTeamName, winnerId, nextVuelta]);
+            }
+          } else {
+            if (nextSlot === 'AWAY') {
+              await transaction.execute('UPDATE matches SET away_team_id = ?, away_team_name = ?, team_away_id = ? WHERE id = ?', [winnerId, winnerTeamName, winnerId, nextMatchId]);
+            } else {
+              await transaction.execute('UPDATE matches SET home_team_id = ?, home_team_name = ?, team_home_id = ? WHERE id = ?', [winnerId, winnerTeamName, winnerId, nextMatchId]);
             }
           }
         }

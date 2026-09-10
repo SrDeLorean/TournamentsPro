@@ -379,20 +379,20 @@ function BracketViewer({
                     </div>
 
                     <div className="flex items-center justify-between text-xs font-[family-name:var(--font-active)] font-bold">
-                      <span className={match.homeTeamName === 'Por Definir' ? 'text-[var(--text-muted)] italic' : 'text-[var(--text-heading)]'}>
+                      <span className={match.homeTeamName === 'Por Definir' ? 'text-[var(--text-muted)] italic' : match.homeTeamName.includes('BYE') ? 'text-[var(--app-accent-2)] italic' : 'text-[var(--text-heading)]'}>
                         {match.homeTeamName}
                       </span>
                       <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-muted)]">
-                        {match.status === 'TERMINADO' ? '3' : '-'}
+                        {match.status === 'TERMINADO' && match.winnerTeamId === match.homeTeamId ? 'W' : '-'}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs font-[family-name:var(--font-active)] font-bold">
-                      <span className={match.awayTeamName === 'Por Definir' ? 'text-[var(--text-muted)] italic' : 'text-[var(--text-heading)]'}>
+                      <span className={match.awayTeamName === 'Por Definir' ? 'text-[var(--text-muted)] italic' : match.awayTeamName.includes('BYE') ? 'text-[var(--app-accent-2)] italic' : 'text-[var(--text-heading)]'}>
                         {match.awayTeamName}
                       </span>
                       <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-muted)]">
-                        {match.status === 'TERMINADO' ? '1' : '-'}
+                        {match.status === 'TERMINADO' && match.winnerTeamId === match.awayTeamId ? 'W' : '-'}
                       </span>
                     </div>
 

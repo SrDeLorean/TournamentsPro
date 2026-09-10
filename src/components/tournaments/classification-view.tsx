@@ -8,8 +8,9 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { TabList } from '@/components/ui/tab-list';
 import { TacticalLoadingSkeleton } from './tactical-loading-skeleton';
-import { PlayoffBracket } from './playoff-bracket';
+import { PlayoffBracket, type PlayoffMatch } from './playoff-bracket';
 import { LeagueStandingsTable } from './league-standings-table';
 import { getOrganizationsWithStatsAction } from '@/app/actions/organizations';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
@@ -212,15 +213,29 @@ export function ClassificationView({
     // Fallback: If API tournaments list is empty and we are NOT filtering by a specific team, build tournament items from allMatches
     if (activeTournaments.length === 0 && allMatches.length > 0 && !targetTeamName) {
       const matchTourns = new Map<string, TournamentItem>();
+      const playoffRoundPattern = /treintaidosavos|32avos|dieciseisavos|16avos|octavos|cuartos|semifinal|tercer|final|llave|playoff|eliminator/i;
       allMatches.forEach((m) => {
         const tName = m.tournament_name || 'Competencia BD';
         if (!matchTourns.has(tName)) {
+          const compMatches = allMatches.filter(
+            (match) => (match.tournament_name || '').toLowerCase() === tName.toLowerCase() || match.competition_id === m.competition_id
+          );
+          const hasPlayoffs = compMatches.some(
+            (match) => match.stage === 'PLAYOFF' || playoffRoundPattern.test(match.round_name || '')
+          );
+          const hasLeague = compMatches.some(
+            (match) => match.stage === 'GROUP' || (!playoffRoundPattern.test(match.round_name || '') && match.stage !== 'PLAYOFF')
+          );
+          let inferredFormat = 'LIGA';
+          if (hasPlayoffs && hasLeague) inferredFormat = 'HIBRIDO';
+          else if (hasPlayoffs) inferredFormat = 'PLAYOFF';
+
           matchTourns.set(tName, {
             id: m.competition_id || tName,
             name: tName,
             gameSlug: game.slug,
             organizationName: m.organization_name || 'Organización Oficial',
-            formatType: 'LIGA',
+            formatType: inferredFormat,
           });
         }
       });
@@ -594,17 +609,37 @@ export function ClassificationView({
                     compMatches.flatMap((match) => [match.home_team_name, match.away_team_name])
                       .filter((name) => name && !name.toLowerCase().includes('definir')),
                   ).size;
-                  const playoffRoundPattern = /dieciseisavos|octavos|cuartos|semifinal|tercer|final/i;
+                  const playoffRoundPattern = /treintaidosavos|32avos|dieciseisavos|16avos|octavos|cuartos|semifinal|tercer|final|llave|playoff|eliminator/i;
                   const leaguePhaseMatches = compMatches.filter((match) =>
                     !playoffRoundPattern.test(match.round_name || '') &&
                     !(match.group_name || '').toUpperCase().includes('PLAYOFF'),
                   );
                   const completedLeagueMatches = leaguePhaseMatches.filter((match) => isFinalizedMatchStatus(match.status));
                   const leaguePhaseComplete = leaguePhaseMatches.length > 0 && completedLeagueMatches.length === leaguePhaseMatches.length;
-                  const playoffMatches = compMatches.filter((match) =>
-                    playoffRoundPattern.test(match.round_name || '') ||
-                    (match.group_name || '').toUpperCase().includes('PLAYOFF'),
-                  );
+                  const playoffMatches: PlayoffMatch[] = (
+                    formatType === 'PLAYOFF'
+                      ? compMatches
+                      : compMatches.filter((match) =>
+                          playoffRoundPattern.test(match.round_name || '') ||
+                          (match.group_name || '').toUpperCase().includes('PLAYOFF'),
+                        )
+                  ).map((m) => ({
+                    id: m.id,
+                    home_team_id: m.home_team_id || m.team_home_id || null,
+                    away_team_id: m.away_team_id || m.team_away_id || null,
+                    home_team_name: m.home_team_name,
+                    home_team_tag: m.home_team_tag,
+                    home_team_logo_url: m.home_team_logo_url || null,
+                    away_team_name: m.away_team_name,
+                    away_team_tag: m.away_team_tag,
+                    away_team_logo_url: m.away_team_logo_url || null,
+                    score_home: m.score_home ?? m.reported_score_home ?? null,
+                    score_away: m.score_away ?? m.reported_score_away ?? null,
+                    status: m.status,
+                    round_name: m.round_name,
+                    matchday: m.matchday,
+                    scheduled_time: m.scheduled_time || m.scheduled_at || null,
+                  }));
                   const activePhase = activeTabs[compName] || 'LIGA';
 
                   return (
@@ -629,11 +664,12 @@ export function ClassificationView({
 
                     {/* TABS PARA HIBRIDO */}
                     {formatType === 'HIBRIDO' && (
-                      <div className="classification-phase-switch" role="tablist" aria-label={`Fases de ${compName}`}>
+                      <TabList className="classification-phase-switch" label={`Fases de ${compName}`}>
                         <button
                           type="button"
                           role="tab"
                           aria-selected={activePhase === 'LIGA'}
+                          tabIndex={activePhase === 'LIGA' ? 0 : -1}
                           onClick={() => setActiveTabs(prev => ({ ...prev, [compName]: 'LIGA' }))}
                           className={activePhase === 'LIGA' ? 'is-active' : ''}
                         >
@@ -643,6 +679,7 @@ export function ClassificationView({
                           type="button"
                           role="tab"
                           aria-selected={activePhase === 'PLAYOFF'}
+                          tabIndex={activePhase === 'PLAYOFF' ? 0 : -1}
                           onClick={() => setActiveTabs(prev => ({ ...prev, [compName]: 'PLAYOFF' }))}
                           className={activePhase === 'PLAYOFF' ? 'is-active' : ''}
                         >
@@ -652,13 +689,13 @@ export function ClassificationView({
                           {leaguePhaseComplete ? <CheckCircle2 /> : <Clock3 />}
                           <span>{leaguePhaseComplete ? 'Liga completada · fase final disponible' : 'La fase final se completa al cerrar la liga'}</span>
                         </div>
-                      </div>
+                      </TabList>
                     )}
 
                     {/* RENDERIZADO CONDICIONAL */}
                     {formatType === 'PLAYOFF' || (formatType === 'HIBRIDO' && activePhase === 'PLAYOFF') ? (
                       <div className="classification-bracket-shell">
-                        <PlayoffBracket matches={playoffMatches} brandColor={brandColor} matchMode={compInfo.matchMode} />
+                        <PlayoffBracket matches={playoffMatches} brandColor={brandColor} matchMode={compInfo.matchMode} hideGuide />
                       </div>
                     ) : (
                       <div className="space-y-6">

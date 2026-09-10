@@ -23,7 +23,7 @@ export abstract class SupabaseBaseRepository<T> implements IRepository<T> {
   }
 
   async findAll(options: FindOptions = {}): Promise<T[]> {
-    const { where = {}, orderBy = 'created_at', orderDirection = 'DESC', limit = 50, offset = 0 } = options;
+    const { where = {}, orderBy = 'created_at', orderDirection = 'DESC', limit, offset = 0 } = options;
     
     let query = supabase.from(this.tableName).select('*');
 
@@ -39,7 +39,7 @@ export abstract class SupabaseBaseRepository<T> implements IRepository<T> {
 
     query = query.order(orderBy, { ascending: orderDirection === 'ASC' });
     
-    if (limit) {
+    if (limit !== undefined && limit !== null) {
       query = query.range(offset, offset + limit - 1);
     }
 

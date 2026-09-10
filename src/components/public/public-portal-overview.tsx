@@ -12,6 +12,7 @@ import {
   PublicTeamCard,
 } from '@/components/public/public-spotlight-cards';
 import { GameLogo } from '@/components/ui/game-logo';
+import { TabList } from '@/components/ui/tab-list';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import type { PublicPortalSummary } from '@/lib/public-home-summary';
 
@@ -118,15 +119,15 @@ export function PublicDisciplineCarousel({ slugs, activeSlug, paused, manuallyPa
         <button type="button" onClick={() => onMove(1)} aria-label="Disciplina siguiente"><ChevronRight /></button>
       </div>
     </div>
-    <div className="public-discipline-carousel-track" role="tablist" aria-label="Disciplinas disponibles">
+    <TabList className="public-discipline-carousel-track" label="Disciplinas disponibles">
       {slugs.map((slug) => {
         const game = GAMES_CATALOG[slug];
         const selected = slug === activeSlug;
-        return <button key={slug} type="button" role="tab" aria-selected={selected} className={selected ? 'is-active' : ''} data-game={slug} onClick={() => onSelect(slug)}>
+        return <button key={slug} type="button" role="tab" aria-selected={selected} tabIndex={selected ? 0 : -1} className={selected ? 'is-active' : ''} data-game={slug} onClick={() => onSelect(slug)}>
           <GameLogo game={game} size="sm" /><span>{game.name}</span>{selected ? <i className={paused ? 'is-paused' : ''} /> : null}
         </button>;
       })}
-    </div>
+    </TabList>
   </section>;
 }
 

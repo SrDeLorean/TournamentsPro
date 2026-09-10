@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { Modal } from '@/components/ui/modal';
+import { TabList } from '@/components/ui/tab-list';
 import {
   Users, Plus, Trash2, CheckCircle2, Settings, Sparkles, X, Award, User, BarChart2, FileText, Check
 } from 'lucide-react';
@@ -179,13 +180,14 @@ export function ClubManagementModal({
         )}
 
         {/* 2-Group Management Tabs Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] overflow-x-auto scrollbar-none">
+        <TabList label="Gestión de club y atleta" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] overflow-x-auto scrollbar-none">
           
           {/* GROUP 1: 🛡️ GESTIÓN DE EQUIPO */}
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
             <span className="text-[10px] font-black uppercase text-[var(--app-accent-2)] px-2 flex-shrink-0">🛡️ Club:</span>
             
             <button
+              role="tab" aria-selected={activeTab === 'EQUIPO_ROSTER'} tabIndex={activeTab === 'EQUIPO_ROSTER' ? 0 : -1}
               onClick={() => setActiveTab('EQUIPO_ROSTER')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 activeTab === 'EQUIPO_ROSTER'
@@ -198,6 +200,7 @@ export function ClubManagementModal({
             </button>
 
             <button
+              role="tab" aria-selected={activeTab === 'EQUIPO_RECLUTAMIENTO'} tabIndex={activeTab === 'EQUIPO_RECLUTAMIENTO' ? 0 : -1}
               onClick={() => setActiveTab('EQUIPO_RECLUTAMIENTO')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 activeTab === 'EQUIPO_RECLUTAMIENTO'
@@ -210,6 +213,7 @@ export function ClubManagementModal({
             </button>
 
             <button
+              role="tab" aria-selected={activeTab === 'EQUIPO_MATCHDAY'} tabIndex={activeTab === 'EQUIPO_MATCHDAY' ? 0 : -1}
               onClick={() => setActiveTab('EQUIPO_MATCHDAY')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 activeTab === 'EQUIPO_MATCHDAY'
@@ -222,6 +226,7 @@ export function ClubManagementModal({
             </button>
 
             <button
+              role="tab" aria-selected={activeTab === 'EQUIPO_AJUSTES'} tabIndex={activeTab === 'EQUIPO_AJUSTES' ? 0 : -1}
               onClick={() => setActiveTab('EQUIPO_AJUSTES')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 activeTab === 'EQUIPO_AJUSTES'
@@ -241,6 +246,7 @@ export function ClubManagementModal({
             <span className="text-[10px] font-black uppercase text-[var(--app-accent)] px-2 flex-shrink-0">👤 Atleta:</span>
             
             <button
+              role="tab" aria-selected={activeTab === 'ATLETA_FICHA'} tabIndex={activeTab === 'ATLETA_FICHA' ? 0 : -1}
               onClick={() => setActiveTab('ATLETA_FICHA')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 activeTab === 'ATLETA_FICHA'
@@ -253,6 +259,7 @@ export function ClubManagementModal({
             </button>
 
             <button
+              role="tab" aria-selected={activeTab === 'ATLETA_STATS'} tabIndex={activeTab === 'ATLETA_STATS' ? 0 : -1}
               onClick={() => setActiveTab('ATLETA_STATS')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 activeTab === 'ATLETA_STATS'
@@ -265,6 +272,7 @@ export function ClubManagementModal({
             </button>
 
             <button
+              role="tab" aria-selected={activeTab === 'ATLETA_SOLICITUDES'} tabIndex={activeTab === 'ATLETA_SOLICITUDES' ? 0 : -1}
               onClick={() => setActiveTab('ATLETA_SOLICITUDES')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 activeTab === 'ATLETA_SOLICITUDES'
@@ -276,7 +284,7 @@ export function ClubManagementModal({
               Ofertas ({offersList.filter(o => o.status === 'PENDIENTE').length})
             </button>
           </div>
-        </div>
+        </TabList>
 
         {/* TAB 1: 👥 PLANTILLA ROSTER */}
         {activeTab === 'EQUIPO_ROSTER' && (

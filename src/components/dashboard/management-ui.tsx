@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { TabList } from '@/components/ui/tab-list';
 import { cn } from '@/lib/utils';
 
 type Tone = 'cyan' | 'violet' | 'emerald' | 'gold' | 'crimson';
@@ -123,7 +124,7 @@ export interface ManagementTab<T extends string> {
 
 export function ManagementTabs<T extends string>({ tabs, activeTab, onChange, label }: { tabs: ManagementTab<T>[]; activeTab: T; onChange: (tab: T) => void; label: string }) {
   return (
-    <div role="tablist" aria-label={label} className="management-tabs">
+    <TabList label={label} className="management-tabs">
       {tabs.map((tab) => {
         const active = tab.id === activeTab;
         const colors = toneStyles[tab.tone ?? 'cyan'];
@@ -134,6 +135,7 @@ export function ManagementTabs<T extends string>({ tabs, activeTab, onChange, la
             type="button"
             role="tab"
             aria-selected={active}
+            tabIndex={active ? 0 : -1}
             onClick={() => onChange(tab.id)}
             className={cn('management-tab', active && 'management-tab-active')}
             style={{ '--management-accent': colors.accent, '--management-soft': colors.soft } as React.CSSProperties}
@@ -144,7 +146,7 @@ export function ManagementTabs<T extends string>({ tabs, activeTab, onChange, la
           </button>
         );
       })}
-    </div>
+    </TabList>
   );
 }
 

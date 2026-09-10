@@ -107,7 +107,7 @@ export abstract class BaseRepository<T extends { id: string }> implements IRepos
   }
 
   async findAll(options: FindOptions = {}): Promise<T[]> {
-    const { where = {}, orderBy = 'created_at', orderDirection = 'DESC', limit = 50, offset = 0 } = options;
+    const { where = {}, orderBy = 'created_at', orderDirection = 'DESC', limit, offset = 0 } = options;
     
     const whereClauses: string[] = [];
     const params: MutableDatabaseParams = [];
@@ -125,9 +125,13 @@ export abstract class BaseRepository<T extends { id: string }> implements IRepos
     }
     
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-    const sql = `SELECT * FROM \`${this.tableName}\` ${whereSql} ORDER BY \`${orderBy}\` ${orderDirection} LIMIT ? OFFSET ?`;
+    let sql = `SELECT * FROM \`${this.tableName}\` ${whereSql} ORDER BY \`${orderBy}\` ${orderDirection}`;
+    if (limit !== undefined && limit !== null) {
+      sql += ' LIMIT ? OFFSET ?';
+      params.push(limit as any, offset as any);
+    }
     
-    const rows = await this.queryRows<RowDataPacket>(sql, [...params, limit, offset]);
+    const rows = await this.queryRows<RowDataPacket>(sql, params);
     return rows.map((row) => this.mapRow(row));
   }
 

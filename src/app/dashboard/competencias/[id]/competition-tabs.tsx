@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { CompetitionData, CompetitionTeamData } from '@/app/actions/competitions';
 import {
@@ -94,7 +94,6 @@ export function CompetitionTabs({
   matches,
 }: CompetitionTabsProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
 
   // Persistir la pestaña activa en la URL (?tab=...)
@@ -106,7 +105,8 @@ export function CompetitionTabs({
   const setActiveTab = (tab: CompetitionTabType) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    // All panels already live in this client component; avoid a redundant server trip.
+    window.history.pushState(null, '', `${pathname}?${params.toString()}`);
   };
 
   const [selectedTeamToEnroll, setSelectedTeamToEnroll] = useState<string>('');
@@ -313,7 +313,7 @@ export function CompetitionTabs({
 
       {/* 📌 PESTAÑA 1: DASHBOARD (RESUMEN) */}
       {activeTab === 'dashboard' && (
-        <div className="competition-overview-grid animate-in fade-in duration-200">
+        <div className="competition-overview-grid animate-in fade-in duration-100">
           <ManagementSection title="Reglas y sistema" description="Configuración competitiva vigente" icon={Shield} tone="violet">
             <dl className="competition-detail-list">
               <div><dt>Modalidad</dt><dd>{competition.mode_format}</dd></div>
@@ -342,7 +342,7 @@ export function CompetitionTabs({
 
       {/* ⚙️ PESTAÑA 2: FIXTURE Y PARTIDOS (MOMENTO FIXTURE OFICIAL & SCHEDULE VIEW SIN FILTROS REPETIDOS) */}
       {activeTab === 'fixture' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
+        <div className="space-y-6 animate-in fade-in duration-100">
           <ManagementSection title="Generación del fixture" description="Configura la estructura, fechas y cruces oficiales" icon={Settings} tone="violet">
             <FixtureGenerator competition={competition} enrolledTeams={enrolledTeams} matches={matches} />
           </ManagementSection>
@@ -363,7 +363,7 @@ export function CompetitionTabs({
 
       {/* 🏆 PESTAÑA 3: TABLA DE POSICIONES (STANDINGS VIEW OFICIAL DE CLASIFICACIÓN SIN FILTROS REPETIDOS) */}
       {activeTab === 'standings' && (
-        <ManagementSection title="Tabla de posiciones" description="Rendimiento, puntos y diferencia de cada participante" icon={Trophy} tone="gold" className="animate-in fade-in duration-200">
+        <ManagementSection title="Tabla de posiciones" description="Rendimiento, puntos y diferencia de cada participante" icon={Trophy} tone="gold" className="animate-in fade-in duration-100">
           <ClassificationView
             game={gameConfig}
             initialTournName={competition.name}
@@ -378,7 +378,7 @@ export function CompetitionTabs({
 
       {/* 🛡️ PESTAÑA 4: INSCRIPCIÓN DE CLUBES O ATLETAS INDIVIDUALES */}
       {activeTab === 'teams' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
+        <div className="space-y-6 animate-in fade-in duration-100">
           <ManagementSection
             title={isIndividual ? 'Inscribir atleta' : 'Inscribir club'}
             description={`Agrega un participante disponible a ${competition.name}`}
@@ -442,7 +442,7 @@ export function CompetitionTabs({
 
       {/* ⚙️ PESTAÑA 5: CONFIGURACIÓN Y ESTADO */}
       {activeTab === 'settings' && (
-        <div className="competition-settings-grid animate-in fade-in duration-200">
+        <div className="competition-settings-grid animate-in fade-in duration-100">
           <ManagementSection title="Ciclo de vida" description="Controla la visibilidad y operación general" icon={Settings} tone="gold">
             <div className="competition-status-actions">
               <Button

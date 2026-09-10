@@ -97,7 +97,7 @@ export function GameSubNavbar({ game, activeSection, onSelectSection }: GameSubN
       if (!nav || !activeLink || nav.clientWidth === 0) return;
 
       const centeredLeft = activeLink.offsetLeft - (nav.clientWidth - activeLink.offsetWidth) / 2;
-      nav.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'smooth' });
+      nav.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'auto' });
       checkScroll();
     });
     return () => window.cancelAnimationFrame(frame);

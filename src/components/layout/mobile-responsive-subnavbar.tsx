@@ -9,6 +9,7 @@ import { GameConfig } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
 import { PUBLIC_GAME_NAV_ITEMS } from '@/lib/section-config';
+import { TabList } from '@/components/ui/tab-list';
 import {
   findManagedTeamForUser,
   getAthleteNavigation,
@@ -49,7 +50,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
       const activeLink = container?.querySelector<HTMLElement>('[data-active="true"]');
       if (!container || !activeLink || container.clientWidth === 0) return;
       const centeredLeft = activeLink.offsetLeft - (container.clientWidth - activeLink.offsetWidth) / 2;
-      container.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'smooth' });
+      container.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'auto' });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [activeSegment, pathname]);
@@ -112,13 +113,14 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
       style={{ '--game-brand': game.brandColor } as React.CSSProperties}
     >
       {/* 1. Top Mobile Segmented Controller (1 Row) */}
-      {showSegmentSwitcher ? <div className="game-portal-mobile-segments" role="tablist" aria-label="Cambiar contexto de navegación">
+      {showSegmentSwitcher ? <TabList className="game-portal-mobile-segments" label="Cambiar contexto de navegación">
         
         {/* Segment 1: JUEGO */}
         <Link
           href={`/${game.slug}`}
           role="tab"
           aria-selected={activeSegment === 'game'}
+          tabIndex={activeSegment === 'game' ? 0 : -1}
           onClick={() => setPreferredSegment('game')}
           className={`game-portal-mobile-segment ${
             activeSegment === 'game'
@@ -136,6 +138,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
             href={`/${game.slug}/atleta`}
             role="tab"
             aria-selected={activeSegment === 'athlete'}
+            tabIndex={activeSegment === 'athlete' ? 0 : -1}
             onClick={() => setPreferredSegment('athlete')}
             className={`game-portal-mobile-segment ${
               activeSegment === 'athlete'
@@ -154,6 +157,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
             href={`/${game.slug}/club`}
             role="tab"
             aria-selected={activeSegment === 'club'}
+            tabIndex={activeSegment === 'club' ? 0 : -1}
             onClick={() => setPreferredSegment('club')}
             className={`game-portal-mobile-segment ${
               activeSegment === 'club'
@@ -176,7 +180,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
             <span>Crear club</span>
           </button>
         )}
-      </div> : null}
+      </TabList> : null}
 
       {/* 2. Active Segment Scrollable Options Bar */}
       <nav ref={linksRef} className="game-portal-mobile-links mobile-scroll-row" aria-label="Secciones del portal">

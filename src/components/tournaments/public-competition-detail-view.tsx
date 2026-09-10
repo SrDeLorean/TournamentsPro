@@ -9,9 +9,9 @@ import { SubSubNavbar, SubSubTabOption } from '@/components/layout/sub-sub-navba
 import { PublicProfileShell } from '@/components/public/public-profile-shell';
 import {
   Trophy, Shield, Calendar, ArrowLeft, Award, Users, Target, Activity,
-  CheckCircle2, FileText, Building2, RefreshCw, BarChart2
+  CheckCircle2, FileText, Building2, RefreshCw, BarChart2, GitBranch
 } from 'lucide-react';
-import { PlayoffBracket } from '@/components/tournaments/playoff-bracket';
+import { PlayoffBracket, type PlayoffMatch } from '@/components/tournaments/playoff-bracket';
 import { FixtureScheduleView } from '@/components/tournaments/fixture-schedule-view';
 import { ClassificationView } from '@/components/tournaments/classification-view';
 
@@ -104,15 +104,19 @@ export function PublicCompetitionDetailView({
   matches = [],
   context = 'game',
 }: PublicCompetitionDetailViewProps) {
-  const [activeTab, setActiveTab] = useState<CompTab>('equipos');
-  const brandColor = gameConfig?.brandColor || 'var(--app-accent)';
+  const formatNormalized = (competition.format || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const modeFormatNormalized = (competition.mode_format || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const isPlayoff = formatNormalized.includes('playoff') || formatNormalized.includes('eliminator') || modeFormatNormalized.includes('playoff') || modeFormatNormalized.includes('eliminator');
+  const isHybrid = formatNormalized.includes('hibrid') || modeFormatNormalized.includes('hibrid');
 
-  const isPlayoff = competition.format?.toLowerCase().includes('playoff') || competition.mode_format?.toLowerCase().includes('playoff');
-  const isHybrid = competition.format?.toLowerCase().includes('hibrid') || competition.mode_format?.toLowerCase().includes('hibrid');
+  const [activeTab, setActiveTab] = useState<CompTab>(
+    isPlayoff && matches.length > 0 ? 'bracket' : 'equipos'
+  );
+  const brandColor = gameConfig?.brandColor || 'var(--app-accent)';
 
   const compSubSubTabs: SubSubTabOption<CompTab>[] = [
     { id: 'equipos', label: 'Equipos Confirmados', icon: <Shield className="w-3.5 h-3.5" />, badge: teams.length },
-    { id: 'bracket', label: isPlayoff ? 'Cuadro Playoffs' : isHybrid ? 'Cuadro & Posiciones' : 'Tabla de Clasificación', icon: <BarChart2 className="w-3.5 h-3.5" /> },
+    { id: 'bracket', label: isPlayoff ? 'Cuadro de Playoffs' : isHybrid ? 'Cuadro & Posiciones' : 'Tabla de Clasificación', icon: isPlayoff ? <GitBranch className="w-3.5 h-3.5" /> : <BarChart2 className="w-3.5 h-3.5" /> },
     { id: 'partidos', label: 'Calendario Partidos', icon: <Activity className="w-3.5 h-3.5" />, badge: matches.length },
     { id: 'reglas', label: 'Reglamento & Fechas', icon: <FileText className="w-3.5 h-3.5" /> },
   ];
@@ -125,17 +129,22 @@ export function PublicCompetitionDetailView({
   const orgLogo = competition.org_logo || '/images/default/logo-default.png';
   const orgName = competition.org_name || 'Organización Oficial';
   const organizationHref = context === 'global' ? `/organizaciones/${orgId}` : `/${gameSlug}/organizacion/${orgId}`;
-  const playoffMatches = matches.map((match) => ({
+  const playoffMatches: PlayoffMatch[] = matches.map((match) => ({
     id: match.id,
+    home_team_id: match.home_team_id || match.team_home_id || null,
+    away_team_id: match.away_team_id || match.team_away_id || null,
     home_team_name: match.home_team_name || 'Por definir',
     home_team_tag: match.home_team_tag || '',
+    home_team_logo_url: (match as any).home_team_logo_url || match.home_logo || null,
     away_team_name: match.away_team_name || 'Por definir',
     away_team_tag: match.away_team_tag || '',
-    score_home: match.score_home ?? null,
-    score_away: match.score_away ?? null,
+    away_team_logo_url: (match as any).away_team_logo_url || match.away_logo || null,
+    score_home: match.score_home ?? match.reported_score_home ?? null,
+    score_away: match.score_away ?? match.reported_score_away ?? null,
     status: match.status || 'Pendiente',
     round_name: match.round_name || 'Ronda Única',
-    matchday: match.matchday ?? undefined,
+    matchday: match.matchday ?? match.matchday_number ?? undefined,
+    scheduled_time: match.scheduled_time || match.scheduled_at || null,
   }));
 
   return (
@@ -244,14 +253,16 @@ export function PublicCompetitionDetailView({
                 {matches.length > 0 ? (
                   <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-3xl p-6 shadow-xl overflow-x-auto relative backdrop-blur-xl">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--app-accent-2-soft)] rounded-full blur-[80px] pointer-events-none" />
-                    <PlayoffBracket matches={playoffMatches} brandColor={brandColor} matchMode={competition.match_mode} />
+                    <PlayoffBracket matches={playoffMatches} brandColor={brandColor} matchMode={competition.match_mode} hideGuide />
                   </div>
                 ) : (
                   <div className="py-12 text-center border border-dashed border-[var(--border-card)] rounded-3xl glass-panel">
                     <Target className="w-10 h-10 text-[var(--text-muted)] mx-auto mb-3 opacity-50" />
                     <h3 className="text-base font-bold text-[var(--text-heading)]">Cuadro de Playoffs por generar</h3>
                     <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto mt-1">
-                      El organizador publicará el cuadro oficial al finalizar la fase de grupos.
+                      {isPlayoff
+                        ? 'El organizador publicará el cuadro oficial una vez confirmados los participantes y generado el fixture.'
+                        : 'El organizador publicará el cuadro oficial al finalizar la fase de grupos.'}
                     </p>
                   </div>
                 )}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
@@ -32,6 +33,8 @@ interface MatchReportModalProps {
     id: string;
     homeTeam: string;
     awayTeam: string;
+    homeScore?: number | null;
+    awayScore?: number | null;
     gameSlug: string;
     tournamentName: string;
     competitionId?: string;
@@ -146,6 +149,7 @@ function getModePresetsForGame(gameSlug: string): GameModePreset[] {
 }
 
 export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalProps) {
+  const router = useRouter();
   const currentMatch = useMemo(() => match || {
     id: 'm-103',
     homeTeam: 'SAN LORENZO ESP',
@@ -162,8 +166,8 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
   const [squadSize, setSquadSize] = useState<number>(modePresets[0]?.squadSize || 5);
 
   // Scores
-  const [homeScore, setHomeScore] = useState<number>(0);
-  const [awayScore, setAwayScore] = useState<number>(0);
+  const [homeScore, setHomeScore] = useState<number>(typeof match?.homeScore === 'number' ? match.homeScore : 0);
+  const [awayScore, setAwayScore] = useState<number>(typeof match?.awayScore === 'number' ? match.awayScore : 0);
 
   // Evidence Screenshot
   const [evidencePreview, setEvidencePreview] = useState<string>('');
@@ -229,13 +233,17 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
     setHomePlayers(initialHome);
     setAwayPlayers(initialAway);
 
+    // Initialize scores if passed from match
+    setHomeScore(typeof match?.homeScore === 'number' ? match.homeScore : 0);
+    setAwayScore(typeof match?.awayScore === 'number' ? match.awayScore : 0);
+
     // Reset API states
     setApiSearchQuery('');
     setApiHistoryItems([]);
     setApiSuccessMessage('');
     setErrorMsg('');
     setSuccessNotice('');
-  }, [currentMatch.gameSlug, createBlankPlayer]);
+  }, [currentMatch.gameSlug, currentMatch.id, match?.homeScore, match?.awayScore, createBlankPlayer]);
 
   // Adjust player array size when squadSize changes
   const adjustRosterSize = useCallback((newSize: number) => {
@@ -515,11 +523,12 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
       }
 
       setIsSubmitting(false);
-      setSuccessNotice(`¡Marcador ${homeScore} - ${awayScore} reportado con ${participantsStatsPayload.length} atletas! Enviado a validación.`);
+      setSuccessNotice(`¡Marcador ${homeScore} - ${awayScore} guardado correctamente! Actualizando...`);
+      router.refresh();
       setTimeout(() => {
         setSuccessNotice('');
         onClose();
-      }, 2500);
+      }, 1500);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al enviar el reporte de partido');
       setIsSubmitting(false);

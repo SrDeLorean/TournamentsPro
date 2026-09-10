@@ -504,13 +504,25 @@ export class SupabaseCompetitionRepository extends SupabaseBaseRepository<Compet
   }
 
   async getReportedMatchesCount(competitionId: string): Promise<number> {
-    const { count, error } = await supabase
+    const { data, error } = await supabase
       .from('matches')
-      .select('*', { count: 'exact', head: true })
-      .eq('competition_id', competitionId)
+      .select('id, status, home_team_name, away_team_name, reported_score_home, reported_score_away')
+      .or(`competition_id.eq.${competitionId},tournament_id.eq.${competitionId}`)
       .in('status', ['POR_REVISAR', 'TERMINADO', 'DISPUTADO', 'FINALIZADO']);
     if (error) throw error;
-    return count || 0;
+    if (!data) return 0;
+
+    const realMatches = data.filter((m: any) => {
+      const home = (m.home_team_name || '').toLowerCase();
+      const away = (m.away_team_name || '').toLowerCase();
+      const isBye = home.includes('bye') || home.includes('descanso') || away.includes('bye') || away.includes('descanso');
+      if (isBye && m.reported_score_home === null && m.reported_score_away === null) {
+        return false;
+      }
+      return true;
+    });
+
+    return realMatches.length;
   }
 
   async getMatchCompetitionId(matchId: string): Promise<string | null> {
@@ -620,6 +632,13 @@ export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> imple
   }
 
   async deleteByCompetition(competitionId: string): Promise<void> {
+    // 1. Limpiar auto-referencias de llaves de playoff para evitar fallos de clave foránea en cascada
+    await supabase
+      .from(this.tableName)
+      .update({ next_match_id: null })
+      .or(`competition_id.eq.${competitionId},tournament_id.eq.${competitionId}`);
+
+    // 2. Eliminar los partidos de la competencia
     const { error } = await supabase
       .from(this.tableName)
       .delete()

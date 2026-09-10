@@ -2256,6 +2256,9 @@
 .management-metrics-expanded { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
 
 .management-tabs { position: sticky; z-index: 20; top: 4rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border-card); border-radius: var(--radius-card); background: color-mix(in srgb, var(--bg-nav) 90%, transparent); box-shadow: var(--shadow-soft); backdrop-filter: blur(calc(var(--ui-blur) + 2px)); }
+.ui-fast-tablist { -webkit-tap-highlight-color: transparent; }
+.ui-fast-tablist [role='tab'] { touch-action: manipulation; transition-duration: 120ms; }
+.ui-fast-tablist [role='tab']:active { transition-duration: 60ms; }
 .management-tab { display: flex; min-width: 0; min-height: 2.75rem; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid transparent; border-radius: var(--radius-control); color: var(--text-secondary); font-size: 0.6875rem; font-weight: 850; text-align: left; transition: color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-emphasized); }
 .management-tab:hover { border-color: var(--border-card); background: var(--bg-card-hover); }
 .management-tab-active { box-shadow: 0 0.6rem 1.5rem -1.1rem currentColor, inset 0 1px rgb(255 255 255 / 0.05); }
@@ -4126,7 +4129,7 @@
   gap: 0.25rem;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scroll-padding-inline: 0.5rem;
   scroll-snap-type: x proximity;
   touch-action: pan-x;
@@ -4193,7 +4196,7 @@
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   padding: 0.48rem max(0.65rem, env(safe-area-inset-right)) 0.48rem max(0.65rem, env(safe-area-inset-left));
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scroll-padding-inline: 0.65rem;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
@@ -4246,7 +4249,7 @@
   gap: 0.2rem;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scroll-padding-inline: 0.4rem;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
@@ -6191,7 +6194,7 @@
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   padding: 0.45rem;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scroll-padding-inline: 0.45rem;
   scroll-snap-type: x proximity;
   scrollbar-width: none;

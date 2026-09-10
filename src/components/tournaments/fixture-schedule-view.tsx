@@ -1301,7 +1301,8 @@ export function FixtureScheduleView({
                             );
 
                             const isMatchLockedByBo3 = match.status === 'CANCELADO' || Boolean(match.isLockedByBo3);
-                            const canReport = (isAdminOrOrganizer || (isCaptainOrCoach && isUserTeamInMatch)) && !isMatchLockedByBo3;
+                            const isFinished = ['FINALIZADO', 'TERMINADO', 'COMPLETADO'].includes(match.status);
+                            const canReport = (isAdminOrOrganizer || (isCaptainOrCoach && isUserTeamInMatch)) && !isMatchLockedByBo3 && (!isFinished || isAdminOrOrganizer);
 
                             return (
                               <tr key={match.id} className="hover:bg-[var(--bg-card-hover)] transition-all duration-300 group relative">
@@ -1440,7 +1441,7 @@ export function FixtureScheduleView({
                                       }}
                                       className="text-xs font-bold py-1 px-3 bg-gradient-to-r from-[var(--app-warning)] to-[var(--app-warning)] hover:from-[var(--app-warning)] hover:to-[var(--app-warning)] text-[var(--text-heading)] shadow"
                                     >
-                                      REPORTAR FICHA
+                                      {isFinished ? 'MODIFICAR RESULTADO' : 'REPORTAR FICHA'}
                                     </Button>
                                   ) : (
                                     <Button
@@ -1480,6 +1481,8 @@ export function FixtureScheduleView({
             id: selectedMatchForReport.id,
             homeTeam: selectedMatchForReport.homeTeam,
             awayTeam: selectedMatchForReport.awayTeam,
+            homeScore: selectedMatchForReport.homeScore,
+            awayScore: selectedMatchForReport.awayScore,
             gameSlug: game.slug,
             tournamentName: selectedMatchForReport.competitionName,
           }}

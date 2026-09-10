@@ -113,6 +113,8 @@ interface GeneratedMatchData {
   awayTeamName: string | null;
   scheduledTime: string;
   scheduledDateTimeISO: string;
+  status?: string;
+  winnerTeamId?: string | null;
 }
 
 export async function generateFixtureService(
@@ -216,7 +218,8 @@ async function generateMatchesForFormat(
       awayTeamId: matchData.awayTeamId,
       homeTeamName: matchData.homeTeamName,
       awayTeamName: matchData.awayTeamName,
-      status: 'PENDIENTE',
+      status: matchData.status || 'PENDIENTE',
+      winnerTeamId: matchData.winnerTeamId || null,
       scheduledTime: matchData.scheduledTime,
       scheduledAt: matchData.scheduledDateTimeISO,
     });
@@ -240,6 +243,8 @@ async function generateMatchesForFormat(
         nextMatchId: node.nextMatchId, nextMatchSlot: node.nextMatchSlot,
         homeTeamId: node.homeTeamId, awayTeamId: node.awayTeamId,
         homeTeamName: node.homeTeamName, awayTeamName: node.awayTeamName,
+        status: node.status === 'TERMINADO' ? 'TERMINADO' : 'PENDIENTE',
+        winnerTeamId: node.winnerTeamId || null,
         ...timing
       });
     }
@@ -310,6 +315,8 @@ async function generateMatchesForFormat(
         nextMatchId: node.nextMatchId, nextMatchSlot: node.nextMatchSlot,
         homeTeamId: node.homeTeamId, awayTeamId: node.awayTeamId,
         homeTeamName: node.homeTeamName, awayTeamName: node.awayTeamName,
+        status: node.status === 'TERMINADO' ? 'TERMINADO' : 'PENDIENTE',
+        winnerTeamId: node.winnerTeamId || null,
         ...timing
       });
     }

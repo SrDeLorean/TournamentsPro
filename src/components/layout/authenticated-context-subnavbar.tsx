@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { initialTeams } from '@/lib/data-store';
 import { CreateTeamModal } from '@/components/teams/create-team-modal';
+import { TabList } from '@/components/ui/tab-list';
 import {
   findManagedTeamForUser,
   getAthleteNavigation,
@@ -81,7 +82,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
       if (!container || !activeLink || container.clientWidth === 0) return;
 
       const centeredLeft = activeLink.offsetLeft - (container.clientWidth - activeLink.offsetWidth) / 2;
-      container.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'smooth' });
+      container.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'auto' });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [context, pathname]);
@@ -91,11 +92,12 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
   return (
     <div className="authenticated-context-nav ui-navigation-tier">
       <div className="authenticated-context-frame ui-navigation-frame h-12">
-        <div className="authenticated-context-switcher" role="tablist" aria-label="Cambiar espacio de trabajo">
+        <TabList className="authenticated-context-switcher" label="Cambiar espacio de trabajo">
           <Link
             href={`/${gameSlug}/atleta`}
             role="tab"
             aria-selected={context === 'athlete'}
+            tabIndex={context === 'athlete' ? 0 : -1}
             onClick={() => setPreferredContext('athlete')}
             className={`authenticated-context-tab ${context === 'athlete' ? 'authenticated-context-tab-active' : ''}`}
           >
@@ -107,6 +109,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
               href={`/${gameSlug}/club`}
               role="tab"
               aria-selected={context === 'club'}
+              tabIndex={context === 'club' ? 0 : -1}
               onClick={() => setPreferredContext('club')}
               className={`authenticated-context-tab ${context === 'club' ? 'authenticated-context-tab-active authenticated-context-tab-club' : ''}`}
             >
@@ -124,7 +127,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
               Crear club
             </button>
           )}
-        </div>
+        </TabList>
 
         <div className="h-5 w-px flex-shrink-0 bg-[var(--border-card)]" />
 

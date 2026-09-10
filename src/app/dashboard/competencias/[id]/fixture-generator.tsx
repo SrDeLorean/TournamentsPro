@@ -17,12 +17,19 @@ import {
 import { RegenerateWarningModal } from './regenerate-warning-modal';
 import { MatchmakingPreview } from './matchmaking-preview';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
+import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Calendar, Clock, Sparkles, Trophy, Swords, Layers, Settings, Check, RefreshCw, Plus, X
+  Calendar, Clock, Sparkles, Trophy, Swords, Layers, Settings, Check, RefreshCw, Plus, X, GitBranch, Edit3
 } from 'lucide-react';
+import { PlayoffBracket, type PlayoffMatch } from '@/components/tournaments/playoff-bracket';
+
+const MatchReportModal = dynamic(
+  () => import('@/components/matches/match-report-modal').then((m) => m.MatchReportModal),
+  { ssr: false }
+);
 
 interface FixtureGeneratorProps {
   competition: CompetitionData;
@@ -317,6 +324,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
   const [selectedTimes, setSelectedTimes] = useState<string[]>(['20:00', '21:30']);
   const [newTimeInput, setNewTimeInput] = useState<string>('');
   const [timeError, setTimeError] = useState<string | null>(null);
+  const [reportModalMatch, setReportModalMatch] = useState<any | null>(null);
 
   const handleAddTime = () => {
     const raw = newTimeInput.trim();
@@ -360,13 +368,27 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
   // Cruces de Sembrados Híbridos
   const hybridSeedings = generateHybridCrossSeedings(groupDistributionPreview, qualifiersPerGroup);
 
-  // Verificar si hay resultados reportados en partidos guardados
-  const hasReportedResults = matches.some(
-    (m) =>
-      ['POR_REVISAR', 'TERMINADO', 'DISPUTADO', 'FINALIZADO'].includes(m.status ?? '') ||
+  // Verificar si hay resultados reportados reales por usuarios en partidos guardados
+  const hasReportedResults = matches.some((m) => {
+    const homeName = (m.home_team_name || '').toLowerCase();
+    const awayName = (m.away_team_name || '').toLowerCase();
+    const isBye =
+      homeName.includes('bye') ||
+      homeName.includes('descanso') ||
+      awayName.includes('bye') ||
+      awayName.includes('descanso');
+
+    if (isBye && m.reported_score_home === null && m.reported_score_away === null) {
+      return false;
+    }
+
+    return (
+      ['POR_REVISAR', 'DISPUTADO', 'FINALIZADO'].includes(m.status ?? '') ||
+      (m.status === 'TERMINADO' && !isBye) ||
       (m.reported_score_home !== null && m.reported_score_home !== undefined) ||
       (m.reported_score_away !== null && m.reported_score_away !== undefined)
-  );
+    );
+  });
 
   const handleToggleDay = (dayId: string) => {
     if (selectedDays.includes(dayId)) {
@@ -379,11 +401,8 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
   };
 
   const handleStartRegeneration = () => {
-    if (hasReportedResults) {
-      setIsWarningModalOpen(true);
-    } else {
-      setIsFormMode(true);
-    }
+    // Al pulsar Modificar, abrimos directamente el panel de ajustes para que el usuario pueda editar parámetros
+    setIsFormMode(true);
   };
 
   const hasPreview = enrolledTeams.length >= 2;
@@ -440,6 +459,34 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
   const currentMatchdayNum = matchdayKeys[currentMatchdayIndex] || 1;
   const currentMatchGroup = matchesByMatchday[currentMatchdayNum] || [];
 
+  const isPlayoffOrHybrid =
+    format === 'Playoff' ||
+    format === 'Hibrido' ||
+    competition.format === 'Playoff' ||
+    competition.format === 'Hibrido' ||
+    (competition as any).mode_format === 'Playoff' ||
+    (competition as any).mode_format === 'Hibrido';
+
+  const [activeViewTab, setActiveViewTab] = useState<'BRACKET' | 'TABLE'>(
+    isPlayoffOrHybrid ? 'BRACKET' : 'TABLE'
+  );
+
+  const playoffMatches: PlayoffMatch[] = matches.map((m) => ({
+    id: m.id,
+    home_team_id: m.home_team_id || m.team_home_id,
+    away_team_id: m.away_team_id || m.team_away_id,
+    home_team_name: m.home_team_name || 'Por Definir',
+    home_team_tag: (m.home_team_name || 'LOC').substring(0, 3).toUpperCase(),
+    away_team_name: m.away_team_name || 'Por Definir',
+    away_team_tag: (m.away_team_name || 'VIS').substring(0, 3).toUpperCase(),
+    score_home: m.reported_score_home ?? m.score_home ?? null,
+    score_away: m.reported_score_away ?? m.score_away ?? null,
+    status: m.status || 'PENDIENTE',
+    round_name: m.round_name || (m.stage === 'PLAYOFF' ? 'Playoff' : `Jornada ${m.matchday_number || m.matchday || 1}`),
+    matchday: m.matchday_number || m.matchday || 1,
+    scheduled_time: m.scheduled_time || m.scheduled_at,
+  }));
+
   return (
     <div className="competition-fixture-generator space-y-6">
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
@@ -452,7 +499,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
         isSubmitting={isPending}
       />
 
-      {/* 📌 1. VISTA DE PARTIDOS (FORMATO TABLA CON AUTO-AVANCE) */}
+      {/* 📌 1. VISTA DE PARTIDOS (FORMATO BRACKET O TABLA CON AUTO-AVANCE) */}
       {hasExistingMatches && !isFormMode && (
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="glass-panel p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
@@ -465,29 +512,72 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                   Fixture Oficial Publicado ({matches.length} Partidos)
                 </h3>
                 <p className="text-xs text-[var(--text-muted)] font-[family-name:var(--font-active)]">
-                  Enfrentamientos en simultáneo con soporte de Auto-Avance en llaves.
+                  {isPlayoffOrHybrid
+                    ? 'Cuadro de eliminación con soporte de Auto-Avance de llaves en vivo.'
+                    : 'Enfrentamientos en simultáneo oficiales de la competencia.'}
                 </p>
               </div>
             </div>
 
-            <Button
-              onClick={handleStartRegeneration}
-              className="bg-[var(--app-danger-soft)]/80 text-[var(--app-danger)] border border-[var(--app-danger)]/40 hover:bg-[var(--app-danger-soft-strong)] font-black text-xs px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4 text-[var(--app-danger)]" />
-              <span>Modificar / Regenerar Fixture</span>
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {isPlayoffOrHybrid && (
+                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--app-surface-2)]/60 border border-[var(--text-heading)]/10">
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewTab('BRACKET')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all flex items-center gap-1.5 ${
+                      activeViewTab === 'BRACKET'
+                        ? 'bg-[var(--app-accent)] text-[var(--text-heading)] shadow-md'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-heading)]'
+                    }`}
+                  >
+                    <GitBranch className="w-3.5 h-3.5" />
+                    <span>Árbol de Llaves</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewTab('TABLE')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all flex items-center gap-1.5 ${
+                      activeViewTab === 'TABLE'
+                        ? 'bg-[var(--app-accent)] text-[var(--text-heading)] shadow-md'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-heading)]'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Tabla de Jornadas</span>
+                  </button>
+                </div>
+              )}
+
+              <Button
+                onClick={handleStartRegeneration}
+                className="bg-[var(--app-danger-soft)]/80 text-[var(--app-danger)] border border-[var(--app-danger)]/40 hover:bg-[var(--app-danger-soft-strong)] font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4 text-[var(--app-danger)]" />
+                <span>Modificar / Regenerar</span>
+              </Button>
+            </div>
           </div>
 
-          {/* Paginación de Jornadas */}
-          {matchdayKeys.length > 0 && (
-            <div className="flex flex-col space-y-4">
-              <div className="flex items-center justify-center gap-2 overflow-x-auto py-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentMatchdayIndex((prev) => Math.max(0, prev - 1))}
-                  disabled={currentMatchdayIndex === 0}
+          {/* Renderizado condicional: Árbol de Llaves o Tabla de Jornadas */}
+          {activeViewTab === 'BRACKET' && isPlayoffOrHybrid ? (
+            <div className="space-y-4">
+              <PlayoffBracket
+                matches={playoffMatches}
+                matchMode={matchMode}
+                onAdvanceWinner={handleAdvanceWinner}
+                isPending={isPending}
+              />
+            </div>
+          ) : (
+            matchdayKeys.length > 0 && (
+              <div className="flex flex-col space-y-4">
+                <div className="flex items-center justify-center gap-2 overflow-x-auto py-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentMatchdayIndex((prev) => Math.max(0, prev - 1))}
+                    disabled={currentMatchdayIndex === 0}
                   className="px-3 border-[var(--text-heading)]/10 bg-[var(--app-surface-2)]/50 hover:bg-[var(--app-surface-2)] text-[var(--text-secondary)]"
                 >
                   {'<'}
@@ -615,7 +705,28 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                               </td>
                               <td className="p-2 text-left font-black text-[var(--text-heading)]">{awayName}</td>
                               <td className="p-2 text-center">
-                                <div className="flex items-center justify-center gap-1.5">
+                                <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                  {!homeName.toLowerCase().includes('bye') && !awayName.toLowerCase().includes('bye') && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setReportModalMatch({
+                                        id: m.id,
+                                        homeTeam: homeName,
+                                        awayTeam: awayName,
+                                        homeScore: m.reported_score_home ?? m.score_home,
+                                        awayScore: m.reported_score_away ?? m.score_away,
+                                        gameSlug: competition.game_slug,
+                                        tournamentName: competition.name,
+                                        competitionId: competition.id,
+                                      })}
+                                      className="text-[10px] font-bold px-2 py-1 h-auto gap-1 border-[var(--app-accent)]/50 text-[var(--app-accent)] hover:bg-[var(--app-accent-soft)]"
+                                    >
+                                      <Edit3 className="w-3 h-3" />
+                                      <span>{isTerminado ? 'Modificar' : 'Reportar'}</span>
+                                    </Button>
+                                  )}
+
                                   {homeId && homeId !== 'BYE' && (
                                     <Button
                                       size="sm"
@@ -649,7 +760,7 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                 );
               })()}
             </div>
-          )}
+          ))}
         </div>
       )}
 
@@ -684,9 +795,25 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                 </div>
               </div>
 
-              <Badge className="bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] border-[var(--app-accent-2)]/40 font-[family-name:var(--font-active)] text-[10px] uppercase">
-                {enrolledTeams.length} Clubes Inscritos
-              </Badge>
+              <div className="flex items-center gap-3">
+                <Badge className="bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] border-[var(--app-accent-2)]/40 font-[family-name:var(--font-active)] text-[10px] uppercase">
+                  {enrolledTeams.length} Clubes Inscritos
+                </Badge>
+                <Button
+                  onClick={() => {
+                    if (hasReportedResults) {
+                      setIsWarningModalOpen(true);
+                    } else {
+                      handleConfirmSaveFixture();
+                    }
+                  }}
+                  disabled={isPending || enrolledTeams.length < 2}
+                  className="bg-[var(--app-positive)] hover:bg-[var(--app-positive)] text-[var(--accent-contrast)] font-black text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{isPending ? 'Guardando...' : 'Guardar Fixture'}</span>
+                </Button>
+              </div>
             </div>
 
             {/* Formato del Torneo */}
@@ -1045,16 +1172,40 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[var(--text-heading)]/10 flex justify-end">
+            <div className="pt-4 border-t border-[var(--text-heading)]/10 flex flex-col sm:flex-row items-center justify-between gap-3">
               <Button
-                onClick={() => {
-                  const elem = document.getElementById('matchmaking-preview-container');
-                  if (elem) elem.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="bg-[var(--app-accent-2)] hover:bg-[var(--app-accent-2)] text-[var(--text-heading)] font-black text-xs px-6 py-3 rounded-xl shadow-xl flex items-center gap-2"
+                variant="ghost"
+                onClick={() => setIsFormMode(false)}
+                className="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-heading)] w-full sm:w-auto"
               >
-                <Sparkles className="w-4 h-4 text-[var(--app-accent)] animate-pulse" /> <span>Previsualización en Vivo (Activa) ⚡</span>
+                ← Cancelar y Volver a los Partidos
               </Button>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                <Button
+                  onClick={() => {
+                    const elem = document.getElementById('matchmaking-preview-container');
+                    if (elem) elem.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  variant="outline"
+                  className="text-xs font-bold flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-4 h-4 text-[var(--app-accent)]" /> <span>Previsualización ⚡</span>
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (hasReportedResults) {
+                      setIsWarningModalOpen(true);
+                    } else {
+                      handleConfirmSaveFixture();
+                    }
+                  }}
+                  disabled={isPending || enrolledTeams.length < 2}
+                  className="bg-[var(--app-positive)] hover:bg-[var(--app-positive)] text-[var(--accent-contrast)] font-black text-xs px-5 py-2.5 rounded-xl shadow-xl flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{isPending ? 'Guardando...' : 'Guardar Fixture'}</span>
+                </Button>
+              </div>
             </div>
           </Card>
 
@@ -1083,6 +1234,15 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
             </div>
           )}
         </div>
+      )}
+
+      {/* Modal de Reporte / Modificación de Partido */}
+      {reportModalMatch && (
+        <MatchReportModal
+          isOpen={Boolean(reportModalMatch)}
+          onClose={() => setReportModalMatch(null)}
+          match={reportModalMatch}
+        />
       )}
     </div>
   );

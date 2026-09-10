@@ -38,6 +38,10 @@ export interface TeamStanding {
 
 export interface ClassificationMatch {
   id: string | number;
+  home_team_id?: string | null;
+  away_team_id?: string | null;
+  team_home_id?: string | null;
+  team_away_id?: string | null;
   home_team_name: string;
   home_team_tag: string;
   away_team_name: string;
@@ -46,14 +50,19 @@ export interface ClassificationMatch {
   away_team_logo_url?: string | null;
   score_home: number | null;
   score_away: number | null;
+  reported_score_home?: number | null;
+  reported_score_away?: number | null;
   status: string;
   round_name: string;
+  stage?: string | null;
   tournament_name?: string;
   tournament_id?: string | number;
   competition_id?: string | number;
   organization_name?: string;
   group_name?: string;
   matchday?: number;
+  scheduled_time?: string | null;
+  scheduled_at?: string | null;
 }
 
 export interface TournamentApiItem {

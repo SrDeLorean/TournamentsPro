@@ -36,13 +36,74 @@ export async function POST(request: Request) {
 
     const effectiveGameSlug = data.gameSlug || (match as any).gameSlug || (match as any).game_slug || 'eafc26';
 
+    const userRole = (session.role || '').toLowerCase();
+    const isAdminOrOrg = userRole === 'admin' || userRole === 'administrador' || userRole === 'organizador';
+
+    const winnerTeamId = homeScore > awayScore
+      ? (match.homeTeamId || match.teamHomeId)
+      : awayScore > homeScore
+        ? (match.awayTeamId || match.teamAwayId)
+        : null;
+
     await dbProvider.matches.update(matchId, {
       reportedScoreHome: homeScore,
       reportedScoreAway: awayScore,
-      status: 'POR_REVISAR',
+      ...(isAdminOrOrg
+        ? {
+            scoreHome: homeScore,
+            scoreAway: awayScore,
+            status: 'FINALIZADO',
+            ...(winnerTeamId ? { winnerTeamId } : {}),
+          }
+        : {
+            status: 'POR_REVISAR',
+          }),
       reportedByUserId: session.userId,
       ...(data.proofUrl ? { proofUrl: data.proofUrl } : {})
     });
+
+    // Si es admin/organizador y hay ganador en partido de llaves, auto-avanzar a siguiente llave
+    if (isAdminOrOrg && winnerTeamId && match.nextMatchId) {
+      const winnerName = winnerTeamId === (match.homeTeamId || match.teamHomeId) ? match.homeTeamName : match.awayTeamName;
+      const nextSlot = match.nextMatchSlot || 'HOME';
+      const isBo3Next = /-j1$/i.test(match.nextMatchId);
+      const isTwoLegNext = /-ida$/i.test(match.nextMatchId);
+
+      try {
+        if (isBo3Next) {
+          const nextJ1 = match.nextMatchId;
+          const nextJ2 = match.nextMatchId.replace(/-j1$/i, '-j2');
+          const nextJ3 = match.nextMatchId.replace(/-j1$/i, '-j3');
+          if (nextSlot === 'AWAY') {
+            await dbProvider.matches.update(nextJ1, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
+            await dbProvider.matches.update(nextJ3, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
+            await dbProvider.matches.update(nextJ2, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
+          } else {
+            await dbProvider.matches.update(nextJ1, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
+            await dbProvider.matches.update(nextJ3, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
+            await dbProvider.matches.update(nextJ2, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
+          }
+        } else if (isTwoLegNext) {
+          const nextIda = match.nextMatchId;
+          const nextVuelta = match.nextMatchId.replace(/-ida$/i, '-vuelta');
+          if (nextSlot === 'AWAY') {
+            await dbProvider.matches.update(nextIda, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
+            await dbProvider.matches.update(nextVuelta, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
+          } else {
+            await dbProvider.matches.update(nextIda, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
+            await dbProvider.matches.update(nextVuelta, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
+          }
+        } else {
+          if (nextSlot === 'AWAY') {
+            await dbProvider.matches.update(match.nextMatchId, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
+          } else {
+            await dbProvider.matches.update(match.nextMatchId, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
+          }
+        }
+      } catch (advErr) {
+        console.warn('No se pudo auto-avanzar ganador a la siguiente llave:', advErr);
+      }
+    }
 
     // Notificar al capitán del equipo rival
     try {

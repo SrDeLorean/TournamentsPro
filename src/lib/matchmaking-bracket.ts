@@ -28,6 +28,7 @@ export interface PlayoffMatchNode {
   nextMatchId: string | null;
   nextMatchSlot: 'HOME' | 'AWAY' | 'VUELTA_TARGET' | null;
   status: 'PENDIENTE' | 'POR_REVISAR' | 'TERMINADO' | 'DISPUTADO';
+  winnerTeamId?: string | null;
 }
 
 /**
@@ -78,6 +79,30 @@ export function getRoundNameByTeamCount(teamCount: number): string {
 }
 
 /**
+ * 2.1 ALGORITMO CANÓNICO DE CABEZAS DE SERIE (TOURNAMENT SEEDING)
+ * Distribuye las semillas de modo que los mejores (#1 y #2) queden en extremos opuestos del bracket
+ * y no se enfrenten antes de la Gran Final.
+ */
+export function getTournamentSeedingPairs(bracketSize: number): [number, number][] {
+  if (bracketSize < 2) return [[1, 2]];
+  let seeds = [1, 2];
+  while (seeds.length < bracketSize) {
+    const nextSeeds: number[] = [];
+    const sum = seeds.length * 2 + 1;
+    for (const s of seeds) {
+      nextSeeds.push(s);
+      nextSeeds.push(sum - s);
+    }
+    seeds = nextSeeds;
+  }
+  const pairs: [number, number][] = [];
+  for (let i = 0; i < seeds.length; i += 2) {
+    pairs.push([seeds[i], seeds[i + 1]]);
+  }
+  return pairs;
+}
+
+/**
  * 3. GENERACIÓN DE LLAVES DE PLAYOFF DE IZQUIERDA A DERECHA (OCTAVOS -> CUARTOS -> SEMIS -> FINAL)
  */
 export function generatePlayoffBracket(
@@ -92,7 +117,8 @@ export function generatePlayoffBracket(
   if (count < 2) return [];
 
   const compClean = competitionId.replace(/[^a-zA-Z0-9]/g, '').slice(-10);
-  const roundsTotal = Math.ceil(Math.log2(count));
+  const bracketSize = Math.pow(2, Math.ceil(Math.log2(Math.max(2, count))));
+  const roundsTotal = Math.ceil(Math.log2(bracketSize));
   const bracketMatches: PlayoffMatchNode[] = [];
 
   // PUSH en orden cronológico: Ronda 1 (Octavos/Cuartos) -> Ronda N (Final)
@@ -133,6 +159,12 @@ export function generatePlayoffBracket(
     }
   }
 
+  // Emparejamiento por cabezas de serie para torneos estándar
+  const seedingPairs = getTournamentSeedingPairs(bracketSize);
+
+  // Mapa para registrar pases automáticos a la siguiente ronda (ej. por BYE en Ronda 1)
+  const preAdvancements = new Map<string, { slot: 'HOME' | 'AWAY'; teamId: string; teamName: string }>();
+
   roundStructures.forEach((roundInfo, rIdx) => {
     for (let m = 0; m < roundInfo.matchCount; m++) {
       const isLastRound = rIdx === roundStructures.length - 1;
@@ -140,24 +172,62 @@ export function generatePlayoffBracket(
       const nextMatchIndex = Math.floor(m / 2) + 1;
       const nextSlotChoice: 'HOME' | 'AWAY' = m % 2 === 0 ? 'HOME' : 'AWAY';
 
-      // Asignación de equipos o semillas en Primera Ronda (rIdx === 0: Octavos/Cuartos)
+      // Asignación de equipos o semillas en Primera Ronda (rIdx === 0)
       let homeTeamId: string | null = null;
       let homeTeamName = 'Por Definir';
       let awayTeamId: string | null = null;
       let awayTeamName = 'Por Definir';
+      let status: PlayoffMatchNode['status'] = 'PENDIENTE';
+      let winnerTeamId: string | null = null;
 
       if (rIdx === 0) {
         if (isHybrid && hybridSeedings[m]) {
           homeTeamName = hybridSeedings[m].homeSeed;
           awayTeamName = hybridSeedings[m].awaySeed;
         } else {
-          const homeTeam = qualifiedTeams[m * 2];
-          const awayTeam = qualifiedTeams[m * 2 + 1];
-          if (homeTeam) { homeTeamId = homeTeam.id; homeTeamName = homeTeam.name; }
-          if (awayTeam) { awayTeamId = awayTeam.id; awayTeamName = awayTeam.name; }
+          const [seedHome, seedAway] = seedingPairs[m] || [m * 2 + 1, m * 2 + 2];
+          const homeTeam = qualifiedTeams[seedHome - 1];
+          const awayTeam = qualifiedTeams[seedAway - 1];
+
+          if (homeTeam) {
+            homeTeamId = homeTeam.id;
+            homeTeamName = homeTeam.name;
+          } else {
+            homeTeamName = 'DESCANSO (BYE)';
+          }
+
+          if (awayTeam) {
+            awayTeamId = awayTeam.id;
+            awayTeamName = awayTeam.name;
+          } else {
+            awayTeamName = homeTeam ? 'DESCANSO (BYE)' : 'Por Definir';
+          }
+
+          // Si uno tiene BYE y el otro equipo existe, auto-avanza a la siguiente ronda
+          if (homeTeam && !awayTeam) {
+            status = 'TERMINADO';
+            winnerTeamId = homeTeam.id;
+          } else if (awayTeam && !homeTeam) {
+            status = 'TERMINADO';
+            winnerTeamId = awayTeam.id;
+          }
+        }
+      } else {
+        // Rondas posteriores: verificar si hubo un pase previo por BYE
+        const baseTargetKey = `r${roundInfo.roundOrder}-m${m + 1}`;
+        const adv = preAdvancements.get(baseTargetKey);
+        if (adv) {
+          if (adv.slot === 'HOME') {
+            homeTeamId = adv.teamId;
+            homeTeamName = adv.teamName;
+          } else {
+            awayTeamId = adv.teamId;
+            awayTeamName = adv.teamName;
+          }
         }
       }
 
+      // Definir IDs según el formato
       if (matchMode === 'MejorDe3') {
         const matchIdJ1 = `p-${compClean}-r${roundInfo.roundOrder}-m${m + 1}-j1`;
         const matchIdJ2 = `p-${compClean}-r${roundInfo.roundOrder}-m${m + 1}-j2`;
@@ -165,6 +235,15 @@ export function generatePlayoffBracket(
         const targetNextRoundId = !isLastRound
           ? `p-${compClean}-r${nextRoundOrder}-m${nextMatchIndex}-j1`
           : null;
+
+        if (winnerTeamId && !isLastRound) {
+          const targetKey = `r${nextRoundOrder}-m${nextMatchIndex}`;
+          preAdvancements.set(targetKey, {
+            slot: nextSlotChoice,
+            teamId: winnerTeamId,
+            teamName: homeTeamId === winnerTeamId ? homeTeamName : awayTeamName,
+          });
+        }
 
         // Nodo Juego 1: Local vs Visitante
         bracketMatches.push({
@@ -179,7 +258,8 @@ export function generatePlayoffBracket(
           awayTeamId,
           nextMatchId: matchIdJ2,
           nextMatchSlot: 'HOME',
-          status: 'PENDIENTE',
+          status,
+          winnerTeamId,
         });
 
         // Nodo Juego 2: Localía invertida
@@ -195,7 +275,8 @@ export function generatePlayoffBracket(
           awayTeamId: homeTeamId,
           nextMatchId: targetNextRoundId,
           nextMatchSlot: !isLastRound ? nextSlotChoice : null,
-          status: 'PENDIENTE',
+          status,
+          winnerTeamId,
         });
 
         // Nodo Juego 3: Desempate condicional
@@ -211,7 +292,8 @@ export function generatePlayoffBracket(
           awayTeamId,
           nextMatchId: targetNextRoundId,
           nextMatchSlot: !isLastRound ? nextSlotChoice : null,
-          status: 'PENDIENTE',
+          status: status === 'TERMINADO' ? 'TERMINADO' : 'PENDIENTE',
+          winnerTeamId,
         });
       } else if (matchMode === 'IdaVuelta') {
         const matchIdIda = `p-${compClean}-r${roundInfo.roundOrder}-m${m + 1}-ida`;
@@ -219,6 +301,15 @@ export function generatePlayoffBracket(
         const targetNextRoundId = !isLastRound
           ? `p-${compClean}-r${nextRoundOrder}-m${nextMatchIndex}-ida`
           : null;
+
+        if (winnerTeamId && !isLastRound) {
+          const targetKey = `r${nextRoundOrder}-m${nextMatchIndex}`;
+          preAdvancements.set(targetKey, {
+            slot: nextSlotChoice,
+            teamId: winnerTeamId,
+            teamName: homeTeamId === winnerTeamId ? homeTeamName : awayTeamName,
+          });
+        }
 
         // Nodo IDA
         bracketMatches.push({
@@ -233,7 +324,8 @@ export function generatePlayoffBracket(
           awayTeamId,
           nextMatchId: matchIdVuelta,
           nextMatchSlot: 'VUELTA_TARGET',
-          status: 'PENDIENTE',
+          status,
+          winnerTeamId,
         });
 
         // Nodo VUELTA: Localía invertida. La final no tiene nextMatchId
@@ -249,7 +341,8 @@ export function generatePlayoffBracket(
           awayTeamId: homeTeamId,
           nextMatchId: targetNextRoundId,
           nextMatchSlot: !isLastRound ? nextSlotChoice : null,
-          status: 'PENDIENTE',
+          status,
+          winnerTeamId,
         });
       } else {
         // PARTIDO ÚNICO
@@ -257,6 +350,15 @@ export function generatePlayoffBracket(
         const targetNextRoundId = !isLastRound
           ? `p-${compClean}-r${nextRoundOrder}-m${nextMatchIndex}`
           : null;
+
+        if (winnerTeamId && !isLastRound) {
+          const targetKey = `r${nextRoundOrder}-m${nextMatchIndex}`;
+          preAdvancements.set(targetKey, {
+            slot: nextSlotChoice,
+            teamId: winnerTeamId,
+            teamName: homeTeamId === winnerTeamId ? homeTeamName : awayTeamName,
+          });
+        }
 
         bracketMatches.push({
           id: matchId,
@@ -270,7 +372,8 @@ export function generatePlayoffBracket(
           awayTeamId,
           nextMatchId: targetNextRoundId,
           nextMatchSlot: !isLastRound ? nextSlotChoice : null,
-          status: 'PENDIENTE',
+          status,
+          winnerTeamId,
         });
       }
     }

@@ -6,6 +6,8 @@ import { canManageCompetition } from '@/lib/authorization';
 import { writeSecurityAudit } from '@/lib/security';
 import { fixtureRequestBodySchema } from '@/lib/api-schemas';
 
+import { generatePlayoffBracket } from '@/lib/matchmaking-bracket';
+
 interface FixtureTeam {
   id: string;
   name: string;
@@ -81,13 +83,25 @@ export async function POST(request: Request) {
       matchday: number;
       roundName: string;
       groupName: string;
-      homeId: string;
-      awayId: string;
+      homeId: string | null;
+      awayId: string | null;
+      homeName?: string;
+      awayName?: string;
+      homeTag?: string;
+      awayTag?: string;
+      nextMatchId?: string | null;
+      nextMatchSlot?: string | null;
       scheduledAt: string;
       scheduledTime: string;
+      status?: string;
+      winnerTeamId?: string | null;
     }) => {
-      const homeTeam = teamMap.get(m.homeId) || { name: 'Equipo Local', tag: 'LOC' };
-      const awayTeam = teamMap.get(m.awayId) || { name: 'Equipo Visitante', tag: 'VIS' };
+      const homeTeam = m.homeId ? teamMap.get(m.homeId) : null;
+      const awayTeam = m.awayId ? teamMap.get(m.awayId) : null;
+      const homeName = m.homeName || homeTeam?.name || (m.homeId ? 'Equipo Local' : 'Por Definir');
+      const awayName = m.awayName || awayTeam?.name || (m.awayId ? 'Equipo Visitante' : 'Por Definir');
+      const homeTag = m.homeTag || homeTeam?.tag || (m.homeId ? homeName.substring(0, 3).toUpperCase() : 'TBD');
+      const awayTag = m.awayTag || awayTeam?.tag || (m.awayId ? awayName.substring(0, 3).toUpperCase() : 'TBD');
 
       await dbProvider.matches.create({
         id: m.id,
@@ -97,57 +111,64 @@ export async function POST(request: Request) {
         matchday: m.matchday,
         roundName: m.roundName,
         groupName: m.groupName,
-        teamHomeId: m.homeId,
-        homeTeamId: m.homeId,
-        teamAwayId: m.awayId,
-        awayTeamId: m.awayId,
-        homeTeamName: homeTeam.name,
-        homeTeamTag: homeTeam.tag,
-        awayTeamName: awayTeam.name,
-        awayTeamTag: awayTeam.tag,
+        teamHomeId: m.homeId || null,
+        homeTeamId: m.homeId || null,
+        teamAwayId: m.awayId || null,
+        awayTeamId: m.awayId || null,
+        homeTeamName: homeName,
+        homeTeamTag: homeTag,
+        awayTeamName: awayName,
+        awayTeamTag: awayTag,
+        nextMatchId: m.nextMatchId || null,
+        nextMatchSlot: m.nextMatchSlot || null,
         scheduledAt: m.scheduledAt,
         scheduledTime: m.scheduledTime,
-        status: 'PROGRAMADO'
+        status: m.status || 'PROGRAMADO',
+        winnerTeamId: m.winnerTeamId || null,
       });
     };
 
     if (fmt.includes('PLAYOFF') || fmt.includes('ELIMINATORIA')) {
-      // 🏆 FORMATO PLAYOFF (Semifinales + Gran Final + Partido por el 3er Lugar / Segunda Final)
-      const t1 = teamIds[0] || 'team-1';
-      const t2 = teamIds[1] || 'team-2';
-      const t3 = teamIds[2] || 'team-3';
-      const t4 = teamIds[3] || 'team-4';
+      // 🏆 FORMATO PLAYOFF (Dinámico con emparejamiento por cabezas de serie y auto-avance)
+      const matchMode = (body.matchMode || 'PartidoUnico') as 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3';
+      const playoffNodes = generatePlayoffBracket(tournamentId, enrolledTeams, matchMode);
 
-      const dateSF = getScheduledStr(0, 20, 0);
-      const dateFinals = getScheduledStr(7, 21, 0);
+      // Insertamos en orden inverso (.reverse()) para satisfacer la clave foránea fk_matches_next
+      for (const node of playoffNodes.reverse()) {
+        let matchdayNumber = node.roundOrder;
+        let dayOffset = (node.roundOrder - 1) * 7;
+        let timeStr = `${hours || '20'}:${minutes || '00'}`;
 
-      // Semifinal 1
-      await insertMatch({
-        id: `match-${tournamentId}-sf1`,
-        round: 1, matchday: 1, roundName: 'SEMIFINAL 1', groupName: 'PLAYOFF',
-        homeId: t1, awayId: t4, scheduledAt: dateSF, scheduledTime: '20:00'
-      });
+        if (matchMode === 'IdaVuelta') {
+          matchdayNumber = (node.roundOrder - 1) * 2 + (node.legType === 'VUELTA' ? 2 : 1);
+          dayOffset = (matchdayNumber - 1) * 4;
+        } else if (matchMode === 'MejorDe3') {
+          const jNum = /-j([123])$/i.exec(node.id)?.[1] || '1';
+          matchdayNumber = (node.roundOrder - 1) * 3 + Number(jNum);
+          dayOffset = (node.roundOrder - 1) * 7;
+          timeStr = jNum === '1' ? '20:00' : jNum === '2' ? '20:45' : '21:30';
+        }
 
-      // Semifinal 2
-      await insertMatch({
-        id: `match-${tournamentId}-sf2`,
-        round: 1, matchday: 1, roundName: 'SEMIFINAL 2', groupName: 'PLAYOFF',
-        homeId: t2, awayId: t3, scheduledAt: dateSF, scheduledTime: '20:30'
-      });
+        const scheduledAt = getScheduledStr(dayOffset);
 
-      // 🥉 Segunda Final (Tercer Lugar)
-      await insertMatch({
-        id: `match-${tournamentId}-3rd`,
-        round: 2, matchday: 2, roundName: 'TERCER LUGAR 🥉', groupName: 'PLAYOFF',
-        homeId: t3, awayId: t4, scheduledAt: dateFinals, scheduledTime: '21:00'
-      });
-
-      // 🏆 Gran Final
-      await insertMatch({
-        id: `match-${tournamentId}-final`,
-        round: 2, matchday: 2, roundName: 'GRAN FINAL 🏆', groupName: 'PLAYOFF',
-        homeId: t1, awayId: t2, scheduledAt: dateFinals, scheduledTime: '22:00'
-      });
+        await insertMatch({
+          id: node.id,
+          round: matchdayNumber,
+          matchday: matchdayNumber,
+          roundName: node.roundName,
+          groupName: 'PLAYOFF',
+          homeId: node.homeTeamId,
+          awayId: node.awayTeamId,
+          homeName: node.homeTeamName,
+          awayName: node.awayTeamName,
+          nextMatchId: node.nextMatchId,
+          nextMatchSlot: node.nextMatchSlot,
+          scheduledAt,
+          scheduledTime: timeStr,
+          status: node.status === 'TERMINADO' ? 'TERMINADO' : 'PROGRAMADO',
+          winnerTeamId: node.winnerTeamId || null,
+        });
+      }
 
     } else if (fmt.includes('HIBRID') || fmt.includes('GRUPO')) {
       // ⚡ FORMATO HÍBRIDO (Fase de Grupos + Playoff con Segunda Final)

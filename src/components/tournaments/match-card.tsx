@@ -17,8 +17,13 @@ interface MatchCardProps {
 }
 
 function isPlaceholder(name: string): boolean {
-  const normalized = name.toLowerCase();
-  return normalized.includes('definir') || normalized === 'tbd';
+  const normalized = (name || '').toLowerCase();
+  return normalized.includes('definir') || normalized === 'tbd' || normalized.includes('bye') || normalized.includes('descanso');
+}
+
+function isBye(name: string): boolean {
+  const normalized = (name || '').toLowerCase();
+  return normalized.includes('bye') || normalized.includes('descanso');
 }
 
 export function MatchCard({
@@ -31,11 +36,13 @@ export function MatchCard({
 }: MatchCardProps) {
   const brandColor = game?.brandColor || 'var(--game-brand)';
   const isLive = match.status === 'EN_VIVO';
-  const isFinished = match.status === 'FINALIZADO';
+  const isFinished = ['FINALIZADO', 'TERMINADO', 'COMPLETADO'].includes(match.status);
+  const homeIsBye = isBye(match.homeTeam);
+  const awayIsBye = isBye(match.awayTeam);
   const isCanceled = match.status === 'CANCELADO' || Boolean(match.isLockedByBo3);
-  const canReport = (isAdminOrOrganizer || isCaptainOrCoach) && !isCanceled;
-  const homeWon = isFinished && match.homeScore !== null && match.awayScore !== null && match.homeScore > match.awayScore;
-  const awayWon = isFinished && match.homeScore !== null && match.awayScore !== null && match.awayScore > match.homeScore;
+  const canReport = (isAdminOrOrganizer || isCaptainOrCoach) && !isCanceled && !homeIsBye && !awayIsBye && (!isFinished || isAdminOrOrganizer);
+  const homeWon = (isFinished && match.homeScore !== null && match.awayScore !== null && match.homeScore > match.awayScore) || (isFinished && awayIsBye && !homeIsBye);
+  const awayWon = (isFinished && match.homeScore !== null && match.awayScore !== null && match.awayScore > match.homeScore) || (isFinished && homeIsBye && !awayIsBye);
 
   return (
     <article
@@ -48,9 +55,9 @@ export function MatchCard({
           <Trophy className="size-4" />
           <span>{match.competitionName}</span>
         </div>
-        <span className={`fixture-match-status is-${isCanceled ? 'cancelado' : match.status.toLowerCase()}`}>
-          {isLive ? <Radio className="size-3" /> : isCanceled ? <CheckCircle2 className="size-3" /> : isFinished ? <CheckCircle2 className="size-3" /> : <Clock3 className="size-3" />}
-          {isLive ? 'En vivo' : isCanceled ? 'No requerido (2-0)' : isFinished ? 'Finalizado' : 'Programado'}
+        <span className={`fixture-match-status is-${isCanceled ? 'cancelado' : (homeIsBye || awayIsBye) ? 'finalizado' : match.status.toLowerCase()}`}>
+          {isLive ? <Radio className="size-3" /> : isCanceled ? <CheckCircle2 className="size-3" /> : (isFinished || homeIsBye || awayIsBye) ? <CheckCircle2 className="size-3" /> : <Clock3 className="size-3" />}
+          {isLive ? 'En vivo' : isCanceled ? 'No requerido (2-0)' : (homeIsBye || awayIsBye) ? 'Pase BYE' : isFinished ? 'Finalizado' : 'Programado'}
         </span>
       </header>
 
@@ -63,19 +70,19 @@ export function MatchCard({
 
       <div className="fixture-match-versus">
         <div className={`fixture-match-team is-home ${homeWon ? 'is-winner' : ''} ${isPlaceholder(match.homeTeam) ? 'is-placeholder' : ''}`}>
-          <Avatar src={match.homeLogoUrl} alt={`Logo de ${match.homeTeam}`} fallback={isPlaceholder(match.homeTeam) ? '?' : match.homeTag} size="lg" />
-          <span><strong>{match.homeTeam}</strong><small>{isPlaceholder(match.homeTeam) ? 'Clasificación pendiente' : match.homeTag}</small></span>
+          <Avatar src={match.homeLogoUrl} alt={`Logo de ${match.homeTeam}`} fallback={homeIsBye ? 'BYE' : isPlaceholder(match.homeTeam) ? '?' : match.homeTag} size="lg" />
+          <span><strong className={homeIsBye ? 'text-[var(--app-accent-2)] italic' : ''}>{match.homeTeam}</strong><small>{homeIsBye ? 'Pase directo' : isPlaceholder(match.homeTeam) ? 'Clasificación pendiente' : match.homeTag}</small></span>
         </div>
 
         <div className="fixture-match-score" aria-label={`Marcador ${match.homeScore ?? 0} a ${match.awayScore ?? 0}`}>
-          <strong className={homeWon ? 'is-winner' : ''}>{match.homeScore ?? '-'}</strong>
+          <strong className={homeWon ? 'is-winner' : ''}>{homeIsBye ? '—' : (match.homeScore ?? '-')}</strong>
           <span>{isLive || isFinished ? ':' : 'VS'}</span>
-          <strong className={awayWon ? 'is-winner' : ''}>{match.awayScore ?? '-'}</strong>
+          <strong className={awayWon ? 'is-winner' : ''}>{awayIsBye ? '—' : (match.awayScore ?? '-')}</strong>
         </div>
 
         <div className={`fixture-match-team is-away ${awayWon ? 'is-winner' : ''} ${isPlaceholder(match.awayTeam) ? 'is-placeholder' : ''}`}>
-          <Avatar src={match.awayLogoUrl} alt={`Logo de ${match.awayTeam}`} fallback={isPlaceholder(match.awayTeam) ? '?' : match.awayTag} size="lg" />
-          <span><strong>{match.awayTeam}</strong><small>{isPlaceholder(match.awayTeam) ? 'Clasificación pendiente' : match.awayTag}</small></span>
+          <Avatar src={match.awayLogoUrl} alt={`Logo de ${match.awayTeam}`} fallback={awayIsBye ? 'BYE' : isPlaceholder(match.awayTeam) ? '?' : match.awayTag} size="lg" />
+          <span><strong className={awayIsBye ? 'text-[var(--app-accent-2)] italic' : ''}>{match.awayTeam}</strong><small>{awayIsBye ? 'Pase directo' : isPlaceholder(match.awayTeam) ? 'Clasificación pendiente' : match.awayTag}</small></span>
         </div>
       </div>
 
@@ -87,7 +94,7 @@ export function MatchCard({
           </span>
         ) : canReport ? (
           <Button variant="outline" size="sm" onClick={() => onOpenReportModal(match)} className="fixture-match-report">
-            <Edit3 className="size-3.5" /> <span>Reportar resultado</span>
+            <Edit3 className="size-3.5" /> <span>{isFinished ? 'Modificar resultado' : 'Reportar resultado'}</span>
           </Button>
         ) : null}
       </footer>

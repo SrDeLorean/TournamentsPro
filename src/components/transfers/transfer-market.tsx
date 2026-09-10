@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { TransferListing } from '@/lib/data-store';
 import { GAMES_CATALOG, GameConfig } from '@/lib/games-data';
@@ -112,10 +112,16 @@ export function TransferMarket({ game, hideHeader = false }: TransferMarketProps
 
   const [transfers, setTransfers] = useState<TransferListing[]>([]);
   const [completedTransfers, setCompletedTransfers] = useState<CompletedTransfer[]>([]);
+  const activeListingsCacheKeyRef = useRef('');
+  const completedTransfersCacheKeyRef = useRef('');
 
   // Function to reload active listings from DB
-  const loadActiveListings = useCallback(() => {
+  const loadActiveListings = useCallback((force = false) => {
     const apiTimeFilter = timeFilter === 'OLDEST' ? 'ALL' : timeFilter;
+    const cacheKey = `${currentGameSlug}:${apiTimeFilter}`;
+    if (!force && activeListingsCacheKeyRef.current === cacheKey) return;
+    activeListingsCacheKeyRef.current = cacheKey;
+    setIsLoadingDB(true);
     getTransferPostsAction(currentGameSlug, apiTimeFilter)
       .then((res) => {
         if (res.success && res.data && Array.isArray(res.data) && res.data.length > 0) {
@@ -139,14 +145,17 @@ export function TransferMarket({ game, hideHeader = false }: TransferMarketProps
         }
       })
       .catch((err) => {
+        activeListingsCacheKeyRef.current = '';
         console.error('Error al cargar publicaciones de BD:', err);
       })
       .finally(() => setIsLoadingDB(false));
   }, [currentGameSlug, timeFilter]);
 
   // Function to load completed historic transfers
-  const loadCompletedTransfers = useCallback(() => {
-    setIsLoadingDB(true);
+  const loadCompletedTransfers = useCallback((background = false, force = false) => {
+    if (!force && completedTransfersCacheKeyRef.current === currentGameSlug) return;
+    completedTransfersCacheKeyRef.current = currentGameSlug;
+    if (!background) setIsLoadingDB(true);
     getCompletedTransfersAction(currentGameSlug)
       .then((res) => {
         if (res.success && res.data) {
@@ -156,22 +165,30 @@ export function TransferMarket({ game, hideHeader = false }: TransferMarketProps
         }
       })
       .catch((err) => {
+        completedTransfersCacheKeyRef.current = '';
         console.error('Error al cargar traspasos realizados:', err);
         setCompletedTransfers([]);
       })
-      .finally(() => setIsLoadingDB(false));
+      .finally(() => {
+        if (!background) setIsLoadingDB(false);
+      });
   }, [currentGameSlug]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      if (activeTab === 'REALIZADOS') {
-        loadCompletedTransfers();
-      } else {
-        loadActiveListings();
-      }
-    }, 0);
+    const timer = window.setTimeout(() => loadActiveListings(), 0);
     return () => window.clearTimeout(timer);
-  }, [activeTab, loadActiveListings, loadCompletedTransfers]);
+  }, [loadActiveListings]);
+
+  useEffect(() => {
+    if (activeTab !== 'REALIZADOS') return;
+    const timer = window.setTimeout(() => loadCompletedTransfers(), 0);
+    return () => window.clearTimeout(timer);
+  }, [activeTab, loadCompletedTransfers]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadCompletedTransfers(true), 250);
+    return () => window.clearTimeout(timer);
+  }, [loadCompletedTransfers]);
 
   let filteredTransfers = transfers.filter((item) => {
     const matchesGame = item.gameSlug === currentGameSlug;
@@ -256,7 +273,7 @@ export function TransferMarket({ game, hideHeader = false }: TransferMarketProps
       setMessageInput('');
 
       // 🔄 RELOAD FROM DATABASE
-      loadActiveListings();
+      loadActiveListings(true);
     } catch (err) {
       console.error('Error al publicar anuncio:', err);
     } finally {

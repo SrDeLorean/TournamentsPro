@@ -207,7 +207,7 @@
   font-family: var(--font-active, var(--font-outfit)), sans-serif;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 160ms ease;
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .foundationTabBtn:hover {

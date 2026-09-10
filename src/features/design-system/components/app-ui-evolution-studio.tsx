@@ -20,6 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TabList } from '@/components/ui/tab-list';
 import { AppCommandBar, AppEntityRow, AppMetricCard } from '@/components/ui/app-primitives';
 import { cn } from '@/lib/utils';
 
@@ -203,7 +204,7 @@ export function AppUiEvolutionStudio() {
         </div>
       </div>
 
-      <div className="app-evolution-mobile-tabs" role="tablist" aria-label="Nivel de evolución">
+      <TabList className="app-evolution-mobile-tabs" label="Nivel de evolución">
         {LEVELS.map((level) => (
           <button
             key={level.id}
@@ -219,7 +220,7 @@ export function AppUiEvolutionStudio() {
             {level.name}
           </button>
         ))}
-      </div>
+      </TabList>
 
       <div className={cn('app-evolution-grid', viewMode === 'mobile' && 'grid-cols-1 md:grid-cols-3 justify-items-center')}>
         {LEVELS.map((level) => (

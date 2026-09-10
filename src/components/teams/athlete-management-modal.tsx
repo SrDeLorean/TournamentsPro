@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { Modal } from '@/components/ui/modal';
+import { TabList } from '@/components/ui/tab-list';
 import {
   User, BarChart2, FileText, CheckCircle2, X
 } from 'lucide-react';
@@ -80,8 +81,9 @@ export function AthleteManagementModal({
         )}
 
         {/* Athlete Management Tabs Strip */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none p-1 rounded-2xl bg-[var(--app-canvas)] border border-[var(--app-accent)]/30">
+        <TabList label="Gestión del atleta" className="flex items-center gap-2 overflow-x-auto scrollbar-none p-1 rounded-2xl bg-[var(--app-canvas)] border border-[var(--app-accent)]/30">
           <button
+            role="tab" aria-selected={activeTab === 'ATLETA_FICHA'} tabIndex={activeTab === 'ATLETA_FICHA' ? 0 : -1}
             onClick={() => setActiveTab('ATLETA_FICHA')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
               activeTab === 'ATLETA_FICHA'
@@ -94,6 +96,7 @@ export function AthleteManagementModal({
           </button>
 
           <button
+            role="tab" aria-selected={activeTab === 'ATLETA_STATS'} tabIndex={activeTab === 'ATLETA_STATS' ? 0 : -1}
             onClick={() => setActiveTab('ATLETA_STATS')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
               activeTab === 'ATLETA_STATS'
@@ -106,6 +109,7 @@ export function AthleteManagementModal({
           </button>
 
           <button
+            role="tab" aria-selected={activeTab === 'ATLETA_SOLICITUDES'} tabIndex={activeTab === 'ATLETA_SOLICITUDES' ? 0 : -1}
             onClick={() => setActiveTab('ATLETA_SOLICITUDES')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 flex-shrink-0 ${
               activeTab === 'ATLETA_SOLICITUDES'
@@ -116,7 +120,7 @@ export function AthleteManagementModal({
             <FileText className="w-3.5 h-3.5" />
             Mis Ofertas ({offersList.filter((o) => o.status === 'PENDIENTE').length})
           </button>
-        </div>
+        </TabList>
 
         {/* TAB 1: MI FICHA TÉCNICA */}
         {activeTab === 'ATLETA_FICHA' && (

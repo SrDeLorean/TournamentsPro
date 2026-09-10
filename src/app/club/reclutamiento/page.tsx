@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useTransition } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useTransition } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
 import { Modal } from '@/components/ui/modal';
+import { TabList } from '@/components/ui/tab-list';
 import {
   Sparkles,
   Search,
@@ -16,15 +17,10 @@ import {
   XCircle,
   CheckCircle2,
   AlertCircle,
-  Clock,
   Shield,
   Loader2,
   Users,
-  Building2,
-  Filter,
-  ArrowRightLeft,
   Briefcase,
-  UserPlus,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getUserEnrolledTeamsAction } from '@/app/actions/squads';
@@ -72,7 +68,7 @@ interface AvailablePlayer {
 type TabType = 'SEARCH_PLAYERS' | 'SENT_OFFERS' | 'POST_VACANCY';
 
 export default function ClubReclutamientoPage() {
-  const { currentUser, activeGameSlug } = useAuth();
+  const { currentUser } = useAuth();
   const [teams, setTeams] = useState<ManagedTeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabType>('SEARCH_PLAYERS');
@@ -87,6 +83,8 @@ export default function ClubReclutamientoPage() {
   // Sent Offers State
   const [outgoingOffers, setOutgoingOffers] = useState<OutgoingOffer[]>([]);
   const [isLoadingOffers, setIsLoadingOffers] = useState(false);
+  const playersCacheKeyRef = useRef('');
+  const offersCacheKeyRef = useRef('');
 
   // Offer Modal State
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
@@ -109,10 +107,9 @@ export default function ClubReclutamientoPage() {
   // 1. Load User's Managed Teams
   useEffect(() => {
     if (!currentUser?.id) {
-      setIsLoadingTeams(false);
-      return;
+      const timer = window.setTimeout(() => setIsLoadingTeams(false), 0);
+      return () => window.clearTimeout(timer);
     }
-    setIsLoadingTeams(true);
     getUserEnrolledTeamsAction(currentUser.id, 'ALL').then((res) => {
       if (res.success && res.teams && res.teams.length > 0) {
         setTeams(res.teams as unknown as ManagedTeam[]);
@@ -123,8 +120,11 @@ export default function ClubReclutamientoPage() {
   }, [currentUser?.id]);
 
   // 2. Load Free Agents / Available Players
-  const loadAvailablePlayers = useCallback(async () => {
+  const loadAvailablePlayers = useCallback(async (force = false) => {
     if (!selectedTeam) return;
+    const cacheKey = `${selectedTeam.id}:${searchQuery.trim().toLowerCase()}`;
+    if (!force && playersCacheKeyRef.current === cacheKey) return;
+    playersCacheKeyRef.current = cacheKey;
     setIsLoadingPlayers(true);
     try {
       const res = await getAvailablePlayersForSquadAction(selectedTeam.id, searchQuery);
@@ -132,6 +132,7 @@ export default function ClubReclutamientoPage() {
         setPlayers(res.players as unknown as AvailablePlayer[]);
       }
     } catch (err) {
+      playersCacheKeyRef.current = '';
       console.error('Error cargando jugadores disponibles:', err);
     } finally {
       setIsLoadingPlayers(false);
@@ -140,31 +141,42 @@ export default function ClubReclutamientoPage() {
 
   useEffect(() => {
     if (activeTab === 'SEARCH_PLAYERS' && selectedTeamId) {
-      void loadAvailablePlayers();
+      const timer = window.setTimeout(() => void loadAvailablePlayers(), 180);
+      return () => window.clearTimeout(timer);
     }
   }, [activeTab, selectedTeamId, loadAvailablePlayers]);
 
   // 3. Load Outgoing Offers
-  const loadOutgoingOffers = useCallback(async () => {
+  const loadOutgoingOffers = useCallback(async (force = false, background = false) => {
     if (!selectedTeamId) return;
-    setIsLoadingOffers(true);
+    if (!force && offersCacheKeyRef.current === selectedTeamId) return;
+    offersCacheKeyRef.current = selectedTeamId;
+    if (!background) setIsLoadingOffers(true);
     try {
       const res = await getOutgoingOffersAction(selectedTeamId, 'ALL');
       if (res.success && res.data) {
         setOutgoingOffers(res.data as unknown as OutgoingOffer[]);
       }
     } catch (err) {
+      offersCacheKeyRef.current = '';
       console.error('Error cargando ofertas enviadas:', err);
     } finally {
-      setIsLoadingOffers(false);
+      if (!background) setIsLoadingOffers(false);
     }
   }, [selectedTeamId]);
 
   useEffect(() => {
     if (activeTab === 'SENT_OFFERS' && selectedTeamId) {
-      void loadOutgoingOffers();
+      const timer = window.setTimeout(() => void loadOutgoingOffers(), 0);
+      return () => window.clearTimeout(timer);
     }
   }, [activeTab, selectedTeamId, loadOutgoingOffers]);
+
+  useEffect(() => {
+    if (!selectedTeamId || activeTab === 'SENT_OFFERS') return;
+    const timer = window.setTimeout(() => void loadOutgoingOffers(false, true), 250);
+    return () => window.clearTimeout(timer);
+  }, [activeTab, loadOutgoingOffers, selectedTeamId]);
 
   // Handle Offer Submission
   const handleOpenOfferModal = (player: AvailablePlayer) => {
@@ -199,7 +211,7 @@ export default function ClubReclutamientoPage() {
         type: 'success',
         text: `¡Oferta formal de contrato enviada con éxito a ${selectedPlayer.gamertag || selectedPlayer.name}!`,
       });
-      void loadOutgoingOffers();
+      void loadOutgoingOffers(true);
     } else {
       setFeedback({
         type: 'error',
@@ -217,7 +229,7 @@ export default function ClubReclutamientoPage() {
         setFeedback({ type: 'success', text: 'Oferta de contrato cancelada.' });
       } else {
         setFeedback({ type: 'error', text: res.error || 'Error al cancelar la oferta.' });
-        void loadOutgoingOffers();
+        void loadOutgoingOffers(true);
       }
     });
   };
@@ -354,8 +366,12 @@ export default function ClubReclutamientoPage() {
             </div>
 
             {/* TAB SELECTORS */}
-            <div className="flex items-center gap-1.5 bg-[var(--bg-main)] p-1 rounded-xl border border-[var(--border-card)] w-full sm:w-auto">
+            <TabList label="Opciones de reclutamiento" className="flex items-center gap-1.5 bg-[var(--bg-main)] p-1 rounded-xl border border-[var(--border-card)] w-full sm:w-auto">
               <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'SEARCH_PLAYERS'}
+                tabIndex={activeTab === 'SEARCH_PLAYERS' ? 0 : -1}
                 onClick={() => setActiveTab('SEARCH_PLAYERS')}
                 className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                   activeTab === 'SEARCH_PLAYERS'
@@ -367,6 +383,10 @@ export default function ClubReclutamientoPage() {
                 <span>Buscar Atletas</span>
               </button>
               <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'SENT_OFFERS'}
+                tabIndex={activeTab === 'SENT_OFFERS' ? 0 : -1}
                 onClick={() => setActiveTab('SENT_OFFERS')}
                 className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                   activeTab === 'SENT_OFFERS'
@@ -378,6 +398,10 @@ export default function ClubReclutamientoPage() {
                 <span>Ofertas Enviadas</span>
               </button>
               <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'POST_VACANCY'}
+                tabIndex={activeTab === 'POST_VACANCY' ? 0 : -1}
                 onClick={() => setActiveTab('POST_VACANCY')}
                 className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                   activeTab === 'POST_VACANCY'
@@ -388,7 +412,7 @@ export default function ClubReclutamientoPage() {
                 <Briefcase className="w-3.5 h-3.5" />
                 <span>Publicar Vacante</span>
               </button>
-            </div>
+            </TabList>
           </div>
 
           {/* TAB 1: BUSCAR ATLETAS */}

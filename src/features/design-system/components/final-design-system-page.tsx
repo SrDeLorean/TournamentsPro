@@ -26,6 +26,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
+import { TabList } from '@/components/ui/tab-list';
 import { useDesign } from '@/components/providers/design-provider';
 import { FONT_DEFINITIONS, DESIGN_FONTS, type DesignFont } from '@/lib/design-system';
 import { GAMES_CATALOG, SYSTEM_SEMANTIC_PALETTE, type GameSemanticPalette } from '@/lib/games-data';
@@ -212,7 +213,7 @@ export default function FinalDesignSystemPage() {
 
         {/* Interactive Foundation Studio Matrix */}
         <div className={styles.foundationInteractiveStage}>
-          <div className={styles.foundationTabs} role="tablist" aria-label="Visualizadores de Fundamentos">
+          <TabList className={styles.foundationTabs} label="Visualizadores de Fundamentos">
             <button
               id="foundation-tab-spacing"
               type="button"
@@ -265,7 +266,7 @@ export default function FinalDesignSystemPage() {
               <Palette />
               <span>04. Paleta Semántica AAA</span>
             </button>
-          </div>
+          </TabList>
 
           {/* TAB 1: SPACING GRID INTERACTIVE */}
           {foundationTab === 'spacing' && (

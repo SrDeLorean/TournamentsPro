@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { GameConfig } from '@/lib/games-data';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { TabList } from '@/components/ui/tab-list';
+import { useWarmedTabData } from '@/components/ui/use-warmed-tab-data';
 import { 
   Users, UserPlus, FileText, Layers, Ban, CheckSquare, Search, Send, Clock, X
 } from 'lucide-react';
@@ -62,6 +64,7 @@ interface SearchablePlayer {
 }
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : 'Error desconocido';
+const SQUAD_TABS = ['roster', 'contracts', 'matrix', 'recruit'] as const;
 
 export function NewSquadManagementView({ game }: { game: GameConfig }) {
   const { currentUser, userTeams } = useAuth();
@@ -77,30 +80,33 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
   const [contracts, setContracts] = useState<ContractOffer[]>([]);
   const [searchablePlayers, setSearchablePlayers] = useState<SearchablePlayer[]>([]);
 
-  // Roster Filters
   const [rosterSearch, setRosterSearch] = useState('');
   const [rosterOrgFilter, setRosterOrgFilter] = useState('ALL');
 
   // Recruit Form
   const [selectedPlayer, setSelectedPlayer] = useState<SearchablePlayer | null>(null);
   const [recruitSearch, setRecruitSearch] = useState('');
+  const [recruitQuery, setRecruitQuery] = useState('');
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([]);
   const availableOrgs = ['comunidad amc', 'gamer cup', 'pgl', 'fgl']; // Stub or fetch from team comps
 
-  const loadData = useCallback(async () => {
-    if (!teamId) return;
+  const fetchTab = useCallback(async (tab: 'roster' | 'recruit' | 'contracts' | 'matrix') => {
+    if (!teamId) return false;
     try {
-      if (activeTab === 'roster') {
+      if (tab === 'roster') {
         const res = await getNewTeamSquadAction(teamId);
         if (res.success) setSquad(res.squad as unknown as SquadMember[]);
-      } else if (activeTab === 'matrix') {
+        return res.success;
+      } else if (tab === 'matrix') {
         const res = await getNewPlayerInscriptionsMatrixAction(teamId);
         if (res.success) setMatrix(res.data);
-      } else if (activeTab === 'contracts') {
+        return res.success;
+      } else if (tab === 'contracts') {
         const res = await getSentContractsByTeamAction(teamId);
         if (res.success) setContracts(res.offers as unknown as ContractOffer[]);
-      } else if (activeTab === 'recruit') {
-        const res = await getAllPlayersForContractOfferAction(game.slug, recruitSearch);
+        return res.success;
+      } else if (tab === 'recruit') {
+        const res = await getAllPlayersForContractOfferAction(game.slug, recruitQuery);
         if (res.success) {
           // Asegurar que el capitán actual y los miembros actuales del equipo estén disponibles para ser seleccionados
           // Esto soluciona el problema de "no me deja enviarme contrato a mi mismo" haciendo que sea súper obvio.
@@ -119,17 +125,21 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
           }
           setSearchablePlayers(allPlayers);
         }
+        return res.success;
       }
     } catch (error) {
       console.error('Error cargando la gestión de plantilla:', error);
     }
-  }, [activeTab, currentUser, game.slug, recruitSearch, teamId]);
+    return false;
+  }, [currentUser, game.slug, recruitQuery, teamId]);
 
-  useEffect(() => {
-    if (teamId) {
-      void Promise.resolve().then(loadData);
-    }
-  }, [teamId, activeTab, loadData]);
+  const loadData = useWarmedTabData({
+    scope: teamId,
+    activeTab,
+    tabs: SQUAD_TABS,
+    load: fetchTab,
+    variant: (tab) => tab === 'recruit' ? recruitQuery.trim().toLowerCase() : '',
+  });
 
   const handleIssueContract = async () => {
     if (!selectedPlayer || selectedOrgs.length === 0) return;
@@ -147,7 +157,7 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
         endSuccess(res.message || 'Contrato emitido exitosamente.');
         setSelectedPlayer(null);
         setSelectedOrgs([]);
-        loadData();
+        void loadData(activeTab, true);
       } else {
         endError(res.error || 'Error');
       }
@@ -162,7 +172,7 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
       const res = await expelPlayerFromSquadAction(teamId!, userId, orgName);
       if (res.success) {
         endSuccess(res.message || 'Jugador desvinculado.');
-        loadData();
+        void loadData(activeTab, true);
       } else {
         endError(res.error || 'Error al expulsar');
       }
@@ -191,20 +201,20 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
       <CrudAlertBanner state={crudState} onClose={resetAlert} />
       
       {/* TABS */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <Button variant={activeTab === 'roster' ? 'primary' : 'outline'} onClick={() => setActiveTab('roster')}>
+      <TabList label="Gestión de plantilla" className="flex flex-wrap gap-2 mb-6">
+        <Button role="tab" aria-selected={activeTab === 'roster'} tabIndex={activeTab === 'roster' ? 0 : -1} variant={activeTab === 'roster' ? 'primary' : 'outline'} onClick={() => setActiveTab('roster')}>
           <Users className="w-4 h-4 mr-2" /> Plantilla Roster
         </Button>
-        <Button variant={activeTab === 'recruit' ? 'primary' : 'outline'} onClick={() => setActiveTab('recruit')}>
+        <Button role="tab" aria-selected={activeTab === 'recruit'} tabIndex={activeTab === 'recruit' ? 0 : -1} variant={activeTab === 'recruit' ? 'primary' : 'outline'} onClick={() => setActiveTab('recruit')}>
           <UserPlus className="w-4 h-4 mr-2" /> Emitir Contrato
         </Button>
-        <Button variant={activeTab === 'contracts' ? 'primary' : 'outline'} onClick={() => setActiveTab('contracts')}>
+        <Button role="tab" aria-selected={activeTab === 'contracts'} tabIndex={activeTab === 'contracts' ? 0 : -1} variant={activeTab === 'contracts' ? 'primary' : 'outline'} onClick={() => setActiveTab('contracts')}>
           <FileText className="w-4 h-4 mr-2" /> Contratos Enviados
         </Button>
-        <Button variant={activeTab === 'matrix' ? 'primary' : 'outline'} onClick={() => setActiveTab('matrix')}>
+        <Button role="tab" aria-selected={activeTab === 'matrix'} tabIndex={activeTab === 'matrix' ? 0 : -1} variant={activeTab === 'matrix' ? 'primary' : 'outline'} onClick={() => setActiveTab('matrix')}>
           <Layers className="w-4 h-4 mr-2" /> Matriz de Organización
         </Button>
-      </div>
+      </TabList>
 
       {/* ROSTER TAB */}
       {activeTab === 'roster' && (
@@ -260,7 +270,10 @@ export function NewSquadManagementView({ game }: { game: GameConfig }) {
               <div className="space-y-4">
                 <div className="flex gap-2">
                   <Input placeholder="Buscar por gamertag o nombre..." value={recruitSearch} onChange={e => setRecruitSearch(e.target.value)} className="bg-[color-mix(in_srgb,var(--app-canvas)_50%,transparent)]" />
-                  <Button onClick={loadData}><Search className="w-4 h-4" /></Button>
+                  <Button onClick={() => {
+                    if (recruitSearch === recruitQuery) void loadData('recruit', true);
+                    else setRecruitQuery(recruitSearch);
+                  }}><Search className="w-4 h-4" /></Button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {searchablePlayers.map(p => (

@@ -48,6 +48,12 @@ export class MatchRepository extends BaseRepository<Match> implements IMatchRepo
   }
 
   async deleteByCompetition(competitionId: string): Promise<void> {
+    // 1. Limpiar referencias de llaves para evitar errores de clave foránea
+    await this.runCommand(
+      'UPDATE matches SET next_match_id = NULL WHERE competition_id = ? OR tournament_id = ?',
+      [competitionId, competitionId]
+    );
+    // 2. Eliminar los partidos de la competencia
     await this.runCommand(
       'DELETE FROM matches WHERE competition_id = ? OR tournament_id = ?',
       [competitionId, competitionId]
