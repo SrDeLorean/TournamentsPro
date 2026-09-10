@@ -23,6 +23,8 @@ describe('almacenamiento compartido de imágenes', () => {
     expect(getUploadFolder('organization', 'banner')).toBe('organizations/banners');
     expect(getUploadFolder('user', 'avatar')).toBe('users/avatars');
     expect(getUploadFolder('game', 'banner')).toBe('games/banners');
+    expect(getUploadFolder('competition', 'logo')).toBe('competitions/logos');
+    expect(getUploadFolder('competition', 'banner')).toBe('competitions/banners');
   });
 
   it('guarda dos copias, vuelve a leerlas y entrega una URL pública cargable', async () => {

@@ -184,11 +184,38 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
 
   // Resolve team
   const resolvedTeam = useMemo(() => {
-    if (activeUser?.teamName) return { id: activeUser.teamId, name: activeUser.teamName };
-    const memberTeam = userTeams?.find((t) => t.gameSlug === game.slug && t.members?.some((m) => m.id === activeUser?.id));
-    if (memberTeam) return { id: memberTeam.id, name: memberTeam.name };
-    if (activeUser?.id === 'usr-srdelorean') return { id: 'team-leguayork', name: 'LeguaYork eSp' };
-    return { id: undefined, name: 'Agencia libre' };
+    let found = userTeams?.find((t) => t.id === activeUser?.teamId);
+    if (!found) {
+      found = userTeams?.find((t) => t.gameSlug === game.slug && t.members?.some((m) => m.id === activeUser?.id));
+    }
+    if (!found && (activeUser?.id === 'usr-srdelorean' || activeUser?.teamId === 'team-leguayork')) {
+      found = userTeams?.find((t) => t.id === 'team-leguayork');
+    }
+    if (found) {
+      return {
+        id: found.id,
+        name: found.name,
+        tag: found.tag,
+        logoUrl: found.logoUrl,
+        bannerUrl: found.bannerUrl,
+      };
+    }
+    if (activeUser?.teamName) {
+      return {
+        id: activeUser.teamId,
+        name: activeUser.teamName,
+        tag: (activeUser as any)?.teamTag,
+        logoUrl: (activeUser as any)?.teamLogoUrl,
+        bannerUrl: (activeUser as any)?.teamBannerUrl,
+      };
+    }
+    return {
+      id: undefined,
+      name: 'Agencia libre',
+      tag: undefined,
+      logoUrl: undefined,
+      bannerUrl: undefined,
+    };
   }, [activeUser, game.slug, userTeams]);
 
   // Resolve avatar URL
@@ -223,6 +250,9 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
     whatsapp: activeUser?.whatsapp || (activeUser as any)?.socialMedia?.whatsapp,
     teamName: resolvedTeam.name,
     teamId: resolvedTeam.id,
+    teamTag: resolvedTeam.tag,
+    teamLogoUrl: resolvedTeam.logoUrl,
+    teamBannerUrl: resolvedTeam.bannerUrl,
     rating: Number(activeUser?.rating || (activeUser?.id === 'usr-srdelorean' ? 9.8 : 9.0)),
     platform: activeUser?.platform || 'PS5',
     avatarUrl: resolvedAvatarUrl,

@@ -203,8 +203,8 @@ export async function PUT(request: Request) {
 
     const finalName = name !== undefined ? name : (u.name || 'Atleta Pro');
     const finalGamertag = gamertag !== undefined ? gamertag : (u.gamertag || 'Gamertag');
-    const userFoto = foto || avatarUrl || u.avatar_url || u.avatarUrl || '/images/default/logo-default.png';
-    const userBanner = bannerUrl || '/images/default/banner-default.jpg';
+    const userFoto = (foto !== undefined ? foto : (avatarUrl !== undefined ? avatarUrl : (u.avatar_url || u.avatarUrl || u.foto))) || '/images/default/logo-default.png';
+    const userBanner = (bannerUrl !== undefined ? bannerUrl : (u.banner_url || u.bannerUrl)) || '/images/default/banner-default.jpg';
     const userGameProfiles = typeof gameProfiles === 'string'
       ? gameProfiles
       : JSON.stringify(gameProfiles ?? {});

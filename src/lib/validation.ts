@@ -59,6 +59,8 @@ export const createCompetitionSchema = z.object({
   seasonId: uuidSchema,
   newSeasonName: z.string().max(100).optional(),
   organizationId: uuidSchema,
+  logoUrl: z.string().max(2048).nullable().optional(),
+  bannerUrl: z.string().max(2048).nullable().optional(),
 });
 
 export const createTeamSchema = z.object({

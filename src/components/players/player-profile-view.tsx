@@ -2,14 +2,16 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PublicProfileShell } from '@/components/public/public-profile-shell';
 import { SubSubNavbar } from '@/components/layout/sub-sub-navbar';
 import { GAMES_CATALOG } from '@/lib/games-data';
+import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import {
-  User, Shield, Trophy, Star, ArrowRightLeft, BarChart3, MessageSquare, Sparkles, Send, Globe, Share2, Video, Tv, Phone, Gamepad2, Monitor, CheckCircle2
+  User, Shield, Trophy, Star, ArrowRightLeft, BarChart3, MessageSquare, Sparkles, Send, Globe, Share2, Video, Tv, Phone, Gamepad2, Monitor, CheckCircle2, ExternalLink
 } from 'lucide-react';
 
 export interface PlayerData {
@@ -31,6 +33,9 @@ export interface PlayerData {
   website?: string;
   teamName: string;
   teamId?: string;
+  teamLogoUrl?: string;
+  teamBannerUrl?: string;
+  teamTag?: string;
   rating: number;
   platform: string;
   avatarUrl?: string;
@@ -80,6 +85,14 @@ export function PlayerProfileView({ player, brandColor = 'var(--app-accent)', is
     ? '/uploads/usuarios/0ANkDShbpFOHqdj7b6bg_1783718412.webp'
     : undefined;
   const effectiveLogoUrl = player.avatarUrl || fallbackAvatar;
+
+  const hasTeam = Boolean(
+    player.teamName &&
+    player.teamName.toLowerCase() !== 'agencia libre' &&
+    player.teamName.toLowerCase() !== 'sin equipo' &&
+    player.teamName.toLowerCase() !== 'agente libre'
+  );
+  const effectiveTeamBanner = player.teamBannerUrl || defaultGameBanner;
 
   const stats = player.stats || {
     matches: 34,
@@ -229,45 +242,129 @@ export function PlayerProfileView({ player, brandColor = 'var(--app-accent)', is
               </Card>
             </div>
 
-            {/* Sidebar Data Card */}
-            <Card className="p-5 space-y-4 border-[var(--border-card)] bg-[var(--bg-card)]">
-              <h3 className="text-sm font-black uppercase text-[var(--text-heading)] tracking-wider flex items-center gap-2">
-                <Shield className="w-4 h-4 text-[var(--app-accent-2)]" />
-                Ficha Técnica del Atleta:
-              </h3>
-              <div className="p-4 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-2.5 text-xs">
-                <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
-                  <span className="text-[var(--text-secondary)]">Club Actual:</span>
-                  <strong className="text-[var(--app-accent-2)] uppercase font-[family-name:var(--font-active)]">{playerTeam}</strong>
-                </div>
-                <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
-                  <span className="text-[var(--text-secondary)]">Gamertag:</span>
-                  <strong className="text-[var(--app-accent)] font-[family-name:var(--font-active)]">@{playerTag}</strong>
-                </div>
-                <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
-                  <span className="text-[var(--text-secondary)]">ID Juego ({player.gameSlug}):</span>
-                  <strong className="text-[var(--app-warning)] font-[family-name:var(--font-active)]">{playerGameId}</strong>
-                </div>
-                <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
-                  <span className="text-[var(--text-secondary)]">Posición Principal:</span>
-                  <strong className="text-[var(--text-heading)] font-bold">{playerPos}</strong>
-                </div>
-                {playerSecPos && (
-                  <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
-                    <span className="text-[var(--text-secondary)]">Posición Secundaria:</span>
-                    <strong className="text-[var(--text-primary)]">{playerSecPos}</strong>
+            {/* Sidebar Column: Escuadra Oficial & Ficha Técnica */}
+            <div className="space-y-6">
+              {/* Tarjeta de Escuadra / Club Oficial */}
+              <Card className="overflow-hidden border-[var(--border-card)] bg-[var(--bg-card)] shadow-md">
+                {hasTeam ? (
+                  <>
+                    <div className="relative h-24 w-full bg-[var(--bg-main)] overflow-hidden">
+                      <Image
+                        src={effectiveTeamBanner}
+                        alt={playerTeam}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 350px"
+                        unoptimized={shouldBypassImageOptimization(effectiveTeamBanner)}
+                        onError={(e) => { e.currentTarget.src = defaultGameBanner; }}
+                        className="object-cover brightness-75"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] via-transparent to-transparent" />
+                      {player.teamTag && (
+                        <Badge variant="cyan" className="absolute top-2.5 right-2.5 text-[10px] uppercase font-black tracking-wider">
+                          [{player.teamTag}]
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="p-4 pt-0 relative space-y-3">
+                      <div className="flex items-end gap-3 -mt-7">
+                        <div className="relative size-14 rounded-2xl bg-[var(--bg-card)] border-2 border-[var(--border-card)] overflow-hidden shadow-lg flex-shrink-0 flex items-center justify-center">
+                          {player.teamLogoUrl ? (
+                            <Image
+                              src={player.teamLogoUrl}
+                              alt={playerTeam}
+                              fill
+                              sizes="56px"
+                              unoptimized={shouldBypassImageOptimization(player.teamLogoUrl)}
+                              onError={(e) => { e.currentTarget.src = '/images/default/logo-default.png'; }}
+                              className="object-cover"
+                            />
+                          ) : (
+                            <Shield className="size-6 text-[var(--app-accent)]" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase block">Escuadra Actual</span>
+                          <h4 className="text-sm font-black text-[var(--text-heading)] uppercase truncate font-[family-name:var(--font-active)]">
+                            {playerTeam}
+                          </h4>
+                        </div>
+                      </div>
+
+                      {player.teamId && (
+                        <Link href={`/${player.gameSlug}/equipos/${player.teamId}`} className="block">
+                          <Button variant="outline" size="sm" className="w-full text-xs font-bold flex items-center justify-center gap-1.5 border-[var(--border-card)] hover:bg-[var(--bg-elevated)]">
+                            <span>Ver ficha de la escuadra</span>
+                            <ExternalLink className="size-3.5" />
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-5 text-center space-y-3">
+                    <div className="size-12 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] mx-auto flex items-center justify-center">
+                      <User className="size-6 text-[var(--text-muted)]" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-[var(--text-heading)] uppercase">Agencia Libre</h4>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                        Atleta disponible para contrataciones y pruebas en escuadras oficiales de {player.gameSlug.toUpperCase()}.
+                      </p>
+                    </div>
+                    <Badge variant="emerald" className="text-[10px] font-bold uppercase">
+                      Disponible para Fichajes
+                    </Badge>
                   </div>
                 )}
-                <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
-                  <span className="text-[var(--text-secondary)]">Plataforma:</span>
-                  <strong className="text-[var(--text-heading)]">{player.platform || 'CROSSPLAY'}</strong>
+              </Card>
+
+              {/* Sidebar Data Card */}
+              <Card className="p-5 space-y-4 border-[var(--border-card)] bg-[var(--bg-card)]">
+                <h3 className="text-sm font-black uppercase text-[var(--text-heading)] tracking-wider flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-[var(--app-accent-2)]" />
+                  Ficha Técnica del Atleta:
+                </h3>
+                <div className="p-4 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-2.5 text-xs">
+                  <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5 items-center">
+                    <span className="text-[var(--text-secondary)]">Club Actual:</span>
+                    {player.teamId ? (
+                      <Link href={`/${player.gameSlug}/equipos/${player.teamId}`} className="text-[var(--app-accent-2)] hover:underline uppercase font-[family-name:var(--font-active)] font-bold flex items-center gap-1">
+                        <span>{playerTeam}</span>
+                        <ExternalLink className="size-3" />
+                      </Link>
+                    ) : (
+                      <strong className="text-[var(--app-accent-2)] uppercase font-[family-name:var(--font-active)]">{playerTeam}</strong>
+                    )}
+                  </div>
+                  <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
+                    <span className="text-[var(--text-secondary)]">Gamertag:</span>
+                    <strong className="text-[var(--app-accent)] font-[family-name:var(--font-active)]">@{playerTag}</strong>
+                  </div>
+                  <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
+                    <span className="text-[var(--text-secondary)]">ID Juego ({player.gameSlug}):</span>
+                    <strong className="text-[var(--app-warning)] font-[family-name:var(--font-active)]">{playerGameId}</strong>
+                  </div>
+                  <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
+                    <span className="text-[var(--text-secondary)]">Posición Principal:</span>
+                    <strong className="text-[var(--text-heading)] font-bold">{playerPos}</strong>
+                  </div>
+                  {playerSecPos && (
+                    <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
+                      <span className="text-[var(--text-secondary)]">Posición Secundaria:</span>
+                      <strong className="text-[var(--text-primary)]">{playerSecPos}</strong>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-b border-[var(--border-card)] pb-1.5">
+                    <span className="text-[var(--text-secondary)]">Plataforma:</span>
+                    <strong className="text-[var(--text-heading)]">{player.platform || 'CROSSPLAY'}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-secondary)]">Nacionalidad:</span>
+                    <strong className="text-[var(--app-positive)]">{playerNacionalidad}</strong>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Nacionalidad:</span>
-                  <strong className="text-[var(--app-positive)]">{playerNacionalidad}</strong>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           </div>
         )}
 

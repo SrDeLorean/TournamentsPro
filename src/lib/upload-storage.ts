@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-export const UPLOAD_ENTITY_TYPES = ['team', 'organization', 'user', 'game'] as const;
+export const UPLOAD_ENTITY_TYPES = ['team', 'organization', 'user', 'game', 'competition'] as const;
 export const UPLOAD_MEDIA_TYPES = ['logo', 'banner', 'avatar'] as const;
 
 export type UploadEntityType = (typeof UPLOAD_ENTITY_TYPES)[number];
@@ -12,6 +12,7 @@ const ENTITY_FOLDERS: Record<UploadEntityType, string> = {
   organization: 'organizations',
   user: 'users',
   game: 'games',
+  competition: 'competitions',
 };
 
 const MEDIA_FOLDERS: Record<UploadMediaType, string> = {

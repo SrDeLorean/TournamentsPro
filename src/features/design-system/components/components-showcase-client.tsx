@@ -26,6 +26,7 @@ import { ModalForm } from '@/components/ui/modal-form';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { useCrudNotifier, CrudAlertBanner } from '@/components/ui/crud-alert';
 import { ImageUploadCard } from '@/components/ui/image-upload-card';
+import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
 import { HologramStage3D } from '@/components/3d/hologram-stage-3d';
 import { GameIdentityCard } from '@/components/game/game-identity-card';
 import { GameSwitcher } from '@/components/layout/game-switcher';
@@ -1206,21 +1207,61 @@ export default function ComponentsShowcasePage() {
                   <Badge variant="cyan" is3D>Client-Side Engine</Badge>
                 </div>
 
-                <ImageUploadCard
-                  label="Logo Oficial del Club / Organización"
-                  subtitle="Compresión automática a 600x600 WebP sin recarga"
-                  currentUrl={uploadedImageUrl}
-                  fallbackType="logo"
-                  brandColor="var(--accent-cyan)"
-                  entityName="Demo Club"
-                  entityId="demo-1"
-                  uploadType="logo"
-                  mode="preview"
-                  onUploadSuccess={(url, stats) => {
-                    setUploadedImageUrl(url);
-                    endSuccess(`Logo subido exitosamente: ${stats}`);
-                  }}
-                />
+                <div className="space-y-4">
+                  <ImageUploadCard
+                    label="Logo Oficial del Club / Organización (ImageUploadCard)"
+                    subtitle="Compresión automática a 512x512 WebP sin recarga"
+                    currentUrl={uploadedImageUrl}
+                    fallbackType="logo"
+                    brandColor="var(--accent-cyan)"
+                    entityName="Demo Club"
+                    entityId="demo-1"
+                    uploadType="logo"
+                    mode="preview"
+                    onUploadSuccess={(url, stats) => {
+                      setUploadedImageUrl(url);
+                      endSuccess(`Logo subido exitosamente: ${stats}`);
+                    }}
+                  />
+
+                  <BrandedImageUploadSection
+                    title="Módulo Completo Institucional (BrandedImageUploadSection)"
+                    brandColor="var(--accent-cyan)"
+                    entityType="team"
+                    items={[
+                      {
+                        label: 'Escudo / Logo Oficial',
+                        subtitle: 'Formato WebP optimizado (512x512)',
+                        currentUrl: uploadedImageUrl,
+                        fallbackType: 'logo',
+                        uploadType: 'logo',
+                        maxDimension: 512,
+                        uploadButtonText: 'Subir escudo',
+                        entityName: 'Demo Escuadra',
+                        entityId: 'demo-section',
+                        mode: 'preview',
+                        onUploadSuccess: (url, stats) => {
+                          setUploadedImageUrl(url);
+                          endSuccess(`Escudo subido: ${stats}`);
+                        },
+                      },
+                      {
+                        label: 'Banner de Portada',
+                        subtitle: 'Formato HD WebP (1920x1080)',
+                        fallbackType: 'banner',
+                        uploadType: 'banner',
+                        maxDimension: 1920,
+                        uploadButtonText: 'Subir portada',
+                        entityName: 'Demo Escuadra',
+                        entityId: 'demo-section',
+                        mode: 'preview',
+                        onUploadSuccess: (_url, stats) => {
+                          endSuccess(`Banner subido: ${stats}`);
+                        },
+                      },
+                    ]}
+                  />
+                </div>
               </div>
 
               {/* Social Media Group inputs inside form */}

@@ -127,17 +127,17 @@ describe('Playoff Bracket Generation with MejorDe3', () => {
     expect(m1J2).toBeDefined();
     expect(m1J3).toBeDefined();
 
-    // J1: t1 vs t2
+    // J1: t1 vs t4 (1st seed vs 4th seed)
     expect(m1J1?.homeTeamId).toBe('t1');
-    expect(m1J1?.awayTeamId).toBe('t2');
+    expect(m1J1?.awayTeamId).toBe('t4');
 
-    // J2: reversed localía (t2 vs t1)
-    expect(m1J2?.homeTeamId).toBe('t2');
+    // J2: reversed localía (t4 vs t1)
+    expect(m1J2?.homeTeamId).toBe('t4');
     expect(m1J2?.awayTeamId).toBe('t1');
 
-    // J3: t1 vs t2
+    // J3: t1 vs t4
     expect(m1J3?.homeTeamId).toBe('t1');
-    expect(m1J3?.awayTeamId).toBe('t2');
+    expect(m1J3?.awayTeamId).toBe('t4');
   });
 });
 

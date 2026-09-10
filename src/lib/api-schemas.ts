@@ -34,7 +34,7 @@ export const uploadRequestBodySchema = z.object({
   fileBase64: z.string().min(1),
   fileName: z.string().max(255).optional(),
   type: z.enum(['logo', 'banner', 'avatar', 'image']).optional(),
-  entityType: z.enum(['team', 'organization', 'user', 'game']).default('team'),
+  entityType: z.enum(['team', 'organization', 'user', 'game', 'competition']).default('team'),
   teamId: z.string().max(100).optional(),
   entityId: z.string().max(100).optional(),
   teamName: z.string().max(150).optional(),

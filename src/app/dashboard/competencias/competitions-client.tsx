@@ -10,6 +10,7 @@ import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
 import { Trophy, Plus, Eye, Trash2, Calendar, ClipboardList, Radio, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getOrganizationSeasonsAction, SeasonData } from '@/app/actions/seasons';
@@ -43,6 +44,8 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
 
   const [selectedGameSlug, setSelectedGameSlug] = useState<string>('eafc26');
   const [creationFormat, setCreationFormat] = useState<'Liga' | 'Playoff' | 'Hibrido'>('Liga');
+  const [compLogoUrl, setCompLogoUrl] = useState<string>('');
+  const [compBannerUrl, setCompBannerUrl] = useState<string>('');
   const [defaultDates] = useState(() => {
     const now = Date.now();
     const format = (days: number) => new Date(now + 86400000 * days).toISOString().slice(0, 16);
@@ -90,6 +93,8 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
     startTransition(async () => {
       const res = await createCompetitionAction(formData);
       if (res.success) {
+        setCompLogoUrl('');
+        setCompBannerUrl('');
         setIsModalOpen(false);
         endSuccess(res.message || 'Competencia registrada exitosamente.');
       } else {
@@ -399,6 +404,40 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
           brandColor="var(--app-accent-2)"
       >
         <div className="space-y-4 text-xs font-bold">
+          <BrandedImageUploadSection
+            title="Identidad Visual del Torneo (Logo & Banner)"
+            brandColor={GAMES_CATALOG[currentSelectedGame]?.brandColor || 'var(--app-accent-2)'}
+            entityType="competition"
+            items={[
+              {
+                label: 'Logo Oficial de la Competencia',
+                subtitle: 'Formato WebP optimizado (512x512)',
+                currentUrl: compLogoUrl,
+                fallbackType: 'logo',
+                uploadType: 'logo',
+                maxDimension: 512,
+                uploadButtonText: 'Subir logo torneo',
+                entityName: 'competencia',
+                entityId: 'new-competition',
+                onUploadSuccess: (url) => setCompLogoUrl(url),
+              },
+              {
+                label: 'Banner Panorámico del Torneo',
+                subtitle: 'Formato HD WebP de fondo (1920x1080)',
+                currentUrl: compBannerUrl,
+                fallbackType: 'banner',
+                uploadType: 'banner',
+                maxDimension: 1920,
+                uploadButtonText: 'Subir portada torneo',
+                entityName: 'competencia',
+                entityId: 'new-competition',
+                onUploadSuccess: (url) => setCompBannerUrl(url),
+              },
+            ]}
+          />
+          <input type="hidden" name="logoUrl" value={compLogoUrl} />
+          <input type="hidden" name="bannerUrl" value={compBannerUrl} />
+
           <div className="space-y-1">
             <label className="text-[var(--text-secondary)] uppercase block">Nombre de la Competencia / Torneo:</label>
             <input

@@ -349,7 +349,7 @@ export function PlayoffBracket({
                                 type="button"
                                 disabled={isPending}
                                 onClick={() => onAdvanceWinner(String(ida.id), String(ida.home_team_id), ida.home_team_name)}
-                                className="flex-1 py-1 px-2 rounded-lg text-[10px] font-black uppercase bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] border border-[var(--app-accent-2)]/30 hover:bg-[var(--app-accent-2)] hover:text-white transition-all text-center truncate disabled:opacity-50"
+                                className="flex-1 py-1 px-2 rounded-lg text-[10px] font-black uppercase bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] border border-[var(--app-accent-2)]/30 hover:bg-[var(--app-accent-2)] hover:text-[var(--accent-contrast)] transition-all text-center truncate disabled:opacity-50"
                               >
                                 Gana {ida.home_team_name.split(' ')[0]}
                               </button>
@@ -357,7 +357,7 @@ export function PlayoffBracket({
                                 type="button"
                                 disabled={isPending}
                                 onClick={() => onAdvanceWinner(String(ida.id), String(ida.away_team_id), ida.away_team_name)}
-                                className="flex-1 py-1 px-2 rounded-lg text-[10px] font-black uppercase bg-[var(--app-accent-soft)] text-[var(--app-accent)] border border-[var(--app-accent)]/30 hover:bg-[var(--app-accent)] hover:text-white transition-all text-center truncate disabled:opacity-50"
+                                className="flex-1 py-1 px-2 rounded-lg text-[10px] font-black uppercase bg-[var(--app-accent-soft)] text-[var(--app-accent)] border border-[var(--app-accent)]/30 hover:bg-[var(--app-accent)] hover:text-[var(--accent-contrast)] transition-all text-center truncate disabled:opacity-50"
                               >
                                 Gana {ida.away_team_name.split(' ')[0]}
                               </button>
@@ -429,7 +429,7 @@ export function PlayoffBracket({
                               type="button"
                               disabled={isPending}
                               onClick={() => onAdvanceWinner(String(ida.id), String(ida.home_team_id), ida.home_team_name)}
-                              className="flex-1 py-1 px-2 rounded-lg text-[10px] font-black uppercase bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] border border-[var(--app-accent-2)]/30 hover:bg-[var(--app-accent-2)] hover:text-white transition-all text-center truncate disabled:opacity-50"
+                              className="flex-1 py-1 px-2 rounded-lg text-[10px] font-black uppercase bg-[var(--app-accent-2-soft)] text-[var(--app-accent-2)] border border-[var(--app-accent-2)]/30 hover:bg-[var(--app-accent-2)] hover:text-[var(--accent-contrast)] transition-all text-center truncate disabled:opacity-50"
                             >
                               Gana {ida.home_team_name.split(' ')[0]}
                             </button>
@@ -437,7 +437,7 @@ export function PlayoffBracket({
                               type="button"
                               disabled={isPending}
                               onClick={() => onAdvanceWinner(String(ida.id), String(ida.away_team_id), ida.away_team_name)}
-                              className="flex-1 py-1 px-2 rounded-lg text-[10px] font-black uppercase bg-[var(--app-accent-soft)] text-[var(--app-accent)] border border-[var(--app-accent)]/30 hover:bg-[var(--app-accent)] hover:text-white transition-all text-center truncate disabled:opacity-50"
+                              className="flex-1 py-1 px-2 rounded-lg text-[10px] font-black uppercase bg-[var(--app-accent-soft)] text-[var(--app-accent)] border border-[var(--app-accent)]/30 hover:bg-[var(--app-accent)] hover:text-[var(--accent-contrast)] transition-all text-center truncate disabled:opacity-50"
                             >
                               Gana {ida.away_team_name.split(' ')[0]}
                             </button>

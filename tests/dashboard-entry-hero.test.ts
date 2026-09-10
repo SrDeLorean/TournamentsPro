@@ -28,6 +28,21 @@ describe('public dashboard entry heroes', () => {
     expect(homeSource).not.toContain('<div className="game-home-hero');
   });
 
+  it('shares a fluid component scale across system and gameSlug entry headers', async () => {
+    const [component, styles] = await Promise.all([
+      readFile('src/components/ui/page-header.tsx', 'utf8'),
+      readFile('src/styles/dashboard-entry.css', 'utf8'),
+    ]);
+
+    expect(component).toContain('ui-page-header game-section-hero portal-entry-header');
+    expect(styles).toContain('.portal-entry-header.ui-page-header');
+    expect(styles).toContain('container-type: inline-size');
+    expect(styles).toContain('cqi');
+    expect(styles).toMatch(/\.portal-entry-header \.ui-page-header-copy > :is\(h1, h2, h3\)[\s\S]*font-size: clamp\(/);
+    expect(styles).toMatch(/@media \(max-width: 639px\)[\s\S]*\.portal-entry-header/);
+    expect(styles).toMatch(/@media \(max-width: 359px\)[\s\S]*\.portal-entry-header/);
+  });
+
   it('shares the compact header across every public gameSlug section without duplicate child headers', async () => {
     const [portalSource, sectionSource, headerSource] = await Promise.all([
       readFile('src/features/game-portal/components/game-portal-client.tsx', 'utf8'),

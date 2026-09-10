@@ -80,6 +80,8 @@ export async function createCompetitionAction(formData: FormData): Promise<{
       playoffMatchMode: stringFormValue(formData, 'playoffMatchMode') || undefined,
       seasonId: stringFormValue(formData, 'seasonId') || null,
       newSeasonName: stringFormValue(formData, 'newSeasonName')?.trim(),
+      logoUrl: stringFormValue(formData, 'logoUrl')?.trim() || null,
+      bannerUrl: stringFormValue(formData, 'bannerUrl')?.trim() || null,
     };
 
     const validation = validateSchema(createCompetitionSchema, rawData);

@@ -10,6 +10,7 @@ import {
   canManageTeam,
   canManageUser,
   isAdministrator,
+  isOrganizer,
   type AuthorizationActor,
 } from '@/lib/authorization';
 import { consumeSecurityRateLimit } from '@/lib/security';
@@ -22,7 +23,7 @@ import {
   type UploadMediaType,
 } from '@/lib/upload-storage';
 
-const SPECIAL_ENTITY_IDS = new Set(['id', 'new-team', 'new-organization', 'new-user', 'create', 'temp']);
+const SPECIAL_ENTITY_IDS = new Set(['id', 'new-team', 'new-organization', 'new-user', 'new-competition', 'create', 'temp']);
 
 async function authorizeEntityUpload(
   actor: AuthorizationActor,
@@ -53,6 +54,21 @@ async function authorizeEntityUpload(
     const organization = await dbProvider.organizations.findById(effectiveId);
     if (!organization) throw Object.assign(new Error('La organización indicada no existe'), { status: 404, code: 'ORGANIZATION_NOT_FOUND' });
     if (!canManageOrganization(actor, effectiveId)) throw Object.assign(new Error('No tienes permisos para modificar esta organización'), { status: 403, code: 'FORBIDDEN' });
+    return effectiveId;
+  }
+
+  if (entityType === 'competition') {
+    if (isTemporary) {
+      if (!isAdministrator(actor) && !isOrganizer(actor)) {
+        throw Object.assign(new Error('Solo un administrador u organizador puede cargar imágenes de una competencia'), { status: 403, code: 'FORBIDDEN' });
+      }
+      return effectiveId;
+    }
+    const competition = await dbProvider.competitions.findById(effectiveId);
+    if (!competition) throw Object.assign(new Error('La competencia indicada no existe'), { status: 404, code: 'COMPETITION_NOT_FOUND' });
+    if (!isAdministrator(actor) && competition.organizerId !== actor.userId && (!actor.organizationId || competition.organizationId !== actor.organizationId)) {
+      throw Object.assign(new Error('No tienes permisos para modificar imágenes de esta competencia'), { status: 403, code: 'FORBIDDEN' });
+    }
     return effectiveId;
   }
 
@@ -109,59 +125,97 @@ export async function POST(request: Request) {
     const authorizedEntityId = await authorizeEntityUpload(actor, entityType, requestedEntityId);
     const mediaType: UploadMediaType = type === 'banner' ? 'banner' : type === 'avatar' ? 'avatar' : 'logo';
 
+    // ── Optimize and compress image tailored to use-case (WebP) ─────────
+    const { optimizeUploadImage } = await import('@/lib/image-processing');
+    const optimized = await optimizeUploadImage(buffer, mediaType);
+    const finalBuffer = optimized.buffer;
+    const finalExtension = optimized.extension; // 'webp'
+
     // Generate safe, human-readable unique filename
     const rawEntityName = body.entityName || body.teamName || body.teamSlug || 'media';
-    const extensionByMime: Record<string, string> = {
-      'image/png': 'png',
-      'image/jpeg': 'jpg',
-      'image/webp': 'webp',
-      'image/gif': 'gif',
-      'image/svg+xml': 'svg',
-    };
-    const extension = extensionByMime[validation.detectedType || ''] || 'webp';
     const timestamp = Date.now();
     const uniqueFileName = buildUploadFileName({
       entityName: rawEntityName,
       entityId: authorizedEntityId,
       mediaType,
-      extension,
+      extension: finalExtension,
       timestamp,
     });
-    // The shared storage writes and verifies both copies after authorization.
-    const persisted = await persistUploadCopies({
-      projectRoot: process.cwd(),
-      entityType,
-      mediaType,
-      fileName: uniqueFileName,
-      buffer,
-    });
+
+    let finalPublicUrl: string;
+    let finalSizeBytes: number;
+
+    // ── Supabase Storage persistence (with graceful local fallback) ────
+    const { isSupabaseStorageConfigured, uploadToSupabaseStorage, deleteFromSupabaseStorage } = await import('@/lib/supabase-storage');
+    const useSupabase = isSupabaseStorageConfigured() && process.env.STORAGE_DRIVER !== 'local';
+
+    if (useSupabase) {
+      try {
+        const uploaded = await uploadToSupabaseStorage({
+          entityType,
+          mediaType,
+          fileName: uniqueFileName,
+          buffer: finalBuffer,
+          mimeType: optimized.mimeType,
+        });
+        finalPublicUrl = uploaded.publicUrl;
+        finalSizeBytes = uploaded.sizeBytes;
+      } catch (storageErr) {
+        console.warn('[Upload API] Supabase storage upload failed, falling back to local:', storageErr);
+        const persisted = await persistUploadCopies({
+          projectRoot: process.cwd(),
+          entityType,
+          mediaType,
+          fileName: uniqueFileName,
+          buffer: finalBuffer,
+        });
+        finalPublicUrl = persisted.publicUrl;
+        finalSizeBytes = persisted.sizeBytes;
+      }
+    } else {
+      const persisted = await persistUploadCopies({
+        projectRoot: process.cwd(),
+        entityType,
+        mediaType,
+        fileName: uniqueFileName,
+        buffer: finalBuffer,
+      });
+      finalPublicUrl = persisted.publicUrl;
+      finalSizeBytes = persisted.sizeBytes;
+    }
 
     // ── Delete previous file safely if replacing ────────────────────────
     const previousUrl = body.previousUrl || body.oldUrl;
-    if (previousUrl && !previousUrl.startsWith('http') && previousUploadBelongsToEntity(previousUrl, authorizedEntityId)) {
-      try {
-        const cleanPrev = previousUrl.replace('/api/uploads/', '').replace('/uploads/', '');
-        
-        // Sanitize path to prevent directory traversal
-        const oldPublicPath = sanitizeUploadPath(cleanPrev, path.join(process.cwd(), 'public', 'uploads'));
-        const oldRootPath = sanitizeUploadPath(cleanPrev, path.join(process.cwd(), 'uploads'));
+    if (previousUrl) {
+      if (previousUrl.startsWith('http') && previousUrl.includes('supabase.co')) {
+        await deleteFromSupabaseStorage(previousUrl);
+      } else if (!previousUrl.startsWith('http') && previousUploadBelongsToEntity(previousUrl, authorizedEntityId)) {
+        try {
+          const cleanPrev = previousUrl.replace('/api/uploads/', '').replace('/uploads/', '');
+          
+          // Sanitize path to prevent directory traversal
+          const oldPublicPath = sanitizeUploadPath(cleanPrev, path.join(process.cwd(), 'public', 'uploads'));
+          const oldRootPath = sanitizeUploadPath(cleanPrev, path.join(process.cwd(), 'uploads'));
 
-        if (oldPublicPath && existsSync(oldPublicPath)) await fs.unlink(oldPublicPath);
-        if (oldRootPath && existsSync(oldRootPath)) await fs.unlink(oldRootPath);
-      } catch (unlinkErr) {
-        console.warn('[Upload API] Error removing previous file:', unlinkErr);
+          if (oldPublicPath && existsSync(oldPublicPath)) await fs.unlink(oldPublicPath);
+          if (oldRootPath && existsSync(oldRootPath)) await fs.unlink(oldRootPath);
+        } catch (unlinkErr) {
+          console.warn('[Upload API] Error removing previous file:', unlinkErr);
+        }
       }
     }
 
     return NextResponse.json({
       success: true,
-      url: persisted.publicUrl,
+      url: finalPublicUrl,
       fileName: uniqueFileName,
       data: {
-        url: persisted.publicUrl,
+        url: finalPublicUrl,
         fileName: uniqueFileName,
-        sizeBytes: persisted.sizeBytes,
-        detectedType: validation.detectedType,
+        sizeBytes: finalSizeBytes,
+        detectedType: optimized.mimeType,
+        width: optimized.width,
+        height: optimized.height,
       },
     });
   } catch (error: unknown) {

@@ -96,5 +96,10 @@ describe('public directory routing', () => {
     expect(mobilePublicNavigation).toContain('Disciplina activa');
     expect(mobilePublicNavigation).toContain("className={isActive ? 'is-active' : ''}");
     expect(informationPage).toContain('public-info-page');
+    expect(informationPage).toContain('<PageHeader');
+    expect(informationPage).toContain('<PageHeaderMetrics');
+    expect(informationPage).toContain('<InformationFeatureCard');
+    expect(informationPage).toContain('brandColor="var(--app-accent)"');
+    expect(informationPage).not.toContain('public-info-hero');
   });
 });

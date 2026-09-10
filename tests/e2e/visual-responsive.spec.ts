@@ -41,6 +41,10 @@ test('el selector Juegos permanece operable con mouse y teclado', async ({ page 
 for (const entry of [
   { name: 'sistema', url: '/', selector: '.public-home-header' },
   { name: 'gameSlug', url: '/eafc26', selector: '.game-dashboard-header' },
+  { name: 'equipos-global', url: '/equipos', selector: '.public-directory-header' },
+  { name: 'organizaciones-global', url: '/organizaciones', selector: '.public-directory-header' },
+  { name: 'usuarios-global', url: '/usuarios', selector: '.public-directory-header' },
+  { name: 'informacion-global', url: '/informacion', selector: '.public-info-header' },
 ]) {
   test(`entrada cinematográfica adaptable del dashboard ${entry.name}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 375, height: 812 });

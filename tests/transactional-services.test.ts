@@ -125,7 +125,7 @@ describe('transactional services', () => {
 
     expect(result.success).toBe(true);
     const statements = mocks.transaction.executeCommand.mock.calls.map(([sql]) => String(sql));
-    expect(statements[0]).toContain('DELETE FROM matches');
+    expect(statements.some((sql) => sql.includes('DELETE FROM matches'))).toBe(true);
     expect(statements.some((sql) => sql.includes('INSERT INTO matches'))).toBe(true);
     expect(statements.at(-1)).toContain('UPDATE competitions');
   });

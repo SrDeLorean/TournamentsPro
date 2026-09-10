@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { Modal } from '@/components/ui/modal';
 import { TabList } from '@/components/ui/tab-list';
+import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
+import { fetchJson } from '@/lib/fetch-utils';
 import {
   Users, Plus, Trash2, CheckCircle2, Settings, Sparkles, X, Award, User, BarChart2, FileText, Check
 } from 'lucide-react';
@@ -38,6 +40,44 @@ export function ClubManagementModal({
   const [currentTeam, setCurrentTeam] = useState<TeamData>(team);
   const [newVacantInput, setNewVacantInput] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const teamBrandColor = GAMES_CATALOG[currentTeam.gameSlug]?.brandColor || 'var(--app-accent)';
+
+  const handleLogoUpdate = (url: string) => {
+    const updated = { ...currentTeam, logoUrl: url };
+    setCurrentTeam(updated);
+    onUpdateTeam?.(updated);
+  };
+
+  const handleBannerUpdate = (url: string) => {
+    const updated = { ...currentTeam, bannerUrl: url };
+    setCurrentTeam(updated);
+    onUpdateTeam?.(updated);
+  };
+
+  const handleSaveAndClose = async () => {
+    setIsSaving(true);
+    try {
+      await fetchJson('/api/teams', {
+        method: 'PUT',
+        body: JSON.stringify({
+          id: currentTeam.id,
+          name: currentTeam.name,
+          tag: currentTeam.tag,
+          description: currentTeam.description,
+          logoUrl: currentTeam.logoUrl,
+          bannerUrl: currentTeam.bannerUrl,
+        }),
+      });
+      onUpdateTeam?.(currentTeam);
+    } catch (e) {
+      console.error('Error saving club settings:', e);
+    } finally {
+      setIsSaving(false);
+      onClose();
+    }
+  };
 
   // Interactive Roster Members state
   const [membersList, setMembersList] = useState<UserProfile[]>(team.members && team.members.length > 0 ? team.members : [
@@ -412,6 +452,36 @@ export function ClubManagementModal({
         {/* TAB 4: ⚙️ AJUSTES DEL CLUB */}
         {activeTab === 'EQUIPO_AJUSTES' && (
           <div className="space-y-4 text-xs font-semibold">
+            <BrandedImageUploadSection
+              title="Identidad visual del club (Escudo & Portada)"
+              brandColor={teamBrandColor}
+              entityType="team"
+              items={[
+                {
+                  label: 'Escudo / Logo Oficial',
+                  currentUrl: currentTeam.logoUrl,
+                  fallbackType: 'logo',
+                  uploadType: 'logo',
+                  maxDimension: 512,
+                  uploadButtonText: 'Subir escudo',
+                  entityName: currentTeam.name || 'club',
+                  entityId: currentTeam.id,
+                  onUploadSuccess: (url) => handleLogoUpdate(url),
+                },
+                {
+                  label: 'Banner de Portada',
+                  currentUrl: currentTeam.bannerUrl,
+                  fallbackType: 'banner',
+                  uploadType: 'banner',
+                  maxDimension: 1920,
+                  uploadButtonText: 'Subir portada',
+                  entityName: currentTeam.name || 'club',
+                  entityId: currentTeam.id,
+                  onUploadSuccess: (url) => handleBannerUpdate(url),
+                },
+              ]}
+            />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase text-[var(--text-heading)] block">Nombre del Club</label>
@@ -532,8 +602,13 @@ export function ClubManagementModal({
 
         {/* Footer */}
         <div className="flex items-center justify-end border-t border-[var(--border-card)] pt-4">
-          <Button onClick={onClose} size="sm" className="font-bold text-xs bg-[var(--app-accent)] text-[var(--accent-contrast)]">
-            Guardar & Cerrar
+          <Button
+            onClick={handleSaveAndClose}
+            disabled={isSaving}
+            size="sm"
+            className="font-bold text-xs bg-[var(--app-accent)] text-[var(--accent-contrast)]"
+          >
+            {isSaving ? 'Guardando...' : 'Guardar & Cerrar'}
           </Button>
         </div>
     </Modal>

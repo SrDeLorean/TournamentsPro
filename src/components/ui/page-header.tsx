@@ -60,7 +60,7 @@ export function PageHeader({
 
   return (
     <header
-      className={cn('ui-page-header game-section-hero font-[family-name:var(--font-active)]', `is-${density}`, className)}
+      className={cn('ui-page-header game-section-hero portal-entry-header font-[family-name:var(--font-active)]', `is-${density}`, className)}
       style={{ '--page-brand': brandColor } as CSSProperties}
     >
       <div className="ui-page-header-scene" aria-hidden="true">

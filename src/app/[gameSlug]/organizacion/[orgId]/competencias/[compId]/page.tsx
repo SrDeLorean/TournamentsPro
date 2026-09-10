@@ -4,12 +4,7 @@ import { dbProvider } from '@/lib/db/provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { Trophy } from 'lucide-react';
 
-import {
-  PublicCompetitionDetailView,
-  type CompetitionDetail,
-  type CompetitionMatch,
-  type ConfirmedTeam,
-} from '@/components/tournaments/public-competition-detail-view';
+import { PublicCompetitionDetailView, type CompetitionDetail, type CompetitionMatch, type ConfirmedTeam } from '@/components/tournaments/public-competition-detail-view';
 
 export const revalidate = 0;
 
