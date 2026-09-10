@@ -50,7 +50,7 @@ describe('public directory routing', () => {
       readFile('src/components/layout/app-layout-wrapper.tsx', 'utf8'),
     ]);
 
-    expect(directory).toContain('fetch(`/api/${kind}?limit=200`)');
+    expect(directory).toContain('fetchJsonCached<DirectoryResponse>(`/api/${kind}?limit=200`)');
     expect(directory).not.toContain('/api/admin/');
     expect(directory).toContain('public-directory-page');
     expect(styles).toContain('.public-directory-hero');

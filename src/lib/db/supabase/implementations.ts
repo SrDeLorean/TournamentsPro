@@ -5,8 +5,10 @@ import type {
   IUserRepository, IOrganizationRepository, ITeamRepository, ICompetitionRepository, ISeasonRepository,
   Match,
   Game,
+  Notification,
   IMatchRepository,
-  IGameRepository
+  IGameRepository,
+  INotificationRepository
 } from '../interfaces';
 
 function toSnakeCase(obj: Record<string, any>): Record<string, any> {
@@ -660,4 +662,54 @@ export class SupabaseGameRepository extends SupabaseBaseRepository<any> {
   protected primaryKey = 'slug';
   protected mapRow(row: any) { return row; }
   protected mapToDb(entity: any) { return entity; }
+}
+
+export class SupabaseNotificationRepository extends SupabaseBaseRepository<Notification> implements INotificationRepository {
+  protected tableName = 'notifications';
+  protected primaryKey = 'id';
+
+  protected override generateId(): string {
+    return `notif-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  protected mapRow(row: any): Notification {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      type: row.type || 'SYSTEM',
+      title: row.title,
+      description: row.description,
+      actionUrl: row.action_url,
+      isRead: Boolean(row.is_read),
+      createdAt: row.created_at,
+    };
+  }
+
+  protected mapToDb(entity: Partial<Notification>): any {
+    return toSnakeCase(entity);
+  }
+
+  async findByUser(userId: string, options: { limit?: number; unreadOnly?: boolean } = {}): Promise<Notification[]> {
+    let query = supabase.from(this.tableName).select('*').eq('user_id', userId);
+    if (options.unreadOnly) {
+      query = query.eq('is_read', 0);
+    }
+    const { data } = await query.order('created_at', { ascending: false }).limit(options.limit || 20);
+    return (data || []).map((row) => this.mapRow(row));
+  }
+
+  async markAsRead(id: string, userId: string): Promise<boolean> {
+    const { error } = await supabase.from(this.tableName).update({ is_read: 1 }).eq('id', id).eq('user_id', userId);
+    return !error;
+  }
+
+  async markAllAsRead(userId: string): Promise<boolean> {
+    const { error } = await supabase.from(this.tableName).update({ is_read: 1 }).eq('user_id', userId).eq('is_read', 0);
+    return !error;
+  }
+
+  async deleteByUser(id: string, userId: string): Promise<boolean> {
+    const { error } = await supabase.from(this.tableName).delete().eq('id', id).eq('user_id', userId);
+    return !error;
+  }
 }

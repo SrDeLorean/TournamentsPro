@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, type CSSProperties, type SetStateAction } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
@@ -9,14 +10,15 @@ import { Trophy, Sparkles, Settings, Menu, X, LogIn, UserPlus, PanelLeftClose, P
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 
-import { AdminNavbar } from '@/components/layout/admin-navbar';
 import { NavLinks } from '@/components/layout/nav-links';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
-import { NotificationCenter } from '@/components/notifications/notification-center';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { MobilePublicNavigation } from '@/components/layout/mobile-public-navigation';
+
+const AdminNavbar = dynamic(() => import('@/components/layout/admin-navbar').then((module) => module.AdminNavbar));
+const NotificationCenter = dynamic(() => import('@/components/notifications/notification-center').then((module) => module.NotificationCenter));
+const MobilePublicNavigation = dynamic(() => import('@/components/layout/mobile-public-navigation').then((module) => module.MobilePublicNavigation));
 
 interface ManagementNavigationControl {
   isMobileOpen: boolean;

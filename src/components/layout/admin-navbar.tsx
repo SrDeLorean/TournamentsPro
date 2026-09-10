@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -15,12 +16,13 @@ import { Badge } from '@/components/ui/badge';
 import { NotificationCenter } from '@/components/notifications/notification-center';
 import { NavLinks } from '@/components/layout/nav-links';
 import { canManageTeam, findActiveManagedTeam, getExploreLinks } from '@/components/layout/admin-navbar-model';
-import { AdminNavbarTeamModals } from '@/components/layout/admin-navbar-team-modals';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import type { TeamData } from '@/lib/data-store';
 import {
   Trophy, Shield, LogOut, Settings, Plus, Sparkles, ChevronDown, LayoutDashboard, CheckCircle2, Compass, UserRoundCog, Mail, SlidersHorizontal
 } from 'lucide-react';
+
+const AdminNavbarTeamModals = dynamic(() => import('@/components/layout/admin-navbar-team-modals').then((module) => module.AdminNavbarTeamModals));
 
 export function AdminNavbar() {
   const pathname = usePathname();

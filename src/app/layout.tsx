@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Outfit, Inter, JetBrains_Mono, Plus_Jakarta_Sans, Sora, Space_Grotesk } from 'next/font/google';
-import Script from 'next/script';
 import '../styles/tokens.css';
 import '../styles/navigation.css';
 import '../styles/accessibility.css';
 import '../styles/responsive-data.css';
+import '../styles/performance.css';
 import '../styles/route-states.css';
 import './globals.css';
 import '../styles/dashboard-entry.css';
@@ -14,11 +14,6 @@ import { AuthProvider } from '@/components/providers/auth-provider';
 import { DesignProvider } from '@/components/providers/design-provider';
 import { AppLayoutWrapper } from '@/components/layout/app-layout-wrapper';
 import { ChunkErrorHandler } from '@/components/providers/chunk-error-handler';
-
-// Hostinger hCDN respects the one-year s-maxage emitted for prerendered HTML.
-// A dynamic shell keeps HTML aligned with the currently running standalone build;
-// hashed CSS and JavaScript remain immutable and cacheable for one year.
-export const dynamic = 'force-dynamic';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -30,30 +25,35 @@ const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   variable: '--font-jakarta',
   display: 'swap',
+  preload: false,
 });
 
 const sora = Sora({
   subsets: ['latin'],
   variable: '--font-sora',
   display: 'swap',
+  preload: false,
 });
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   variable: '--font-space-grotesk',
   display: 'swap',
+  preload: false,
 });
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
+  preload: false,
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -122,7 +122,6 @@ export default function RootLayout({
             </LanguageProvider>
           </DesignProvider>
         </ThemeProvider>
-        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
       </body>
     </html>
   );

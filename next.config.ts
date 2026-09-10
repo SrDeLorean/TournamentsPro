@@ -22,7 +22,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   deploymentId: process.env.NEXT_DEPLOYMENT_ID || process.env.DEPLOYMENT_VERSION || undefined,
   images: {
-    unoptimized: true,
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 3600,
   },
   typescript: {
     ignoreBuildErrors: false,

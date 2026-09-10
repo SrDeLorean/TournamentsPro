@@ -48,6 +48,17 @@ export interface GameRow extends RowDataPacket {
   brand_color: string; stats_schema: unknown; created_at: string;
 }
 
+export interface NotificationRow extends RowDataPacket {
+  id: string;
+  user_id: string;
+  type: 'TRANSFER' | 'MATCH' | 'TOURNAMENT' | 'SYSTEM';
+  title: string;
+  description: string;
+  action_url: string | null;
+  is_read: number;
+  created_at: string;
+}
+
 export interface TeamRow extends RowDataPacket {
   id: string; name: string; tag: string; game_slug: string; organization_id: string | null;
   captain_id: string; captain_name: string; platform: string; members_count: number; max_members: number;

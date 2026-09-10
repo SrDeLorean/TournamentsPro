@@ -10,6 +10,7 @@ export * from './competition.repository';
 export * from './season.repository';
 export * from './match.repository';
 export * from './game.repository';
+export * from './notification.repository';
 export * from './provider';
 
 import { UserRepository } from './user.repository';
@@ -19,6 +20,7 @@ import { CompetitionRepository } from './competition.repository';
 import { SeasonRepository } from './season.repository';
 import { MatchRepository } from './match.repository';
 import { GameRepository } from './game.repository';
+import { NotificationRepository } from './notification.repository';
 
 export const userRepository = new UserRepository();
 export const organizationRepository = new OrganizationRepository();
@@ -27,3 +29,4 @@ export const competitionRepository = new CompetitionRepository();
 export const seasonRepository = new SeasonRepository();
 export const matchRepository = new MatchRepository();
 export const gameRepository = new GameRepository();
+export const notificationRepository = new NotificationRepository();

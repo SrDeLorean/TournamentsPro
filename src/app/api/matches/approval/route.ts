@@ -248,6 +248,37 @@ export async function POST(request: Request) {
         metadata: { competitionId, scoreHome: finalHome, scoreAway: finalAway, winnerId },
       });
 
+      // Notificar a ambos capitanes
+      try {
+        const teamH = (match.teamHomeId || match.homeTeamId) ? await dbProvider.teams.findById(match.teamHomeId || match.homeTeamId) : null;
+        const teamA = (match.teamAwayId || match.awayTeamId) ? await dbProvider.teams.findById(match.teamAwayId || match.awayTeamId) : null;
+        const gameSlug = (match as any).gameSlug || 'eafc26';
+
+        if (teamH?.captainId) {
+          await dbProvider.notifications.create({
+            userId: teamH.captainId,
+            type: 'MATCH',
+            title: 'Partido Oficializado con Visto Bueno',
+            description: `El árbitro/organizador ha oficializado el resultado final (${finalHome} - ${finalAway}) contra ${teamA?.name || 'Visitante'}.`,
+            actionUrl: `/${gameSlug}/partidos`,
+            isRead: false,
+          }).catch((e) => console.warn('Error al notificar capitan local:', e));
+        }
+
+        if (teamA?.captainId) {
+          await dbProvider.notifications.create({
+            userId: teamA.captainId,
+            type: 'MATCH',
+            title: 'Partido Oficializado con Visto Bueno',
+            description: `El árbitro/organizador ha oficializado el resultado final (${finalAway} - ${finalHome}) contra ${teamH?.name || 'Local'}.`,
+            actionUrl: `/${gameSlug}/partidos`,
+            isRead: false,
+          }).catch((e) => console.warn('Error al notificar capitan visitante:', e));
+        }
+      } catch (err) {
+        console.warn('Error al emitir notificaciones de visto bueno:', err);
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Visto bueno otorgado. Resultado oficializado y guardado en MySQL.',

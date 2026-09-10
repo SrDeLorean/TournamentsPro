@@ -18,15 +18,15 @@ export function TeamApiSearchResults({
   teams,
   sourceApi,
   onSelectTeam,
-  brandColor = '#00F0FF',
+  brandColor = 'var(--app-accent)',
 }: TeamApiSearchResultsProps) {
   if (!teams || teams.length === 0) return null;
 
   return (
-    <div className="space-y-2.5 p-3.5 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/40 shadow-xl font-mono text-xs animate-in fade-in slide-in-from-top-2 duration-200">
+    <div className="space-y-2.5 p-3.5 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/40 shadow-xl font-[family-name:var(--font-active)] text-xs animate-in fade-in slide-in-from-top-2 duration-200" style={{ '--ui-dynamic-brand': brandColor } as React.CSSProperties}>
       <div className="flex items-center justify-between gap-2 border-b border-[var(--border-card)] pb-2">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+          <Sparkles className="w-4 h-4 text-[var(--app-warning)] animate-pulse" />
           <span className="font-extrabold uppercase text-[var(--text-heading)] tracking-wider">
             Coincidencias encontradas en {sourceApi}:
           </span>
@@ -61,17 +61,17 @@ export function TeamApiSearchResults({
                 </div>
                 <div className="flex items-center gap-3 text-[10px] text-[var(--text-muted)] mt-0.5">
                   {t.division && (
-                    <span className="flex items-center gap-1 text-cyan-400">
+                    <span className="flex items-center gap-1 text-[var(--app-accent)]">
                       <Trophy className="w-3 h-3" /> {t.division}
                     </span>
                   )}
                   {t.roster && t.roster.length > 0 && (
-                    <span className="flex items-center gap-1 text-emerald-400">
+                    <span className="flex items-center gap-1 text-[var(--app-positive)]">
                       <Users className="w-3 h-3" /> {t.roster.length} Jugadores
                     </span>
                   )}
                   {t.record && (
-                    <span className="text-amber-400 font-bold">
+                    <span className="text-[var(--app-warning)] font-bold">
                       {t.record.wins}V - {t.record.losses}D {t.record.draws ? `- ${t.record.draws}E` : ''}
                     </span>
                   )}
@@ -83,7 +83,7 @@ export function TeamApiSearchResults({
               type="button"
               size="sm"
               onClick={() => onSelectTeam(t)}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5 shrink-0 shadow-md"
+              className="bg-[var(--app-positive)] text-[var(--bg-main)] hover:brightness-110 font-black text-[10px] uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5 shrink-0 shadow-md"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Importar</span>

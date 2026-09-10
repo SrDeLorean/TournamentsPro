@@ -9,10 +9,12 @@ describe('Next security configuration', () => {
     expect(nextConfig.poweredByHeader).toBe(false);
   });
 
-  it('keeps application HTML out of long-lived CDN caches', async () => {
+  it('keeps public HTML revalidatable instead of forcing every route dynamic', async () => {
     const rootLayout = await readFile(new URL('../src/app/layout.tsx', import.meta.url), 'utf8');
+    const homePage = await readFile(new URL('../src/app/page.tsx', import.meta.url), 'utf8');
 
-    expect(rootLayout).toContain("export const dynamic = 'force-dynamic'");
+    expect(rootLayout).not.toContain("export const dynamic = 'force-dynamic'");
+    expect(homePage).toContain('export const revalidate = 60');
   });
 
   it('uses a deployment identifier generated for every production release', async () => {

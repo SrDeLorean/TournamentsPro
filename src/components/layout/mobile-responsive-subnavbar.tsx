@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GameConfig } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
-import { CreateTeamModal } from '@/components/teams/create-team-modal';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
 import { PUBLIC_GAME_NAV_ITEMS } from '@/lib/section-config';
 import {
@@ -19,6 +19,8 @@ import {
 import {
   Gamepad2, User, Shield, Home, Trophy, Award, ArrowRightLeft, Users, UserCheck, Calendar, Star, PieChart, Database, Sparkles, Settings, FileText, BarChart2, LayoutDashboard, MessageSquare, History, BriefcaseBusiness, Activity, Plus
 } from 'lucide-react';
+
+const CreateTeamModal = dynamic(() => import('@/components/teams/create-team-modal').then((module) => module.CreateTeamModal));
 
 export type MobileSubnavSegment = 'game' | 'athlete' | 'club';
 

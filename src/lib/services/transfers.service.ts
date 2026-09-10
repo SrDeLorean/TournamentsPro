@@ -134,6 +134,21 @@ export async function sendClubContractOfferService(data: {
         );
         count++;
       }
+
+      if (count > 0) {
+        const teamObj = await transaction.teams.findById(data.teamId);
+        const teamName = teamObj?.name || 'Un club';
+        const gameSlug = data.gameSlug || 'eafc26';
+        await transaction.notifications.create({
+          userId: data.playerUserId,
+          type: 'TRANSFER',
+          title: 'Oferta de Contrato Recibida',
+          description: `El club ${teamName} te ha enviado una propuesta de fichaje para ${gameSlug.toUpperCase()}.`,
+          actionUrl: `/${gameSlug}/traspasos`,
+          isRead: false,
+        }).catch((e) => console.warn('No se pudo emitir notificación de contrato:', e));
+      }
+
       return { success: true, count, message: `Se emitieron ${count} propuesta(s) de contrato independiente(s) por Organización.` };
     });
   } catch (err: unknown) {
@@ -224,6 +239,16 @@ export async function respondOrdinaryTransferApplicationService(
         [processedByUserId, applicationId],
         'La solicitud ya fue procesada.',
       );
+
+      await transaction.notifications.create({
+        userId: application.applicant_user_id,
+        type: 'TRANSFER',
+        title: 'Solicitud de Fichaje Rechazada',
+        description: 'Tu solicitud de traspaso no ha sido aceptada en esta oportunidad.',
+        actionUrl: `/${application.game_slug}/traspasos`,
+        isRead: false,
+      }).catch((e) => console.warn('Error al notificar rechazo:', e));
+
       return { success: true };
     }
 
@@ -265,6 +290,15 @@ export async function respondOrdinaryTransferApplicationService(
         previousTeams[0]?.name || 'Agente Libre', application.team_id, teams[0].name, processedByUserId,
       ],
     );
+
+    await transaction.notifications.create({
+      userId: application.applicant_user_id,
+      type: 'TRANSFER',
+      title: '¡Fichaje Confirmado!',
+      description: `Has sido incorporado exitosamente a la plantilla oficial de ${teams[0].name}.`,
+      actionUrl: `/${application.game_slug}/equipos/${application.team_id}`,
+      isRead: false,
+    }).catch((e) => console.warn('Error al notificar aceptación:', e));
     for (const previousTeam of previousTeams) {
       await transaction.execute(
         'UPDATE teams SET members_count = (SELECT COUNT(*) FROM team_members WHERE team_id = ?) WHERE id = ?',

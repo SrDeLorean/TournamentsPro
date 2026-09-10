@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useDeferredValue, useState, useEffect } from 'react';
 import { GAMES_CATALOG, GameConfig } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/components/providers/auth-provider';
-import { fetchJson } from '@/lib/fetch-utils';
+import { fetchJsonCached } from '@/lib/fetch-utils';
 
 interface TeamDirectoryProps {
   gameName?: string;
@@ -63,6 +63,7 @@ export function TeamDirectory({
   const { currentUser } = useAuth();
   const [teamsList, setTeamsList] = useState<DirectoryTeam[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [selectedPlatform, setSelectedPlatform] = useState<string>('TODOS');
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('ALL');
   const [isLoading, setIsLoading] = useState(true);
@@ -75,7 +76,7 @@ export function TeamDirectory({
     let isMounted = true;
     const fetchAllTeams = async () => {
       try {
-        const data = await fetchJson<{ data?: { teams?: DirectoryTeam[] }; teams?: DirectoryTeam[]; success?: boolean }>(
+        const data = await fetchJsonCached<{ data?: { teams?: DirectoryTeam[] }; teams?: DirectoryTeam[]; success?: boolean }>(
           `/api/teams?gameSlug=${gameSlug}&limit=200`,
         );
         let teams = data.data?.teams || data.teams || (data.success && Array.isArray(data.data) ? data.data : []);
@@ -154,9 +155,9 @@ export function TeamDirectory({
     }
 
     const matchesSearch =
-      team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      team.tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (team.captainName || team.captain || '').toLowerCase().includes(searchTerm.toLowerCase());
+      team.name.toLowerCase().includes(deferredSearchTerm.toLowerCase()) ||
+      team.tag.toLowerCase().includes(deferredSearchTerm.toLowerCase()) ||
+      (team.captainName || team.captain || '').toLowerCase().includes(deferredSearchTerm.toLowerCase());
     const matchesPlatform = selectedPlatform === 'TODOS' || team.platform === selectedPlatform;
     const tSlug = team.gameSlug || team.game_slug || 'eafc26';
     const matchesDiscipline = selectedDiscipline === 'ALL' || tSlug === selectedDiscipline;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useDeferredValue, useState, useEffect } from 'react';
 import { GameConfig } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
 import { Trophy, Shield, Star } from 'lucide-react';
@@ -38,6 +38,7 @@ export function OrganizationDirectory({ gameSlug, gameConfig, mode = 'organizati
   const [orgs, setOrgs] = useState<OrgWithStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function OrganizationDirectory({ gameSlug, gameConfig, mode = 'organizati
   }, [gameSlug]);
 
   const filteredOrgs = orgs.filter((org) => {
-    const term = searchTerm.toLowerCase();
+    const term = deferredSearchTerm.toLowerCase();
     return org.name.toLowerCase().includes(term) || (org.tag && org.tag.toLowerCase().includes(term));
   });
 

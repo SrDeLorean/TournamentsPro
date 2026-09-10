@@ -44,6 +44,26 @@ export async function POST(request: Request) {
       ...(data.proofUrl ? { proofUrl: data.proofUrl } : {})
     });
 
+    // Notificar al capitán del equipo rival
+    try {
+      const opposingTeamId = (match.homeTeamId && (match as any).captainId !== session.userId) ? match.awayTeamId : match.homeTeamId;
+      if (opposingTeamId) {
+        const opposingTeam = await dbProvider.teams.findById(opposingTeamId);
+        if (opposingTeam?.captainId && opposingTeam.captainId !== session.userId) {
+          await dbProvider.notifications.create({
+            userId: opposingTeam.captainId,
+            type: 'MATCH',
+            title: 'Resultado de Partido Reportado',
+            description: `Se ha registrado el marcador ${match.homeTeamName || 'Local'} (${homeScore}) vs (${awayScore}) ${match.awayTeamName || 'Visitante'}.`,
+            actionUrl: `/${effectiveGameSlug}/partidos`,
+            isRead: false,
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.warn('No se pudo emitir notificación de partido:', notifErr);
+    }
+
     // Insertar stats de los participantes (Riot, EA FC, Rocket League, Fortnite, CS2 o manual)
     if (participantsStats && Array.isArray(participantsStats)) {
       for (const p of participantsStats) {

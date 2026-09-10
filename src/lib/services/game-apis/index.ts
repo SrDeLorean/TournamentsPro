@@ -6,3 +6,4 @@ export * from './riot-lol-api.service';
 export * from './cs2-api.service';
 export * from './rocket-league-api.service';
 export * from './fortnite-api.service';
+export * from './match-sync.service';

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Check, Trash2, ArrowRightLeft, Calendar, Trophy, ChevronRight, Inbox } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Bell, Check, Trash2, ArrowRightLeft, Calendar, Trophy, ChevronRight, Inbox, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export interface NotificationItem {
@@ -11,47 +11,91 @@ export interface NotificationItem {
   description: string;
   timestamp: string;
   isRead: boolean;
-  actionUrl?: string;
+  actionUrl?: string | null;
+  createdAt?: string;
 }
 
 type NotificationFilter = 'ALL' | Exclude<NotificationItem['type'], 'SYSTEM'>;
+
+interface NotificationApiRecord {
+  id: string;
+  type?: NotificationItem['type'];
+  title: string;
+  description: string;
+  isRead?: boolean;
+  is_read?: boolean;
+  actionUrl?: string | null;
+  action_url?: string | null;
+  createdAt?: string;
+  created_at?: string;
+}
+
+function formatRelativeTime(dateStr?: string): string {
+  if (!dateStr) return 'Reciente';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'Reciente';
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Ahora mismo';
+    if (diffMins < 60) return `Hace ${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `Hace ${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `Hace ${diffDays} d`;
+  } catch {
+    return 'Reciente';
+  }
+}
 
 export function NotificationCenter({ onOpen }: { onOpen?: () => void } = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>('ALL');
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'notif-1',
-      type: 'TRANSFER',
-      title: 'Oferta de Contrato Recibida',
-      description: 'El club SAN LORENZO ESP te ha enviado una oferta de fichaje para EA FC 26.',
-      timestamp: 'Hace 5 min',
-      isRead: false,
-      actionUrl: '/eafc26/traspasos',
-    },
-    {
-      id: 'notif-2',
-      type: 'MATCH',
-      title: 'Partido Convocado Hoy',
-      description: 'Tu encuentro contra SANGRE NUEVA FC está programado para las 21:00 HS.',
-      timestamp: 'Hace 1 hora',
-      isRead: false,
-      actionUrl: '/eafc26/partidos',
-    },
-    {
-      id: 'notif-3',
-      type: 'TOURNAMENT',
-      title: 'Inscripción Confirmada',
-      description: 'Tu escuadra ha sido aceptada oficialmente en la Liga Élite Pro 2026.',
-      timestamp: 'Hace 3 horas',
-      isRead: false,
-      actionUrl: '/eafc26/competencias',
-    },
-  ]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/notifications');
+      if (res.ok) {
+        const data = await res.json() as { success?: boolean; notifications?: NotificationApiRecord[] };
+        if (data.success && Array.isArray(data.notifications)) {
+          const items: NotificationItem[] = data.notifications.map((n) => ({
+            id: n.id,
+            type: n.type || 'SYSTEM',
+            title: n.title,
+            description: n.description,
+            timestamp: formatRelativeTime(n.createdAt || n.created_at),
+            isRead: Boolean(n.isRead ?? n.is_read),
+            actionUrl: n.actionUrl || n.action_url,
+            createdAt: n.createdAt || n.created_at,
+          }));
+          setNotifications(items);
+          setUnreadCount(items.filter((item) => !item.isRead).length);
+        }
+      }
+    } catch (err) {
+      console.warn('No se pudieron cargar las notificaciones desde la API:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const initialRequest = window.setTimeout(() => void fetchNotifications(), 0);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void fetchNotifications();
+    }, 60_000);
+    return () => {
+      window.clearTimeout(initialRequest);
+      window.clearInterval(interval);
+    };
+  }, [fetchNotifications]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -71,16 +115,56 @@ export function NotificationCenter({ onOpen }: { onOpen?: () => void } = {}) {
   }, []);
 
   const togglePopover = () => {
-    if (!isOpen) onOpen?.();
+    if (!isOpen) {
+      onOpen?.();
+      fetchNotifications();
+    }
     setIsOpen((open) => !open);
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAll: true }),
+      });
+    } catch (err) {
+      console.warn('Error al marcar notificaciones leídas:', err);
+    }
   };
 
-  const removeNotification = (id: string) => {
+  const markSingleAsRead = async (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+    } catch (err) {
+      console.warn('Error al marcar notificación:', err);
+    }
+  };
+
+  const removeNotification = async (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+    setUnreadCount((prev) => {
+      const removed = notifications.find((n) => n.id === id);
+      return removed && !removed.isRead ? Math.max(0, prev - 1) : prev;
+    });
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('Error al eliminar notificación:', err);
+    }
   };
 
   const filteredNotifications = activeFilter === 'ALL'
@@ -88,12 +172,12 @@ export function NotificationCenter({ onOpen }: { onOpen?: () => void } = {}) {
     : notifications.filter((n) => n.type === activeFilter);
 
   return (
-    <div className="relative" ref={popoverRef}>
+    <div className="relative font-[family-name:var(--font-active)] text-xs" ref={popoverRef}>
       {/* Bell Button */}
       <button
         type="button"
         onClick={togglePopover}
-        className="notification-center-trigger"
+        className="notification-center-trigger relative"
         aria-label={`Notificaciones${unreadCount ? `, ${unreadCount} sin leer` : ''}`}
         aria-expanded={isOpen}
         aria-controls="notification-center-panel"
@@ -101,15 +185,15 @@ export function NotificationCenter({ onOpen }: { onOpen?: () => void } = {}) {
       >
         <Bell className="w-4 h-4 text-[var(--app-accent)]" />
         {unreadCount > 0 && (
-          <span className="notification-center-count">
-            {unreadCount}
+          <span className="notification-center-count animate-pulse">
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div id="notification-center-panel" className="notification-center-panel fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:w-[25rem] max-h-[85vh] overflow-y-auto z-50 p-3 sm:p-4 space-y-3 animate-in fade-in zoom-in-95">
+        <div id="notification-center-panel" className="notification-center-panel fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:w-[25rem] max-h-[85vh] overflow-y-auto z-50 p-3 sm:p-4 space-y-3 animate-in fade-in zoom-in-95 shadow-2xl">
           
           {/* Header Bar */}
           <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-3">
@@ -119,14 +203,17 @@ export function NotificationCenter({ onOpen }: { onOpen?: () => void } = {}) {
               </div>
               <div>
                 <h4 className="font-black text-xs uppercase text-[var(--text-heading)] tracking-wider leading-none">Notificaciones</h4>
-                <span className="text-[9px] font-[family-name:var(--font-active)] text-[var(--text-muted)] font-bold">{unreadCount ? `${unreadCount} pendientes` : 'Todo al día'}</span>
+                <span className="text-[9px] text-[var(--text-muted)] font-bold">
+                  {isLoading ? 'Actualizando...' : unreadCount ? `${unreadCount} pendientes` : 'Todo al día'}
+                </span>
               </div>
             </div>
 
             {unreadCount > 0 && (
               <button
+                type="button"
                 onClick={markAllAsRead}
-                className="text-[10px] text-[var(--app-accent)] hover:text-[var(--text-heading)] font-extrabold flex items-center gap-1 bg-[var(--app-accent-soft)] px-2 py-1.5 rounded-lg border border-[var(--app-accent)]/30"
+                className="text-[10px] text-[var(--app-accent)] hover:text-[var(--text-heading)] font-extrabold flex items-center gap-1 bg-[var(--app-accent-soft)] px-2 py-1.5 rounded-lg border border-[var(--app-accent)]/30 transition-colors"
               >
                 <Check className="w-3 h-3" />
                 Marcar leídas
@@ -160,14 +247,19 @@ export function NotificationCenter({ onOpen }: { onOpen?: () => void } = {}) {
 
           {/* List */}
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-            {filteredNotifications.length > 0 ? (
+            {isLoading && notifications.length === 0 ? (
+              <div className="text-center py-8 text-[var(--text-muted)] flex flex-col items-center gap-2">
+                <Loader2 className="w-6 h-6 animate-spin text-[var(--app-accent)]" />
+                <span className="text-[11px] font-bold">Cargando alertas...</span>
+              </div>
+            ) : filteredNotifications.length > 0 ? (
               filteredNotifications.map((n) => (
                 <div
                   key={n.id}
                   className={`notification-center-item p-3 rounded-xl border transition-all text-xs space-y-1 relative group ${
                     !n.isRead
-                      ? 'is-unread border-[var(--app-accent)]/40'
-                      : 'border-[var(--border-card)] opacity-75'
+                      ? 'is-unread border-[var(--app-accent)]/40 bg-[var(--app-accent-soft)]/20'
+                      : 'border-[var(--border-card)] opacity-80'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -179,7 +271,7 @@ export function NotificationCenter({ onOpen }: { onOpen?: () => void } = {}) {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-[family-name:var(--font-active)] text-[var(--text-muted)]">{n.timestamp}</span>
+                      <span className="text-[9px] text-[var(--text-muted)]">{n.timestamp}</span>
                       <button
                         type="button"
                         onClick={() => removeNotification(n.id)}
@@ -198,7 +290,10 @@ export function NotificationCenter({ onOpen }: { onOpen?: () => void } = {}) {
                   {n.actionUrl && (
                     <Link
                       href={n.actionUrl}
-                      onClick={() => setIsOpen(false)}
+                      onClick={() => {
+                        if (!n.isRead) markSingleAsRead(n.id);
+                        setIsOpen(false);
+                      }}
                       className="text-[10px] text-[var(--app-accent)] font-black hover:underline inline-flex items-center gap-1 pt-1"
                     >
                       <span>Ir a la Sección</span>

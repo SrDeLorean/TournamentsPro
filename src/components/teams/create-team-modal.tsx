@@ -89,7 +89,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
         setApiMessage(`No se halló coincidencias para "${query}". Puedes registrar tu club manualmente a continuación.`);
         setExtractedTeams([]);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setApiMessage(`La API no devolvió datos automáticos. Puedes continuar con el formulario manual.`);
       console.warn('Error al extraer datos desde API:', err);
     } finally {
@@ -196,7 +196,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
       brandColor={color}
       size="lg"
     >
-      <div className="space-y-5 font-mono text-xs">
+      <div className="space-y-5 font-[family-name:var(--font-active)] text-xs">
 
         {/* Live Crest Card Preview */}
         <div className="p-4 rounded-2xl bg-gradient-to-r from-[var(--app-accent-2)]/60 via-[var(--app-canvas)] to-[var(--app-surface-1)] border border-[var(--app-accent-2)]/30 flex items-center justify-between gap-4 relative z-10 shadow-inner">
@@ -267,9 +267,9 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
         </div>
 
         {/* ⚡ API Auto-Extraction Section */}
-        <div className="p-3.5 rounded-2xl bg-[var(--app-surface-2)] border border-amber-500/30 space-y-2.5">
+        <div className="p-3.5 rounded-2xl bg-[var(--app-surface-2)] border border-[var(--app-warning)]/30 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-amber-400 font-extrabold uppercase text-[11px]">
+            <div className="flex items-center gap-2 text-[var(--app-warning)] font-extrabold uppercase text-[11px]">
               <Sparkles className="w-4 h-4 animate-bounce" />
               <span>Auto-extraer datos vía API de {selectedGameObj.name}:</span>
             </div>
@@ -292,14 +292,14 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
                     handleApiExtraction();
                   }
                 }}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-[var(--app-canvas)] border border-[var(--border-card)] text-xs text-[var(--text-heading)] focus:outline-none focus:border-amber-400 font-bold"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-[var(--app-canvas)] border border-[var(--border-card)] text-xs text-[var(--text-heading)] focus:outline-none focus:border-[var(--app-warning)] font-bold"
               />
             </div>
             <Button
               type="button"
               onClick={handleApiExtraction}
               disabled={isExtracting}
-              className="bg-amber-600 hover:bg-amber-500 text-white font-black text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 shrink-0 shadow-md"
+              className="bg-[var(--app-warning)] text-[var(--bg-main)] hover:brightness-110 font-black text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 shrink-0 shadow-md"
             >
               {isExtracting ? (
                 <>
@@ -316,7 +316,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
           </div>
 
           {apiMessage && (
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] font-bold flex items-center gap-2">
+            <div className="p-2.5 rounded-xl bg-[var(--app-warning)]/10 border border-[var(--app-warning)]/20 text-[var(--app-warning)] text-[11px] font-bold flex items-center gap-2">
               <Info className="w-4 h-4 shrink-0" />
               <span>{apiMessage}</span>
             </div>

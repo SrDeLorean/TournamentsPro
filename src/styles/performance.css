@@ -1,0 +1,21 @@
+/* Shared rendering optimizations for repeated, below-the-fold collections. */
+:where(
+  .public-directory-grid,
+  .game-directory-grid,
+  .public-portal-match-grid,
+  .public-portal-spotlight-grid,
+  .public-portal-team-grid,
+  .ui-data-table-body
+) > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 20rem;
+}
+
+/* Keep navigation anchors stable below the sticky global and discipline bars. */
+html {
+  scroll-padding-top: 7rem;
+}
+
+@media (max-width: 767px) {
+  html { scroll-padding-top: 6.5rem; }
+}

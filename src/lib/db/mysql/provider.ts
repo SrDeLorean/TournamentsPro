@@ -6,6 +6,7 @@ import { CompetitionRepository } from './competition.repository';
 import { SeasonRepository } from './season.repository';
 import { MatchRepository } from './match.repository';
 import { GameRepository } from './game.repository';
+import { NotificationRepository } from './notification.repository';
 import type { IDatabaseProvider } from '../interfaces';
 import type { ResultSetHeader } from 'mysql2';
 import type { DatabaseExecutor, DatabaseParams } from '@/lib/db';
@@ -18,6 +19,7 @@ export class MysqlDatabaseProvider implements IDatabaseProvider {
   seasons: SeasonRepository;
   matches: MatchRepository;
   games: GameRepository;
+  notifications: NotificationRepository;
 
   constructor(private executor?: DatabaseExecutor) {
     this.users = new UserRepository(executor);
@@ -27,6 +29,7 @@ export class MysqlDatabaseProvider implements IDatabaseProvider {
     this.seasons = new SeasonRepository(executor);
     this.matches = new MatchRepository(executor);
     this.games = new GameRepository(executor);
+    this.notifications = new NotificationRepository(executor);
   }
 
   async query<T = unknown>(sql: string, params: DatabaseParams = []): Promise<T[]> {

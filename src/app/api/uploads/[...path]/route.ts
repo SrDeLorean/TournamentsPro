@@ -37,7 +37,7 @@ export async function GET(request: Request, { params }: Params) {
       return new NextResponse('Imagen no encontrada', { status: 404 });
     }
 
-    const fileBuffer = await fs.readFile(safePath);
+    const fileBuffer = await fs.readFile(/* turbopackIgnore: true */ safePath);
 
     // Determine content type from extension
     const ext = path.extname(safePath).toLowerCase();

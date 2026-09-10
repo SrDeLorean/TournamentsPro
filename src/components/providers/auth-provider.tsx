@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [activeGameSlug, setActiveGameSlug] = useState<string>('eafc26');
   const [userTeams, setUserTeams] = useState<TeamData[]>(initialTeams);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const authenticatedUserId = currentUser?.id;
 
   const applyAuthenticatedUser = useCallback((user: UserProfile) => {
     setCurrentUser(user);
@@ -80,8 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!authenticatedUserId) return;
     fetchGlobalTeams();
-  }, [fetchGlobalTeams]);
+  }, [authenticatedUserId, fetchGlobalTeams]);
 
   // The HttpOnly cookie is the source of truth. Never hydrate identity or roles
   // from browser-controlled storage.
@@ -241,6 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     setCurrentUser(null);
+    setUserTeams(initialTeams);
     // Clear HttpOnly cookie by calling logout endpoint
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   }, []);

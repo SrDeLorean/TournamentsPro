@@ -69,20 +69,20 @@ export async function persistUploadCopies({
   const publicDir = path.join(projectRoot, 'public', 'uploads', relativeFolder);
   const backupDir = path.join(projectRoot, 'uploads', relativeFolder);
   const publicPath = path.join(publicDir, fileName);
-  const backupPath = path.join(backupDir, fileName);
+  const backupPath = path.join(/* turbopackIgnore: true */ backupDir, fileName);
 
   await Promise.all([
     fs.mkdir(publicDir, { recursive: true }),
     fs.mkdir(backupDir, { recursive: true }),
   ]);
   await Promise.all([
-    fs.writeFile(publicPath, buffer),
-    fs.writeFile(backupPath, buffer),
+    fs.writeFile(/* turbopackIgnore: true */ publicPath, buffer),
+    fs.writeFile(/* turbopackIgnore: true */ backupPath, buffer),
   ]);
 
   const [publicStat, backupStat] = await Promise.all([
-    fs.stat(publicPath),
-    fs.stat(backupPath),
+    fs.stat(/* turbopackIgnore: true */ publicPath),
+    fs.stat(/* turbopackIgnore: true */ backupPath),
   ]);
   if (publicStat.size !== buffer.length || backupStat.size !== buffer.length) {
     throw new Error('La imagen no pudo verificarse después de guardarla');

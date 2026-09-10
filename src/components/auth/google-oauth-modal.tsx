@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Check, Fingerprint, Lock, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -47,6 +48,7 @@ export function GoogleOAuthModal({ isOpen, onClose, onSuccess, mode = 'authentic
   const { loginWithGoogle } = useAuth();
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleReady, setIsGoogleReady] = useState(false);
   const buttonContainerRef = useRef<HTMLDivElement>(null);
 
   const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -94,47 +96,43 @@ export function GoogleOAuthModal({ isOpen, onClose, onSuccess, mode = 'authentic
 
     if (mode === 'preview') return;
 
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-    let cancelled = false;
+    const googleIdentity = window.google?.accounts?.id;
+    if (!GOOGLE_CLIENT_ID || !googleIdentity || !buttonContainerRef.current) return;
 
-    if (GOOGLE_CLIENT_ID && typeof window !== 'undefined') {
-      intervalId = setInterval(() => {
-        if (cancelled) return;
-        if (window.google?.accounts?.id && buttonContainerRef.current) {
-          if (intervalId) clearInterval(intervalId);
-          window.google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: (res: { credential?: string }) => {
-              void handleCredential(res);
-            },
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          });
+    googleIdentity.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (res: { credential?: string }) => {
+        void handleCredential(res);
+      },
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
 
-          buttonContainerRef.current.replaceChildren();
-          window.google.accounts.id.renderButton(buttonContainerRef.current, {
-            type: 'standard',
-            theme: 'filled_black',
-            size: 'large',
-            text: 'continue_with',
-            shape: 'pill',
-            logo_alignment: 'left',
-            width: 280,
-          });
-        }
-      }, 100);
-    }
-
-    return () => {
-      cancelled = true;
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [GOOGLE_CLIENT_ID, handleCredential, isOpen, mode]);
+    buttonContainerRef.current.replaceChildren();
+    googleIdentity.renderButton(buttonContainerRef.current, {
+      type: 'standard',
+      theme: 'filled_black',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'pill',
+      logo_alignment: 'left',
+      width: 280,
+    });
+  }, [GOOGLE_CLIENT_ID, handleCredential, isGoogleReady, isOpen, mode]);
 
   if (!isOpen) return null;
 
   return (
-    <Modal
+    <>
+      {mode !== 'preview' && GOOGLE_CLIENT_ID ? (
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="afterInteractive"
+          onLoad={() => setIsGoogleReady(true)}
+          onReady={() => setIsGoogleReady(true)}
+        />
+      ) : null}
+      <Modal
       isOpen={isOpen}
       onClose={closeModal}
       size="sm"
@@ -177,7 +175,7 @@ export function GoogleOAuthModal({ isOpen, onClose, onSuccess, mode = 'authentic
           </div>
         ) : (
           <div className="ui-oauth-provider" aria-busy={isSubmitting}>
-            {isSubmitting ? (
+            {isSubmitting || !isGoogleReady ? (
               <span className="ui-oauth-loading"><span /> Verificando cuenta segura…</span>
             ) : (
               <div ref={buttonContainerRef} className="flex justify-center" />
@@ -197,6 +195,7 @@ export function GoogleOAuthModal({ isOpen, onClose, onSuccess, mode = 'authentic
           <span><Lock /> Google Identity Services</span>
         </div>
       </div>
-    </Modal>
+      </Modal>
+    </>
   );
 }

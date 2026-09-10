@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import type { GameConfig } from '@/lib/games-data';
-import { fetchJson } from '@/lib/fetch-utils';
+import { fetchJsonCached } from '@/lib/fetch-utils';
 import type { PlayerCardData } from '@/components/game/player-card-grid';
 
 export function mapGamePlayer(user: Record<string, unknown>, game: GameConfig): PlayerCardData {
@@ -30,7 +30,7 @@ export function useGamePlayers(game: GameConfig | undefined, activeSection: stri
   useEffect(() => {
     if (!game || (activeSection !== 'jugadores' && activeSection !== 'tops')) return;
     let cancelled = false;
-    fetchJson<Record<string, unknown>>(`/api/users?gameSlug=${game.slug}&limit=200`)
+    fetchJsonCached<Record<string, unknown>>(`/api/users?gameSlug=${game.slug}&limit=200`)
       .then((data) => {
         const responseData = data.data as { users?: Record<string, unknown>[] } | Record<string, unknown>[] | undefined;
         const users = (!Array.isArray(responseData) && responseData?.users) || data.users || (data.success && Array.isArray(responseData) ? responseData : []);
@@ -41,14 +41,15 @@ export function useGamePlayers(game: GameConfig | undefined, activeSection: stri
     return () => { cancelled = true; };
   }, [activeSection, game]);
 
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const filteredPlayers = useMemo(() => {
-    const query = searchTerm.toLowerCase();
+    const query = deferredSearchTerm.toLowerCase();
     return players.filter((player) => {
       const matchesSearch = !query || [player.name, player.gamertag, player.team, player.gameId]
         .some((value) => value?.toLowerCase().includes(query));
       return matchesSearch && (selectedPosition === 'ALL' || player.pos === selectedPosition);
     });
-  }, [players, searchTerm, selectedPosition]);
+  }, [deferredSearchTerm, players, selectedPosition]);
 
   return { filteredPlayers, isLoadingPlayers };
 }

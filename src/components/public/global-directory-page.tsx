@@ -7,6 +7,7 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { PageHeader, PageHeaderMetrics } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { GAMES_CATALOG } from '@/lib/games-data';
+import { fetchJsonCached } from '@/lib/fetch-utils';
 
 export type PublicDirectoryKind = 'organizations' | 'users' | 'teams';
 
@@ -113,6 +114,7 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
   const [isLoading, setIsLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState('');
   const [search, setSearch] = React.useState('');
+  const deferredSearch = React.useDeferredValue(search);
   const [gameFilter, setGameFilter] = React.useState('ALL');
   const [page, setPage] = React.useState(1);
 
@@ -122,9 +124,7 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
       try {
         setIsLoading(true);
         setLoadError('');
-        const response = await fetch(`/api/${kind}?limit=200`);
-        if (!response.ok) throw new Error(`No se pudo cargar el directorio (${response.status})`);
-        const payload = await response.json() as DirectoryResponse;
+        const payload = await fetchJsonCached<DirectoryResponse>(`/api/${kind}?limit=200`);
         if (active) setRecords(extractRecords(kind, payload).filter((record) => !record.isBanned));
       } catch (error) {
         if (active) setLoadError(error instanceof Error ? error.message : 'No se pudo cargar el directorio.');
@@ -137,7 +137,7 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
   }, [kind]);
 
   const filteredRecords = React.useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    const normalizedSearch = deferredSearch.trim().toLowerCase();
     return records.filter((record) => {
       const gameSlug = getGameSlug(record);
       const matchesGame = gameFilter === 'ALL' || gameSlug === gameFilter || record.allowedGames?.includes(gameFilter);
@@ -147,7 +147,7 @@ export default function GlobalDirectoryPage({ kind }: { kind: PublicDirectoryKin
         .toLowerCase();
       return matchesGame && (!normalizedSearch || haystack.includes(normalizedSearch));
     });
-  }, [gameFilter, records, search]);
+  }, [deferredSearch, gameFilter, records]);
 
   const pageSize = 12;
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));

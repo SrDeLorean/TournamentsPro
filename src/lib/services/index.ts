@@ -11,3 +11,4 @@ export * from './competitions.service';
 export * from './transfers.service';
 export * from './matches.service';
 export * from './chat.service';
+export * from './notifications.service';

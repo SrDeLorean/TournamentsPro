@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useDeferredValue, useState, useEffect } from 'react';
 import { GameConfig } from '@/lib/games-data';
 import { PageHeader } from '@/components/ui/page-header';
-import { Trophy, CalendarDays, Sword, Users } from 'lucide-react';
+import { Trophy, CalendarDays, Sword } from 'lucide-react';
 import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loading-skeleton';
 import { getPublicCompetitionsAction, CompetitionData } from '@/app/actions/competitions';
 import { Pagination } from '@/components/ui/pagination';
@@ -11,7 +11,6 @@ import { FilterBar } from '@/components/ui/filter-bar';
 
 import { EsportsCard } from '@/components/ui/esports-card';
 import { GameExplorerPanel } from '@/components/ui/game-explorer-panel';
-import { useRouter } from 'next/navigation';
 
 interface CompetitionDirectoryProps {
   gameSlug: string;
@@ -23,8 +22,8 @@ export function CompetitionDirectory({ gameSlug, gameConfig, hideHeader = false 
   const [competitions, setCompetitions] = useState<CompetitionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [currentPage, setCurrentPage] = useState(1);
-  const router = useRouter();
 
   useEffect(() => {
     let isMounted = true;
@@ -47,7 +46,7 @@ export function CompetitionDirectory({ gameSlug, gameConfig, hideHeader = false 
   }, [gameSlug]);
 
   const filteredComps = competitions.filter((comp) => {
-    const term = searchTerm.toLowerCase();
+    const term = deferredSearchTerm.toLowerCase();
     return comp.name.toLowerCase().includes(term) || (comp.description && comp.description.toLowerCase().includes(term));
   });
 
@@ -101,18 +100,14 @@ export function CompetitionDirectory({ gameSlug, gameConfig, hideHeader = false 
                   key={comp.id}
                   entityType="competition"
                   gameSlug={gameSlug}
+                  href={comp.organization_id
+                    ? `/${gameSlug}/organizacion/${comp.organization_id}/competencias/${comp.id}`
+                    : `/dashboard/competencias/${comp.id}`}
                   title={comp.name}
                   subtitle={comp.organizer_name || 'Organizador'}
                   description={comp.description || 'Torneo de eSports competitivo'}
                   fallbackIcon={<Trophy className="w-12 h-12 text-[var(--text-muted)]" />}
                   animationDelay={idx * 50}
-                  onClick={() => {
-                     if (comp.organization_id) {
-                         router.push(`/${gameSlug}/organizacion/${comp.organization_id}/competencias/${comp.id}`);
-                     } else {
-                         router.push(`/dashboard/competencias/${comp.id}`);
-                     }
-                  }}
                   badges={[
                     {
                       text: comp.status.toUpperCase(),

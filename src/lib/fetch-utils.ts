@@ -36,6 +36,41 @@ export async function fetchJson<T>(url: string, options: RequestInit = {}): Prom
   return payload as T;
 }
 
+type ClientCacheEntry = { expiresAt: number; value: unknown };
+const clientJsonCache = new Map<string, ClientCacheEntry>();
+const clientJsonRequests = new Map<string, Promise<unknown>>();
+
+/** Deduplicates and briefly caches public GET requests across client navigations. */
+export async function fetchJsonCached<T>(url: string, ttlMs = 30_000): Promise<T> {
+  if (typeof window === 'undefined') return fetchJson<T>(url);
+
+  const cached = clientJsonCache.get(url);
+  if (cached && cached.expiresAt > Date.now()) return cached.value as T;
+
+  const pending = clientJsonRequests.get(url);
+  if (pending) return pending as Promise<T>;
+
+  const request = fetchJson<T>(url)
+    .then((value) => {
+      clientJsonCache.set(url, { expiresAt: Date.now() + ttlMs, value });
+      return value;
+    })
+    .finally(() => clientJsonRequests.delete(url));
+
+  clientJsonRequests.set(url, request);
+  return request;
+}
+
+export function invalidateClientJsonCache(urlPrefix?: string) {
+  if (!urlPrefix) {
+    clientJsonCache.clear();
+    return;
+  }
+  for (const key of clientJsonCache.keys()) {
+    if (key.startsWith(urlPrefix)) clientJsonCache.delete(key);
+  }
+}
+
 /**
  * Parse standardized API response. Handles both old { data } and new { data: { ... } } formats.
  */

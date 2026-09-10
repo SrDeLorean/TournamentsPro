@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ArrowUpRight, Globe, MessageCircle, MessageSquare, Tv } from 'lucide-react';
 import { CountryFlag } from '@/components/ui/country-flag';
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
+import { IntentLink } from '@/components/ui/intent-link';
 
 export interface EsportsCardStat {
   icon: React.ReactNode;
@@ -195,7 +196,7 @@ export function EsportsCard({
       role={!href && onClick ? 'button' : undefined}
       tabIndex={!href && onClick ? 0 : undefined}
     >
-      {href ? <Link href={href} transitionTypes={transitionTypes} className="esports-entity-card-link" aria-label={`${actionText}: ${title}`} /> : null}
+      {href ? <IntentLink href={href} transitionTypes={transitionTypes} className="esports-entity-card-link" aria-label={`${actionText}: ${title}`} /> : null}
 
       <div className="esports-entity-card-banner">
         <Image

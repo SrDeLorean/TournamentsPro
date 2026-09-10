@@ -235,6 +235,24 @@ export interface IMatchRepository extends IRepository<Match> {
 
 export interface IGameRepository extends IRepository<Game> {}
 
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'TRANSFER' | 'MATCH' | 'TOURNAMENT' | 'SYSTEM';
+  title: string;
+  description: string;
+  actionUrl?: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface INotificationRepository extends IRepository<Notification> {
+  findByUser(userId: string, options?: { limit?: number; unreadOnly?: boolean }): Promise<Notification[]>;
+  markAsRead(id: string, userId: string): Promise<boolean>;
+  markAllAsRead(userId: string): Promise<boolean>;
+  deleteByUser(id: string, userId: string): Promise<boolean>;
+}
+
 export interface IDatabaseProvider {
   users: IUserRepository;
   organizations: IOrganizationRepository;
@@ -243,6 +261,7 @@ export interface IDatabaseProvider {
   seasons: ISeasonRepository;
   matches: IMatchRepository;
   games: IGameRepository;
+  notifications: INotificationRepository;
 
   query<T = any>(sql: string, params?: any[]): Promise<T[]>;
   execute(sql: string, params?: any[]): Promise<any>;
