@@ -13,10 +13,15 @@ const REFRESH_TOKEN_EXPIRY = '30d';
 
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
-  if (secret) return secret;
+  if (secret) {
+    if (secret.length < 32 && process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET debe tener al menos 32 caracteres en entornos de producción');
+    }
+    return secret;
+  }
 
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET es obligatorio en producción');
+  if (process.env.NODE_ENV === 'production' || (process.env.NODE_ENV as string) === 'staging') {
+    throw new Error('JWT_SECRET es obligatorio en producción y staging');
   }
 
   return DEVELOPMENT_JWT_SECRET;

@@ -81,10 +81,7 @@ export function PlayerProfileView({ player, brandColor = 'var(--app-accent)', is
     ? player.bannerUrl
     : defaultGameBanner;
 
-  const fallbackAvatar = (player.id === 'usr-srdelorean' || player.gamertag?.toLowerCase() === 'srdelorean')
-    ? '/uploads/usuarios/0ANkDShbpFOHqdj7b6bg_1783718412.webp'
-    : undefined;
-  const effectiveLogoUrl = player.avatarUrl || fallbackAvatar;
+  const effectiveLogoUrl = player.avatarUrl;
 
   const hasTeam = Boolean(
     player.teamName &&
@@ -95,11 +92,11 @@ export function PlayerProfileView({ player, brandColor = 'var(--app-accent)', is
   const effectiveTeamBanner = player.teamBannerUrl || defaultGameBanner;
 
   const stats = player.stats || {
-    matches: 34,
-    goals: 18,
-    assists: 12,
-    mvps: 6,
-    winrate: '74%',
+    matches: 0,
+    goals: 0,
+    assists: 0,
+    mvps: 0,
+    winrate: '0%',
   };
 
   const profileTabs = [

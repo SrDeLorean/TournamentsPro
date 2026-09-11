@@ -18,26 +18,13 @@ export async function GET(request: Request) {
 
     const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
-    // --- HELPER PARA GENERAR MOCK MIENTRAS EL API KEY SEA INVÁLIDA ---
-    const getMockHistory = (slug: string) => {
-      if (slug === 'lol') {
-        return [
-          { matchId: 'LA2_14567890', champion: 'Ahri', result: 'Victoria', kda: '12/2/8', date: 'Hace 2 horas', duration: '28:14' },
-          { matchId: 'LA2_14567891', champion: 'Syndra', result: 'Derrota', kda: '4/6/5', date: 'Hace 5 horas', duration: '35:20' },
-          { matchId: 'LA2_14567892', champion: 'Orianna', result: 'Victoria', kda: '8/1/14', date: 'Ayer', duration: '22:10' }
-        ];
-      } else if (slug === 'valorant') {
-        return [
-          { matchId: 'VAL_99887766', champion: 'Jett', result: 'Victoria', kda: '24/12/5', date: 'Hace 1 hora', duration: '13-8' },
-          { matchId: 'VAL_99887765', champion: 'Reyna', result: 'Victoria', kda: '30/14/2', date: 'Hace 4 horas', duration: '13-11' },
-          { matchId: 'VAL_99887764', champion: 'Omen', result: 'Derrota', kda: '12/18/8', date: 'Ayer', duration: '9-13' }
-        ];
-      }
-      return [];
-    };
-
     if (!RIOT_API_KEY) {
-      return NextResponse.json({ success: true, source: 'mock_no_key', history: getMockHistory(gameSlug) });
+      return NextResponse.json({
+        success: false,
+        error: 'La clave de integración de Riot Games (RIOT_API_KEY) no está configurada en las variables de entorno del servidor.',
+        code: 'RIOT_API_KEY_MISSING',
+        history: [],
+      }, { status: 503 });
     }
 
     // --- CONEXIÓN REAL A RIOT API ---
@@ -50,9 +37,12 @@ export async function GET(request: Request) {
       });
       
       if (!accountRes.ok) {
-        // Fallback to mock if API key is invalid or expired (very common for dev keys)
-        console.warn('Riot API PUUID fetch failed. Falling back to mock.');
-        return NextResponse.json({ success: true, source: 'mock_fallback', history: getMockHistory(gameSlug) });
+        return NextResponse.json({
+          success: false,
+          error: `No se pudo encontrar la cuenta de Riot para "${riotId}". Verifica el Riot ID y TagLine.`,
+          code: 'RIOT_ACCOUNT_NOT_FOUND',
+          history: [],
+        }, { status: accountRes.status === 404 ? 404 : 502 });
       }
 
       const accountData = await accountRes.json();
@@ -116,7 +106,12 @@ export async function GET(request: Request) {
 
     } catch (apiErr) {
       console.error('Riot Real API error', apiErr);
-      return NextResponse.json({ success: true, source: 'mock_fallback', history: getMockHistory(gameSlug) });
+      return NextResponse.json({
+        success: false,
+        error: 'Error al consultar el historial de partidas en la API oficial de Riot Games.',
+        code: 'RIOT_HISTORY_FETCH_FAILED',
+        history: [],
+      }, { status: 502 });
     }
 
   } catch (error: any) {

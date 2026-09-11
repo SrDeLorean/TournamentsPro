@@ -19,7 +19,6 @@ import {
   User,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { initialUsers } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import {
   ManagementHero,
@@ -175,21 +174,22 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
     }
   };
 
-  // Resolve active athlete: current user or realistic fallback
-  const defaultAthlete = useMemo(() => {
-    return initialUsers.find((u) => u.primaryGame === game.slug) || initialUsers[0];
-  }, [game.slug]);
-
-  const activeUser = currentUser || defaultAthlete;
+  const activeUser = currentUser;
 
   // Resolve team
   const resolvedTeam = useMemo(() => {
-    let found = userTeams?.find((t) => t.id === activeUser?.teamId);
-    if (!found) {
-      found = userTeams?.find((t) => t.gameSlug === game.slug && t.members?.some((m) => m.id === activeUser?.id));
+    if (!activeUser) {
+      return {
+        id: undefined,
+        name: 'Agencia libre',
+        tag: undefined,
+        logoUrl: undefined,
+        bannerUrl: undefined,
+      };
     }
-    if (!found && (activeUser?.id === 'usr-srdelorean' || activeUser?.teamId === 'team-leguayork')) {
-      found = userTeams?.find((t) => t.id === 'team-leguayork');
+    let found = userTeams?.find((t) => t.id === activeUser.teamId);
+    if (!found) {
+      found = userTeams?.find((t) => t.gameSlug === game.slug && t.members?.some((m) => m.id === activeUser.id));
     }
     if (found) {
       return {
@@ -200,7 +200,7 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
         bannerUrl: found.bannerUrl,
       };
     }
-    if (activeUser?.teamName) {
+    if (activeUser.teamName) {
       return {
         id: activeUser.teamId,
         name: activeUser.teamName,
@@ -222,11 +222,8 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
   const resolvedAvatarUrl = useMemo(() => {
     const raw = activeUser?.avatarUrl || activeUser?.foto || (activeUser as any)?.avatar_url;
     if (raw && raw.trim() !== '') return raw;
-    if (activeUser?.id === 'usr-srdelorean' || (!currentUser && defaultAthlete?.id === 'usr-srdelorean')) {
-      return '/uploads/usuarios/0ANkDShbpFOHqdj7b6bg_1783718412.webp';
-    }
     return undefined;
-  }, [activeUser, currentUser, defaultAthlete]);
+  }, [activeUser]);
 
   // Resolve banner URL
   const resolvedBannerUrl = useMemo(() => {
@@ -236,37 +233,37 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
   }, [activeUser, game.bannerUrl]);
 
   const player = useMemo<PlayerData>(() => ({
-    id: activeUser?.id || 'usr-srdelorean',
-    name: activeUser?.name || 'SrDeLorean',
-    gamertag: activeUser?.gamertag || 'SrDeLorean',
-    position: activeUser?.position || game.positions?.[0] || 'DC',
+    id: activeUser?.id || 'perfil',
+    name: activeUser?.name || 'Atleta',
+    gamertag: activeUser?.gamertag || 'Gamertag',
+    position: activeUser?.position || game.positions?.[0] || 'DFC',
     secondaryPosition: activeUser?.secondaryPosition || undefined,
     nacionalidad: activeUser?.nacionalidad || (activeUser as any)?.country || 'Chile',
     telefono: activeUser?.telefono || (activeUser as any)?.phone,
-    instagram: activeUser?.instagram || (activeUser as any)?.socialMedia?.instagram || (activeUser?.id === 'usr-srdelorean' ? '@srdelorean' : undefined),
-    twitch: activeUser?.twitch || (activeUser as any)?.socialMedia?.twitch || (activeUser?.id === 'usr-srdelorean' ? 'srdelorean_tv' : undefined),
+    instagram: activeUser?.instagram || (activeUser as any)?.socialMedia?.instagram,
+    twitch: activeUser?.twitch || (activeUser as any)?.socialMedia?.twitch,
     youtube: activeUser?.youtube || (activeUser as any)?.socialMedia?.youtube,
-    discord: activeUser?.discord || (activeUser as any)?.socialMedia?.discord || (activeUser?.id === 'usr-srdelorean' ? 'srdelorean' : undefined),
+    discord: activeUser?.discord || (activeUser as any)?.socialMedia?.discord,
     whatsapp: activeUser?.whatsapp || (activeUser as any)?.socialMedia?.whatsapp,
     teamName: resolvedTeam.name,
     teamId: resolvedTeam.id,
     teamTag: resolvedTeam.tag,
     teamLogoUrl: resolvedTeam.logoUrl,
     teamBannerUrl: resolvedTeam.bannerUrl,
-    rating: Number(activeUser?.rating || (activeUser?.id === 'usr-srdelorean' ? 9.8 : 9.0)),
-    platform: activeUser?.platform || 'PS5',
+    rating: Number(activeUser?.rating || 85),
+    platform: activeUser?.platform || 'CROSSPLAY',
     avatarUrl: resolvedAvatarUrl,
     bannerUrl: resolvedBannerUrl,
     gameSlug: game.slug,
     role: activeUser?.role || 'Jugador',
-    status: activeUser?.status || 'Atleta Titular',
-    bio: activeUser?.biografia || (activeUser as any)?.bio || (activeUser?.id === 'usr-srdelorean' ? 'Capitán y delantero estelar de LeguaYork eSp. Especialista en definición y liderazgo táctico.' : `Atleta oficial compitiendo en el circuito profesional de ${game.name}.`),
+    status: activeUser?.status || 'Atleta Activo',
+    bio: activeUser?.biografia || (activeUser as any)?.bio || `Atleta oficial compitiendo en el circuito profesional de ${game.name}.`,
     stats: stats || {
-      matches: 42,
-      goals: 28,
-      assists: 16,
-      mvps: 8,
-      winrate: '78%',
+      matches: 0,
+      goals: 0,
+      assists: 0,
+      mvps: 0,
+      winrate: '0%',
     },
   }), [activeUser, game, resolvedAvatarUrl, resolvedBannerUrl, resolvedTeam, stats]);
 

@@ -420,7 +420,7 @@ export function mapTeamRowToData(row: any): TeamData {
     tag: row.tag || 'TP',
     gameSlug: row.game_slug || row.gameSlug || 'eafc26',
     organizationId: row.organization_id || row.organizationId || null,
-    captainId: row.captain_id || row.captainId || 'usr-srdelorean',
+    captainId: row.captain_id || row.captainId || '',
     captainName: row.captain_name || row.captainName || 'Capitán',
     platform: row.platform || 'CROSSPLAY',
     membersCount: typeof (row.members_count ?? row.membersCount) === 'number' ? (row.members_count ?? row.membersCount) : 20,

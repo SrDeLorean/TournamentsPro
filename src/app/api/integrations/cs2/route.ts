@@ -31,84 +31,75 @@ export async function GET(request: Request) {
     const homeTeam = searchParams.get('homeTeam') || 'Terrorists / Local';
     const awayTeam = searchParams.get('awayTeam') || 'CTs / Visitante';
 
-    // Helper for CS2 squad sizes (5 or fewer)
-    const getMockCs2Match = (squadMode: string) => {
-      let squadSize = 5;
-      if (squadMode === '1v1') squadSize = 1;
-      else if (squadMode === '2v2') squadSize = 2;
-      else squadSize = 5;
+    const STEAM_API_KEY = process.env.STEAM_API_KEY;
+    const FACEIT_API_KEY = process.env.FACEIT_API_KEY;
 
-      const homeParticipants: Cs2Participant[] = [];
-      const awayParticipants: Cs2Participant[] = [];
+    if (!STEAM_API_KEY && !FACEIT_API_KEY) {
+      return NextResponse.json({
+        success: false,
+        error: 'La integración con CS2 (FACEIT / Steam Web API) no está configurada en las variables de entorno del servidor.',
+        code: 'CS2_INTEGRATION_NOT_CONFIGURED',
+        participants: [],
+      }, { status: 503 });
+    }
 
-      // Realistic MR12 / MR15 round scores
-      const homeRounds = 13;
-      const awayRounds = 10;
+    if (!matchId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Se requiere un Match ID oficial de FACEIT o Steam para sincronizar la partida de CS2.',
+        code: 'MATCH_ID_REQUIRED',
+        participants: [],
+      }, { status: 400 });
+    }
 
-      for (let i = 0; i < squadSize; i++) {
-        const k = Math.floor(Math.random() * 12) + (i === 0 ? 18 : 10);
-        const d = Math.floor(Math.random() * 8) + 11;
-        const a = Math.floor(Math.random() * 6) + 2;
-        const adr = Math.floor(Math.random() * 35) + 70;
-        const hs = Math.floor(Math.random() * 25) + 30;
-        const mvps = i === 0 ? 4 : Math.floor(Math.random() * 2);
-
-        homeParticipants.push({
-          gamertag: i === 0 ? gamertag : `${homeTeam.replace(/\s+/g, '')}_CS${i + 1}`,
-          team: 'home',
-          isMvp: i === 0,
-          stats: {
-            kills: k,
-            deaths: d,
-            assists: a,
-            adr,
-            hs_percent: hs,
-            mvps,
+    if (FACEIT_API_KEY) {
+      try {
+        const faceitRes = await fetch(`https://open.faceit.com/data/v4/matches/${encodeURIComponent(matchId)}`, {
+          headers: {
+            Authorization: `Bearer ${FACEIT_API_KEY}`,
           },
         });
+        if (faceitRes.ok) {
+          const data = await faceitRes.json();
+          const teams = data.teams || {};
+          const faction1 = teams.faction1?.roster || [];
+          const faction2 = teams.faction2?.roster || [];
+          const p1 = faction1.map((p: any) => ({
+            gamertag: p.nickname || p.game_player_name || 'Player',
+            team: 'home' as const,
+            isMvp: false,
+            stats: { kills: 0, deaths: 0, assists: 0, adr: 0, hs_percent: 0, mvps: 0 },
+          }));
+          const p2 = faction2.map((p: any) => ({
+            gamertag: p.nickname || p.game_player_name || 'Player',
+            team: 'away' as const,
+            isMvp: false,
+            stats: { kills: 0, deaths: 0, assists: 0, adr: 0, hs_percent: 0, mvps: 0 },
+          }));
+          return NextResponse.json({
+            success: true,
+            source: 'faceit_official',
+            participants: [...p1, ...p2],
+            matchScore: {
+              team1: data.results?.score?.faction1 ?? 0,
+              team2: data.results?.score?.faction2 ?? 0,
+            },
+            mode,
+            squadSize: Math.max(p1.length, p2.length),
+            matchId,
+          });
+        }
+      } catch (fErr) {
+        console.error('FACEIT API request failed:', fErr);
       }
+    }
 
-      for (let i = 0; i < squadSize; i++) {
-        const k = Math.floor(Math.random() * 10) + 9;
-        const d = Math.floor(Math.random() * 7) + 13;
-        const a = Math.floor(Math.random() * 5) + 1;
-        const adr = Math.floor(Math.random() * 30) + 65;
-        const hs = Math.floor(Math.random() * 25) + 28;
-        const mvps = Math.floor(Math.random() * 2);
-
-        awayParticipants.push({
-          gamertag: `${awayTeam.replace(/\s+/g, '')}_CS${i + 1}`,
-          team: 'away',
-          isMvp: false,
-          stats: {
-            kills: k,
-            deaths: d,
-            assists: a,
-            adr,
-            hs_percent: hs,
-            mvps,
-          },
-        });
-      }
-
-      return {
-        participants: [...homeParticipants, ...awayParticipants],
-        matchScore: {
-          team1: homeRounds,
-          team2: awayRounds,
-        },
-        mode: squadMode,
-        squadSize,
-        matchId: matchId || `CS2-MATCH-${Date.now().toString().slice(-6)}`,
-      };
-    };
-
-    const mockData = getMockCs2Match(mode);
     return NextResponse.json({
-      success: true,
-      source: 'cs2_faceit_simulated',
-      ...mockData,
-    });
+      success: false,
+      error: `No se pudo obtener la información de la partida "${matchId}" desde el proveedor oficial de CS2.`,
+      code: 'CS2_MATCH_NOT_FOUND',
+      participants: [],
+    }, { status: 404 });
   } catch (error: any) {
     console.error('CS2 API Integration Error:', error);
     return NextResponse.json({ error: error.message || 'Error al conectar con la API de CS2' }, { status: 500 });

@@ -58,33 +58,19 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
     resolvedSecPos = rawSecPos.trim();
   }
 
-  // Known player catalog mapping
-  const knownPlayers: Record<string, Partial<PlayerData>> = {
-    'usr-srdelorean': { id: 'usr-srdelorean', name: 'SrDeLorean', gamertag: 'SrDeLorean', position: 'DC', teamName: 'LeguaYork eSp', rating: 9.8, status: 'Atleta Titular', bio: 'Capitán y delantero estelar de LeguaYork eSp. Especialista en definición y liderazgo táctico.' },
-    'srdelorean': { id: 'usr-srdelorean', name: 'SrDeLorean', gamertag: 'SrDeLorean', position: 'DC', teamName: 'LeguaYork eSp', rating: 9.8, status: 'Atleta Titular', bio: 'Capitán y delantero estelar de LeguaYork eSp. Especialista en definición y liderazgo táctico.' },
-    'usr-sgjotta': { id: 'usr-sgjotta', name: 'SG Jotta', gamertag: 'SG_Jotta', position: 'DFC', teamName: 'San Lorenzo eSp', rating: 9.6, status: 'Atleta Titular', bio: 'Defensa central infranqueable de San Lorenzo eSp. Dominio del juego aéreo y cobertura limpia.' },
-    'sg-jotta': { id: 'usr-sgjotta', name: 'SG Jotta', gamertag: 'SG_Jotta', position: 'DFC', teamName: 'San Lorenzo eSp', rating: 9.6, status: 'Atleta Titular', bio: 'Defensa central infranqueable de San Lorenzo eSp. Dominio del juego aéreo y cobertura limpia.' },
-    'usr-aczinomeme': { id: 'usr-aczinomeme', name: 'AcZinoMeme', gamertag: 'AcZinoMeme', position: 'MC', teamName: 'Highfield XX', rating: 9.4, status: 'Atleta Titular', bio: 'Mediocampista organizador de Highfield XX. Visión de pase de gol y recuperación de balón.' },
-    'aczinomeme': { id: 'usr-aczinomeme', name: 'AcZinoMeme', gamertag: 'AcZinoMeme', position: 'MC', teamName: 'Highfield XX', rating: 9.4, status: 'Atleta Titular', bio: 'Mediocampista organizador de Highfield XX. Visión de pase de gol y recuperación de balón.' },
-    'usr-gabot': { id: 'usr-gabot', name: 'T_TGaboT_T', gamertag: 'T_TGaboT_T', position: 'POR', teamName: 'Sangre Nueva FC', rating: 9.5, status: 'Atleta Titular', bio: 'Guardameta titular de Sangre Nueva FC. Reflejos bajo palos y salida de balón con el pie.' },
-    't_tgabot_t': { id: 'usr-gabot', name: 'T_TGaboT_T', gamertag: 'T_TGaboT_T', position: 'POR', teamName: 'Sangre Nueva FC', rating: 9.5, status: 'Atleta Titular', bio: 'Guardameta titular de Sangre Nueva FC. Reflejos bajo palos y salida de balón con el pie.' },
-  };
-
-  const matchedKnown = knownPlayers[normalizedId];
-
   // Construct player profile data dynamically
   const player: PlayerData = {
-    id: playerId,
-    name: activeUser?.name || matchedKnown?.name || playerId.replace(/[-_]/g, ' ').toUpperCase(),
-    gamertag: activeUser?.gamertag || matchedKnown?.gamertag || playerId,
+    id: activeUser?.id || playerId,
+    name: activeUser?.name || playerId.replace(/[-_]/g, ' ').toUpperCase(),
+    gamertag: activeUser?.gamertag || playerId,
     position: resolvedPosition,
     secondaryPosition: resolvedSecPos,
-    teamName: activeUser?.teamName || matchedKnown?.teamName || 'Escuadra Registrada',
-    rating: Number(activeUser?.rating) || matchedKnown?.rating || 89,
+    teamName: activeUser?.teamName || 'Agencia Libre',
+    rating: Number(activeUser?.rating) || 85,
     platform: activeUser?.platform || 'CROSSPLAY',
     gameSlug: gameSlug,
-    status: activeUser?.status || matchedKnown?.status || 'Atleta Activo en Circuito',
-    bio: activeUser?.biografia || matchedKnown?.bio || `Deportista eSports oficial compitiendo en el circuito profesional de ${game?.name || gameSlug.toUpperCase()}.`,
+    status: activeUser?.status || 'Atleta Activo en Circuito',
+    bio: activeUser?.biografia || (activeUser as any)?.bio || `Deportista eSports oficial compitiendo en el circuito profesional de ${game?.name || gameSlug.toUpperCase()}.`,
     gameId: activeUser?.gameProfiles?.[gameSlug]?.gameId || `${gameSlug.toUpperCase()}-ID #${playerId.substring(0, 6)}`,
     nacionalidad: activeUser?.nacionalidad || 'Chile',
     instagram: activeUser?.instagram,
@@ -93,16 +79,14 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
     discord: activeUser?.discord,
     whatsapp: activeUser?.whatsapp,
     website: activeUser?.website,
-    avatarUrl: activeUser?.avatarUrl || activeUser?.foto || matchedKnown?.avatarUrl || (normalizedId === 'usr-srdelorean' || normalizedId === 'srdelorean' ? '/uploads/usuarios/0ANkDShbpFOHqdj7b6bg_1783718412.webp' : undefined) || '/images/default/logo-default.png',
-    bannerUrl: activeUser?.bannerUrl || matchedKnown?.bannerUrl || game?.bannerUrl || '/images/games-background/eafc.jpg',
-    stats: {
-      ...((activeUser as (UserProfile & { aggregatedStats?: PlayerData['stats'] }) | null)?.aggregatedStats || {
-        matches: 42,
-        goals: 24,
-        assists: 15,
-        mvps: 8,
-        winrate: '79%',
-      })
+    avatarUrl: activeUser?.avatarUrl || activeUser?.foto || '/images/default/logo-default.png',
+    bannerUrl: activeUser?.bannerUrl || game?.bannerUrl || '/images/games-background/eafc.jpg',
+    stats: (activeUser as (UserProfile & { aggregatedStats?: PlayerData['stats'] }) | null)?.aggregatedStats || {
+      matches: 0,
+      goals: 0,
+      assists: 0,
+      mvps: 0,
+      winrate: '0%',
     },
   };
 

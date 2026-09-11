@@ -19,54 +19,14 @@ export async function GET(request: Request) {
 
     const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
-      // --------------------------------------------------------
-
-    // --- HELPER PARA GENERAR MOCK MÚLTIPLES JUGADORES ---
-    const getMockParticipants = (slug: string) => {
-      const participants = [];
-      for(let i=0; i<10; i++) {
-        if (slug === 'lol') {
-          participants.push({
-            riotId: `MockPlayer${i}#LAS`,
-            teamId: i < 5 ? 100 : 200,
-            stats: {
-              champion: ['Ahri', 'Yasuo', 'Lee Sin', 'Jinx', 'Thresh'][i % 5],
-              kills: Math.floor(Math.random() * 15) + 2,
-              deaths: Math.floor(Math.random() * 8),
-              assists: Math.floor(Math.random() * 20),
-              totalDamageDealtToChampions: Math.floor(Math.random() * 30000) + 10000,
-              visionScore: Math.floor(Math.random() * 50) + 15,
-              goldEarned: Math.floor(Math.random() * 12000) + 6000,
-              champLevel: 16
-            }
-          });
-        } else if (slug === 'valorant') {
-          const k = Math.floor(Math.random() * 25) + 5;
-          const d = Math.floor(Math.random() * 18) + 1;
-          participants.push({
-            riotId: `MockPlayer${i}#LAS`,
-            teamId: i < 5 ? 'Blue' : 'Red',
-            stats: {
-              agent: ['Jett', 'Reyna', 'Omen', 'Killjoy', 'Sova'][i % 5],
-              acs: Math.floor(Math.random() * 200) + 100,
-              kills: k,
-              deaths: d,
-              assists: Math.floor(Math.random() * 12),
-              kd: Number((k / d).toFixed(2)),
-              adr: Math.floor(Math.random() * 100) + 80,
-              hs_percent: Math.floor(Math.random() * 40) + 10,
-              fk: Math.floor(Math.random() * 5),
-              fd: Math.floor(Math.random() * 5)
-            }
-          });
-        }
-      }
-      return participants;
-    };
-
     if (!RIOT_API_KEY || RIOT_API_KEY === 'tu_api_key_aqui') {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return NextResponse.json({ success: true, source: 'riot_mock', participants: getMockParticipants(gameSlug), matchScore: { team1: 13, team2: 10 } });
+      return NextResponse.json({
+        success: false,
+        error: 'La clave de integración oficial de Riot Games (RIOT_API_KEY) no está configurada en las variables de entorno del servidor.',
+        code: 'RIOT_API_KEY_MISSING',
+        participants: [],
+        matchScore: null,
+      }, { status: 503 });
     }
     
     let participants = [];
@@ -137,8 +97,14 @@ export async function GET(request: Request) {
       }
       return NextResponse.json({ success: true, source: 'riot_official', participants, matchScore });
     } catch (apiError) {
-      console.warn('Riot API fetch failed, falling back to mock stats.', apiError);
-      return NextResponse.json({ success: true, source: 'mock_fallback', participants: getMockParticipants(gameSlug), matchScore: { team1: 13, team2: 10 } });
+      console.warn('Riot API fetch failed:', apiError);
+      return NextResponse.json({
+        success: false,
+        error: 'Error al consultar los datos del encuentro en la API oficial de Riot Games.',
+        code: 'RIOT_MATCH_FETCH_FAILED',
+        participants: [],
+        matchScore: null,
+      }, { status: 502 });
     }
 
   } catch (error: any) {

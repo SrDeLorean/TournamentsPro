@@ -77,11 +77,7 @@ const ROLE_ANALYTICS_DATA: Record<string, Record<string, {
         { name: 'Éxito en Entradas de Defensas', percentage: 84, color: 'var(--app-accent-2)' },
         { name: 'Porcentaje Atajadas de Porteros', percentage: 81, color: 'var(--app-warning)' },
       ],
-      topAthletes: [
-        { rank: 1, name: 'Sebastián Rodríguez', gamertag: 'SrDeLorean', team: 'LeguaYork eSp', stat: '18 Goles / 8 Asist', rating: '9.8' },
-        { rank: 2, name: 'Lucas Benítez', gamertag: 'Vhaex_CS', team: 'Highfield XX', stat: '14 Goles / 10 Asist', rating: '9.6' },
-        { rank: 3, name: 'Valentin Rossi', gamertag: 'ViperX', team: 'Sangre Nueva FC', stat: '12 Goles / 6 Asist', rating: '9.5' },
-      ],
+      topAthletes: [],
     },
     DC: {
       summaryTitle: 'Infografía de Rendimiento: Delanteros (DC, EI, ED)',
@@ -96,10 +92,7 @@ const ROLE_ANALYTICS_DATA: Record<string, Record<string, {
         { name: 'Desmarques Exitosos a la Espalda', percentage: 82, color: 'var(--app-accent)' },
         { name: 'Goles de Cabeza / Juego Aéreo', percentage: 65, color: 'var(--app-warning)' },
       ],
-      topAthletes: [
-        { rank: 1, name: 'Sebastián Rodríguez', gamertag: 'SrDeLorean', team: 'LeguaYork eSp', stat: '18 Goles (DC)', rating: '9.8' },
-        { rank: 2, name: 'Francisco Morales', gamertag: 'Pancho_T10', team: 'Sangre Nueva FC', stat: '14 Goles (EI)', rating: '9.5' },
-      ],
+      topAthletes: [],
     },
     MCO: {
       summaryTitle: 'Infografía de Rendimiento: Mediocampistas (MCO, MC, MCD)',
@@ -114,10 +107,7 @@ const ROLE_ANALYTICS_DATA: Record<string, Record<string, {
         { name: 'Retención de Balón bajo Presión', percentage: 89, color: 'var(--app-positive)' },
         { name: 'Distribución de Banda a Banda', percentage: 86, color: 'var(--app-accent-2)' },
       ],
-      topAthletes: [
-        { rank: 1, name: 'AcZinoMeme', gamertag: 'AcZinoMeme', team: 'Highfield XX', stat: '12 Asist (MCO)', rating: '9.4' },
-        { rank: 2, name: 'Valentin Rossi', gamertag: 'ViperX', team: 'Sangre Nueva FC', stat: '9 Asist (MC)', rating: '9.3' },
-      ],
+      topAthletes: [],
     },
     DFC: {
       summaryTitle: 'Infografía de Rendimiento: Defensas (DFC, LI, LD)',
@@ -132,10 +122,7 @@ const ROLE_ANALYTICS_DATA: Record<string, Record<string, {
         { name: 'Cobertura de Centro de Área', percentage: 85, color: 'var(--app-accent)' },
         { name: 'Salida de Balón Jugado', percentage: 78, color: 'var(--app-positive)' },
       ],
-      topAthletes: [
-        { rank: 1, name: 'Joaquín Silva', gamertag: 'SG Jotta', team: 'San Lorenzo eSp', stat: '42 Robos (DFC)', rating: '9.6' },
-        { rank: 2, name: 'Rodrigo Sir', gamertag: 'SirRodrick_FC', team: 'LeguaYork eSp', stat: '38 Robos (DFC)', rating: '9.4' },
-      ],
+      topAthletes: [],
     },
     POR: {
       summaryTitle: 'Infografía de Rendimiento: Porteros (POR)',
@@ -406,23 +393,29 @@ export function EsportsAnalyticsView({ game, hideHeader = false }: EsportsAnalyt
           </div>
 
           <div className="space-y-3">
-            {currentAnalytics.topAthletes.map((ath) => (
-              <div key={ath.gamertag} className="p-3.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-3">
-                  <span className=" font-black text-[var(--app-warning)] text-sm">#{ath.rank}</span>
-                  <Avatar fallback={ath.name} size="sm" status="online" />
-                  <div>
-                    <span className="font-extrabold text-sm text-[var(--text-heading)] block">{ath.name}</span>
-                    <span className="text-[10px] text-[var(--app-accent)]  font-bold">@{ath.gamertag} • {ath.team}</span>
+            {currentAnalytics.topAthletes && currentAnalytics.topAthletes.length > 0 ? (
+              currentAnalytics.topAthletes.map((ath) => (
+                <div key={ath.gamertag} className="p-3.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-3">
+                    <span className=" font-black text-[var(--app-warning)] text-sm">#{ath.rank}</span>
+                    <Avatar fallback={ath.name} size="sm" status="online" />
+                    <div>
+                      <span className="font-extrabold text-sm text-[var(--text-heading)] block">{ath.name}</span>
+                      <span className="text-[10px] text-[var(--app-accent)]  font-bold">@{ath.gamertag} • {ath.team}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right space-y-0.5">
+                    <span className=" font-bold text-[var(--app-warning)] block text-xs">★ {ath.rating}</span>
+                    <span className="text-[10px] text-[var(--app-positive)]  font-bold block">{ath.stat}</span>
                   </div>
                 </div>
-
-                <div className="text-right space-y-0.5">
-                  <span className=" font-bold text-[var(--app-warning)] block text-xs">★ {ath.rating}</span>
-                  <span className="text-[10px] text-[var(--app-positive)]  font-bold block">{ath.stat}</span>
-                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center text-[var(--text-muted)] text-xs border border-dashed border-[var(--border-card)] rounded-2xl">
+                Aún no hay suficientes encuentros oficiales registrados para calcular el ranking de {selectedRole} de esta temporada.
               </div>
-            ))}
+            )}
           </div>
         </Card>
 
