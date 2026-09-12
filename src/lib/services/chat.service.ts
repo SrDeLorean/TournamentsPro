@@ -25,6 +25,48 @@ interface TypingEntry {
   expiresAt: number;
 }
 
+export interface ChatThreadAuthorizationScope {
+  participantAId: string;
+  participantBId: string;
+}
+
+export async function getChatThreadAuthorizationScopeService(
+  threadId: string,
+): Promise<ChatThreadAuthorizationScope | null> {
+  if (isSupabaseProvider()) {
+    const { supabase } = await import('@/lib/db/supabase/client');
+    const { data, error } = await supabase
+      .from('chat_threads')
+      .select('participant_a_id, participant_b_id')
+      .eq('id', threadId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      participantAId: data.participant_a_id,
+      participantBId: data.participant_b_id,
+    };
+  }
+
+  const rows = await dbProvider.query<{
+    participant_a_id: string;
+    participant_b_id: string;
+  }>(
+    `SELECT participant_a_id, participant_b_id
+       FROM chat_threads
+      WHERE id = ?
+      LIMIT 1`,
+    [threadId],
+  );
+
+  if (!rows[0]) return null;
+  return {
+    participantAId: rows[0].participant_a_id,
+    participantBId: rows[0].participant_b_id,
+  };
+}
+
 const typingCache = new Map<string, TypingEntry>();
 
 function clearTypingEntry(threadId: string, userId: string) {

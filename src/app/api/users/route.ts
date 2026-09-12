@@ -1,12 +1,13 @@
 import { dbProvider } from '@/lib/db/provider';
 import { hashPassword } from '@/lib/auth';
-import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
+import { authorizationErrorResponse, getRequestUserSession, requireRequestActor } from '@/lib/auth-server';
 import { canManageUser, isAdministrator } from '@/lib/authorization';
 import { revokeUserSessions, writeSecurityAudit } from '@/lib/security';
 import { userCreateBodySchema, userUpdateBodySchema } from '@/lib/api-schemas';
 import {
   UserRow,
   mapUserRowToProfile,
+  mapUserRowToPublicProfile,
   apiSuccess,
   apiError,
   parsePaginationParams,
@@ -16,6 +17,7 @@ import {
 // GET /api/users — List users or get single user by ID
 export async function GET(request: Request) {
   try {
+    const requester = await getRequestUserSession(request);
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
     const gameSlug = searchParams.get('gameSlug');
@@ -28,7 +30,11 @@ export async function GET(request: Request) {
         return apiError('Usuario no encontrado', 404);
       }
       
-      const userProfile = mapUserRowToProfile(user as any);
+      const canViewPrivateProfile = requester?.userId === userId
+        || requester?.role === 'Administrador';
+      const userProfile = canViewPrivateProfile
+        ? mapUserRowToProfile(user as any)
+        : mapUserRowToPublicProfile(user as any);
       
       // AGGREGATE STATS
       // Using query provider for stats as it's a direct relation on match_player_stats.
@@ -81,14 +87,15 @@ export async function GET(request: Request) {
 
     // Paginated query
     const rows = await dbProvider.users.findAll(findOptions);
-    const users = rows.map(u => mapUserRowToProfile(u as any));
+    const users = rows.map((user) => requester?.role === 'Administrador'
+      ? mapUserRowToProfile(user as any)
+      : mapUserRowToPublicProfile(user as any));
     const meta = buildPaginationMeta(page, limit, total);
 
     return apiSuccess({ users }, undefined, meta);
   } catch (error: unknown) {
     console.error('Users GET error:', error);
-    const message = error instanceof Error ? error.message : 'Error consultando usuarios';
-    return apiError(message, 500);
+    return apiError('Error consultando usuarios', 500);
   }
 }
 

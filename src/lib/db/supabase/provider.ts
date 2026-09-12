@@ -20,16 +20,24 @@ export class SupabaseDatabaseProvider implements IDatabaseProvider {
   games = new SupabaseGameRepository();
   notifications = new SupabaseNotificationRepository();
 
-  async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  async query<T = unknown>(sql: string, params: unknown[] = []): Promise<T[]> {
+    void sql;
+    void params;
     throw new Error('Las consultas SQL directas (queryDB) no están soportadas en Supabase REST. Debes usar los repositorios de dbProvider.');
   }
 
-  async execute(sql: string, params: any[] = []): Promise<any> {
+  async execute(sql: string, params: unknown[] = []): Promise<never> {
+    void sql;
+    void params;
     throw new Error('La ejecución SQL directa (executeCommand) no está soportada en Supabase REST. Debes usar los repositorios de dbProvider.');
   }
 
   async withTransaction<T>(operation: (tx: IDatabaseProvider) => Promise<T>): Promise<T> {
-    return operation(this);
+    // PostgREST runs each request in its own transaction. Executing this callback
+    // would commit earlier writes even if a later step failed. Fail closed until
+    // each multi-step use case is backed by a database transaction or atomic RPC.
+    void operation;
+    throw new Error('Supabase REST no admite una transacción atómica para esta operación. Configure MySQL o implemente una RPC transaccional.');
   }
 }
 

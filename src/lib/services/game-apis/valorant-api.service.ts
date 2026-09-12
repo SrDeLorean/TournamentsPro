@@ -1,4 +1,4 @@
-import { ExtractedTeam, ExtractedPlayer, GameApiSearchResult } from './types';
+import { ExtractedPlayer, GameApiSearchResult } from './types';
 
 /**
  * Conector para Riot Games API & HenrikDev Valorant API
@@ -16,7 +16,6 @@ export async function searchValorantTeamOrPlayer(query: string): Promise<GameApi
     if (trimmed.includes('#')) {
       const [name, tag] = trimmed.split('#');
       const accountUrl = `https://api.henrikdev.xyz/valorant/v1/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`;
-      const mmrUrl = `https://api.henrikdev.xyz/valorant/v2/by-puuid/mmr/latam/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`;
 
       const headers: Record<string, string> = { 'Accept': 'application/json' };
       if (apiKey) headers['Authorization'] = apiKey;
@@ -87,12 +86,12 @@ export async function searchValorantTeamOrPlayer(query: string): Promise<GameApi
       sourceApi: 'Valorant API Service',
       query,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en búsqueda de VALORANT:', err);
     return {
       success: false,
       teams: [],
-      message: `Error al consultar la API de VALORANT: ${err.message || 'Error de conexión'}`,
+      message: `Error al consultar la API de VALORANT: ${err instanceof Error ? err.message : 'Error de conexión'}`,
       sourceApi: 'VALORANT API',
       query,
     };

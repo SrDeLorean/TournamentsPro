@@ -5,7 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowRight, BarChart3, CalendarCheck, Eye, History, MessageSquare, Shield, Shirt, Sparkles, Trophy, UserPlus, Users } from 'lucide-react';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { initialTeams, type TeamData } from '@/lib/data-store';
 import { findManagedTeamForUser } from '@/lib/authenticated-navigation';
@@ -63,7 +63,8 @@ interface CaptainRequestSummary { id: string; applicant_name?: string; applicant
 interface CompetitionEntrySummary { id: string; competition_name?: string; status?: string }
 
 export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug: string; section?: ClubWorkspaceSection }) {
-  const { currentUser, userTeams, refetchTeams } = useAuth();
+  const { currentUser } = useAuth();
+  const { userTeams, refetchTeams } = useTeams();
   const game = GAMES_CATALOG[gameSlug] || GAMES_CATALOG.eafc26;
   const base = `/${game.slug}/club`;
   const copy = sectionCopy[section];

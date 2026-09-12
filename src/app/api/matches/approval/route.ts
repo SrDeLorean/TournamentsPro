@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { dbProvider } from '@/lib/db/provider';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
@@ -32,6 +31,7 @@ export async function POST(request: Request) {
     let competition = {
       organizationId: null as string | null,
       organizerId: null as string | null,
+      gameSlug: 'eafc26',
       format: null as string | null,
       qualifiersPerGroup: 2,
     };
@@ -41,6 +41,7 @@ export async function POST(request: Request) {
         competition = {
           organizationId: compObj.organizationId,
           organizerId: compObj.organizerId,
+          gameSlug: compObj.gameSlug,
           format: compObj.format || compObj.modeFormat,
           qualifiersPerGroup: Number(compObj.qualifiersPerGroup || 2),
         };
@@ -58,8 +59,8 @@ export async function POST(request: Request) {
       const teamAwayObj = awayTeamId ? await dbProvider.teams.findById(awayTeamId) : null;
       
       const participantIds = [
-        ...managersHome.map(m => m.userId),
-        ...managersAway.map(m => m.userId),
+        ...managersHome,
+        ...managersAway,
         teamHomeObj?.captainId,
         teamAwayObj?.captainId
       ].filter(Boolean) as string[];
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
       const gameInfo = parseBo3GameInfo(match);
       if (gameInfo.isBo3 && gameInfo.gameNumber === 3 && competitionId) {
         const compMatches = await dbProvider.matches.findByCompetition(competitionId);
-        const seriesMatches = compMatches.filter((m: any) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
+        const seriesMatches = compMatches.filter((m) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
         const evalResult = evaluateBo3Series(seriesMatches);
         if (evalResult.isGame3Locked || evalResult.isDefined) {
           return NextResponse.json({
@@ -147,8 +148,8 @@ export async function POST(request: Request) {
         if (gameInfo.isBo3 && competitionId) {
           const compMatches = await transaction.matches.findByCompetition(competitionId);
           const seriesMatches = compMatches
-            .map((m: any) => m.id === matchId ? { ...m, scoreHome: finalHome, scoreAway: finalAway, status: 'TERMINADO', winnerTeamId: winnerId } : m)
-            .filter((m: any) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
+            .map((m) => m.id === matchId ? { ...m, scoreHome: finalHome, scoreAway: finalAway, status: 'TERMINADO', winnerTeamId: winnerId } : m)
+            .filter((m) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
           const evalResult = evaluateBo3Series(seriesMatches);
 
           if (evalResult.isDefined && evalResult.winnerTeamId) {
@@ -250,9 +251,11 @@ export async function POST(request: Request) {
 
       // Notificar a ambos capitanes
       try {
-        const teamH = (match.teamHomeId || match.homeTeamId) ? await dbProvider.teams.findById(match.teamHomeId || match.homeTeamId) : null;
-        const teamA = (match.teamAwayId || match.awayTeamId) ? await dbProvider.teams.findById(match.teamAwayId || match.awayTeamId) : null;
-        const gameSlug = (match as any).gameSlug || 'eafc26';
+        const homeTeamId = match.teamHomeId || match.homeTeamId;
+        const awayTeamId = match.teamAwayId || match.awayTeamId;
+        const teamH = homeTeamId ? await dbProvider.teams.findById(homeTeamId) : null;
+        const teamA = awayTeamId ? await dbProvider.teams.findById(awayTeamId) : null;
+        const gameSlug = competition.gameSlug;
 
         if (teamH?.captainId) {
           await dbProvider.notifications.create({

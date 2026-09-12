@@ -177,6 +177,7 @@ export function FilterBar({
                 id={selectId}
                 type="button"
                 role="combobox"
+                aria-controls={`${selectId}-listbox`}
                 aria-expanded={isDropdownOpen}
                 aria-haspopup="listbox"
                 aria-label={`${filterLabel}: ${activeOption?.label || activeFilter}`}
@@ -198,6 +199,7 @@ export function FilterBar({
               {/* MENÚ DESPLEGABLE CON LOGOS OFICIALES REALES */}
               {isDropdownOpen && (
                 <div
+                  id={`${selectId}-listbox`}
                   role="listbox"
                   aria-label={filterLabel}
                   className="ui-filter-dropdown-menu"

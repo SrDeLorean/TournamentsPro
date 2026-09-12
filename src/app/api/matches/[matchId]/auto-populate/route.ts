@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { dbProvider } from '@/lib/db/provider';
-import { getServerUserSession } from '@/lib/auth-server';
+import { authorizationErrorResponse, requireRequestMatchReporter } from '@/lib/auth-server';
+import { autoPopulateMatchBodySchema } from '@/lib/api-schemas';
 import { syncMatchFromGameApi } from '@/lib/services/game-apis';
 import { randomUUID } from 'crypto';
 
@@ -9,11 +10,6 @@ export async function POST(
   { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
-    const session = await getServerUserSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
     const { matchId } = await params;
     if (!matchId) {
       return NextResponse.json({ error: 'Match ID requerido' }, { status: 400 });
@@ -24,16 +20,21 @@ export async function POST(
       return NextResponse.json({ error: 'Partido no encontrado' }, { status: 404 });
     }
 
-    const body = await request.json().catch(() => ({}));
+    const parsedBody = autoPopulateMatchBodySchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsedBody.success) {
+      return NextResponse.json({ error: 'Parámetros de sincronización inválidos', code: 'VALIDATION_ERROR' }, { status: 400 });
+    }
+    const body = parsedBody.data;
+    const actor = await requireRequestMatchReporter(request, matchId);
     const query = body.query || body.matchIdentifier || body.clubId || match.homeTeamName || '';
     const mode = body.mode || '5v5';
 
     // Determinar la disciplina del partido
-    const effectiveGameSlug =
-      body.gameSlug ||
-      (match as any).gameSlug ||
-      (match as any).game_slug ||
-      'eafc26';
+    const competitionId = match.competitionId || match.tournamentId;
+    const competition = competitionId
+      ? await dbProvider.competitions.findById(competitionId)
+      : null;
+    const effectiveGameSlug = competition?.gameSlug || body.gameSlug || 'eafc26';
 
     // Consultar la API del juego
     const result = await syncMatchFromGameApi(effectiveGameSlug, query, {
@@ -54,7 +55,7 @@ export async function POST(
       reportedScoreHome: result.matchScore.team1,
       reportedScoreAway: result.matchScore.team2,
       status: 'POR_REVISAR',
-      reportedByUserId: session.userId,
+      reportedByUserId: actor.userId,
     });
 
     // Guardar estadísticas individuales de cada jugador extraído
@@ -98,10 +99,12 @@ export async function POST(
       mvpGamertag: result.mvpGamertag,
       participants: result.participants,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error en /api/matches/[matchId]/auto-populate:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al auto-poblar estadísticas de partido' },
+      { error: 'Error al auto-poblar estadísticas de partido' },
       { status: 500 }
     );
   }

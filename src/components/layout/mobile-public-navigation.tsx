@@ -22,7 +22,7 @@ export function MobilePublicNavigation({ currentGame, currentPath, isAuthenticat
   return (
     <>
       <button type="button" aria-label="Cerrar menú principal" onClick={onClose} className="fixed inset-0 top-14 z-30 bg-[var(--app-overlay)] backdrop-blur-sm lg:hidden" />
-      <div id="public-mobile-navigation" className="app-navbar-mobile-menu fixed bottom-0 right-0 top-14 z-40 space-y-3 overflow-y-auto overscroll-contain touch-pan-y lg:hidden">
+      <div id="public-mobile-navigation" className="app-navbar-mobile-menu fixed bottom-0 right-0 top-14 z-40 h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] space-y-3 overflow-y-auto overscroll-contain touch-pan-y bg-[var(--bg-card)] lg:hidden">
         <div className="app-navbar-mobile-heading">
           <span>
             <strong>Navegación</strong>

@@ -22,6 +22,7 @@ describe('standalone deployment assets', () => {
     ]);
     await Promise.all([
       writeFile(path.join(root, '.next', 'standalone', 'server.js'), 'server'),
+      writeFile(path.join(root, '.next', 'standalone', '.env'), 'JWT_SECRET=must-not-ship'),
       writeFile(path.join(root, '.next', 'static', 'chunks', 'app.css'), 'body{display:grid}'),
       writeFile(path.join(root, '.next', 'static', 'chunks', 'app.js'), 'console.log("ready")'),
       writeFile(path.join(root, 'public', 'images', 'logo.txt'), 'logo'),
@@ -35,6 +36,7 @@ describe('standalone deployment assets', () => {
       .resolves.toContain('ready');
     await expect(readFile(path.join(root, '.next', 'standalone', 'public', 'images', 'logo.txt'), 'utf8'))
       .resolves.toBe('logo');
+    await expect(readFile(path.join(root, '.next', 'standalone', '.env'), 'utf8')).rejects.toThrow();
   });
 
   it('removes stale assets before copying a new build', async () => {

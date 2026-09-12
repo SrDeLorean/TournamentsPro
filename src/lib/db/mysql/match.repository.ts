@@ -1,4 +1,5 @@
 import type { Match, IMatchRepository } from '@/lib/db/interfaces';
+import type { DatabaseParams } from '@/lib/db';
 import { BaseRepository, type MatchRow } from './types';
 
 export class MatchRepository extends BaseRepository<Match> implements IMatchRepository {
@@ -65,7 +66,7 @@ export class MatchRepository extends BaseRepository<Match> implements IMatchRepo
     const chunkSize = 50;
     for (let i = 0; i < matches.length; i += chunkSize) {
       const chunk = matches.slice(i, i + chunkSize);
-      const values: any[] = [];
+      const values: DatabaseParams = [];
       const placeholders = chunk.map((m) => {
         values.push(
           m.id || `match-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,

@@ -502,7 +502,6 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
 
       const payload = {
         matchId: currentMatch.id,
-        competition_id: currentMatch.competitionId,
         gameSlug: currentMatch.gameSlug,
         homeScore,
         awayScore,

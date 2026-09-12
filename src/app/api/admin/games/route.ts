@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { dbProvider } from '@/lib/db/provider';
-import { getServerUserSession } from '@/lib/auth-server';
+import {
+  authorizationErrorResponse,
+  getServerUserSession,
+  requireRequestActor,
+} from '@/lib/auth-server';
 
 export async function GET() {
   try {
@@ -29,10 +33,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerUserSession();
-    if (!session || (session.role !== 'Administrador' && session.role !== 'Admin')) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
+    await requireRequestActor(request, ['Administrador']);
 
     const data = await request.json();
     const { slug, name, category, team_size, positions_json, brand_color, stats_schema } = data;
@@ -58,7 +59,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, message: 'Juego guardado exitosamente' });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('POST /api/admin/games error:', error);
     return NextResponse.json({ error: 'Error interno del servidor al guardar.' }, { status: 500 });
   }
@@ -66,10 +69,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const session = await getServerUserSession();
-    if (!session || (session.role !== 'Administrador' && session.role !== 'Admin')) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
+    await requireRequestActor(request, ['Administrador']);
 
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get('slug');
@@ -80,9 +80,11 @@ export async function DELETE(request: Request) {
 
     await dbProvider.games.delete(slug);
     return NextResponse.json({ success: true, message: 'Juego eliminado' });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('DELETE /api/admin/games error:', error);
-    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+    if (error instanceof Error && 'code' in error && error.code === 'ER_ROW_IS_REFERENCED_2') {
        return NextResponse.json({ error: 'No se puede eliminar la disciplina porque tiene equipos, jugadores o torneos asociados.' }, { status: 400 });
     }
     return NextResponse.json({ error: 'Error al eliminar. Asegúrese de que no tenga datos dependientes.' }, { status: 500 });

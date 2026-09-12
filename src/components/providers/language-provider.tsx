@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useEffect, useSyncExternalStore } from 'react';
 import es from '@/locales/es.json';
 import en from '@/locales/en.json';
 import pt from '@/locales/pt.json';
@@ -48,6 +48,10 @@ function subscribeToLanguage(onStoreChange: () => void) {
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const language = useSyncExternalStore(subscribeToLanguage, getStoredLanguage, getServerLanguage);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   const setLanguage = (lang: Language) => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);

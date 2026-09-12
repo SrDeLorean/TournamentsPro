@@ -31,6 +31,23 @@ async function countFiles(directory, matcher = () => true) {
   return total;
 }
 
+async function removeEnvironmentFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  await Promise.all(entries
+    .filter((entry) => entry.isFile() && (entry.name === '.env' || entry.name.startsWith('.env.')))
+    .map((entry) => rm(path.join(directory, entry.name), { force: true })));
+}
+
+async function assertNoEnvironmentFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const leakedFile = entries.find(
+    (entry) => entry.isFile() && (entry.name === '.env' || entry.name.startsWith('.env.')),
+  );
+  if (leakedFile) {
+    throw new Error(`Standalone build contains forbidden environment file: ${leakedFile.name}`);
+  }
+}
+
 export async function verifyStandalone(projectRoot = process.cwd()) {
   const root = path.resolve(projectRoot);
   const standaloneDirectory = path.join(root, '.next', 'standalone');
@@ -43,6 +60,7 @@ export async function verifyStandalone(projectRoot = process.cwd()) {
     assertDirectory(staticDirectory, 'Standalone static assets'),
     assertDirectory(publicDirectory, 'Standalone public assets'),
   ]);
+  await assertNoEnvironmentFiles(standaloneDirectory);
 
   const [cssFiles, javascriptFiles, publicFiles] = await Promise.all([
     countFiles(staticDirectory, (file) => file.endsWith('.css')),
@@ -69,6 +87,10 @@ export async function prepareStandalone(projectRoot = process.cwd()) {
     assertDirectory(staticSource, 'Next.js static assets'),
     assertDirectory(publicSource, 'Public assets'),
   ]);
+
+  // Next's file tracer may copy local environment files into standalone output.
+  // Runtime secrets must be configured by the host, never shipped in the artifact.
+  await removeEnvironmentFiles(standaloneDirectory);
 
   // Never mix chunks from two builds: stale hashed assets cause reload-only failures.
   await Promise.all([

@@ -57,7 +57,6 @@ export async function GET(request: Request) {
     return apiSuccess({ authenticated: true, user: mapUserRowToProfile(userRow) });
   } catch (error) {
     console.error('Session lookup error:', error);
-    const msg = error instanceof Error ? error.message : String(error);
-    return apiError('No se pudo verificar la sesión: ' + msg, 500);
+    return apiError('No se pudo verificar la sesión', 500);
   }
 }

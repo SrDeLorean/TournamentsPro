@@ -187,7 +187,11 @@ export async function POST(request: Request) {
     // ── Delete previous file safely if replacing ────────────────────────
     const previousUrl = body.previousUrl || body.oldUrl;
     if (previousUrl) {
-      if (previousUrl.startsWith('http') && previousUrl.includes('supabase.co')) {
+      if (
+        previousUrl.startsWith('http')
+        && previousUrl.includes('supabase.co')
+        && previousUploadBelongsToEntity(previousUrl, authorizedEntityId)
+      ) {
         await deleteFromSupabaseStorage(previousUrl);
       } else if (!previousUrl.startsWith('http') && previousUploadBelongsToEntity(previousUrl, authorizedEntityId)) {
         try {

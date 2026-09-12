@@ -1,4 +1,4 @@
-import { ExtractedTeam, ExtractedPlayer, GameApiSearchResult } from './types';
+import { ExtractedPlayer, GameApiSearchResult } from './types';
 
 /**
  * Conector para Riot Games League of Legends API (Clash / Summoners)
@@ -45,12 +45,12 @@ export async function searchLeagueOfLegendsTeamOrPlayer(query: string): Promise<
       sourceApi: 'Riot Games LoL API',
       query,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en búsqueda de League of Legends:', err);
     return {
       success: false,
       teams: [],
-      message: `Error al consultar la API de LoL: ${err.message || 'Error de conexión'}`,
+      message: `Error al consultar la API de LoL: ${err instanceof Error ? err.message : 'Error de conexión'}`,
       sourceApi: 'Riot Games LoL API',
       query,
     };

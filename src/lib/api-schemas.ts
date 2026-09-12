@@ -23,6 +23,37 @@ export const matchApprovalBodySchema = z.object({
   action: z.enum(['REPORT_SCORE', 'APPROVE']),
 }).passthrough();
 
+const participantStatSchema = z.object({
+  gamertag: z.string().max(100).optional(),
+  riotId: z.string().max(100).optional(),
+  name: z.string().max(100).optional(),
+  playerName: z.string().max(100).optional(),
+  team: z.union([z.string().max(50), z.number().int()]).optional(),
+  teamId: z.union([z.string().max(100), z.number().int()]).optional(),
+  position: z.string().max(50).optional(),
+  isMvp: z.boolean().optional(),
+  stats: z.record(z.string(), z.unknown()).optional(),
+}).passthrough();
+
+export const matchReportBodySchema = z.object({
+  matchId: requiredIdSchema,
+  homeScore: z.coerce.number().int().min(0).max(999),
+  awayScore: z.coerce.number().int().min(0).max(999),
+  proofUrl: z.string().url().max(2048).optional(),
+  mvpName: z.string().trim().max(100).optional(),
+  dynamicStats: z.record(z.string(), z.unknown()).optional(),
+  participantsStats: z.array(participantStatSchema).max(100).optional(),
+  gameSlug: z.string().trim().max(50).optional(),
+}).strict();
+
+export const autoPopulateMatchBodySchema = z.object({
+  query: z.string().trim().max(200).optional(),
+  matchIdentifier: z.string().trim().max(200).optional(),
+  clubId: z.string().trim().max(200).optional(),
+  mode: z.string().trim().max(30).optional(),
+  gameSlug: z.string().trim().max(50).optional(),
+}).strict();
+
 export const fixtureRequestBodySchema = z.object({
   tournamentId: requiredIdSchema,
   format: z.string().trim().min(1).max(30).optional(),

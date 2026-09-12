@@ -1,4 +1,19 @@
-import { ExtractedTeam, ExtractedPlayer, GameApiSearchResult } from './types';
+import { ExtractedTeam, GameApiSearchResult } from './types';
+
+interface FaceitMember {
+  nickname?: string;
+  faceit_elo?: number;
+}
+
+interface FaceitTeam {
+  name?: string;
+  nickname?: string;
+  avatar?: string;
+  game_profile?: { level?: number | string };
+  members?: FaceitMember[];
+  team_id?: string;
+  id?: string;
+}
 
 /**
  * Conector para Faceit API v4 & Steam Web API (CS2)
@@ -23,10 +38,10 @@ export async function searchCS2TeamOrPlayer(query: string): Promise<GameApiSearc
       });
 
       if (res.ok) {
-        const data = await res.json();
-        const items = data.items || [];
+        const data = (await res.json()) as { items?: FaceitTeam[] };
+        const items = Array.isArray(data?.items) ? data.items : [];
         if (items.length > 0) {
-          const extractedTeams: ExtractedTeam[] = items.map((t: any) => ({
+          const extractedTeams: ExtractedTeam[] = items.map((t) => ({
             teamName: t.name || t.nickname || trimmed,
             tag: (t.nickname || trimmed).substring(0, 3).toUpperCase(),
             gameSlug: 'csgo',
@@ -35,7 +50,7 @@ export async function searchCS2TeamOrPlayer(query: string): Promise<GameApiSearc
             description: `Equipo CS2 verificado en Faceit (Nivel ${t.game_profile?.level || 'Master'})`,
             division: 'Faceit Competitive',
             record: { wins: 0, losses: 0 },
-            roster: (t.members || []).map((m: any) => ({
+            roster: (Array.isArray(t.members) ? t.members : []).map((m) => ({
               gamertag: m.nickname || 'CS2 Player',
               position: 'Rifler',
               rankTitle: `Faceit Level ${m.faceit_elo ? Math.ceil(m.faceit_elo / 300) : 10}`,
@@ -74,12 +89,12 @@ export async function searchCS2TeamOrPlayer(query: string): Promise<GameApiSearc
       sourceApi: 'Faceit / Steam API',
       query,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en búsqueda de CS2:', err);
     return {
       success: false,
       teams: [],
-      message: `Error al consultar la API de CS2: ${err.message || 'Error de conexión'}`,
+      message: `Error al consultar la API de CS2: ${err instanceof Error ? err.message : 'Error de conexión'}`,
       sourceApi: 'Faceit / Steam API',
       query,
     };

@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
 import { dbProvider } from '@/lib/db/provider';
-import { getServerUserSession } from '@/lib/auth-server';
+import { authorizationErrorResponse, requireRequestMatchReporter } from '@/lib/auth-server';
+import { matchReportBodySchema } from '@/lib/api-schemas';
 import { randomUUID } from 'crypto';
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerUserSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    const parsedBody = matchReportBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      return NextResponse.json({ error: 'Datos de reporte inválidos', code: 'VALIDATION_ERROR' }, { status: 400 });
     }
-
-    const data = await request.json();
-    const { matchId, homeScore, awayScore, mvpName, dynamicStats, participantsStats, competition_id } = data;
-
-    if (!matchId) return NextResponse.json({ error: 'Match ID requerido' }, { status: 400 });
+    const data = parsedBody.data;
+    const { matchId, homeScore, awayScore, mvpName, dynamicStats, participantsStats } = data;
+    const actor = await requireRequestMatchReporter(request, matchId);
 
     const match = await dbProvider.matches.findById(matchId);
     if (!match) return NextResponse.json({ error: 'Partido no encontrado' }, { status: 404 });
@@ -21,7 +20,7 @@ export async function POST(request: Request) {
     const { parseBo3GameInfo, evaluateBo3Series } = await import('@/lib/bo3-series');
     const gameInfo = parseBo3GameInfo(match);
     if (gameInfo.isBo3 && gameInfo.gameNumber === 3) {
-      const compId = match.competitionId || competition_id;
+      const compId = match.competitionId || match.tournamentId;
       if (compId) {
         const compMatches = await dbProvider.matches.findByCompetition(compId);
         const seriesMatches = compMatches.filter((m) => parseBo3GameInfo(m).baseSeriesId === gameInfo.baseSeriesId);
@@ -34,10 +33,13 @@ export async function POST(request: Request) {
       }
     }
 
-    const effectiveGameSlug = data.gameSlug || (match as any).gameSlug || (match as any).game_slug || 'eafc26';
+    const competitionId = match.competitionId || match.tournamentId;
+    const competition = competitionId
+      ? await dbProvider.competitions.findById(competitionId)
+      : null;
+    const effectiveGameSlug = competition?.gameSlug || data.gameSlug || 'eafc26';
 
-    const userRole = (session.role || '').toLowerCase();
-    const isAdminOrOrg = userRole === 'admin' || userRole === 'administrador' || userRole === 'organizador';
+    const isAdminOrOrg = actor.role === 'Administrador' || actor.role === 'Organizador';
 
     const winnerTeamId = homeScore > awayScore
       ? (match.homeTeamId || match.teamHomeId)
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
         : {
             status: 'POR_REVISAR',
           }),
-      reportedByUserId: session.userId,
+      reportedByUserId: actor.userId,
       ...(data.proofUrl ? { proofUrl: data.proofUrl } : {})
     });
 
@@ -105,14 +107,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // Notificar al capitán del equipo rival
+    // Notificar a los capitanes involucrados, excepto al propio reportante.
     try {
-      const opposingTeamId = (match.homeTeamId && (match as any).captainId !== session.userId) ? match.awayTeamId : match.homeTeamId;
-      if (opposingTeamId) {
-        const opposingTeam = await dbProvider.teams.findById(opposingTeamId);
-        if (opposingTeam?.captainId && opposingTeam.captainId !== session.userId) {
+      const involvedTeamIds = Array.from(new Set([
+        match.homeTeamId || match.teamHomeId,
+        match.awayTeamId || match.teamAwayId,
+      ].filter((teamId): teamId is string => Boolean(teamId))));
+      const involvedTeams = await Promise.all(
+        involvedTeamIds.map((teamId) => dbProvider.teams.findById(teamId)),
+      );
+      await Promise.all(involvedTeams.map(async (team) => {
+        if (team?.captainId && team.captainId !== actor.userId) {
           await dbProvider.notifications.create({
-            userId: opposingTeam.captainId,
+            userId: team.captainId,
             type: 'MATCH',
             title: 'Resultado de Partido Reportado',
             description: `Se ha registrado el marcador ${match.homeTeamName || 'Local'} (${homeScore}) vs (${awayScore}) ${match.awayTeamName || 'Visitante'}.`,
@@ -120,7 +127,7 @@ export async function POST(request: Request) {
             isRead: false,
           });
         }
-      }
+      }));
     } catch (notifErr) {
       console.warn('No se pudo emitir notificación de partido:', notifErr);
     }
@@ -178,7 +185,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, message: 'Reporte enviado a revisión' });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Match Report API error:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }

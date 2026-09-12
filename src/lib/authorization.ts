@@ -20,6 +20,11 @@ export interface TeamResource extends OwnedResource {
   participatingOrgIds?: string[];
 }
 
+export interface ThreadResource {
+  participantAId: string;
+  participantBId: string;
+}
+
 export function normalizeRole(role: string): SystemRole | null {
   if (role === 'Admin') return 'Administrador';
   if (role === 'Capitan') return 'Capitán';
@@ -32,6 +37,17 @@ export function isAdministrator(actor: AuthorizationActor): boolean {
 
 export function isOrganizer(actor: AuthorizationActor): boolean {
   return actor.role === 'Organizador';
+}
+
+export function canAccessThread(
+  actor: AuthorizationActor,
+  thread: ThreadResource,
+): boolean {
+  return isAdministrator(actor)
+    || thread.participantAId === actor.userId
+    || thread.participantBId === actor.userId
+    || thread.participantAId === 'usr-all'
+    || thread.participantBId === 'usr-all';
 }
 
 export function belongsToActorOrganization(

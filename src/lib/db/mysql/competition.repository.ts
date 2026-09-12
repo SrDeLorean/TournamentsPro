@@ -1,4 +1,4 @@
-import type { Competition, ICompetitionRepository } from '@/lib/db/interfaces';
+import type { Competition, ICompetitionRepository, EnrolledTeamRecord } from '@/lib/db/interfaces';
 import { BaseRepository, type CompetitionRow, type MutableDatabaseParams } from './types';
 
 export class CompetitionRepository extends BaseRepository<Competition> implements ICompetitionRepository {
@@ -45,8 +45,8 @@ export class CompetitionRepository extends BaseRepository<Competition> implement
     return rows.map((row) => this.mapRow(row));
   }
 
-  async getEnrolledTeams(competitionId: string): Promise<Record<string, unknown>[]> {
-    return this.queryRows<Record<string, unknown>>(
+  async getEnrolledTeams(competitionId: string): Promise<EnrolledTeamRecord[]> {
+    return this.queryRows<EnrolledTeamRecord>(
       `SELECT * FROM competition_teams WHERE competition_id = ? AND status = 'CONFIRMADO'`,
       [competitionId]
     );

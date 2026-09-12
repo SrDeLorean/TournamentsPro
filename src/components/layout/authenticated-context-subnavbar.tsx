@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { initialTeams } from '@/lib/data-store';
 import { CreateTeamModal } from '@/components/teams/create-team-modal';
 import { TabList } from '@/components/ui/tab-list';
@@ -57,7 +57,8 @@ const NAV_GROUP_STARTS = new Set<AuthenticatedNavItemId>(['offers', 'messages', 
 
 export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }) {
   const pathname = usePathname();
-  const { currentUser, userTeams, refetchTeams } = useAuth();
+  const { currentUser } = useAuth();
+  const { userTeams, refetchTeams } = useTeams();
   const teamsPool = userTeams?.length ? userTeams : initialTeams;
   const myTeam = findManagedTeamForUser(teamsPool, currentUser, gameSlug);
 

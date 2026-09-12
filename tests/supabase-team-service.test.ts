@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { updateManagedTeamService, archiveManagedTeamService, createTeamService } from '../src/lib/services';
 import { dbProvider } from '../src/lib/db/provider';
 import type { Team, User } from '../src/lib/db/interfaces';
@@ -7,6 +7,10 @@ describe('Team operations via dbProvider repositories (Supabase / MySQL compatib
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(dbProvider, 'withTransaction').mockImplementation(async (operation) => operation(dbProvider));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('updates a team without using raw SQL queryDB', async () => {

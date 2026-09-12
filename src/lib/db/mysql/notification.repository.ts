@@ -183,7 +183,7 @@ export class NotificationRepository implements INotificationRepository {
     return result.affectedRows > 0;
   }
 
-  async count(options: FindOptions = {}): Promise<number> {
+  async count(): Promise<number> {
     await this.ensureTable();
     const rows = await this.queryRows<{ total: number }>('SELECT COUNT(*) as total FROM notifications');
     return rows[0]?.total || 0;

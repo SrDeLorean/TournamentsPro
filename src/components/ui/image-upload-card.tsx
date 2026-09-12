@@ -43,11 +43,9 @@ export function ImageUploadCard({
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [stats, setStats] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [localPreview, setLocalPreview] = useState<string>('');
-
-  React.useEffect(() => {
-    setLocalPreview('');
-  }, [currentUrl]);
+  const [previewState, setPreviewState] = useState({ sourceUrl: currentUrl, preview: '' });
+  const localPreview = previewState.sourceUrl === currentUrl ? previewState.preview : '';
+  const setLocalPreview = (preview: string) => setPreviewState({ sourceUrl: currentUrl, preview });
 
   const defaultButtonText = uploadType === 'banner' ? 'Subir / Cambiar Banner' : 'Subir / Cambiar Foto';
   const buttonText = uploadButtonText || defaultButtonText;

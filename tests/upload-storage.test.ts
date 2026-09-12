@@ -89,5 +89,17 @@ describe('almacenamiento compartido de imágenes', () => {
   it('solo permite reemplazar archivos vinculados a la entidad autorizada', () => {
     expect(previousUploadBelongsToEntity('/uploads/users/avatars/player-avatar-usr-123-10.webp', 'usr-123')).toBe(true);
     expect(previousUploadBelongsToEntity('/uploads/users/avatars/other-avatar-usr-999-10.webp', 'usr-123')).toBe(false);
+    expect(previousUploadBelongsToEntity(
+      'https://project.supabase.co/storage/v1/object/public/tournaments-media/users/avatars/player-avatar-usr-123-10.webp',
+      'usr-123',
+    )).toBe(true);
+    expect(previousUploadBelongsToEntity(
+      'https://project.supabase.co/storage/v1/object/public/tournaments-media/users/avatars/other-avatar-usr-999-10.webp',
+      'usr-123',
+    )).toBe(false);
+    expect(previousUploadBelongsToEntity(
+      '/uploads/users/avatars/player-avatar-usr-10-10.webp',
+      'usr-1',
+    )).toBe(false);
   });
 });

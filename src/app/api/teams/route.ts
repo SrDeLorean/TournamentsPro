@@ -1,11 +1,9 @@
-// @ts-nocheck
 import { dbProvider } from '@/lib/db/provider';
+import { NextResponse } from 'next/server';
 import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { teamCreateBodySchema, teamUpdateBodySchema } from '@/lib/api-schemas';
 import { canManageTeam, isAdministrator, isOrganizer } from '@/lib/authorization';
 import {
-  TeamRow,
-  mapTeamRowToData,
   apiSuccess,
   apiError,
   parsePaginationParams,
@@ -22,7 +20,7 @@ export async function GET(request: Request) {
   const { page, limit } = parsePaginationParams(searchParams);
 
   try {
-    const where: any = {};
+    const where: Record<string, string> = {};
     if (gameSlug && !['ALL', 'all', 'TODOS', 'todas'].includes(gameSlug)) {
       where.game_slug = gameSlug;
     }
@@ -39,27 +37,27 @@ export async function GET(request: Request) {
       id: t.id,
       name: t.name,
       tag: t.tag,
-      gameSlug: t.gameSlug || t.game_slug || 'eafc26',
-      game_slug: t.gameSlug || t.game_slug || 'eafc26',
+      gameSlug: t.gameSlug || 'eafc26',
+      game_slug: t.gameSlug || 'eafc26',
       platform: t.platform || 'CROSSPLAY',
       color: t.color || '#00F0FF',
-      logoText: t.logoText || t.logo_text || t.tag || 'TP',
-      logo_text: t.logoText || t.logo_text || t.tag || 'TP',
+      logoText: t.logoText || t.tag || 'TP',
+      logo_text: t.logoText || t.tag || 'TP',
       description: t.description,
       status: t.status || 'ACTIVO',
-      logoUrl: t.logoUrl || t.logo_url || null,
-      logo_url: t.logoUrl || t.logo_url || null,
-      bannerUrl: t.bannerUrl || t.banner_url || null,
-      banner_url: t.bannerUrl || t.banner_url || null,
-      captainId: t.captainId || t.captain_id,
-      captain_id: t.captainId || t.captain_id,
-      captainName: t.captainName || t.captain_name || 'Capitán',
-      captain_name: t.captainName || t.captain_name || 'Capitán',
-      membersCount: typeof (t.membersCount ?? t.members_count) === 'number' ? (t.membersCount ?? t.members_count) : 20,
-      maxMembers: typeof (t.maxMembers ?? t.max_members) === 'number' ? (t.maxMembers ?? t.max_members) : 45,
-      vacantPositions: t.vacantPositions || t.vacant_positions || [],
+      logoUrl: t.logoUrl || null,
+      logo_url: t.logoUrl || null,
+      bannerUrl: t.bannerUrl || null,
+      banner_url: t.bannerUrl || null,
+      captainId: t.captainId,
+      captain_id: t.captainId,
+      captainName: t.captainName || 'Capitán',
+      captain_name: t.captainName || 'Capitán',
+      membersCount: typeof t.membersCount === 'number' ? t.membersCount : 20,
+      maxMembers: typeof t.maxMembers === 'number' ? t.maxMembers : 45,
+      vacantPositions: t.vacantPositions || [],
       palmares: t.palmares || null,
-      created_at: t.createdAt || t.created_at,
+      created_at: t.createdAt,
     }));
     
     const meta = buildPaginationMeta(page, limit, total);
@@ -177,11 +175,11 @@ export async function PUT(request: Request) {
     const safeDescription = description ?? t.description ?? 'Escuadra oficial del circuito eSports.';
     const safePlatform = (platform ?? t?.platform ?? 'CROSSPLAY').slice(0, 20);
     const safeColor = (color ?? t?.color ?? '#00F0FF').slice(0, 20);
-    const safeLogoText = (logoText ?? t?.logo_text ?? safeTag ?? 'TP').slice(0, 5);
+    const safeLogoText = (logoText ?? t.logoText ?? safeTag ?? 'TP').slice(0, 5);
     const safeStatus = status ?? t.status ?? 'Escuadra Activa';
-    const safeLogoUrl = (logoUrl && typeof logoUrl === 'string' && logoUrl.trim() !== '') ? logoUrl : (t?.logo_url || '');
-    const safeBannerUrl = (bannerUrl && typeof bannerUrl === 'string' && bannerUrl.trim() !== '') ? bannerUrl : (t?.banner_url || '');
-    const safeGameSlug = (gameSlug || t?.game_slug || 'eafc26').slice(0, 50);
+    const safeLogoUrl = (logoUrl && logoUrl.trim() !== '') ? logoUrl : (t.logoUrl || '');
+    const safeBannerUrl = (bannerUrl && bannerUrl.trim() !== '') ? bannerUrl : (t.bannerUrl || '');
+    const safeGameSlug = (gameSlug || t.gameSlug || 'eafc26').slice(0, 50);
     const canAssignCaptain = isAdministrator(actor) || isOrganizer(actor);
     let safeCaptainId = (canAssignCaptain ? captainId : null) ?? t.captainId ?? actor.userId;
     safeCaptainId = safeCaptainId.slice(0, 36);

@@ -1,4 +1,4 @@
-import { ExtractedTeam, ExtractedPlayer, GameApiSearchResult } from './types';
+import { ExtractedPlayer, GameApiSearchResult } from './types';
 
 /**
  * Conector para Fortnite-API (Epic Games)
@@ -57,12 +57,12 @@ export async function searchFortniteTeamOrPlayer(query: string): Promise<GameApi
       sourceApi: 'Fortnite-API',
       query,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en búsqueda de Fortnite:', err);
     return {
       success: false,
       teams: [],
-      message: `Error al consultar la API de Fortnite: ${err.message || 'Error de conexión'}`,
+      message: `Error al consultar la API de Fortnite: ${err instanceof Error ? err.message : 'Error de conexión'}`,
       sourceApi: 'Fortnite-API',
       query,
     };

@@ -43,7 +43,7 @@ describe('shared fast tab navigation', () => {
   it('warms data-backed tabs and reuses their results', async () => {
     const [squad, recruitment, transfers] = await Promise.all([
       read('src/components/game/new-squad-management.tsx'),
-      read('src/app/club/reclutamiento/page.tsx'),
+      read('src/features/recruitment/use-recruitment.ts'),
       read('src/components/transfers/transfer-market.tsx'),
     ]);
 

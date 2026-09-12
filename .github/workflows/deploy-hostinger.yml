@@ -1,20 +1,35 @@
 name: Deploy to Hostinger
 
 on:
-  push:
-    branches:
-      - main # Cambia esto a la rama que uses para producción
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-hostinger
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
+    environment: production
     
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: ⚙️ Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -22,8 +37,21 @@ jobs:
       - name: 📦 Install dependencies
         run: npm ci
 
+      - name: 🔐 Verify production configuration
+        env:
+          DATABASE_PROVIDER: ${{ vars.DATABASE_PROVIDER }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run verify:release-config
+
       - name: 🏗️ Build Next.js project
         env:
+          DATABASE_PROVIDER: ${{ vars.DATABASE_PROVIDER }}
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_PORT: ${{ secrets.DB_PORT }}
           DB_USER: ${{ secrets.DB_USER }}
@@ -35,30 +63,11 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: npm run build
 
-      - name: 📂 Prepare deployment folder (Standalone)
-        run: |
-          # Copy static files to the standalone directory
-          cp -r .next/static .next/standalone/.next/
-          cp -r public .next/standalone/
-          if [ -f public/.htaccess ]; then cp public/.htaccess .next/standalone/.htaccess; fi
-          cp package.json .next/standalone/
-          cp -r database .next/standalone/
-          
-          # Create .env file for runtime
-          cat <<EOF > .next/standalone/.env
-          DB_HOST=127.0.0.1
-          DB_PORT=${{ secrets.DB_PORT }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          DB_NAME=${{ secrets.DB_NAME }}
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
-          NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-          EOF
+      - name: 🔎 Verify standalone artifact
+        run: npm run verify:release
 
       - name: 🚀 Deploy to Hostinger via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@8e83cea8672e3fbcbb9fdafff34debf6ae4c5f65 # v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
@@ -67,6 +76,8 @@ jobs:
           server-dir: ./public_html/ # Ajustado a tu directorio principal
           dangerous-clean-slate: false
           exclude: |
+            **/.env
+            **/.env.*
             **/.git*
             **/.git*/**
             **/node_modules/**

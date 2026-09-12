@@ -128,7 +128,7 @@ export abstract class BaseRepository<T extends { id: string }> implements IRepos
     let sql = `SELECT * FROM \`${this.tableName}\` ${whereSql} ORDER BY \`${orderBy}\` ${orderDirection}`;
     if (limit !== undefined && limit !== null) {
       sql += ' LIMIT ? OFFSET ?';
-      params.push(limit as any, offset as any);
+      params.push(limit, offset);
     }
     
     const rows = await this.queryRows<RowDataPacket>(sql, params);

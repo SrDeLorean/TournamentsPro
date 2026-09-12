@@ -13,7 +13,7 @@ import { TacticalLoadingSkeleton } from '@/components/tournaments/tactical-loadi
 import { PlayerData } from '@/components/players/player-profile-view';
 import { Button } from '@/components/ui/button';
 import { LoaderCircle, Trophy, Users } from 'lucide-react';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { useGamePlayers } from '@/features/game-portal/hooks/use-game-players';
 import { NewUserMyTeamsView as UserMyTeamsView } from '@/components/user/new-user-my-teams';
 import type { PublicPortalSummary } from '@/lib/public-home-summary';
@@ -74,7 +74,8 @@ interface GamePortalClientProps {
 
 export default function GamePortalClient({ gameSlug, initialSection, initialOverview }: GamePortalClientProps) {
   const router = useRouter();
-  const { currentUser, userTeams, refetchTeams } = useAuth();
+  const { currentUser } = useAuth();
+  const { userTeams, refetchTeams } = useTeams();
   const game = GAMES_CATALOG[gameSlug];
 
   const myTeamInActiveDiscipline =

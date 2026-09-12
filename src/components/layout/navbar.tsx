@@ -93,7 +93,8 @@ export function Navbar({
   }
 
   return (
-    <header
+    <>
+      <header
       className="app-navbar ui-navigation-bar sticky top-0 z-50 flex h-14 w-full items-center"
       data-game={routeGame?.slug}
       style={{ '--navigation-brand': routeGame?.brandColor || 'var(--app-accent)' } as CSSProperties}
@@ -167,24 +168,32 @@ export function Navbar({
 
             {/* Settings Dropdown Container */}
             {isSettingsOpen && (
-              <div className="ui-navigation-popover absolute right-0 top-full z-50 mt-2 w-72 space-y-3 p-3 animate-in fade-in zoom-in-95 duration-150">
-                <div className="pb-2 border-b border-[var(--border-card)] flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-heading)] font-[family-name:var(--font-active)]">Preferencias</span>
-                  <Sparkles className="w-3.5 h-3.5 text-[var(--navigation-brand)]" />
-                </div>
+              <>
+                <button
+                  type="button"
+                  aria-label="Cerrar preferencias"
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="fixed inset-0 top-14 z-40 bg-[var(--app-overlay)] backdrop-blur-sm sm:hidden"
+                />
+                <div className="management-popover ui-navigation-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] space-y-3 overflow-y-auto p-3 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="pb-2 border-b border-[var(--border-card)] flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-heading)] font-[family-name:var(--font-active)]">Preferencias</span>
+                    <Sparkles className="w-3.5 h-3.5 text-[var(--navigation-brand)]" />
+                  </div>
 
-                {/* Theme Switcher */}
-                <div className="space-y-1.5 font-[family-name:var(--font-active)]">
-                  <label className="text-[11px] font-bold text-[var(--text-muted)] block font-[family-name:var(--font-active)]">Tema Visual</label>
-                  <ThemeSwitcher />
-                </div>
+                  {/* Theme Switcher */}
+                  <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+                    <label className="text-[11px] font-bold text-[var(--text-muted)] block font-[family-name:var(--font-active)]">Tema Visual</label>
+                    <ThemeSwitcher />
+                  </div>
 
-                {/* Language Switcher */}
-                <div className="space-y-1.5 font-[family-name:var(--font-active)]">
-                  <label className="text-[11px] font-bold text-[var(--text-muted)] block font-[family-name:var(--font-active)]">Idioma / Region</label>
-                  <LanguageSwitcher />
+                  {/* Language Switcher */}
+                  <div className="space-y-1.5 font-[family-name:var(--font-active)]">
+                    <label className="text-[11px] font-bold text-[var(--text-muted)] block font-[family-name:var(--font-active)]">Idioma / Region</label>
+                    <LanguageSwitcher />
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
@@ -209,41 +218,49 @@ export function Navbar({
               </button>
 
               {isUserMenuOpen ? (
-                <div id="public-authenticated-user-menu" className="management-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] space-y-2 overflow-y-auto rounded-2xl p-3 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80 font-[family-name:var(--font-active)]">
-                  <div className="management-profile-card space-y-3 rounded-xl p-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || 'Usuario'} status="online" size="md" />
-                      <div className="min-w-0 flex-1">
-                        <strong className="block truncate text-sm text-[var(--text-heading)] font-[family-name:var(--font-active)]">{currentUser?.name}</strong>
-                        <span className="block truncate font-[family-name:var(--font-active)] text-xs font-bold text-[var(--navigation-brand)]">@{currentUser?.gamertag}</span>
-                        <span className="block truncate text-[10px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">{currentUser?.email}</span>
+                <>
+                  <button
+                    type="button"
+                    aria-label="Cerrar menú de usuario"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="fixed inset-0 top-14 z-40 bg-[var(--app-overlay)] backdrop-blur-sm sm:hidden"
+                  />
+                  <div id="public-authenticated-user-menu" className="management-popover ui-navigation-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] space-y-2 overflow-y-auto rounded-2xl p-3 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80 font-[family-name:var(--font-active)]">
+                    <div className="management-profile-card space-y-3 rounded-xl p-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || 'Usuario'} status="online" size="md" />
+                        <div className="min-w-0 flex-1">
+                          <strong className="block truncate text-sm text-[var(--text-heading)] font-[family-name:var(--font-active)]">{currentUser?.name}</strong>
+                          <span className="block truncate font-[family-name:var(--font-active)] text-xs font-bold text-[var(--navigation-brand)]">@{currentUser?.gamertag}</span>
+                          <span className="block truncate text-[10px] text-[var(--text-muted)] font-[family-name:var(--font-active)]">{currentUser?.email}</span>
+                        </div>
                       </div>
+                      <Badge variant="neutral" className="navigation-role-badge">{currentUser?.role}</Badge>
                     </div>
-                    <Badge variant="neutral" className="navigation-role-badge">{currentUser?.role}</Badge>
+                    <div className="space-y-1 text-xs font-bold font-[family-name:var(--font-active)]">
+                      <Link href="/dashboard" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
+                        <LayoutDashboard className="size-4 text-[var(--navigation-brand)]" />Panel de gestión
+                      </Link>
+                      <Link href="/cuenta/ajustes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
+                        <UserRoundCog className="size-4 text-[var(--navigation-brand)]" />Configuración de la cuenta
+                      </Link>
+                      <Link href="/mensajes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
+                        <Mail className="size-4 text-[var(--navigation-brand)]" />Centro de mensajes
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          logout();
+                          router.push('/login');
+                        }}
+                        className="management-profile-action w-full border-t border-[var(--border-card)] text-left text-[var(--app-danger)] font-[family-name:var(--font-active)]"
+                      >
+                        <LogOut className="size-4" />Cerrar sesión
+                      </button>
+                    </div>
                   </div>
-                  <div className="space-y-1 text-xs font-bold font-[family-name:var(--font-active)]">
-                    <Link href="/dashboard" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
-                      <LayoutDashboard className="size-4 text-[var(--navigation-brand)]" />Panel de gestión
-                    </Link>
-                    <Link href="/cuenta/ajustes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
-                      <UserRoundCog className="size-4 text-[var(--navigation-brand)]" />Configuración de la cuenta
-                    </Link>
-                    <Link href="/mensajes" onClick={() => setIsUserMenuOpen(false)} className="management-profile-action">
-                      <Mail className="size-4 text-[var(--navigation-brand)]" />Centro de mensajes
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        logout();
-                        router.push('/login');
-                      }}
-                      className="management-profile-action w-full border-t border-[var(--border-card)] text-left text-[var(--app-danger)] font-[family-name:var(--font-active)]"
-                    >
-                      <LogOut className="size-4" />Cerrar sesión
-                    </button>
-                  </div>
-                </div>
+                </>
               ) : null}
             </div>
           ) : (
@@ -285,10 +302,11 @@ export function Navbar({
           ) : null}
         </div>
       </div>
-
-      {isPublicMobileMenuOpen ? (
-        <MobilePublicNavigation currentGame={currentGame} currentPath={pathname} isAuthenticated={isAuthenticated} onClose={() => setIsMobileMenuOpen(false)} />
-      ) : null}
     </header>
+
+    {isPublicMobileMenuOpen ? (
+      <MobilePublicNavigation currentGame={currentGame} currentPath={pathname} isAuthenticated={isAuthenticated} onClose={() => setIsMobileMenuOpen(false)} />
+    ) : null}
+  </>
   );
 }

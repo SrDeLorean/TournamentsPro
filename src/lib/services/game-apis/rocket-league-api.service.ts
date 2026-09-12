@@ -1,4 +1,4 @@
-import { ExtractedTeam, ExtractedPlayer, GameApiSearchResult } from './types';
+import { GameApiSearchResult } from './types';
 
 /**
  * Conector para Ballchasing API & Tracker Network API (Rocket League)
@@ -29,12 +29,12 @@ export async function searchRocketLeagueTeamOrPlayer(query: string): Promise<Gam
       sourceApi: 'Rocket League API Service',
       query,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en búsqueda de Rocket League:', err);
     return {
       success: false,
       teams: [],
-      message: `Error al consultar la API de Rocket League: ${err.message || 'Error de conexión'}`,
+      message: `Error al consultar la API de Rocket League: ${err instanceof Error ? err.message : 'Error de conexión'}`,
       sourceApi: 'Rocket League API',
       query,
     };

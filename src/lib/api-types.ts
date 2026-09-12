@@ -184,6 +184,10 @@ export interface UserProfile {
   banReason: string | null;
 }
 
+export type PublicUserProfile = Omit<UserProfile, 'email' | 'isBanned' | 'banReason' | 'socialMedia'> & {
+  socialMedia: Omit<UserProfile['socialMedia'], 'whatsapp' | 'discord'>;
+};
+
 export interface TeamData {
   id: string;
   name: string;
@@ -409,6 +413,40 @@ export function mapUserRowToProfile(row: any): UserProfile {
     organizationId: orgId,
     isBanned: Boolean(row.is_banned ?? row.isBanned),
     banReason: row.ban_reason || row.banReason || null,
+  };
+}
+
+export function mapUserRowToPublicProfile(row: any): PublicUserProfile {
+  const profile = mapUserRowToProfile(row);
+  return {
+    id: profile.id,
+    name: profile.name,
+    gamertag: profile.gamertag,
+    role: profile.role,
+    primaryGame: profile.primaryGame,
+    platform: profile.platform,
+    position: profile.position,
+    secondaryPosition: profile.secondaryPosition,
+    rankBadge: profile.rankBadge,
+    rating: profile.rating,
+    status: profile.status,
+    avatarUrl: profile.avatarUrl,
+    foto: profile.foto,
+    bannerUrl: profile.bannerUrl,
+    country: profile.country,
+    bio: profile.bio,
+    biografia: profile.biografia,
+    teamId: profile.teamId,
+    teamName: profile.teamName,
+    socialMedia: {
+      instagram: profile.socialMedia.instagram,
+      twitch: profile.socialMedia.twitch,
+      youtube: profile.socialMedia.youtube,
+      tiktok: profile.socialMedia.tiktok,
+      twitter: profile.socialMedia.twitter,
+      website: profile.socialMedia.website,
+    },
+    organizationId: profile.organizationId,
   };
 }
 

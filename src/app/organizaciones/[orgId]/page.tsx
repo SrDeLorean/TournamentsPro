@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from 'next/link';
 import { Building2 } from 'lucide-react';
 import { dbProvider } from '@/lib/db/provider';
@@ -74,8 +73,8 @@ export default async function GlobalOrganizationPage({ params }: { params: Promi
     id: c.id, name: c.name, game_slug: c.gameSlug,
     organizer_id: c.organizerId, organizer_name: c.organizerName,
     organization_id: c.organizationId, season_id: c.seasonId,
-    prize_pool: c.prizePool, transfer_market_mode: c.transferMarketMode as any,
-    mode_format: c.modeFormat, status: c.status as any,
+    prize_pool: c.prizePool, transfer_market_mode: c.transferMarketMode,
+    mode_format: c.modeFormat, status: c.status,
     fecha_limite_inscripcion: c.fechaLimiteInscripcion,
     fecha_inicio: c.fechaInicio, fecha_termino: c.fechaTermino,
     description: c.description, created_at: c.createdAt,

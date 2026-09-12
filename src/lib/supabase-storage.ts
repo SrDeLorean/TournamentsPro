@@ -7,7 +7,7 @@ let bucketCheckPromise: Promise<void> | null = null;
 
 export function isSupabaseStorageConfigured(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   return !!(url && key && !url.includes('placeholder.supabase.co'));
 }
 
@@ -99,12 +99,15 @@ export async function deleteFromSupabaseStorage(fileUrl: string): Promise<boolea
   if (!fileUrl || !isSupabaseStorageConfigured()) return false;
 
   try {
+    const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    if (!configuredUrl || new URL(fileUrl).origin !== new URL(configuredUrl).origin) return false;
+
     // Extract object path from full public URL
     // e.g.: https://xyz.supabase.co/storage/v1/object/public/tournaments-media/teams/logos/abc.webp
     const marker = `/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/`;
     if (!fileUrl.includes(marker)) return false;
 
-    const objectPath = fileUrl.substring(fileUrl.indexOf(marker) + marker.length);
+    const objectPath = decodeURIComponent(fileUrl.substring(fileUrl.indexOf(marker) + marker.length));
     if (!objectPath) return false;
 
     const { error } = await supabase.storage

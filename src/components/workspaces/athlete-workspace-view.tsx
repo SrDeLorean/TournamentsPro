@@ -18,7 +18,7 @@ import {
   Trophy,
   User,
 } from 'lucide-react';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import {
   ManagementHero,
@@ -88,7 +88,8 @@ const sectionCopy: Record<AthleteWorkspaceSection, { eyebrow: string; title: str
 };
 
 export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug: string; section?: AthleteWorkspaceSection }) {
-  const { currentUser, userTeams = [] } = useAuth();
+  const { currentUser } = useAuth();
+  const { userTeams = [] } = useTeams();
   const game = GAMES_CATALOG[gameSlug] || GAMES_CATALOG.eafc26;
   const base = `/${game.slug}/atleta`;
   const copy = sectionCopy[section];

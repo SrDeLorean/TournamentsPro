@@ -27,15 +27,18 @@ const detailTitles: Record<DetailKey, string> = { users: 'Actividad de usuarios'
 export function useDashboardInsights() {
   const [insights, setInsights] = useState<DashboardInsights | null>(null);
   const [loading, setLoading] = useState(true);
-  const reload = useCallback(async () => {
-    setLoading(true);
+  const fetchInsights = useCallback(async () => {
     try {
       const response = await fetch('/api/dashboard/insights');
       const data = await response.json() as { success?: boolean; insights?: DashboardInsights };
       if (response.ok && data.success && data.insights) setInsights(data.insights);
     } finally { setLoading(false); }
   }, []);
-  useEffect(() => { void reload(); }, [reload]);
+  const reload = useCallback(async () => {
+    setLoading(true);
+    await fetchInsights();
+  }, [fetchInsights]);
+  useEffect(() => { void fetchInsights(); }, [fetchInsights]);
   return { insights, loading, reload };
 }
 

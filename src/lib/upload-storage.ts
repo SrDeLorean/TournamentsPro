@@ -99,5 +99,12 @@ export async function persistUploadCopies({
 
 export function previousUploadBelongsToEntity(previousUrl: string, entityId: string): boolean {
   const expectedId = sanitizeUploadSegment(entityId, 'entity');
-  return sanitizeUploadSegment(path.basename(previousUrl)).includes(expectedId);
+  let fileName: string;
+  try {
+    fileName = decodeURIComponent(new URL(previousUrl, 'https://local.invalid').pathname.split('/').pop() || '');
+  } catch {
+    return false;
+  }
+  const escapedId = expectedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`-${escapedId}-\\d+\\.[a-z0-9]+$`, 'i').test(fileName);
 }

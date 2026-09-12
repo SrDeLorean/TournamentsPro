@@ -1,5 +1,36 @@
 import { ExtractedTeam, ExtractedPlayer, GameApiSearchResult } from './types';
 
+interface EaClub {
+  clubId?: string | number;
+  id?: string | number;
+  name?: string;
+  clubName?: string;
+  currentDivision?: string | number;
+  rank?: string | number;
+  wins?: number;
+  overallWins?: number;
+  losses?: number;
+  overallLosses?: number;
+  ties?: number;
+  overallTies?: number;
+}
+
+interface EaMember {
+  name?: string;
+  proName?: string;
+  gamertag?: string;
+  favoritePosition?: string;
+  position?: string;
+  rating?: number;
+  goals?: number;
+  assists?: number;
+  gamesPlayed?: number;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /**
  * Conector de la API oficial de EA SPORTS FC Pro Clubs
  */
@@ -20,16 +51,17 @@ export async function searchEaFcProClub(query: string, platform = 'common-gen5')
       next: { revalidate: 300 }, // Caché de 5 minutos
     });
 
-    let rawClubs: any[] = [];
+    let rawClubs: EaClub[] = [];
     if (searchRes.ok) {
-      const data = await searchRes.json();
-      rawClubs = Array.isArray(data) ? data : Object.values(data);
+      const data: unknown = await searchRes.json();
+      const candidates = Array.isArray(data) ? data : isRecord(data) ? Object.values(data) : [];
+      rawClubs = candidates.filter(isRecord) as EaClub[];
     }
 
     // Si la búsqueda directa devuelve clubes
     if (rawClubs.length > 0) {
       const extractedTeams: ExtractedTeam[] = await Promise.all(
-        rawClubs.slice(0, 5).map(async (club: any) => {
+        rawClubs.slice(0, 5).map(async (club) => {
           const clubId = club.clubId || club.id;
           const clubName = club.name || club.clubName || trimmed;
           const tag = clubName.substring(0, 3).toUpperCase();
@@ -42,9 +74,10 @@ export async function searchEaFcProClub(query: string, platform = 'common-gen5')
               headers: { 'User-Agent': 'Mozilla/5.0' },
             });
             if (rosterRes.ok) {
-              const rData = await rosterRes.json();
-              const members = rData?.members || rData || [];
-              roster = (Array.isArray(members) ? members : Object.values(members)).map((m: any) => ({
+              const rData: unknown = await rosterRes.json();
+              const members = isRecord(rData) && rData.members ? rData.members : rData;
+              const candidates = Array.isArray(members) ? members : isRecord(members) ? Object.values(members) : [];
+              roster = (candidates.filter(isRecord) as EaMember[]).map((m) => ({
                 gamertag: m.name || m.proName || m.gamertag || 'Jugador EA FC',
                 position: m.favoritePosition || m.position || 'MC',
                 rating: m.rating ? Math.round(Number(m.rating)) : 85,
@@ -108,12 +141,12 @@ export async function searchEaFcProClub(query: string, platform = 'common-gen5')
       sourceApi: 'EA Sports Pro Clubs API',
       query,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error en búsqueda de EA FC Pro Club:', err);
     return {
       success: false,
       teams: [],
-      message: `No se pudo conectar a la API de EA FC: ${err.message || 'Error de conexión'}`,
+      message: `No se pudo conectar a la API de EA FC: ${err instanceof Error ? err.message : 'Error de conexión'}`,
       sourceApi: 'EA Sports Pro Clubs API',
       query,
     };

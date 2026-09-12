@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { Building2, Gamepad2, Layers, MapPin, Swords } from 'lucide-react';
 import { ManagementHero } from '@/components/dashboard/management-ui';
@@ -29,16 +29,8 @@ export function OrganizerDashboardHero({
 }: OrganizerDashboardHeroProps) {
   const activeGame = GAMES_CATALOG[selectedGameSlug] ?? GAMES_CATALOG.eafc26;
   const activeGameMode = gameModes.find((mode) => mode.id === selectedGameModeId) ?? gameModes[0];
-  const [hasBannerError, setHasBannerError] = useState(false);
-  const [hasLogoError, setHasLogoError] = useState(false);
-
-  React.useEffect(() => {
-    setHasBannerError(false);
-  }, [organization?.banner_url]);
-
-  React.useEffect(() => {
-    setHasLogoError(false);
-  }, [organization?.logo_url]);
+  const [failedBannerUrl, setFailedBannerUrl] = useState<string | null>(null);
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
 
   return (
     <ManagementHero
@@ -50,7 +42,7 @@ export function OrganizerDashboardHero({
       badge={organization ? `[${organization.tag}]` : 'Organizador'}
     >
       <div className="organizer-dashboard-context">
-        {organization?.banner_url && !hasBannerError ? (
+        {organization?.banner_url && failedBannerUrl !== organization.banner_url ? (
           <div className="organizer-dashboard-banner" aria-hidden="true">
             <Image
               key={organization.banner_url}
@@ -59,14 +51,14 @@ export function OrganizerDashboardHero({
               fill
               sizes="(min-width: 1024px) 70vw, 100vw"
               unoptimized={shouldBypassImageOptimization(organization.banner_url)}
-              onError={() => setHasBannerError(true)}
+              onError={() => setFailedBannerUrl(organization.banner_url ?? null)}
             />
           </div>
         ) : null}
 
         <div className="organizer-dashboard-identity">
           <div className="organizer-dashboard-logo">
-            {organization?.logo_url && !hasLogoError ? (
+            {organization?.logo_url && failedLogoUrl !== organization.logo_url ? (
               <Image
                 key={organization.logo_url}
                 src={organization.logo_url}
@@ -74,7 +66,7 @@ export function OrganizerDashboardHero({
                 fill
                 sizes="64px"
                 unoptimized={shouldBypassImageOptimization(organization.logo_url)}
-                onError={() => setHasLogoError(true)}
+                onError={() => setFailedLogoUrl(organization.logo_url ?? null)}
               />
             ) : (
               <Building2 aria-hidden="true" />

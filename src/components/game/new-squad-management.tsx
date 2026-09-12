@@ -13,7 +13,7 @@ import { useWarmedTabData } from '@/components/ui/use-warmed-tab-data';
 import { 
   Users, UserPlus, FileText, Layers, Ban, CheckSquare, Search, Send, Clock, X
 } from 'lucide-react';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { CrudAlertBanner, useCrudNotifier } from '@/components/ui/crud-alert';
 import {
   getNewTeamSquadAction,
@@ -25,7 +25,6 @@ import {
   getSentContractsByTeamAction
 } from '@/app/actions/new-transfers';
 import { getAllPlayersForContractOfferAction } from '@/app/actions/squads'; // reuse the simple search
-
 interface SquadMember {
   user_id: string;
   user_name: string;
@@ -67,7 +66,8 @@ const getErrorMessage = (error: unknown) => error instanceof Error ? error.messa
 const SQUAD_TABS = ['roster', 'contracts', 'matrix', 'recruit'] as const;
 
 export function NewSquadManagementView({ game }: { game: GameConfig }) {
-  const { currentUser, userTeams } = useAuth();
+  const { currentUser } = useAuth();
+  const { userTeams } = useTeams();
   const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
   const [activeTab, setActiveTab] = useState<'roster' | 'recruit' | 'contracts' | 'matrix'>('roster');

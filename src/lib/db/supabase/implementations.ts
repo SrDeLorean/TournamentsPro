@@ -8,11 +8,24 @@ import type {
   Notification,
   IMatchRepository,
   IGameRepository,
-  INotificationRepository
+  INotificationRepository,
+  AvailablePlayerRecord,
+  SquadRecord,
+  EnrolledTeamRecord,
 } from '../interfaces';
 
-function toSnakeCase(obj: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {};
+type SnakeCaseKey<S extends string> = S extends `${infer First}${infer Rest}`
+  ? First extends Lowercase<First>
+    ? `${First}${SnakeCaseKey<Rest>}`
+    : `_${Lowercase<First>}${SnakeCaseKey<Rest>}`
+  : S;
+
+type SupabaseRow<T> = Record<string, unknown> & {
+  [K in keyof T as SnakeCaseKey<K & string>]-?: T[K]
+};
+
+function toSnakeCase(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value === undefined) continue;
     const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
@@ -33,7 +46,8 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
     return `usr-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
-  protected mapRow(row: any): User {
+  protected mapRow(rawRow: Record<string, unknown>): User {
+    const row = rawRow as SupabaseRow<User>;
     return {
       id: row.id, email: row.email, passwordHash: row.password_hash, googleId: row.google_id,
       name: row.name, gamertag: row.gamertag, role: row.role, primaryGameSlug: row.primary_game_slug,
@@ -45,7 +59,7 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
     };
   }
   
-  protected mapToDb(entity: Partial<User>): any {
+  protected mapToDb(entity: Partial<User>): Record<string, unknown> {
     return toSnakeCase(entity);
   }
 
@@ -80,7 +94,7 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
     return this.mapRow(data);
   }
 
-  async getAvailablePlayers(options?: { organizerOrgId?: string | null; searchQuery?: string }): Promise<any[]> {
+  async getAvailablePlayers(options?: { organizerOrgId?: string | null; searchQuery?: string }): Promise<AvailablePlayerRecord[]> {
     let query = supabase
       .from(this.tableName)
       .select('id, name, gamertag, email, position, primary_game_slug, organization_id, avatar_url, foto, role, status, is_banned')
@@ -104,7 +118,7 @@ export class SupabaseUserRepository extends SupabaseBaseRepository<User> impleme
       if (orgs) orgMap = new Map(orgs.map((o) => [o.id, o.name]));
     }
 
-    let teamMap = new Map<string, { id: string; name: string }>();
+    const teamMap = new Map<string, { id: string; name: string }>();
     if (userIds.length > 0) {
       const { data: members } = await supabase.from('team_members').select('user_id, team_id').in('user_id', userIds);
       if (members && members.length > 0) {
@@ -146,7 +160,8 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
     return `org-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
-  protected mapRow(row: any): Organization {
+  protected mapRow(rawRow: Record<string, unknown>): Organization {
+    const row = rawRow as SupabaseRow<Organization>;
     return {
       id: row.id, name: row.name, tag: row.tag, ownerId: row.owner_id, logoUrl: row.logo_url,
       bannerUrl: row.banner_url, description: row.description, country: row.country, status: row.status, isBanned: Boolean(row.is_banned), banReason: row.ban_reason,
@@ -155,7 +170,7 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
     };
   }
   
-  protected mapToDb(entity: Partial<Organization>): any {
+  protected mapToDb(entity: Partial<Organization>): Record<string, unknown> {
     const dbData = toSnakeCase(entity);
     if (entity.allowedGames) {
       dbData.allowed_games = JSON.stringify(entity.allowedGames);
@@ -168,7 +183,8 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
     return data ? this.mapRow(data) : null;
   }
 
-  async getOrganizationsWithStats(gameSlug?: string): Promise<any[]> {
+  async getOrganizationsWithStats(gameSlug?: string): Promise<Record<string, unknown>[]> {
+    void gameSlug;
     const orgs = await this.findAll();
     return orgs.map(o => ({
       ...o,
@@ -210,7 +226,8 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
     return `team-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
-  protected mapRow(row: any): Team {
+  protected mapRow(rawRow: Record<string, unknown>): Team {
+    const row = rawRow as SupabaseRow<Team>;
     return {
       id: row.id, name: row.name, tag: row.tag, gameSlug: row.game_slug, organizationId: row.organization_id,
       captainId: row.captain_id, captainName: row.captain_name, platform: row.platform, membersCount: row.members_count,
@@ -221,7 +238,7 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
     };
   }
   
-  protected mapToDb(entity: Partial<Team>): any {
+  protected mapToDb(entity: Partial<Team>): Record<string, unknown> {
     const dbData = toSnakeCase(entity);
     if (entity.vacantPositions) {
       dbData.vacant_positions = JSON.stringify(entity.vacantPositions);
@@ -318,7 +335,7 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
     await supabase.from(this.tableName).update({ status: 'Archivado', updated_at: new Date().toISOString() }).eq('id', teamId);
   }
 
-  async getSquad(teamId: string): Promise<any[]> {
+  async getSquad(teamId: string): Promise<SquadRecord[]> {
     const { data: members, error: memError } = await supabase
       .from('team_members')
       .select('*')
@@ -453,7 +470,8 @@ export class SupabaseCompetitionRepository extends SupabaseBaseRepository<Compet
     return `comp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
-  protected mapRow(row: any): Competition {
+  protected mapRow(rawRow: Record<string, unknown>): Competition {
+    const row = rawRow as SupabaseRow<Competition>;
     return {
       id: row.id, name: row.name, gameSlug: row.game_slug, organizerId: row.organizer_id,
       organizerName: row.organizer_name, organizationId: row.organization_id, seasonId: row.season_id,
@@ -465,7 +483,7 @@ export class SupabaseCompetitionRepository extends SupabaseBaseRepository<Compet
     };
   }
   
-  protected mapToDb(entity: Partial<Competition>): any {
+  protected mapToDb(entity: Partial<Competition>): Record<string, unknown> {
     return toSnakeCase(entity);
   }
 
@@ -484,7 +502,7 @@ export class SupabaseCompetitionRepository extends SupabaseBaseRepository<Compet
     return (data || []).map(row => this.mapRow(row));
   }
 
-  async getEnrolledTeams(competitionId: string): Promise<any[]> {
+  async getEnrolledTeams(competitionId: string): Promise<EnrolledTeamRecord[]> {
     const { data, error } = await supabase
       .from('competition_teams')
       .select('*')
@@ -512,7 +530,7 @@ export class SupabaseCompetitionRepository extends SupabaseBaseRepository<Compet
     if (error) throw error;
     if (!data) return 0;
 
-    const realMatches = data.filter((m: any) => {
+    const realMatches = data.filter((m) => {
       const home = (m.home_team_name || '').toLowerCase();
       const away = (m.away_team_name || '').toLowerCase();
       const isBye = home.includes('bye') || home.includes('descanso') || away.includes('bye') || away.includes('descanso');
@@ -561,14 +579,15 @@ export class SupabaseSeasonRepository extends SupabaseBaseRepository<Season> imp
     return `seas-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
-  protected mapRow(row: any): Season {
+  protected mapRow(rawRow: Record<string, unknown>): Season {
+    const row = rawRow as SupabaseRow<Season>;
     return {
       id: row.id, name: row.name, organizationId: row.organization_id, startDate: row.start_date,
       endDate: row.end_date, status: row.status, createdAt: row.created_at
     };
   }
   
-  protected mapToDb(entity: Partial<Season>): any {
+  protected mapToDb(entity: Partial<Season>): Record<string, unknown> {
     return toSnakeCase(entity);
   }
 
@@ -586,7 +605,8 @@ export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> imple
     return `match-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
-  protected mapRow(row: any): Match {
+  protected mapRow(rawRow: Record<string, unknown>): Match {
+    const row = rawRow as SupabaseRow<Match>;
     return {
       id: row.id,
       tournamentId: row.tournament_id,
@@ -619,7 +639,7 @@ export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> imple
     };
   }
 
-  protected mapToDb(entity: Partial<Match>): any {
+  protected mapToDb(entity: Partial<Match>): Record<string, unknown> {
     return toSnakeCase(entity);
   }
 
@@ -676,11 +696,11 @@ export class SupabaseMatchRepository extends SupabaseBaseRepository<Match> imple
 }
 
 
-export class SupabaseGameRepository extends SupabaseBaseRepository<any> {
+export class SupabaseGameRepository extends SupabaseBaseRepository<Game> implements IGameRepository {
   protected tableName = 'games';
   protected primaryKey = 'slug';
-  protected mapRow(row: any) { return row; }
-  protected mapToDb(entity: any) { return entity; }
+  protected mapRow(row: Record<string, unknown>): Game { return row as unknown as Game; }
+  protected mapToDb(entity: Partial<Game>): Record<string, unknown> { return { ...entity }; }
 }
 
 export class SupabaseNotificationRepository extends SupabaseBaseRepository<Notification> implements INotificationRepository {
@@ -691,7 +711,8 @@ export class SupabaseNotificationRepository extends SupabaseBaseRepository<Notif
     return `notif-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
-  protected mapRow(row: any): Notification {
+  protected mapRow(rawRow: Record<string, unknown>): Notification {
+    const row = rawRow as SupabaseRow<Notification>;
     return {
       id: row.id,
       userId: row.user_id,
@@ -704,7 +725,7 @@ export class SupabaseNotificationRepository extends SupabaseBaseRepository<Notif
     };
   }
 
-  protected mapToDb(entity: Partial<Notification>): any {
+  protected mapToDb(entity: Partial<Notification>): Record<string, unknown> {
     return toSnakeCase(entity);
   }
 

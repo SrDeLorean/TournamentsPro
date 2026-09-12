@@ -1,3 +1,6 @@
+import type { DatabaseParams } from '@/lib/db';
+import type { ResultSetHeader } from 'mysql2';
+
 export interface FindOptions {
   where?: Record<string, unknown>;
   orderBy?: string;
@@ -140,22 +143,73 @@ export interface Game {
   name: string;
   category: string;
   teamSize: number;
-  positionsJson: any | null;
+  positionsJson: unknown;
   brandColor: string;
-  statsSchema: any | null;
+  statsSchema: unknown;
   createdAt: string;
+}
+
+export interface AvailablePlayerRecord {
+  id: string;
+  name: string;
+  gamertag: string;
+  email: string;
+  position: string;
+  primary_game_slug: string;
+  organization_id: string | null;
+  organization_name: string | null;
+  current_team_id: string | null;
+  current_team_name: string | null;
+  avatar_url: string | null;
+  foto: string | null;
+  role: string;
+  status: string;
+}
+
+export interface SquadRecord {
+  id: string;
+  team_id: string;
+  user_id: string;
+  userId?: string;
+  organization_name: string | null;
+  tactical_position: string;
+  role_in_team: 'Capitan' | 'Capitán' | 'Encargado' | 'Jugador' | 'DT / Analyst';
+  jersey_number: number | null;
+  joined_at: string;
+  user_name: string;
+  gamertag: string;
+  email: string;
+  avatar_url: string | null;
+  foto: string | null;
+}
+
+export interface EnrolledTeamRecord {
+  id: string;
+  competition_id: string;
+  team_id: string;
+  teamId?: string;
+  team_name: string;
+  teamName?: string;
+  team_tag: string | null;
+  teamTag?: string | null;
+  status: string;
+  competitionId?: string;
+  enrolled_at?: string | null;
+  enrolledAt?: string | null;
+  updated_at?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface IUserRepository extends IRepository<User> {
   findByEmail(email: string): Promise<User | null>;
   findByGamertag(gamertag: string): Promise<User | null>;
   findByEmailOrGamertag(identifier: string): Promise<User | null>;
-  getAvailablePlayers(options?: { organizerOrgId?: string | null; searchQuery?: string }): Promise<any[]>;
+  getAvailablePlayers(options?: { organizerOrgId?: string | null; searchQuery?: string }): Promise<AvailablePlayerRecord[]>;
 }
 
 export interface IOrganizationRepository extends IRepository<Organization> {
   findByOwnerId(ownerId: string): Promise<Organization | null>;
-  getOrganizationsWithStats(gameSlug?: string): Promise<any[]>;
+  getOrganizationsWithStats(gameSlug?: string): Promise<Record<string, unknown>[]>;
   hasActiveCompetitions(organizationId: string): Promise<boolean>;
   archiveOrganization(organizationId: string): Promise<number>;
 }
@@ -169,8 +223,8 @@ export interface ITeamRepository extends IRepository<Team> {
   syncStaff(teamId: string, captainId: string, managerIds: string[], position?: string): Promise<void>;
   hasActiveCompetitions(teamId: string): Promise<boolean>;
   archiveTeam(teamId: string): Promise<void>;
-  getSquad(teamId: string): Promise<any[]>;
-  getAcceptedOffers(teamId: string): Promise<any[]>;
+  getSquad(teamId: string): Promise<SquadRecord[]>;
+  getAcceptedOffers(teamId: string): Promise<Array<{ player_user_id: string; pitch_message: string | null }>>;
   getTeamCompetitionOrganizations(teamId: string): Promise<Array<{ org_id: string; org_name: string }>>;
   addSquadMember(teamId: string, userId: string, position?: string, role?: string, orgName?: string): Promise<void>;
   removeSquadMember(teamId: string, userId: string, orgName?: string): Promise<void>;
@@ -183,7 +237,7 @@ export interface ICompetitionRepository extends IRepository<Competition> {
   findByOrganizer(organizerId: string): Promise<Competition[]>;
   findByOrganization(orgId: string): Promise<Competition[]>;
   findByGameSlug(gameSlug: string): Promise<Competition[]>;
-  getEnrolledTeams(competitionId: string): Promise<any[]>;
+  getEnrolledTeams(competitionId: string): Promise<EnrolledTeamRecord[]>;
   removeEnrolledTeam(competitionId: string, teamId: string): Promise<void>;
   getReportedMatchesCount(competitionId: string): Promise<number>;
   getMatchCompetitionId(matchId: string): Promise<string | null>;
@@ -233,7 +287,7 @@ export interface IMatchRepository extends IRepository<Match> {
   addPlayerStat(statsId: string, matchId: string, playerId: string, gameSlug: string, statsJson: string): Promise<void>;
 }
 
-export interface IGameRepository extends IRepository<Game> {}
+export type IGameRepository = IRepository<Game>;
 
 export interface Notification {
   id: string;
@@ -263,7 +317,7 @@ export interface IDatabaseProvider {
   games: IGameRepository;
   notifications: INotificationRepository;
 
-  query<T = any>(sql: string, params?: any[]): Promise<T[]>;
-  execute(sql: string, params?: any[]): Promise<any>;
+  query<T = unknown>(sql: string, params?: DatabaseParams): Promise<T[]>;
+  execute(sql: string, params?: DatabaseParams): Promise<ResultSetHeader>;
   withTransaction<T>(operation: (tx: IDatabaseProvider) => Promise<T>): Promise<T>;
 }

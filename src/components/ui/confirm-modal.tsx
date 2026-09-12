@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, ShieldAlert, CheckCircle2, Loader2, XCircle } from 'lucide-react';
@@ -36,6 +36,8 @@ export function ConfirmModal({
   const [confirmation, setConfirmation] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const reasonId = useId();
+  const confirmationId = useId();
 
   if (!isOpen) return null;
 
@@ -132,10 +134,11 @@ export function ConfirmModal({
 
         {requireReason && (
           <div className="ui-confirm-field space-y-1.5 font-[family-name:var(--font-active)]">
-            <label className="text-xs font-bold text-[var(--text-heading)] uppercase block font-[family-name:var(--font-active)]">
+            <label htmlFor={reasonId} className="text-xs font-bold text-[var(--text-heading)] uppercase block font-[family-name:var(--font-active)]">
               Motivo o justificación:
             </label>
             <textarea
+              id={reasonId}
               data-autofocus={!confirmationText || undefined}
               rows={2}
               value={reason}
@@ -148,10 +151,11 @@ export function ConfirmModal({
 
         {confirmationText && (
           <div className="ui-confirm-field space-y-1.5 font-[family-name:var(--font-active)]">
-            <label className="block text-xs font-bold uppercase text-[var(--text-heading)] font-[family-name:var(--font-active)]">
+            <label htmlFor={confirmationId} className="block text-xs font-bold uppercase text-[var(--text-heading)] font-[family-name:var(--font-active)]">
               Escribe <span className="select-all text-[var(--app-danger)] font-black">{confirmationText}</span> para confirmar:
             </label>
             <input
+              id={confirmationId}
               data-autofocus
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}

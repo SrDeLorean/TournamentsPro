@@ -2,16 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { UserProfile, TeamData, initialTeams } from '@/lib/data-store';
-
-type TeamApiRecord = TeamData & {
-  game_slug?: string;
-  captain_id?: string;
-  captain_name?: string;
-  logo_url?: string;
-  banner_url?: string;
-  logo?: string;
-  banner?: string;
-};
+import { normalizeTeamApiRecords } from '@/lib/normalize-team-api-records';
 
 // ── Separate Contexts to prevent unnecessary re-renders ─────────────────────
 
@@ -66,15 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then((data) => {
         const teams = data.teams || data.data?.teams;
         if (Array.isArray(teams) && teams.length > 0) {
-          const normalizedTeams = (teams as TeamApiRecord[]).map((t): TeamData => ({
-            ...t,
-            gameSlug: (t.game_slug || t.gameSlug || 'eafc26') as TeamData['gameSlug'],
-            captainId: t.captain_id || t.captainId,
-            captainName: t.captain_name || t.captainName,
-            logoUrl: t.logo_url || t.logoUrl || t.logo,
-            bannerUrl: t.banner_url || t.bannerUrl || t.banner || '',
-          }));
-          setUserTeams(normalizedTeams);
+          setUserTeams(normalizeTeamApiRecords(teams));
         }
       })
       .catch((err) => console.error('Error fetching global teams:', err));
@@ -302,13 +285,7 @@ export function useAuth() {
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  // Also merge teams context for backward compatibility
-  const teamsContext = useContext(TeamsContext);
-  return {
-    ...context,
-    userTeams: teamsContext?.userTeams || [],
-    refetchTeams: teamsContext?.refetchTeams || (() => {}),
-  };
+  return context;
 }
 
 export function useTeams() {

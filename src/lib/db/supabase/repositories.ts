@@ -4,10 +4,13 @@ import { supabase } from './client';
 export abstract class SupabaseBaseRepository<T> implements IRepository<T> {
   protected abstract tableName: string;
   protected abstract primaryKey: string;
-  protected abstract mapRow(row: any): T;
-  protected abstract mapToDb(entity: Partial<T>): any;
+  protected abstract mapRow(row: Record<string, unknown>): T;
+  protected abstract mapToDb(entity: Partial<T>): Record<string, unknown>;
 
-  async findById(id: string): Promise<T | null> {
+  async findById(id: string, options: { forUpdate?: boolean } = {}): Promise<T | null> {
+    if (options.forUpdate) {
+      throw new Error('Supabase REST no ofrece bloqueo de filas (row lock). Use una transacción de base de datos o una RPC atómica.');
+    }
     const { data, error } = await supabase
       .from(this.tableName)
       .select('*')

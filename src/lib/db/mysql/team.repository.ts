@@ -1,4 +1,4 @@
-import type { Team, ITeamRepository } from '@/lib/db/interfaces';
+import type { Team, ITeamRepository, SquadRecord } from '@/lib/db/interfaces';
 import { BaseRepository, type TeamRow, type MutableDatabaseParams } from './types';
 
 export class TeamRepository extends BaseRepository<Team> implements ITeamRepository {
@@ -165,8 +165,8 @@ export class TeamRepository extends BaseRepository<Team> implements ITeamReposit
     await this.runCommand("UPDATE teams SET status = 'Archivado', updated_at = NOW() WHERE id = ?", [teamId]);
   }
 
-  async getSquad(teamId: string): Promise<Record<string, unknown>[]> {
-    return this.queryRows<Record<string, unknown>>(
+  async getSquad(teamId: string): Promise<SquadRecord[]> {
+    return this.queryRows<SquadRecord>(
       `SELECT 
         tm.id, tm.team_id, tm.user_id, tm.organization_name, tm.tactical_position, tm.role_in_team, tm.jersey_number, tm.joined_at,
         u.name as user_name, u.gamertag, u.email, u.avatar_url, u.foto

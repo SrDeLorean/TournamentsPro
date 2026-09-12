@@ -1,14 +1,15 @@
-// @ts-nocheck
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import { authenticateRequest } from '@/lib/auth';
-import { queryDB } from '@/lib/db';
+import { authenticateRequest, verifyToken } from '@/lib/auth';
+import { dbProvider } from '@/lib/db/provider';
+import { getChatThreadAuthorizationScopeService } from '@/lib/services/chat.service';
 import { isAuthSessionActive, validateMutationOrigin } from '@/lib/security';
 import {
+  canAccessThread,
   canManageCompetition,
   canManageTeam,
   canManageUser,
+  canReportMatch,
   normalizeRole,
   type AuthorizationActor,
   type SystemRole,
@@ -22,21 +23,11 @@ export interface ServerUserSession {
   allowedGames: string[];
 }
 
-interface SessionUserRow {
-  id: string;
-  name: string;
-  role: string;
-  organization_id: string | null;
-  owned_org_id: string | null;
-  status: string | null;
-  is_banned: number | null;
-}
-
 export class AuthorizationError extends Error {
   constructor(
     message: string,
-    public readonly status: 401 | 403 = 401,
-    public readonly code: 'UNAUTHORIZED' | 'FORBIDDEN' = 'UNAUTHORIZED',
+    public readonly status: 401 | 403 | 404 = 401,
+    public readonly code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' = 'UNAUTHORIZED',
   ) {
     super(message);
     this.name = 'AuthorizationError';
@@ -44,31 +35,24 @@ export class AuthorizationError extends Error {
 }
 
 async function loadServerUser(userId: string): Promise<ServerUserSession | null> {
-  const user = await import('./db/provider').then(m => m.dbProvider.users.findById(userId));
+  const user = await dbProvider.users.findById(userId);
   
   if (!user || user.isBanned || user.status === 'Baneado' || user.status === 'Suspendido') {
     return null;
   }
 
   // Find owned org if any
-  const ownedOrgs = await import('./db/provider').then(m => m.dbProvider.organizations.findAll({ where: { owner_id: userId }, limit: 1 }));
+  const ownedOrgs = await dbProvider.organizations.findAll({ where: { owner_id: userId }, limit: 1 });
   const owned_org_id = ownedOrgs[0]?.id || null;
 
   const organizationId = user.organizationId || owned_org_id || null;
   let allowedGames: string[] = [];
 
   if (organizationId) {
-    const org = await import('./db/provider').then(m => m.dbProvider.organizations.findById(organizationId));
+    const org = await dbProvider.organizations.findById(organizationId);
     if (org && org.allowedGames) {
       if (Array.isArray(org.allowedGames)) {
         allowedGames = org.allowedGames as string[];
-      } else if (typeof org.allowedGames === 'string') {
-        try {
-          const parsed = JSON.parse(org.allowedGames);
-          allowedGames = Array.isArray(parsed) ? parsed : [];
-        } catch {
-          allowedGames = org.allowedGames.split(',').map((g: string) => g.trim()).filter(Boolean);
-        }
       }
     }
   }
@@ -173,7 +157,7 @@ export function authorizationErrorResponse(error: unknown): NextResponse | null 
 
 export async function requireUserManager(targetUserId: string): Promise<AuthorizationActor> {
   const actor = await requireServerActor();
-  const target = await import('./db/provider').then(m => m.dbProvider.users.findById(targetUserId));
+  const target = await dbProvider.users.findById(targetUserId);
   if (!target || !canManageUser(actor, {
     userId: target.id,
     role: target.role,
@@ -188,35 +172,24 @@ export async function requireTeamManager(teamId: string): Promise<AuthorizationA
   const actor = await requireServerActor();
   if (actor.role === 'Administrador') return actor;
 
-  const db = (await import('./db/provider')).dbProvider;
-  const team = await db.teams.findById(teamId);
+  const team = await dbProvider.teams.findById(teamId);
   if (!team) throw new AuthorizationError('Equipo no encontrado', 404, 'NOT_FOUND');
 
   // Fetch managers and participating orgs for full security evaluation
-  const [managerMembers, participatingComps] = await Promise.all([
-    db.query<{ user_id: string }>(
-      `SELECT user_id FROM team_members 
-       WHERE team_id = ? AND role_in_team IN ('Capitán', 'Capitan', 'Encargado', 'DT / Analyst', 'Manager', 'Co-Capitán')`,
-      [teamId],
-    ).catch(() => []),
-    db.query<{ organization_id: string }>(
-      `SELECT DISTINCT c.organization_id 
-       FROM competition_teams ct 
-       JOIN competitions c ON ct.competition_id = c.id 
-       WHERE ct.team_id = ? AND c.organization_id IS NOT NULL`,
-      [teamId],
-    ).catch(() => []),
+  const [managerIdsFromRepository, participatingOrganizations] = await Promise.all([
+    dbProvider.teams.getManagers(teamId),
+    dbProvider.teams.getTeamCompetitionOrganizations(teamId),
   ]);
 
   const managerIds = Array.from(
     new Set([
       team.captainId,
-      ...managerMembers.map((m) => m.user_id),
+      ...managerIdsFromRepository,
     ].filter(Boolean) as string[]),
   );
 
-  const participatingOrgIds = participatingComps
-    .map((c) => c.organization_id)
+  const participatingOrgIds = participatingOrganizations
+    .map((organization) => organization.org_id)
     .filter(Boolean);
 
   if (!canManageTeam(actor, {
@@ -233,7 +206,7 @@ export async function requireTeamManager(teamId: string): Promise<AuthorizationA
 
 export async function requireCompetitionManager(competitionId: string): Promise<AuthorizationActor> {
   const actor = await requireServerActor();
-  const competition = await import('./db/provider').then(m => m.dbProvider.competitions.findById(competitionId));
+  const competition = await dbProvider.competitions.findById(competitionId);
   if (!competition || !canManageCompetition(actor, {
     organizationId: competition.organizationId,
     organizerId: competition.organizerId,
@@ -243,6 +216,68 @@ export async function requireCompetitionManager(competitionId: string): Promise<
   return actor;
 }
 
-export async function requireThreadParticipant(threadId: string) { return await requireServerActor(); }
+export async function requireThreadParticipant(threadId: string): Promise<AuthorizationActor> {
+  const actor = await requireServerActor();
+  const thread = await getChatThreadAuthorizationScopeService(threadId);
+  if (!thread) {
+    throw new AuthorizationError('Conversación no encontrada', 404, 'NOT_FOUND');
+  }
+  if (!canAccessThread(actor, thread)) {
+    throw new AuthorizationError('No tienes acceso a esta conversación', 403, 'FORBIDDEN');
+  }
+  return actor;
+}
 
-export async function requireMatchReporter(matchId: string) { return await requireServerActor(); }
+async function assertMatchReporter(
+  actor: AuthorizationActor,
+  matchId: string,
+): Promise<AuthorizationActor> {
+  const match = await dbProvider.matches.findById(matchId);
+  if (!match) {
+    throw new AuthorizationError('Partido no encontrado', 404, 'NOT_FOUND');
+  }
+
+  if (actor.role === 'Administrador') return actor;
+
+  const competitionId = match.competitionId || match.tournamentId;
+  if (actor.role === 'Organizador' && competitionId) {
+    const competition = await dbProvider.competitions.findById(competitionId);
+    if (competition && canManageCompetition(actor, {
+      organizationId: competition.organizationId,
+      organizerId: competition.organizerId,
+    })) {
+      return actor;
+    }
+  }
+
+  const teamIds = Array.from(new Set([
+    match.homeTeamId || match.teamHomeId,
+    match.awayTeamId || match.teamAwayId,
+  ].filter((teamId): teamId is string => Boolean(teamId))));
+
+  const participantIds = new Set<string>();
+  await Promise.all(teamIds.map(async (teamId) => {
+    const [team, managerIds] = await Promise.all([
+      dbProvider.teams.findById(teamId),
+      dbProvider.teams.getManagers(teamId),
+    ]);
+    if (team?.captainId) participantIds.add(team.captainId);
+    for (const managerId of managerIds) participantIds.add(managerId);
+  }));
+
+  if (!canReportMatch(actor, [...participantIds])) {
+    throw new AuthorizationError('No puedes reportar este partido', 403, 'FORBIDDEN');
+  }
+  return actor;
+}
+
+export async function requireMatchReporter(matchId: string): Promise<AuthorizationActor> {
+  return assertMatchReporter(await requireServerActor(), matchId);
+}
+
+export async function requireRequestMatchReporter(
+  request: Request,
+  matchId: string,
+): Promise<AuthorizationActor> {
+  return assertMatchReporter(await requireRequestActor(request), matchId);
+}

@@ -16,8 +16,9 @@ const testTeam = {
 
 vi.mock('@/components/providers/auth-provider', () => ({
   useAuth: () => ({
-    currentUser: testUser, userTeams: [testTeam], refetchTeams: vi.fn(), refetchUser: vi.fn(), updateCurrentUser: vi.fn(),
+    currentUser: testUser, refetchUser: vi.fn(), updateCurrentUser: vi.fn(),
   }),
+  useTeams: () => ({ userTeams: [testTeam], refetchTeams: vi.fn() }),
 }));
 
 vi.mock('next/navigation', async (importOriginal) => ({

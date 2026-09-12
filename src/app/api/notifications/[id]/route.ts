@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerUserSession } from '@/lib/auth-server';
+import { authorizationErrorResponse, requireRequestActor } from '@/lib/auth-server';
 import { deleteNotificationService } from '@/lib/services';
 
 export async function DELETE(
@@ -7,22 +7,21 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerUserSession();
-    if (!session?.userId) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
+    const actor = await requireRequestActor(request);
 
     const { id } = await params;
     if (!id) {
       return NextResponse.json({ error: 'ID de notificación requerido' }, { status: 400 });
     }
 
-    const success = await deleteNotificationService(id, session.userId);
+    const success = await deleteNotificationService(id, actor.userId);
     return NextResponse.json({ success, message: 'Notificación eliminada' });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error en DELETE /api/notifications/[id]:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al eliminar notificación' },
+      { error: 'Error al eliminar notificación' },
       { status: 500 }
     );
   }

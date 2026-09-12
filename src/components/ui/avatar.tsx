@@ -14,11 +14,7 @@ export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', status, className, style, ...props }: AvatarProps) {
-  const [hasError, setHasError] = React.useState(false);
-
-  React.useEffect(() => {
-    setHasError(false);
-  }, [src]);
+  const [failedSource, setFailedSource] = React.useState<string | null>(null);
 
   const sizes = {
     sm: 'w-8 h-8 text-xs',
@@ -36,7 +32,7 @@ export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', statu
 
   return (
     <div className={cn("relative inline-flex flex-shrink-0", className)} style={style} {...props}>
-      {src && !hasError ? (
+      {src && failedSource !== src ? (
         <Image
           key={src}
           src={src}
@@ -45,7 +41,7 @@ export function Avatar({ src, alt = 'Avatar', fallback = 'U', size = 'md', statu
           height={pixels}
           sizes={`${pixels}px`}
           unoptimized={shouldBypassImageOptimization(src)}
-          onError={() => setHasError(true)}
+          onError={() => setFailedSource(src)}
           className={cn("rounded-xl object-cover border border-[var(--border-card)] shadow-sm", sizes[size])}
         />
       ) : (

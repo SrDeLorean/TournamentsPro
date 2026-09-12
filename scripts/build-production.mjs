@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { prepareStandalone } from './prepare-standalone.mjs';
@@ -35,6 +36,12 @@ export async function buildProduction(projectRoot = process.cwd()) {
   };
 
   console.log(`Building deployment ${deploymentId}...`);
+  // Development type artifacts can be left incomplete when `next dev` stops.
+  // They are not production inputs and can otherwise poison Next's type check.
+  await rm(path.join(path.resolve(projectRoot), '.next', 'dev'), {
+    recursive: true,
+    force: true,
+  });
   await runNextBuild(path.resolve(projectRoot), environment);
 
   process.env.NEXT_DEPLOYMENT_ID = deploymentId;

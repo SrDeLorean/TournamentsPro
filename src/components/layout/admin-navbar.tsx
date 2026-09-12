@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
@@ -27,7 +27,8 @@ const AdminNavbarTeamModals = dynamic(() => import('@/components/layout/admin-na
 export function AdminNavbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, activeGameSlug, setActiveGameSlug, logout, userTeams } = useAuth();
+  const { currentUser, activeGameSlug, setActiveGameSlug, logout } = useAuth();
+  const { userTeams } = useTeams();
   const userRoleStr = (currentUser?.role || '').toLowerCase();
   const isAdmin = userRoleStr === 'administrador' || userRoleStr === 'admin';
   const isOrganizer = userRoleStr === 'organizador';
@@ -101,7 +102,7 @@ export function AdminNavbar() {
         <div className="admin-navbar-frame ui-navigation-frame h-full max-w-[96rem] gap-1 sm:gap-2.5">
           
           {/* 1. Left Brand & Admin Badge */}
-          <div className="admin-navbar-brand hidden sm:flex items-center gap-3 flex-shrink-0">
+          <div className="admin-navbar-brand flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <Link href={`/${activeGameSlug}`} className="ui-navigation-brand group">
               <div className="ui-navigation-brand-mark">
                 <div>
@@ -142,7 +143,7 @@ export function AdminNavbar() {
               className="player-team-switcher w-full sm:w-auto"
               style={{ '--player-game': currentGameObj.brandColor } as React.CSSProperties}
             >
-              <div className="player-team-switcher-logo relative">
+              <div className="w-6 h-6 rounded-lg bg-[var(--bg-card)] border border-[var(--border-card)] flex items-center justify-center overflow-hidden font-black text-[10px] text-[var(--navigation-brand)] relative flex-shrink-0">
                 {activeTeamLogo ? (
                   <Image
                     src={activeTeamLogo}
@@ -170,7 +171,14 @@ export function AdminNavbar() {
             </button>
 
             {isTeamsOpen && (
-              <div id="player-team-switcher-menu" className="management-popover ui-navigation-popover player-team-switcher-menu fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:mt-2 sm:w-[22rem] max-h-[85vh] overflow-y-auto p-3 space-y-3 z-50 animate-in fade-in zoom-in-95">
+              <>
+                <button
+                  type="button"
+                  aria-label="Cerrar selector de clubes"
+                  onClick={() => setIsTeamsOpen(false)}
+                  className="fixed inset-0 top-14 z-40 bg-[var(--app-overlay)] backdrop-blur-sm sm:hidden"
+                />
+                <div id="player-team-switcher-menu" className="management-popover ui-navigation-popover player-team-switcher-menu fixed inset-x-2 top-14 z-50 max-h-[85vh] overflow-y-auto p-3 space-y-3 sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:mt-2 sm:w-[22rem] animate-in fade-in zoom-in-95">
                 <div className="pb-2 border-b border-[var(--border-card)] flex items-center justify-between">
                   <span className="min-w-0">
                     <span className="text-xs font-black text-[var(--text-heading)] flex items-center gap-1.5">
@@ -234,7 +242,8 @@ export function AdminNavbar() {
                   })}
                 </div>
               </div>
-            )}
+            </>
+          )}
           </div>
 
           {/* Global destinations live in one compact menu; game links stay in the subnavbar. */}
@@ -259,31 +268,39 @@ export function AdminNavbar() {
             </button>
 
             {isExploreOpen ? (
-              <div id="authenticated-explore-menu" className="ui-navigation-popover fixed inset-x-2 top-14 z-50 grid grid-cols-2 gap-1 p-2 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80">
-                {exploreLinks.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsExploreOpen(false)}
-                      aria-current={isActive ? 'page' : undefined}
-                      className={`flex min-w-0 items-center gap-2 rounded-xl border p-2.5 transition-colors ${
-                        isActive
-                          ? 'border-[var(--navigation-brand)] bg-[color-mix(in_srgb,var(--navigation-brand)_12%,var(--bg-card))] text-[var(--navigation-brand)]'
-                          : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-heading)]'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4 flex-shrink-0" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-xs font-black">{item.label}</span>
-                        <span className="block truncate text-[9px] font-medium text-[var(--text-muted)]">{item.description}</span>
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
+              <>
+                <button
+                  type="button"
+                  aria-label="Cerrar menú explorar"
+                  onClick={() => setIsExploreOpen(false)}
+                  className="fixed inset-0 top-14 z-40 bg-[var(--app-overlay)] backdrop-blur-sm sm:hidden"
+                />
+                <div id="authenticated-explore-menu" className="management-popover ui-navigation-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] overflow-y-auto grid grid-cols-2 gap-1 p-2 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 sm:max-h-none animate-in fade-in zoom-in-95">
+                  {exploreLinks.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsExploreOpen(false)}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`flex min-w-0 items-center gap-2 rounded-xl border p-2.5 transition-colors ${
+                          isActive
+                            ? 'border-[var(--navigation-brand)] bg-[color-mix(in_srgb,var(--navigation-brand)_12%,var(--bg-card))] text-[var(--navigation-brand)]'
+                            : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-heading)]'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 flex-shrink-0" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs font-black">{item.label}</span>
+                          <span className="block truncate text-[9px] font-medium text-[var(--text-muted)]">{item.description}</span>
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
             ) : null}
           </div>
 
@@ -320,48 +337,56 @@ export function AdminNavbar() {
               </button>
 
               {isSettingsOpen && (
-                <div id="player-preferences-menu" className="management-popover ui-navigation-popover fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 max-h-[85vh] overflow-y-auto p-4 space-y-4 z-50 animate-in fade-in zoom-in-95">
-                  <div className="pb-2.5 border-b border-[var(--border-card)] flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="navigation-accent-surface p-1.5 rounded-lg border">
-                        <Settings className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-black text-[var(--text-heading)] tracking-wide block leading-none">Preferencias rápidas</span>
-                        <span className="text-[9px] font-[family-name:var(--font-active)] text-[var(--text-muted)] font-bold">Apariencia e idioma</span>
-                      </div>
-                    </div>
-                    <Sparkles className="w-4 h-4 text-[var(--navigation-brand)]" />
-                  </div>
-
-                  {/* Theme Switcher Box */}
-                  <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] space-y-2">
-                    <label className="text-[10px] font-black uppercase text-[var(--text-secondary)] block tracking-wider">
-                      Tema visual
-                    </label>
-                    <ThemeSwitcher />
-                  </div>
-
-                  {/* Language Switcher Box */}
-                  <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] space-y-2">
-                    <label className="text-[10px] font-black uppercase text-[var(--text-secondary)] block tracking-wider">
-                      Idioma de interfaz
-                    </label>
-                    <LanguageSwitcher />
-                  </div>
-
-                  <Link
-                    href="/cuenta/ajustes"
+                <>
+                  <button
+                    type="button"
+                    aria-label="Cerrar preferencias"
                     onClick={() => setIsSettingsOpen(false)}
-                    className="management-profile-action border-[var(--border-card)] bg-[var(--bg-card)] text-xs font-bold"
-                  >
-                    <UserRoundCog className="w-4 h-4 text-[var(--navigation-brand)]" />
-                    <span className="min-w-0 flex-1">
-                      <strong className="block text-[var(--text-heading)]">Configuración de la cuenta</strong>
-                      <small className="block truncate font-medium text-[var(--text-muted)]">Perfil, seguridad y datos personales</small>
-                    </span>
-                  </Link>
-                </div>
+                    className="fixed inset-0 top-14 z-40 bg-[var(--app-overlay)] backdrop-blur-sm sm:hidden"
+                  />
+                  <div id="player-preferences-menu" className="management-popover ui-navigation-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] overflow-y-auto p-4 space-y-4 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 animate-in fade-in zoom-in-95">
+                    <div className="pb-2.5 border-b border-[var(--border-card)] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="navigation-accent-surface p-1.5 rounded-lg border">
+                          <Settings className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-black text-[var(--text-heading)] tracking-wide block leading-none">Preferencias rápidas</span>
+                          <span className="text-[9px] font-[family-name:var(--font-active)] text-[var(--text-muted)] font-bold">Apariencia e idioma</span>
+                        </div>
+                      </div>
+                      <Sparkles className="w-4 h-4 text-[var(--navigation-brand)]" />
+                    </div>
+
+                    {/* Theme Switcher Box */}
+                    <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] space-y-2">
+                      <label className="text-[10px] font-black uppercase text-[var(--text-secondary)] block tracking-wider">
+                        Tema visual
+                      </label>
+                      <ThemeSwitcher />
+                    </div>
+
+                    {/* Language Switcher Box */}
+                    <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-card)] space-y-2">
+                      <label className="text-[10px] font-black uppercase text-[var(--text-secondary)] block tracking-wider">
+                        Idioma de interfaz
+                      </label>
+                      <LanguageSwitcher />
+                    </div>
+
+                    <Link
+                      href="/cuenta/ajustes"
+                      onClick={() => setIsSettingsOpen(false)}
+                      className="management-profile-action border-[var(--border-card)] bg-[var(--bg-card)] text-xs font-bold"
+                    >
+                      <UserRoundCog className="w-4 h-4 text-[var(--navigation-brand)]" />
+                      <span className="min-w-0 flex-1">
+                        <strong className="block text-[var(--text-heading)]">Configuración de la cuenta</strong>
+                        <small className="block truncate font-medium text-[var(--text-muted)]">Perfil, seguridad y datos personales</small>
+                      </span>
+                    </Link>
+                  </div>
+                </>
               )}
             </div>
 
@@ -393,7 +418,14 @@ export function AdminNavbar() {
               </button>
 
               {isUserMenuOpen && (
-                <div id="player-user-menu" className="management-popover ui-navigation-popover fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 max-h-[85vh] overflow-y-auto p-3 space-y-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <>
+                  <button
+                    type="button"
+                    aria-label="Cerrar menú de usuario"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="fixed inset-0 top-14 z-40 bg-[var(--app-overlay)] backdrop-blur-sm sm:hidden"
+                  />
+                  <div id="player-user-menu" className="management-popover ui-navigation-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] overflow-y-auto p-3 space-y-2 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 animate-in fade-in zoom-in-95 duration-150">
                   
                   {/* Profile Header Box */}
                   <div className="management-profile-card p-3 rounded-xl space-y-3">
@@ -482,8 +514,9 @@ export function AdminNavbar() {
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+              </>
+            )}
+          </div>
           </div>
         </div>
       </header>

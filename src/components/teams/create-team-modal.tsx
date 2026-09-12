@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { checkTeamNameAvailability, initialTeams, TeamData } from '@/lib/data-store';
 import { GameLogo } from '@/components/ui/game-logo';
@@ -24,7 +24,8 @@ interface CreateTeamModalProps {
 
 export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 'eafc26' }: CreateTeamModalProps) {
   const router = useRouter();
-  const { currentUser, updateCurrentUser, refetchTeams, refetchUser } = useAuth();
+  const { currentUser, updateCurrentUser, refetchUser } = useAuth();
+  const { refetchTeams } = useTeams();
 
   const [teamName, setTeamName] = useState('');
   const [tag, setTag] = useState('');

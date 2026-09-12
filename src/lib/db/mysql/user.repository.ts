@@ -1,4 +1,4 @@
-import type { User, IUserRepository } from '@/lib/db/interfaces';
+import type { User, IUserRepository, AvailablePlayerRecord } from '@/lib/db/interfaces';
 import { BaseRepository, type UserRow, type MutableDatabaseParams } from './types';
 
 export class UserRepository extends BaseRepository<User> implements IUserRepository {
@@ -62,7 +62,7 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
     return rows.length > 0 ? this.mapRow(rows[0]) : null;
   }
 
-  async getAvailablePlayers(options: { organizerOrgId?: string | null; searchQuery?: string } = {}): Promise<Record<string, unknown>[]> {
+  async getAvailablePlayers(options: { organizerOrgId?: string | null; searchQuery?: string } = {}): Promise<AvailablePlayerRecord[]> {
     let sql = `
       SELECT u.id, u.name, u.gamertag, u.email, u.position, u.primary_game_slug, u.organization_id, u.avatar_url, u.foto, u.role, u.status,
              o.name AS organization_name,
@@ -82,7 +82,7 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
     }
 
     sql += ` ORDER BY u.name ASC LIMIT 60`;
-    return this.queryRows<Record<string, unknown>>(sql, params);
+    return this.queryRows<AvailablePlayerRecord>(sql, params);
   }
 
   async create(data: Partial<User>): Promise<User> {

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bell, Check, Trash2, ArrowRightLeft, Calendar, Trophy, ChevronRight, Inbox, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { formatRelativeTime } from '@/lib/format-relative-time';
 
 export interface NotificationItem {
   id: string;
@@ -28,25 +29,6 @@ interface NotificationApiRecord {
   action_url?: string | null;
   createdAt?: string;
   created_at?: string;
-}
-
-function formatRelativeTime(dateStr?: string): string {
-  if (!dateStr) return 'Reciente';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return 'Reciente';
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return 'Ahora mismo';
-    if (diffMins < 60) return `Hace ${diffMins} min`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `Hace ${diffHours} h`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `Hace ${diffDays} d`;
-  } catch {
-    return 'Reciente';
-  }
 }
 
 export function NotificationCenter({ onOpen }: { onOpen?: () => void } = {}) {

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TeamData, UserProfile } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { TeamAdminSection } from '@/components/layout/team-admin-subnavbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +33,8 @@ export function ClubManagementModal({
   onUpdateTeam,
 }: ClubManagementModalProps) {
   const router = useRouter();
-  const { currentUser, refetchTeams } = useAuth();
+  const { currentUser } = useAuth();
+  const { refetchTeams } = useTeams();
   const [tabSelection, setTabSelection] = useState({ initialTab, value: initialTab });
   const activeTab = tabSelection.initialTab === initialTab ? tabSelection.value : initialTab;
   const setActiveTab = (value: TeamAdminSection) => setTabSelection({ initialTab, value });

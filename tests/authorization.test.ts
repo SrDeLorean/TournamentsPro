@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canApproveMatch,
+  canAccessThread,
   canAssignRole,
   canCreateOrganization,
   canManageCompetition,
@@ -98,5 +99,22 @@ describe('team and competition policy', () => {
     expect(canReportMatch(captain, ['captain-1', 'player-2'])).toBe(true);
     expect(canReportMatch(captain, ['player-2'])).toBe(false);
     expect(canReportMatch(admin, [])).toBe(true);
+  });
+});
+
+describe('resource-level communication policy', () => {
+  it('limits private threads to their participants and administrators', () => {
+    const thread = { participantAId: 'captain-1', participantBId: 'player-2' };
+
+    expect(canAccessThread(captain, thread)).toBe(true);
+    expect(canAccessThread(admin, thread)).toBe(true);
+    expect(canAccessThread(organizer, thread)).toBe(false);
+  });
+
+  it('allows authenticated users to access explicit community threads', () => {
+    expect(canAccessThread(captain, {
+      participantAId: 'admin-1',
+      participantBId: 'usr-all',
+    })).toBe(true);
   });
 });

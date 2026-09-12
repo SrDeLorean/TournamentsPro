@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from 'next/link';
 import { Trophy } from 'lucide-react';
 import { dbProvider } from '@/lib/db/provider';
@@ -31,13 +30,13 @@ export default async function GlobalCompetitionDetailPage({ params }: { params: 
     id: compRaw.id, name: compRaw.name, game_slug: compRaw.gameSlug,
     organizer_id: compRaw.organizerId, organizer_name: compRaw.organizerName,
     organization_id: compRaw.organizationId, season_id: compRaw.seasonId,
-    prize_pool: compRaw.prizePool, transfer_market_mode: compRaw.transferMarketMode as any,
+    prize_pool: compRaw.prizePool, transfer_market_mode: compRaw.transferMarketMode,
     mode_format: compRaw.modeFormat,
     format: compRaw.format || undefined,
     match_mode: compRaw.playoffMatchMode || compRaw.matchMode || undefined,
     group_count: compRaw.groupCount ?? undefined,
     qualifiers_per_group: compRaw.qualifiersPerGroup ?? undefined,
-    status: compRaw.status as any,
+    status: compRaw.status,
     fecha_limite_inscripcion: compRaw.fechaLimiteInscripcion,
     fecha_inicio: compRaw.fechaInicio, fecha_termino: compRaw.fechaTermino,
     description: compRaw.description, created_at: compRaw.createdAt,

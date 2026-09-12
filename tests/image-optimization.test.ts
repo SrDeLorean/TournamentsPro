@@ -4,6 +4,11 @@ import { optimizeUploadImage } from '@/lib/image-processing';
 import { isSupabaseStorageConfigured, SUPABASE_STORAGE_BUCKET } from '@/lib/supabase-storage';
 
 describe('Image Optimization & Adaptive Compression Pipeline', () => {
+  it('rejects malformed bytes instead of relabeling them as WebP', async () => {
+    await expect(optimizeUploadImage(Buffer.from('not-an-image'), 'logo'))
+      .rejects.toThrow('La imagen no es válida');
+  });
+
   it('converts a large banner into high-quality WebP within 1920px max resolution', async () => {
     // Generate an artificial 2500x1400 JPEG image
     const rawLargeImage = await sharp({

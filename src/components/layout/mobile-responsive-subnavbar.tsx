@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/components/providers/auth-provider';
+import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GameConfig } from '@/lib/games-data';
 import { initialTeams } from '@/lib/data-store';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
@@ -33,7 +33,8 @@ interface MobileResponsiveSubnavbarProps {
 
 export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection }: MobileResponsiveSubnavbarProps) {
   const pathname = usePathname();
-  const { currentUser, userTeams, isAuthenticated, refetchTeams } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
+  const { userTeams, refetchTeams } = useTeams();
   const [preferredSegment, setPreferredSegment] = useState<MobileSubnavSegment>('game');
   const [isCreateClubOpen, setIsCreateClubOpen] = useState(false);
   const routeSegment: MobileSubnavSegment | null = pathname.startsWith(`/${game.slug}/atleta`)

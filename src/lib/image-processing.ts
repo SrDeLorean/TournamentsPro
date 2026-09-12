@@ -30,7 +30,10 @@ export async function optimizeUploadImage(
   customOptions?: ImageOptimizationOptions
 ): Promise<OptimizedImageResult> {
   try {
-    const pipeline = sharp(inputBuffer).rotate(); // Auto-orient via EXIF
+    const pipeline = sharp(inputBuffer, {
+      limitInputPixels: 40_000_000,
+      failOn: 'warning',
+    }).rotate(); // Auto-orient via EXIF
     const metadata = await pipeline.metadata();
 
     // Determine target dimensions and WebP options based on media type
@@ -110,14 +113,7 @@ export async function optimizeUploadImage(
       sizeBytes: optimizedBuffer.length,
     };
   } catch (error) {
-    console.warn('[ImageProcessing] Sharp optimization failed, fallback to original buffer:', error);
-    // Fallback: If sharp fails on an unconventional format, return original buffer
-    return {
-      buffer: inputBuffer,
-      format: 'webp',
-      mimeType: 'image/webp',
-      extension: 'webp',
-      sizeBytes: inputBuffer.length,
-    };
+    console.warn('[ImageProcessing] Sharp rejected the uploaded image:', error);
+    throw new Error('La imagen no es válida o excede los límites de procesamiento', { cause: error });
   }
 }

@@ -52,7 +52,13 @@ export class GameRepository implements IGameRepository {
     const fieldMap: Record<string, string> = { name: 'name', category: 'category', teamSize: 'team_size', positionsJson: 'positions_json', brandColor: 'brand_color', statsSchema: 'stats_schema' };
     const entries = Object.entries(data).filter(([key]) => fieldMap[key]);
     if (entries.length === 0) return this.findById(slug);
-    await this.runCommand(`UPDATE games SET ${entries.map(([key]) => `\`${fieldMap[key]}\` = ?`).join(', ')} WHERE slug = ?`, [...entries.map(([key, value]) => ['positionsJson', 'statsSchema'].includes(key) && typeof value !== 'string' ? JSON.stringify(value) : value ?? null), slug]);
+    const params: DatabaseParams = entries.map(([key, value]) => {
+      if (key === 'positionsJson' || key === 'statsSchema') {
+        return typeof value === 'string' ? value : JSON.stringify(value);
+      }
+      return typeof value === 'string' || typeof value === 'number' ? value : null;
+    });
+    await this.runCommand(`UPDATE games SET ${entries.map(([key]) => `\`${fieldMap[key]}\` = ?`).join(', ')} WHERE slug = ?`, [...params, slug]);
     return this.findById(slug);
   }
 

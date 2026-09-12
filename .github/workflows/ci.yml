@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:
@@ -30,8 +33,8 @@ jobs:
       DB_PASSWORD: root
       DB_NAME: tournamentspro_ci
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -40,7 +43,9 @@ jobs:
       - run: npm run db:migrate
       - run: npm run db:migrate:verify
       - run: npm run security:housekeeping:check
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
+      - run: npm run architecture:check
       - run: npm test
       - run: npm run build
       - run: npx playwright install --with-deps chromium

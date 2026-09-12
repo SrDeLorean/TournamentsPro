@@ -1,10 +1,9 @@
-// @ts-nocheck
 import { createHash, randomUUID } from 'node:crypto';
 import { queryDB } from './db';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabase = (process.env.DATABASE_PROVIDER === 'supabase' && supabaseUrl && supabaseKey)
   ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
   : null;
@@ -137,69 +136,66 @@ export function createRateLimiter(primary: RateLimitStore, fallback: RateLimitSt
 }
 
 
-const supabaseRateLimitStore: RateLimitStore = {
+interface SupabaseRateLimitRpcClient {
+  rpc(
+    name: string,
+    params: Record<string, string | number>,
+  ): PromiseLike<{
+    data: unknown;
+    error: { message?: string } | null;
+  }>;
+}
+
+interface SupabaseRateLimitRpcRow {
+  allowed: boolean;
+  remaining: number;
+  reset_at: number;
+}
+
+export function createSupabaseRateLimitStore(
+  client: SupabaseRateLimitRpcClient | null,
+): RateLimitStore {
+  return {
   async consume(keyHash, action, maxRequests, windowMs, now) {
-    if (!supabase) throw new Error("Supabase client not initialized");
-    const expiresAt = new Date(now + windowMs).toISOString();
-    const windowStartedAt = new Date(now).toISOString();
-    // Simplified rate limiter for supabase (Supabase RPC is better, but we do basic insert/update)
-    const { data: existing } = await supabase
-      .from('security_rate_limits')
-      .select('request_count, window_started_at, expires_at')
-      .eq('rate_key', keyHash)
-      .eq('action_name', action)
-      .maybeSingle();
+    if (!client) throw new Error('Supabase client not initialized');
+    const { data, error } = await client.rpc('consume_security_rate_limit', {
+      p_rate_key: keyHash,
+      p_action_name: action,
+      p_max_requests: maxRequests,
+      p_window_ms: windowMs,
+      p_now_ms: now,
+    });
+    if (error) throw new Error(error.message || 'Supabase rate limit RPC failed');
 
-    let request_count = 1;
-    let reset_at_ms = now + windowMs;
-
-    if (existing) {
-      if (new Date(existing.expires_at).getTime() <= now) {
-        request_count = 1;
-      } else {
-        request_count = existing.request_count + 1;
-        reset_at_ms = new Date(existing.expires_at).getTime();
-      }
-      await supabase.from('security_rate_limits')
-        .update({ request_count, window_started_at: request_count === 1 ? windowStartedAt : existing.window_started_at, expires_at: request_count === 1 ? expiresAt : existing.expires_at })
-        .eq('rate_key', keyHash).eq('action_name', action);
-    } else {
-      await supabase.from('security_rate_limits')
-        .insert({ rate_key: keyHash, action_name: action, request_count: 1, window_started_at: windowStartedAt, expires_at: expiresAt });
+    const row = (Array.isArray(data) ? data[0] : data) as SupabaseRateLimitRpcRow | null;
+    if (!row || typeof row.allowed !== 'boolean') {
+      throw new Error('Supabase rate limit RPC returned an invalid result');
     }
-    const allowed = request_count <= maxRequests;
+
+    const resetAt = Number(row.reset_at);
+    if (!Number.isFinite(resetAt)) {
+      throw new Error('Supabase rate limit RPC returned an invalid reset time');
+    }
+
     return {
-      allowed,
-      remaining: Math.max(0, maxRequests - request_count),
-      resetAt: reset_at_ms,
-      retryAfter: allowed ? undefined : Math.max(1, Math.ceil((reset_at_ms - now) / 1000))
+      allowed: row.allowed,
+      remaining: Math.max(0, Number(row.remaining)),
+      resetAt,
+      retryAfter: row.allowed ? undefined : Math.max(1, Math.ceil((resetAt - now) / 1_000)),
     };
-  }
-};
+  },
+  };
+}
+
+const supabaseRateLimitStore = createSupabaseRateLimitStore(
+  supabase as unknown as SupabaseRateLimitRpcClient | null,
+);
 
 const mysqlRateLimitStore: RateLimitStore = {
   async consume(keyHash, action, maxRequests, windowMs, now) {
     const expiresAt = toMysqlDate(now + windowMs);
     const windowStartedAt = toMysqlDate(now);
     
-    if (process.env.DATABASE_PROVIDER === 'supabase' && supabase) {
-      await supabase.from('security_audit_log').insert({
-        id: auditId,
-        request_id: requestId,
-        actor_user_id: event?.actor.userId,
-        actor_role: event?.actor.role,
-        action_name: event?.action,
-        resource_type: event?.resourceType,
-        resource_id: event?.resourceId || null,
-        organization_id: event?.organizationId ?? event?.actor.organizationId,
-        outcome: event?.outcome || 'SUCCESS',
-        metadata_json: metadata,
-        ip_hash: event?.request ? getRequestFingerprint(event?.request) : null,
-        user_agent_hash: event?.request?.headers.get('user-agent') ? hashSecurityValue(event?.request.headers.get('user-agent') || '') : null
-      });
-      return;
-    }
-
     await queryDB(
       `INSERT INTO security_rate_limits
         (rate_key, action_name, request_count, window_started_at, expires_at)
