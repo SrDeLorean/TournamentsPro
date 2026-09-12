@@ -63,9 +63,17 @@ export const createCompetitionSchema = z.object({
   bannerUrl: z.string().max(2048).nullable().optional(),
 });
 
+export const teamTagSchema = z.preprocess(
+  (val) => (typeof val === 'string' ? val.trim().toUpperCase() : val),
+  z.string()
+    .min(2, 'El tag debe tener al menos 2 caracteres')
+    .max(10, 'El tag no puede superar los 10 caracteres')
+    .regex(/^[\p{L}0-9 _.-]+$/u, 'El tag solo puede contener letras, números, espacios, guiones y puntos')
+);
+
 export const createTeamSchema = z.object({
-  name: z.string().min(3).max(100),
-  tag: z.string().min(2).max(10).regex(/^[A-Z0-9]+$/, 'Solo mayúsculas y números'),
+  name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres').max(100, 'El nombre no puede superar los 100 caracteres'),
+  tag: teamTagSchema,
   gameSlug: gameSlugSchema,
   platform: platformSchema.default('CROSSPLAY'),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#00F0FF'),

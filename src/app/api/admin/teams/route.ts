@@ -155,7 +155,10 @@ export async function POST(request: Request) {
       socialMedia,
     } = body;
 
-    if (!name || !tag) {
+    const cleanName = (name || '').trim();
+    const cleanTag = (tag || '').trim().toUpperCase();
+
+    if (!cleanName || !cleanTag) {
       return NextResponse.json({ error: 'Nombre y Tag del club requeridos' }, { status: 400 });
     }
 
@@ -171,14 +174,14 @@ export async function POST(request: Request) {
     }
     const safeCaptainId = (captainId || actor.userId).slice(0, 36);
     const result = await createTeamService({
-      name,
-      tag,
+      name: cleanName,
+      tag: cleanTag,
       gameSlug: gameSlug || 'eafc26',
       organizationId: targetOrganizationId,
       managerIds: encargadosArray.map((entry) => typeof entry === 'string' ? entry : entry.id).filter(Boolean),
       platform: platform || 'CROSSPLAY',
       color: color || '#00FF87',
-      logoText: logoText || tag,
+      logoText: logoText || cleanTag.slice(0, 5),
       description: description || 'Escuadra oficial del circuito eSports.',
       status: status || 'Activo',
       clubIdEa: clubIdEa || null,

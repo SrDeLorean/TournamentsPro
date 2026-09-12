@@ -81,7 +81,10 @@ export async function POST(request: Request) {
     const body = parsedBody.data;
     const { id, name, tag, gameSlug, captainId, captainName, platform, color, logoText, logoUrl, bannerUrl, description, vacantPositions } = body;
 
-    if (!name || !tag) {
+    const cleanName = (name || '').trim();
+    const cleanTag = (tag || '').trim().toUpperCase();
+
+    if (!cleanName || !cleanTag) {
       return apiError('Nombre y tag del equipo son requeridos', 400);
     }
 
@@ -108,12 +111,12 @@ export async function POST(request: Request) {
     const effectivePlatform = allowedPlatforms.find((item) => item === platform) || 'CROSSPLAY';
     const result = await createTeamService({
       id: teamId,
-      name,
-      tag: tag || 'TP',
+      name: cleanName,
+      tag: cleanTag,
       gameSlug: effectiveGameSlug,
       platform: effectivePlatform,
       color: color || '#00F0FF',
-      logoText: logoText || 'TP',
+      logoText: logoText || cleanTag.slice(0, 5) || 'TP',
       logoUrl: logoUrl || null,
       bannerUrl: bannerUrl || null,
       description: teamDesc,
@@ -165,7 +168,7 @@ export async function PUT(request: Request) {
     }
 
     const safeName = (name ?? t?.name ?? 'Escuadra Pro').slice(0, 100);
-    const safeTag = (tag ?? t?.tag ?? 'TP').slice(0, 10);
+    const safeTag = (tag ? tag.trim().toUpperCase() : (t?.tag ?? 'TP')).slice(0, 10);
     const safeDescription = description ?? t.description ?? 'Escuadra oficial del circuito eSports.';
     const safePlatform = (platform ?? t?.platform ?? 'CROSSPLAY').slice(0, 20);
     const safeColor = (color ?? t?.color ?? '#00F0FF').slice(0, 20);

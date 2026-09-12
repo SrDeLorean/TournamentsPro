@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { updateManagedTeamService, archiveManagedTeamService } from '../src/lib/services';
+import { updateManagedTeamService, archiveManagedTeamService, createTeamService } from '../src/lib/services';
 import { dbProvider } from '../src/lib/db/provider';
 import type { Team, User } from '../src/lib/db/interfaces';
 
@@ -85,5 +85,80 @@ describe('Team operations via dbProvider repositories (Supabase / MySQL compatib
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('activa');
+  });
+
+  describe('createTeamService & teamTagSchema validation', () => {
+    it('validates and auto-uppercases team tags with esports characters, spaces, dots, and accents', async () => {
+      const mockCaptain = {
+        id: 'usr-captain-1',
+        name: 'Capitán Pro',
+        gamertag: 'CapitanPro',
+        role: 'Capitán',
+      };
+
+      vi.spyOn(dbProvider.users, 'findById').mockResolvedValue(mockCaptain as User);
+      vi.spyOn(dbProvider.teams, 'findByCaptain').mockResolvedValue([]);
+      vi.spyOn(dbProvider.teams, 'create').mockImplementation(async (teamData) => teamData as Team);
+      vi.spyOn(dbProvider.teams, 'syncStaff').mockResolvedValue(undefined);
+
+      // Tag with space and lowercase: "sn fc" -> "SN FC"
+      const res1 = await createTeamService({
+        name: 'Sangre Nueva FC',
+        tag: 'sn fc',
+        gameSlug: 'eafc26',
+      }, 'usr-captain-1', 'Capitán Pro');
+
+      expect(res1.success).toBe(true);
+      expect(res1.team?.tag).toBe('SN FC');
+
+      // Tag with accents: "krü" -> "KRÜ"
+      const res2 = await createTeamService({
+        name: 'KRÜ Esports',
+        tag: 'krü',
+        gameSlug: 'valorant',
+      }, 'usr-captain-1', 'Capitán Pro');
+
+      expect(res2.success).toBe(true);
+      expect(res2.team?.tag).toBe('KRÜ');
+
+      // Tag with hyphens and dots: "sk.t-1" -> "SK.T-1"
+      const res3 = await createTeamService({
+        name: 'T1 Esports',
+        tag: 't-1',
+        gameSlug: 'lol',
+      }, 'usr-captain-1', 'Capitán Pro');
+
+      expect(res3.success).toBe(true);
+      expect(res3.team?.tag).toBe('T-1');
+    });
+
+    it('rejects invalid team tags with descriptive Spanish messages', async () => {
+      // Too short (< 2)
+      const resShort = await createTeamService({
+        name: 'Equipo Alfa',
+        tag: 'A',
+        gameSlug: 'eafc26',
+      }, 'usr-1', 'Capitán');
+      expect(resShort.success).toBe(false);
+      expect(resShort.error).toContain('El tag debe tener al menos 2 caracteres');
+
+      // Too long (> 10)
+      const resLong = await createTeamService({
+        name: 'Equipo Alfa',
+        tag: 'TAGDEMASIADOLARGO',
+        gameSlug: 'eafc26',
+      }, 'usr-1', 'Capitán');
+      expect(resLong.success).toBe(false);
+      expect(resLong.error).toContain('El tag no puede superar los 10 caracteres');
+
+      // Invalid characters (e.g. $, #, @)
+      const resInvalid = await createTeamService({
+        name: 'Equipo Alfa',
+        tag: 'TAG$#',
+        gameSlug: 'eafc26',
+      }, 'usr-1', 'Capitán');
+      expect(resInvalid.success).toBe(false);
+      expect(resInvalid.error).toContain('El tag solo puede contener letras, números, espacios, guiones y puntos');
+    });
   });
 });

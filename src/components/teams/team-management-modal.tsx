@@ -63,8 +63,8 @@ export function TeamManagementModal({
         method: 'PUT',
         body: JSON.stringify({
           id: currentTeam.id,
-          name: currentTeam.name,
-          tag: currentTeam.tag,
+          name: currentTeam.name?.trim(),
+          tag: currentTeam.tag?.trim().toUpperCase(),
           description: currentTeam.description,
           logoUrl: currentTeam.logoUrl,
           bannerUrl: currentTeam.bannerUrl,
@@ -422,6 +422,7 @@ export function TeamManagementModal({
                 <label className="text-xs font-bold uppercase text-[var(--text-heading)] block">Tag / Sigla</label>
                 <input
                   type="text"
+                  maxLength={10}
                   value={currentTeam.tag}
                   onChange={(e) => setCurrentTeam({ ...currentTeam, tag: e.target.value.toUpperCase() })}
                   className="w-full px-3.5 py-2.5 rounded-xl input-theme border border-[var(--border-card)] font-black uppercase text-xs"

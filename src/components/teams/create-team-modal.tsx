@@ -111,13 +111,27 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
     e.preventDefault();
     setErrorMsg('');
 
-    if (!teamName.trim()) {
-      setErrorMsg('El nombre de la escuadra es obligatorio');
+    const cleanName = teamName.trim();
+    if (!cleanName || cleanName.length < 3) {
+      setErrorMsg('El nombre del club debe tener al menos 3 caracteres');
       return;
     }
 
-    if (!tag.trim()) {
-      setErrorMsg('El tag / sigla corta es obligatorio (ej. LYE)');
+    const cleanTag = tag.trim().toUpperCase();
+    if (!cleanTag) {
+      setErrorMsg('El tag / sigla corta es obligatorio (ej. SNFC)');
+      return;
+    }
+    if (cleanTag.length < 2) {
+      setErrorMsg('El tag debe tener al menos 2 caracteres (ej. SN)');
+      return;
+    }
+    if (cleanTag.length > 10) {
+      setErrorMsg('El tag no puede superar los 10 caracteres');
+      return;
+    }
+    if (!/^[\p{L}0-9 _.-]+$/u.test(cleanTag)) {
+      setErrorMsg('El tag solo puede contener letras, números, espacios, guiones y puntos');
       return;
     }
 
@@ -136,9 +150,9 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
     }
 
     // Rule Validation 2: Unique team name within the SAME discipline
-    const isAvailable = checkTeamNameAvailability(teamName, gameSlug);
+    const isAvailable = checkTeamNameAvailability(cleanName, gameSlug);
     if (!isAvailable) {
-      setErrorMsg(`El nombre "${teamName}" ya está registrado por otro club en ${selectedGameObj.name}. ¡Elige otro nombre!`);
+      setErrorMsg(`El nombre "${cleanName}" ya está registrado por otro club en ${selectedGameObj.name}. ¡Elige otro nombre!`);
       return;
     }
 
@@ -149,8 +163,8 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: teamName.trim(),
-          tag: tag.trim(),
+          name: cleanName,
+          tag: cleanTag,
           gameSlug,
           captainId: currentUser?.id || 'usr-current',
           captainName: currentUser?.name || 'Nuevo Capitán',
@@ -359,10 +373,13 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
             <input
               type="text"
               required
-              maxLength={5}
-              placeholder="ej. SN FC"
+              maxLength={10}
+              placeholder="ej. SNFC"
               value={tag}
-              onChange={(e) => setTag(e.target.value)}
+              onChange={(e) => {
+                setTag(e.target.value.toUpperCase());
+                setErrorMsg('');
+              }}
               className="w-full px-3.5 py-2 rounded-xl input-theme border border-[var(--border-card)] text-xs font-extrabold uppercase text-center"
             />
           </div>

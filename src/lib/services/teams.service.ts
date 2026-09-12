@@ -5,7 +5,7 @@
 import { randomUUID } from 'crypto';
 import type { Team } from '@/lib/db/interfaces';
 import { dbProvider } from '@/lib/db/provider';
-import { validateSchema, uuidSchema } from '@/lib/validation';
+import { validateSchema, uuidSchema, teamTagSchema } from '@/lib/validation';
 import { isManagerEntry } from './types';
 import { z } from 'zod';
 
@@ -39,8 +39,8 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
   const validation = validateSchema(
     z.object({
       id: z.string().min(1).max(36).optional(),
-      name: z.string().min(3).max(100),
-      tag: z.string().min(2).max(10).regex(/^[A-Z0-9]+$/),
+      name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres').max(100, 'El nombre no puede superar los 100 caracteres'),
+      tag: teamTagSchema,
       gameSlug: z.enum(['eafc26', 'valorant', 'csgo', 'lol', 'rocketleague', 'fortnite']),
       platform: z.enum(['PS5', 'PS4', 'XBOX', 'PC', 'CROSSPLAY']).default('CROSSPLAY'),
       color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#00F0FF'),
@@ -158,7 +158,7 @@ export async function updateManagedTeamService(teamId: string, data: ManagedTeam
 
     const updated = await transaction.teams.update(teamId, {
       name: data.name ?? existingTeam.name,
-      tag: data.tag ?? existingTeam.tag,
+      tag: data.tag ? data.tag.trim().toUpperCase() : existingTeam.tag,
       gameSlug: data.gameSlug ?? existingTeam.gameSlug,
       organizationId: data.organizationId !== undefined ? data.organizationId : existingTeam.organizationId,
       captainId,
