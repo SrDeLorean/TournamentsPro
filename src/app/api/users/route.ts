@@ -24,18 +24,20 @@ export async function GET(request: Request) {
     const { page, limit } = parsePaginationParams(searchParams);
 
     if (userId) {
-      // Single user lookup
-      const user = await dbProvider.users.findById(userId);
+      // Single user lookup (by ID with gamertag fallback)
+      let user = await dbProvider.users.findById(userId);
+      if (!user && dbProvider.users.findByGamertag) {
+        user = await dbProvider.users.findByGamertag(userId);
+      }
       if (!user) {
         return apiError('Usuario no encontrado', 404);
       }
       
-      const canViewPrivateProfile = requester?.userId === userId
+      const canViewPrivateProfile = requester?.userId === user.id
         || requester?.role === 'Administrador';
       const userProfile = canViewPrivateProfile
         ? mapUserRowToProfile(user as any)
         : mapUserRowToPublicProfile(user as any);
-      
       // AGGREGATE STATS
       // Using query provider for stats as it's a direct relation on match_player_stats.
       // Wait, dbProvider.query throws in Supabase. Let's just catch it and return 0 stats for now if it throws.
