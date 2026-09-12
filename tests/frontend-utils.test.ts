@@ -48,7 +48,8 @@ describe('shouldBypassImageOptimization', () => {
     ['data:image/webp;base64,abc', true],
     ['blob:http://localhost/id', true],
     ['/images/games/eafc26.png', false],
-    ['/uploads/teams/logo.webp', false],
+    ['/uploads/teams/logo.webp', true],
+    ['/api/uploads/teams/logo.webp', true],
   ])('classifies %s', (src, expected) => {
     expect(shouldBypassImageOptimization(src)).toBe(expected);
   });

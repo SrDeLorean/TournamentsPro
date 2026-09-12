@@ -234,6 +234,8 @@ export function UserProfileSettingsView({ onBack, brandColor = 'var(--app-accent
         const updatedUser = { ...currentUser, ...payload, secondaryPosition: activeSecondaryPosition };
         updateCurrentUser({ ...updatedUser, primaryGame: primaryGame as UserProfile['primaryGame'] });
         await refetchUser();
+        window.dispatchEvent(new Event('user_profile_updated'));
+        window.dispatchEvent(new Event('refetch_user_profile'));
         router.refresh();
       } else {
         setSavingMsg({ type: 'error', text: data.error || 'No fue posible actualizar el perfil.' });

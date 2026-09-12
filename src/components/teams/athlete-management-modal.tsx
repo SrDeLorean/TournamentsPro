@@ -53,7 +53,7 @@ export function AthleteManagementModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
           <div className="flex items-center gap-3">
-            <Avatar fallback={currentUser?.name || 'Atleta'} size="lg" status="online" />
+            <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || 'Atleta'} size="lg" status="online" />
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-black uppercase text-[var(--text-heading)]">

@@ -118,48 +118,63 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
     }
   }, [currentUser?.id, game.slug, section]);
 
-  useEffect(() => {
+  const loadTeamsData = useCallback(async () => {
     if (!currentUser?.id || !['resumen', 'equipos'].includes(section)) return;
-    let active = true;
-    getUserEnrolledTeamsAction(currentUser.id, game.slug)
-      .then(async (result) => {
-        if (!active || !result.success) return;
-        const enrolled = (result.teams || []) as AthleteTeamSummary[];
-        setTeams(enrolled);
-        const response = await fetch(`/api/matches?gameSlug=${encodeURIComponent(game.slug)}`);
-        const payload = await response.json() as { matches?: AthleteMatchSummary[] };
-        if (!active) return;
-        const teamIds = new Set(enrolled.map((team) => team.id));
-        setMatches((payload.matches || []).filter((match) => teamIds.has(match.teamHomeId || match.homeTeamId || '') || teamIds.has(match.teamAwayId || match.awayTeamId || '')));
-      })
-      .catch(() => undefined);
-    return () => { active = false; };
+    try {
+      const result = await getUserEnrolledTeamsAction(currentUser.id, game.slug);
+      if (!result.success) return;
+      const enrolled = (result.teams || []) as AthleteTeamSummary[];
+      setTeams(enrolled);
+      const response = await fetch(`/api/matches?gameSlug=${encodeURIComponent(game.slug)}&_t=${Date.now()}`, { cache: 'no-store' });
+      const payload = await response.json() as { matches?: AthleteMatchSummary[] };
+      const teamIds = new Set(enrolled.map((team) => team.id));
+      setMatches((payload.matches || []).filter((match) => teamIds.has(match.teamHomeId || match.homeTeamId || '') || teamIds.has(match.teamAwayId || match.awayTeamId || '')));
+    } catch {
+      // ignore
+    }
   }, [currentUser?.id, game.slug, section]);
+
+  const loadUserData = useCallback(async () => {
+    if (!currentUser?.id) return;
+    try {
+      const response = await fetch(`/api/users?id=${encodeURIComponent(currentUser.id)}&gameSlug=${encodeURIComponent(game.slug)}&_t=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) return;
+      const payload = await response.json();
+      const aggregated = payload?.data?.user?.aggregatedStats || payload?.user?.aggregatedStats;
+      if (!aggregated) return;
+      setStats({
+        matches: Number(aggregated.matches || 0),
+        goals: Number(aggregated.goals || aggregated.kills || 0),
+        assists: Number(aggregated.assists || 0),
+        mvps: Number(aggregated.mvps || aggregated.mvp || 0),
+        winrate: aggregated.winrate ? `${aggregated.winrate}${String(aggregated.winrate).includes('%') ? '' : '%'}` : '—',
+      });
+    } catch {
+      // ignore
+    }
+  }, [currentUser?.id, game.slug]);
 
   useEffect(() => {
     void loadMarketData();
-  }, [loadMarketData]);
+    void loadTeamsData();
+    void loadUserData();
+  }, [loadMarketData, loadTeamsData, loadUserData]);
 
   useEffect(() => {
-    if (!currentUser?.id) return;
-    let active = true;
-    fetch(`/api/users?id=${encodeURIComponent(currentUser.id)}&gameSlug=${encodeURIComponent(game.slug)}`)
-      .then((response) => response.ok ? response.json() : null)
-      .then((payload) => {
-        if (!active) return;
-        const aggregated = payload?.data?.user?.aggregatedStats || payload?.user?.aggregatedStats;
-        if (!aggregated) return;
-        setStats({
-          matches: Number(aggregated.matches || 0),
-          goals: Number(aggregated.goals || aggregated.kills || 0),
-          assists: Number(aggregated.assists || 0),
-          mvps: Number(aggregated.mvps || aggregated.mvp || 0),
-          winrate: aggregated.winrate ? `${aggregated.winrate}${String(aggregated.winrate).includes('%') ? '' : '%'}` : '—',
-        });
-      })
-      .catch(() => undefined);
-    return () => { active = false; };
-  }, [currentUser?.id, game.slug]);
+    const handleUpdate = () => {
+      void loadUserData();
+      void loadTeamsData();
+      void loadMarketData();
+    };
+    window.addEventListener('user_profile_updated', handleUpdate);
+    window.addEventListener('refetch_user_profile', handleUpdate);
+    window.addEventListener('teams_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('user_profile_updated', handleUpdate);
+      window.removeEventListener('refetch_user_profile', handleUpdate);
+      window.removeEventListener('teams_updated', handleUpdate);
+    };
+  }, [loadUserData, loadTeamsData, loadMarketData]);
 
   const respondToOffer = async () => {
     if (!offerDecision || !currentUser?.id) return;

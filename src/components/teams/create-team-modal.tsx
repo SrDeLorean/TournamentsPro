@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { checkTeamNameAvailability, initialTeams, TeamData } from '@/lib/data-store';
@@ -22,7 +23,8 @@ interface CreateTeamModalProps {
 }
 
 export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 'eafc26' }: CreateTeamModalProps) {
-  const { currentUser, updateCurrentUser } = useAuth();
+  const router = useRouter();
+  const { currentUser, updateCurrentUser, refetchTeams, refetchUser } = useAuth();
 
   const [teamName, setTeamName] = useState('');
   const [tag, setTag] = useState('');
@@ -184,9 +186,26 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
         return;
       }
 
-      const createdTeam: TeamData = data.team;
+      const createdTeam: TeamData | undefined = data.data?.team || data.team || (data.data?.id ? data.data : undefined);
 
-      updateCurrentUser({ role: 'Capitán', teamId: createdTeam.id, teamName: createdTeam.name });
+      if (!createdTeam || !createdTeam.id) {
+        setErrorMsg('No se recibieron los datos del club creado por parte del servidor');
+        setIsSubmitting(false);
+        return;
+      }
+
+      updateCurrentUser({
+        role: 'Capitán',
+        teamId: createdTeam.id,
+        teamName: createdTeam.name || cleanName,
+        teamLogoUrl: createdTeam.logoUrl || logoUrl,
+        teamBannerUrl: createdTeam.bannerUrl || bannerUrl,
+      } as any);
+
+      if (refetchTeams) refetchTeams();
+      if (refetchUser) await refetchUser();
+      window.dispatchEvent(new Event('teams_updated'));
+      router.refresh();
 
       setIsSubmitting(false);
       if (onSuccess) onSuccess(createdTeam);

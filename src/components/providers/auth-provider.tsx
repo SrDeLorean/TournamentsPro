@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchGlobalTeams = useCallback(() => {
-    fetch('/api/teams?limit=200')
+    fetch(`/api/teams?limit=200&_t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => {
         if (!res.ok) throw new Error(`No se pudieron cargar los equipos (${res.status})`);
         return res.json();
@@ -84,6 +84,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!authenticatedUserId) return;
     fetchGlobalTeams();
   }, [authenticatedUserId, fetchGlobalTeams]);
+
+  useEffect(() => {
+    const handleTeamsUpdate = () => {
+      fetchGlobalTeams();
+    };
+    window.addEventListener('teams_updated', handleTeamsUpdate);
+    return () => {
+      window.removeEventListener('teams_updated', handleTeamsUpdate);
+    };
+  }, [fetchGlobalTeams]);
 
   // The HttpOnly cookie is the source of truth. Never hydrate identity or roles
   // from browser-controlled storage.
@@ -227,7 +237,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!userId) return;
 
     try {
-      const res = await fetch(`/api/users?id=${userId}`);
+      const res = await fetch(`/api/users?id=${encodeURIComponent(userId)}&_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         const user = data.data?.user || data.user;
@@ -240,6 +250,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error recargando perfil de usuario:', err);
     }
   }, [currentUser?.id, applyAuthenticatedUser]);
+
+  useEffect(() => {
+    const handleRefetch = () => {
+      void refetchUser();
+    };
+    window.addEventListener('refetch_user_profile', handleRefetch);
+    return () => {
+      window.removeEventListener('refetch_user_profile', handleRefetch);
+    };
+  }, [refetchUser]);
 
   const logout = useCallback(() => {
     setCurrentUser(null);

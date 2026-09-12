@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -97,6 +98,7 @@ const organizationSocials = (organization: OrganizationRecord): EsportsSocialLin
 };
 
 export default function OrganizationsModulePage() {
+  const router = useRouter();
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'directory' | 'admin'>('directory');
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,7 +120,9 @@ export default function OrganizationsModulePage() {
 
   const fetchOrganizations = React.useCallback(async (): Promise<OrganizationRecord[]> => {
     try {
-      const res = await fetch(getDirectoryEndpoint('organizations', isAdmin));
+      const endpoint = getDirectoryEndpoint('organizations', isAdmin);
+      const separator = endpoint.includes('?') ? '&' : '?';
+      const res = await fetch(`${endpoint}${separator}_t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`No se pudieron cargar las organizaciones (${res.status})`);
       const data: { success?: boolean; organizations?: OrganizationRecord[] } = await res.json();
       return data.success && Array.isArray(data.organizations) ? data.organizations : [];
@@ -246,6 +250,8 @@ export default function OrganizationsModulePage() {
         setModalBannerUrl('');
         endSuccess(`Los datos de la organización "${orgName}" fueron actualizados con éxito.`);
         refreshOrganizations();
+        window.dispatchEvent(new Event('organization_updated'));
+        router.refresh();
       } else {
         endError(data.error || 'Error al actualizar la organización.');
       }
@@ -269,6 +275,8 @@ export default function OrganizationsModulePage() {
       if (res.ok && data.success) {
         endSuccess(`La organización "${organization.name}" fue eliminada correctamente.`);
         refreshOrganizations();
+        window.dispatchEvent(new Event('organization_updated'));
+        router.refresh();
       } else {
         throw new Error(data.error || 'Error al eliminar la organización.');
       }

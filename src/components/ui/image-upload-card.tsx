@@ -45,6 +45,10 @@ export function ImageUploadCard({
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [localPreview, setLocalPreview] = useState<string>('');
 
+  React.useEffect(() => {
+    setLocalPreview('');
+  }, [currentUrl]);
+
   const defaultButtonText = uploadType === 'banner' ? 'Subir / Cambiar Banner' : 'Subir / Cambiar Foto';
   const buttonText = uploadButtonText || defaultButtonText;
 
@@ -143,7 +147,7 @@ export function ImageUploadCard({
         {isBanner ? (
           <div className="ui-image-upload-preview w-20 h-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] overflow-hidden flex items-center justify-center flex-shrink-0 relative shadow-sm">
             {effectiveUrl ? (
-              <Image src={effectiveUrl} alt={label} fill sizes="80px" unoptimized className="object-cover" />
+              <Image key={effectiveUrl} src={effectiveUrl} alt={label} fill sizes="80px" unoptimized className="object-cover" />
             ) : (
               renderFallback()
             )}
@@ -154,7 +158,7 @@ export function ImageUploadCard({
             style={{ '--ui-dynamic-brand': brandColor } as React.CSSProperties}
           >
             {effectiveUrl ? (
-              <Image src={effectiveUrl} alt={label} fill sizes="56px" unoptimized className="object-cover" />
+              <Image key={effectiveUrl} src={effectiveUrl} alt={label} fill sizes="56px" unoptimized className="object-cover" />
             ) : (
               renderFallback()
             )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { TeamData, UserProfile } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -31,7 +32,8 @@ export function ClubManagementModal({
   initialTab = 'EQUIPO_ROSTER',
   onUpdateTeam,
 }: ClubManagementModalProps) {
-  const { currentUser } = useAuth();
+  const router = useRouter();
+  const { currentUser, refetchTeams } = useAuth();
   const [tabSelection, setTabSelection] = useState({ initialTab, value: initialTab });
   const activeTab = tabSelection.initialTab === initialTab ? tabSelection.value : initialTab;
   const setActiveTab = (value: TeamAdminSection) => setTabSelection({ initialTab, value });
@@ -71,6 +73,9 @@ export function ClubManagementModal({
         }),
       });
       onUpdateTeam?.(currentTeam);
+      if (refetchTeams) refetchTeams();
+      window.dispatchEvent(new Event('teams_updated'));
+      router.refresh();
     } catch (e) {
       console.error('Error saving club settings:', e);
     } finally {
@@ -521,7 +526,7 @@ export function ClubManagementModal({
           <div className="space-y-4">
             <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4">
               <div className="flex items-center gap-4">
-                <Avatar fallback={currentUser?.name || 'Atleta'} size="lg" status="online" />
+                <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || 'Atleta'} size="lg" status="online" />
                 <div>
                   <h4 className="text-lg font-black text-[var(--text-heading)] uppercase">{currentUser?.name}</h4>
                   <span className="text-xs text-[var(--app-accent)] font-[family-name:var(--font-active)] font-bold">Gamertag: @{currentUser?.gamertag}</span>

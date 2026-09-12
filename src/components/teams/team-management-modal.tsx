@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { TeamData, UserProfile } from '@/lib/data-store';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -32,7 +33,8 @@ export function TeamManagementModal({
   initialTab = 'EQUIPO_ROSTER',
   onUpdateTeam,
 }: TeamManagementModalProps) {
-  const { currentUser } = useAuth();
+  const router = useRouter();
+  const { currentUser, refetchTeams } = useAuth();
   const [tabSelection, setTabSelection] = useState({ initialTab, value: initialTab });
   const activeTab = tabSelection.initialTab === initialTab ? tabSelection.value : initialTab;
   const setActiveTab = (value: TeamTabOption) => setTabSelection({ initialTab, value });
@@ -71,6 +73,9 @@ export function TeamManagementModal({
         }),
       });
       onUpdateTeam?.(currentTeam);
+      if (refetchTeams) refetchTeams();
+      window.dispatchEvent(new Event('teams_updated'));
+      router.refresh();
     } catch (e) {
       console.error('Error saving team settings:', e);
     } finally {

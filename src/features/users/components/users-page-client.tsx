@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -129,6 +130,7 @@ const toPlayerData = (user: UserRecord): PlayerData => ({
 });
 
 export default function UsersModulePage() {
+  const router = useRouter();
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'directory' | 'management' | 'banned'>('directory');
 
@@ -158,7 +160,9 @@ export default function UsersModulePage() {
 
   const fetchUsers = React.useCallback(async (): Promise<UserRecord[]> => {
     try {
-      const res = await fetch(getDirectoryEndpoint('users', canManage));
+      const endpoint = getDirectoryEndpoint('users', canManage);
+      const url = endpoint.includes('?') ? `${endpoint}&_t=${Date.now()}` : `${endpoint}?_t=${Date.now()}`;
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`No se pudieron cargar los usuarios (${res.status})`);
       const data: UsersResponse = await res.json();
       return extractUsers(data);
@@ -168,11 +172,25 @@ export default function UsersModulePage() {
     }
   }, [canManage]);
 
-  const refreshUsers = () => void fetchUsers().then(setUsersList);
+  const refreshUsers = React.useCallback(() => {
+    void fetchUsers().then(setUsersList);
+  }, [fetchUsers]);
 
   useEffect(() => {
     void fetchUsers().then(setUsersList);
   }, [fetchUsers]);
+
+  useEffect(() => {
+    const onUserUpdated = () => {
+      refreshUsers();
+    };
+    window.addEventListener('user_profile_updated', onUserUpdated);
+    window.addEventListener('refetch_user_profile', onUserUpdated);
+    return () => {
+      window.removeEventListener('user_profile_updated', onUserUpdated);
+      window.removeEventListener('refetch_user_profile', onUserUpdated);
+    };
+  }, [refreshUsers]);
 
   const openCreateModal = () => {
     setModalAvatarUrl('');
@@ -277,6 +295,11 @@ export default function UsersModulePage() {
         setModalBannerUrl('');
         endSuccess(`El usuario @${userGamertag} fue creado exitosamente en la base de datos MySQL.`);
         refreshUsers();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user_profile_updated'));
+          window.dispatchEvent(new CustomEvent('refetch_user_profile'));
+        }
+        router.refresh();
       } else {
         endError(data.error || 'Error al crear usuario.');
       }
@@ -336,6 +359,11 @@ export default function UsersModulePage() {
         setModalBannerUrl('');
         endSuccess(`Los cambios en el usuario @${userGamertag} fueron guardados correctamente.`);
         refreshUsers();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user_profile_updated'));
+          window.dispatchEvent(new CustomEvent('refetch_user_profile'));
+        }
+        router.refresh();
       } else {
         endError(data.error || 'Error al actualizar usuario.');
       }
@@ -372,6 +400,11 @@ export default function UsersModulePage() {
         setBanConfirmUser(null);
         endSuccess(isCurrentlyBanned ? `El usuario @${userGamertag} ha sido desbaneado y activado.` : `El usuario @${userGamertag} ha sido baneado del sistema.`);
         refreshUsers();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user_profile_updated'));
+          window.dispatchEvent(new CustomEvent('refetch_user_profile'));
+        }
+        router.refresh();
       } else {
         endError(data.error || `Error al procesar el ${actionLabel.toLowerCase()}.`);
       }

@@ -68,7 +68,7 @@ export class TeamRepository extends BaseRepository<Team> implements ITeamReposit
     
     await this.runCommand(
       `INSERT INTO teams (id, name, tag, game_slug, organization_id, captain_id, captain_name, platform, members_count, max_members, color, logo_text, description, vacant_positions, logo_url, banner_url, status, club_id_ea, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         id, data.name, data.tag, data.gameSlug, data.organizationId || null,
         data.captainId, data.captainName, data.platform || 'CROSSPLAY',

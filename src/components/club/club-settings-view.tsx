@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
   const game = GAMES_CATALOG[activeGameSlug] || GAMES_CATALOG['eafc26'];
   const brandColor = game?.brandColor || 'var(--app-accent)';
 
+  const router = useRouter();
   const [currentTeamId, setCurrentTeamId] = useState<string>(
     (team?.id || currentUser?.teamId || `tm-${activeGameSlug.slice(0, 8)}-${(currentUser?.id || 'pro').replace('usr-', '')}`).slice(0, 36)
   );
@@ -43,6 +45,9 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
 
   // Unified persistent image update handler
   const persistImageUpdate = async (type: 'logo' | 'banner', newUrl: string) => {
+    if (type === 'logo') setLogoUrl(newUrl);
+    if (type === 'banner') setBannerUrl(newUrl);
+
     const updatedLogo = type === 'logo' ? newUrl : logoUrl;
     const updatedBanner = type === 'banner' ? newUrl : bannerUrl;
 
@@ -63,8 +68,16 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
       });
 
       if (putRes.ok) {
-        if (updateCurrentUser) updateCurrentUser({ teamId: currentTeamId });
+        if (updateCurrentUser) {
+          updateCurrentUser({
+            teamId: currentTeamId,
+            teamLogoUrl: updatedLogo,
+            teamBannerUrl: updatedBanner,
+          } as any);
+        }
         if (refetchTeams) await refetchTeams();
+        window.dispatchEvent(new Event('teams_updated'));
+        router.refresh();
       } else if (putRes.status === 404) {
         // Team does not exist yet; create it
         const postRes = await fetch('/api/teams', {
@@ -84,8 +97,16 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
           const postData = await postRes.json();
           const newId = postData?.data?.team?.id || postData?.team?.id;
           if (newId) setCurrentTeamId(newId);
-          if (updateCurrentUser && newId) updateCurrentUser({ teamId: newId });
+          if (updateCurrentUser && newId) {
+            updateCurrentUser({
+              teamId: newId,
+              teamLogoUrl: updatedLogo,
+              teamBannerUrl: updatedBanner,
+            } as any);
+          }
           if (refetchTeams) await refetchTeams();
+          window.dispatchEvent(new Event('teams_updated'));
+          router.refresh();
         } else {
           const postData = await postRes.json().catch(() => ({}));
           throw new Error(postData.error || 'No se pudo crear el club para guardar la imagen');
@@ -94,8 +115,6 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
         const putData = await putRes.json().catch(() => ({}));
         throw new Error(putData.error || 'No se pudo vincular la imagen al club');
       }
-      if (type === 'logo') setLogoUrl(newUrl);
-      if (type === 'banner') setBannerUrl(newUrl);
     } catch (err) {
       console.error('Error persisting image update:', err);
       throw err;
@@ -157,8 +176,17 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
         const resData = await res.json().catch(() => null);
         const savedId = resData?.data?.team?.id || resData?.team?.id || currentTeamId;
         if (savedId) setCurrentTeamId(savedId);
-        if (updateCurrentUser) updateCurrentUser({ teamId: savedId, teamName });
+        if (updateCurrentUser) {
+          updateCurrentUser({
+            teamId: savedId,
+            teamName,
+            teamLogoUrl: logoUrl,
+            teamBannerUrl: bannerUrl,
+          } as any);
+        }
         if (refetchTeams) await refetchTeams();
+        window.dispatchEvent(new Event('teams_updated'));
+        router.refresh();
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 4000);
       }

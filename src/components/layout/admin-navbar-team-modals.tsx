@@ -30,7 +30,11 @@ export function AdminNavbarTeamModals({
         isOpen={isCreateTeamOpen}
         defaultGameSlug={activeGameSlug}
         onClose={onCreateTeamClose}
-        onSuccess={(team) => router.push(`/${team.gameSlug}/equipos/${team.id}`)}
+        onSuccess={(team) => {
+          if (team?.id) {
+            router.push(`/${team.gameSlug || activeGameSlug}/equipos/${team.id}`);
+          }
+        }}
       />
       {activeTeam ? (
         <ClubManagementModal

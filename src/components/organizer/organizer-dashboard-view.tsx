@@ -102,7 +102,7 @@ export function OrganizerDashboardView() {
       }
 
       // 2. Fallback to API route
-      const res = await fetch('/api/organizer/organization');
+      const res = await fetch(`/api/organizer/organization?_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (data.success && data.organization) {
         setUserOrg(data.organization);
@@ -110,7 +110,7 @@ export function OrganizerDashboardView() {
       }
 
       // 3. Fallback to public organizations if necessary
-      const publicRes = await fetch('/api/organizations');
+      const publicRes = await fetch(`/api/organizations?_t=${Date.now()}`, { cache: 'no-store' });
       const publicData = await publicRes.json().catch(() => ({}));
       if (publicData.success && Array.isArray(publicData.organizations)) {
         const found = (publicData.organizations as OrganizerOrganization[]).find(
@@ -124,6 +124,16 @@ export function OrganizerDashboardView() {
       console.error('Error cargando organización del usuario:', e);
     }
   }, [currentUser?.organizationId]);
+
+  useEffect(() => {
+    const handleOrgUpdate = () => {
+      void fetchUserOrganization();
+    };
+    window.addEventListener('organization_updated', handleOrgUpdate);
+    return () => {
+      window.removeEventListener('organization_updated', handleOrgUpdate);
+    };
+  }, [fetchUserOrganization]);
 
   const fetchFixtureData = useCallback(async () => {
     if (!selectedTournamentId) return;

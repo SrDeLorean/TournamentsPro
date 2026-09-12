@@ -203,7 +203,7 @@ export function Navbar({
                 aria-controls="public-authenticated-user-menu"
                 className="flex h-9 items-center gap-2 rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-1 pr-1.5 shadow-sm transition-colors hover:border-[var(--navigation-brand)]"
               >
-                <Avatar fallback={currentUser?.name || currentUser?.gamertag || 'Usuario'} status="online" size="sm" />
+                <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || currentUser?.gamertag || 'Usuario'} status="online" size="sm" />
                 <span className="hidden max-w-28 truncate text-xs font-black text-[var(--text-heading)] md:inline font-[family-name:var(--font-active)]">{currentUser?.gamertag}</span>
                 <ChevronDown className={`hidden size-3 text-[var(--text-muted)] transition-transform md:block ${isUserMenuOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -212,7 +212,7 @@ export function Navbar({
                 <div id="public-authenticated-user-menu" className="management-popover fixed inset-x-2 top-14 z-50 max-h-[85vh] space-y-2 overflow-y-auto rounded-2xl p-3 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80 font-[family-name:var(--font-active)]">
                   <div className="management-profile-card space-y-3 rounded-xl p-3">
                     <div className="flex items-center gap-3">
-                      <Avatar fallback={currentUser?.name || 'Usuario'} status="online" size="md" />
+                      <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || 'Usuario'} status="online" size="md" />
                       <div className="min-w-0 flex-1">
                         <strong className="block truncate text-sm text-[var(--text-heading)] font-[family-name:var(--font-active)]">{currentUser?.name}</strong>
                         <span className="block truncate font-[family-name:var(--font-active)] text-xs font-bold text-[var(--navigation-brand)]">@{currentUser?.gamertag}</span>

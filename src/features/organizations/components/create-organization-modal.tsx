@@ -87,6 +87,7 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
         form.reset();
         setModalLogoUrl('');
         setModalBannerUrl('');
+        window.dispatchEvent(new Event('organization_updated'));
         onSuccess();
         onClose();
       } else {

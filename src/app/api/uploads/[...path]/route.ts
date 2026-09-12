@@ -34,6 +34,47 @@ export async function GET(request: Request, { params }: Params) {
     }
 
     if (!safePath) {
+      // 1. Check Supabase Storage if configured
+      try {
+        const { isSupabaseStorageConfigured, SUPABASE_STORAGE_BUCKET } = await import('@/lib/supabase-storage');
+        if (isSupabaseStorageConfigured()) {
+          const { supabase } = await import('@/lib/db/supabase/client');
+          const { data, error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).download(requestedPath);
+          if (!error && data) {
+            const arrayBuffer = await data.arrayBuffer();
+            return new NextResponse(Buffer.from(arrayBuffer), {
+              status: 200,
+              headers: {
+                'Content-Type': data.type || 'image/webp',
+                'Cache-Control': 'public, max-age=31536000, immutable',
+                'X-Content-Type-Options': 'nosniff',
+              },
+            });
+          }
+        }
+      } catch (storageErr) {
+        console.warn('Error fetching from Supabase storage fallback:', storageErr);
+      }
+
+      // 2. Fallback gracefully to default images instead of raw 404 text
+      const isBanner = requestedPath.toLowerCase().includes('banner') || requestedPath.toLowerCase().includes('organizaciones');
+      const fallbackFile = isBanner
+        ? path.join(process.cwd(), 'public', 'images', 'default', 'banner-default.jpg')
+        : path.join(process.cwd(), 'public', 'images', 'default', 'logo-default.png');
+
+      if (existsSync(fallbackFile)) {
+        const fallbackBuffer = await fs.readFile(fallbackFile);
+        const fallbackContentType = isBanner ? 'image/jpeg' : 'image/png';
+        return new NextResponse(fallbackBuffer, {
+          status: 200,
+          headers: {
+            'Content-Type': fallbackContentType,
+            'Cache-Control': 'public, max-age=300',
+            'X-Content-Type-Options': 'nosniff',
+          },
+        });
+      }
+
       return new NextResponse('Imagen no encontrada', { status: 404 });
     }
 

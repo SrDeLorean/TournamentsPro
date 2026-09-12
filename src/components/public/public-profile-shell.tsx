@@ -72,6 +72,7 @@ export function PublicProfileShell({
         <section className="public-team-hero public-profile-hero">
           <div className="public-team-banner">
             <Image
+              key={bannerUrl}
               src={bannerUrl}
               alt={bannerAlt}
               fill
@@ -89,6 +90,7 @@ export function PublicProfileShell({
               <div className="public-team-logo">
                 {logoUrl ? (
                   <Image
+                    key={logoUrl}
                     src={logoUrl}
                     alt={logoAlt}
                     fill

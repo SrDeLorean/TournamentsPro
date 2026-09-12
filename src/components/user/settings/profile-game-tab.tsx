@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
@@ -63,6 +64,7 @@ export function ProfileGameTab({
   biografia,
   setBiografia,
 }: ProfileGameTabProps) {
+  const router = useRouter();
   const brandColor = GAMES_CATALOG[configuredGame]?.brandColor || 'var(--app-accent)';
   const gameInfo = GAMES_CATALOG[configuredGame];
 
@@ -89,6 +91,9 @@ export function ProfileGameTab({
     else setBannerUrl(url);
     updateCurrentUser(type === 'avatar' ? { avatarUrl: url, foto: url } : { bannerUrl: url });
     await refetchUser();
+    window.dispatchEvent(new Event('user_profile_updated'));
+    window.dispatchEvent(new Event('refetch_user_profile'));
+    router.refresh();
   };
 
   return (

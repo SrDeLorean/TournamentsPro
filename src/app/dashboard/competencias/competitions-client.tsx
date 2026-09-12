@@ -2,6 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { GAMES_CATALOG, GAME_MODE_OPTIONS, GameModeOption } from '@/lib/games-data';
 import { CompetitionData, createCompetitionAction, updateCompetitionStatusAction, CompetitionStatus } from '@/app/actions/competitions';
 import { DataTable, ColumnDef } from '@/components/ui/data-table';
@@ -32,6 +33,7 @@ type CompetitionFilter = 'all' | 'Borrador' | 'Inscripcion' | 'En Curso' | 'Fina
 type TimeFilter = 'NEWEST' | 'OLDEST' | 'NAME_ASC' | 'NAME_DESC';
 
 export function CompetitionsListClient({ competitions, allowedGames = [], userRole }: CompetitionsListClientProps) {
+  const router = useRouter();
   const { currentUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingCompetition, setDeletingCompetition] = useState<CompetitionData | null>(null);
@@ -97,6 +99,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
         setCompBannerUrl('');
         setIsModalOpen(false);
         endSuccess(res.message || 'Competencia registrada exitosamente.');
+        router.refresh();
       } else {
         endError(res.error || 'Error al crear la competencia.');
       }
@@ -111,6 +114,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
       const res = await updateCompetitionStatusAction(id, targetStatus);
       if (res.success) {
         endSuccess(res.message || 'Estado actualizado.');
+        router.refresh();
       } else {
         endError(res.error || 'Error al cambiar estado.');
       }
@@ -126,6 +130,7 @@ export function CompetitionsListClient({ competitions, allowedGames = [], userRo
       throw new Error(message);
     }
     endSuccess(res.message || `La competencia "${competition.name}" fue eliminada.`);
+    router.refresh();
   };
 
   const columns: ColumnDef<CompetitionData>[] = [

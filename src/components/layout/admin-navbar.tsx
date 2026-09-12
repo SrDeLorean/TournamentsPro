@@ -380,7 +380,7 @@ export function AdminNavbar() {
                 aria-controls="player-user-menu"
                 className="admin-navbar-user flex items-center gap-2 p-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--navigation-brand)] transition-all shadow-sm"
               >
-                <Avatar fallback={currentUser?.name || 'User'} size="sm" status="online" />
+                <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || 'User'} size="sm" status="online" />
                 <div className="text-left hidden md:block leading-none">
                   <span className="text-xs font-black text-[var(--text-heading)] block truncate max-w-[110px]">
                     {currentUser?.gamertag}
@@ -398,7 +398,7 @@ export function AdminNavbar() {
                   {/* Profile Header Box */}
                   <div className="management-profile-card p-3 rounded-xl space-y-3">
                     <div className="flex items-center gap-3">
-                      <Avatar fallback={currentUser?.name || 'User'} size="md" status="online" />
+                      <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || 'User'} size="md" status="online" />
                       <div className="min-w-0">
                         <span className="font-black text-sm text-[var(--text-heading)] block truncate">
                           {currentUser?.name}

@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { Building2, Gamepad2, Layers, MapPin, Swords } from 'lucide-react';
 import { ManagementHero } from '@/components/dashboard/management-ui';
@@ -28,6 +29,16 @@ export function OrganizerDashboardHero({
 }: OrganizerDashboardHeroProps) {
   const activeGame = GAMES_CATALOG[selectedGameSlug] ?? GAMES_CATALOG.eafc26;
   const activeGameMode = gameModes.find((mode) => mode.id === selectedGameModeId) ?? gameModes[0];
+  const [hasBannerError, setHasBannerError] = useState(false);
+  const [hasLogoError, setHasLogoError] = useState(false);
+
+  React.useEffect(() => {
+    setHasBannerError(false);
+  }, [organization?.banner_url]);
+
+  React.useEffect(() => {
+    setHasLogoError(false);
+  }, [organization?.logo_url]);
 
   return (
     <ManagementHero
@@ -39,27 +50,31 @@ export function OrganizerDashboardHero({
       badge={organization ? `[${organization.tag}]` : 'Organizador'}
     >
       <div className="organizer-dashboard-context">
-        {organization?.banner_url ? (
+        {organization?.banner_url && !hasBannerError ? (
           <div className="organizer-dashboard-banner" aria-hidden="true">
             <Image
+              key={organization.banner_url}
               src={organization.banner_url}
               alt=""
               fill
               sizes="(min-width: 1024px) 70vw, 100vw"
               unoptimized={shouldBypassImageOptimization(organization.banner_url)}
+              onError={() => setHasBannerError(true)}
             />
           </div>
         ) : null}
 
         <div className="organizer-dashboard-identity">
           <div className="organizer-dashboard-logo">
-            {organization?.logo_url ? (
+            {organization?.logo_url && !hasLogoError ? (
               <Image
+                key={organization.logo_url}
                 src={organization.logo_url}
                 alt={`Logotipo de ${organization.name}`}
                 fill
                 sizes="64px"
                 unoptimized={shouldBypassImageOptimization(organization.logo_url)}
+                onError={() => setHasLogoError(true)}
               />
             ) : (
               <Building2 aria-hidden="true" />

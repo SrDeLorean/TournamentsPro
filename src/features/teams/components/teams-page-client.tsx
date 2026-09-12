@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import { TeamDirectory } from '@/components/teams/team-directory';
 import { Avatar } from '@/components/ui/avatar';
@@ -73,6 +74,7 @@ const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
 export default function TeamsModulePage() {
+  const router = useRouter();
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'directory' | 'crud' | 'banned'>('directory');
   const [teams, setTeams] = useState<AdminTeam[]>([]);
@@ -101,7 +103,9 @@ export default function TeamsModulePage() {
 
   const fetchTeams = React.useCallback(async (): Promise<AdminTeam[]> => {
     try {
-      const res = await fetch(getDirectoryEndpoint('teams', isAdminOrOrganizer));
+      const endpoint = getDirectoryEndpoint('teams', isAdminOrOrganizer);
+      const url = endpoint.includes('?') ? `${endpoint}&_t=${Date.now()}` : `${endpoint}?_t=${Date.now()}`;
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`No se pudieron cargar los equipos (${res.status})`);
       const data: { success?: boolean; teams?: AdminTeam[]; data?: { teams?: AdminTeam[] } } = await res.json();
       const teams = data.teams || data.data?.teams;
@@ -116,7 +120,7 @@ export default function TeamsModulePage() {
     if (!isAdminOrOrganizer) return [];
 
     try {
-      const res = await fetch('/api/admin/users');
+      const res = await fetch(`/api/admin/users?_t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`No se pudieron cargar los usuarios (${res.status})`);
       const data: { success?: boolean; users?: AdminUser[] } = await res.json();
       return data.success && Array.isArray(data.users) ? data.users : [];
@@ -126,7 +130,9 @@ export default function TeamsModulePage() {
     }
   }, [isAdminOrOrganizer]);
 
-  const refreshTeams = () => void fetchTeams().then(setTeams);
+  const refreshTeams = React.useCallback(() => {
+    void fetchTeams().then(setTeams);
+  }, [fetchTeams]);
 
   useEffect(() => {
     void Promise.all([fetchTeams(), fetchUsers()]).then(([teamRows, userRows]) => {
@@ -134,6 +140,14 @@ export default function TeamsModulePage() {
       setUsersList(userRows);
     });
   }, [fetchTeams, fetchUsers]);
+
+  useEffect(() => {
+    const onTeamsUpdated = () => {
+      refreshTeams();
+    };
+    window.addEventListener('teams_updated', onTeamsUpdated);
+    return () => window.removeEventListener('teams_updated', onTeamsUpdated);
+  }, [refreshTeams]);
 
   const openCreateModal = () => {
     setModalLogoUrl('');
@@ -203,6 +217,10 @@ export default function TeamsModulePage() {
         setCreateEncargados([]);
         endSuccess(`La escuadra "${teamName}" fue registrada exitosamente en la base de datos con Capitán y Encargados.`);
         refreshTeams();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('teams_updated'));
+        }
+        router.refresh();
       } else {
         endError(data.error || 'Error al crear la escuadra.');
       }
@@ -261,6 +279,10 @@ export default function TeamsModulePage() {
         setModalBannerUrl('');
         endSuccess(`Los cambios en la escuadra "${teamName}" fueron actualizados con éxito.`);
         refreshTeams();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('teams_updated'));
+        }
+        router.refresh();
       } else {
         endError(data.error || 'Error al actualizar la escuadra.');
       }
@@ -297,6 +319,10 @@ export default function TeamsModulePage() {
         setBanConfirmTeam(null);
         endSuccess(isCurrentlyBanned ? `La escuadra "${teamName}" fue desbaneada y activada.` : `La escuadra "${teamName}" ha sido baneada.`);
         refreshTeams();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('teams_updated'));
+        }
+        router.refresh();
       } else {
         endError(data.error || `Error al procesar el ${actionLabel.toLowerCase()}.`);
       }

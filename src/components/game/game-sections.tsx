@@ -162,7 +162,7 @@ export function PlayerFichaCrudSection({ currentUser }: { currentUser: UserProfi
       <Card className="border-[var(--border-card)] p-6 space-y-6">
         <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-4">
           <div className="flex items-center gap-3">
-            <Avatar fallback={currentUser?.name || 'User'} size="lg" status="online" />
+            <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || 'User'} size="lg" status="online" />
             <div>
               <h3 className="text-xl font-black uppercase text-[var(--text-heading)]">{currentUser?.name}</h3>
               <span className="text-xs text-[var(--app-accent)] font-bold">@{currentUser?.gamertag}</span>

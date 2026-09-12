@@ -307,7 +307,17 @@ export interface ApiErrorResponse {
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 export function apiSuccess<T>(data: T, message?: string, meta?: PaginationMeta): NextResponse<ApiSuccessResponse<T>> {
-  return NextResponse.json({ success: true, data, message, meta }, { status: 200 });
+  return NextResponse.json(
+    { success: true, data, message, meta },
+    {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+      },
+    }
+  );
 }
 
 export function apiCreated<T>(data: T, message?: string): NextResponse<ApiSuccessResponse<T>> {

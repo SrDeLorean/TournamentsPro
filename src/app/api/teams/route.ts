@@ -123,7 +123,12 @@ export async function POST(request: Request) {
       vacantPositions: vacantPositions || [],
     }, effectiveCaptainId, effectiveCaptainName);
     if (!result.success) return apiError(result.error || 'No se pudo crear el equipo', 409, result.code);
-    return apiSuccess({ team: result.team }, 'Equipo creado exitosamente');
+    return NextResponse.json({
+      success: true,
+      data: { team: result.team },
+      team: result.team,
+      message: 'Equipo creado exitosamente',
+    }, { status: 200 });
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
