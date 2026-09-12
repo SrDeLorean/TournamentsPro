@@ -47,16 +47,16 @@ export interface CompetitionDetail {
 
 export interface ConfirmedTeam {
   id: string;
-  competition_id?: string;
-  team_id?: string;
+  competition_id?: string | null;
+  team_id?: string | null;
   team_name: string;
-  team_tag?: string;
+  team_tag?: string | null;
   team_logo?: string | null;
-  captain_name?: string;
-  status?: string;
-  created_at?: string;
-  enrolled_at?: string;
-  updated_at?: string;
+  captain_name?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  enrolled_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface CompetitionMatch {

@@ -19,9 +19,9 @@ interface PublicOrganizationRow {
   teams_count: number;
 }
 
-function parseJsonValue<T>(value: string | T | null, fallback: T): T {
+function parseJsonValue<T>(value: unknown, fallback: T): T {
   if (!value) return fallback;
-  if (typeof value !== 'string') return value;
+  if (typeof value !== 'string') return value as T;
 
   try {
     return JSON.parse(value) as T;

@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     // 1. Fetch Enrolled Teams with real names and tags
     const enrolledTeamsData = await dbProvider.competitions.getEnrolledTeams(tournamentId);
     const enrolledTeams: FixtureTeam[] = enrolledTeamsData.map(t => ({
-      id: t.team_id || t.teamId,
+      id: t.team_id || t.teamId || t.id || '',
       name: t.team_name || t.teamName || 'Equipo BD',
       tag: t.team_tag || t.teamTag || (t.team_name || t.teamName || 'EQU').substring(0, 3).toUpperCase()
     }));

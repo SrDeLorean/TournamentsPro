@@ -61,11 +61,16 @@ export default async function GlobalCompetitionDetailPage({ params }: { params: 
   const teams: ConfirmedTeam[] = enrolledTeamsRaw.map(ct => {
     const t = teamMap.get(ct.team_id || ct.teamId || '');
     return {
-      id: ct.id, competition_id: ct.competition_id || ct.competitionId,
-      team_id: ct.team_id || ct.teamId, team_name: ct.team_name || ct.teamName,
-      team_tag: ct.team_tag || ct.teamTag, status: ct.status,
-      enrolled_at: ct.enrolled_at || ct.enrolledAt, updated_at: ct.updated_at || ct.updatedAt,
-      team_logo: t?.logoUrl, captain_name: t?.captainName
+      id: ct.id,
+      competition_id: ct.competition_id || ct.competitionId,
+      team_id: ct.team_id || ct.teamId,
+      team_name: ct.team_name || ct.teamName || t?.name || 'Equipo',
+      team_tag: ct.team_tag || ct.teamTag || t?.tag || '',
+      status: ct.status,
+      enrolled_at: ct.enrolled_at || ct.enrolledAt,
+      updated_at: ct.updated_at || ct.updatedAt,
+      team_logo: t?.logoUrl,
+      captain_name: t?.captainName
     };
   });
 

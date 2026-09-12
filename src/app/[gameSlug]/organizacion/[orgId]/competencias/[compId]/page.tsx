@@ -84,18 +84,21 @@ export default async function PublicCompetitionDetailPage({
     ...enrolledTeamsRaw.map(t => t.team_id || t.teamId),
     ...matchesRaw.flatMap(m => [m.homeTeamId, m.teamHomeId, m.awayTeamId, m.teamAwayId])
   ].filter(Boolean))) as string[];
-  
   const matchTeamsRaw = allTeamIds.length > 0 ? await dbProvider.teams.findAll({ where: { id: allTeamIds } }) : [];
   const teamMap = new Map(matchTeamsRaw.map(t => [t.id, t]));
 
   const teamRows: ConfirmedTeam[] = enrolledTeamsRaw.map(ct => {
     const t = teamMap.get(ct.team_id || ct.teamId || '');
     return {
-      id: ct.id, competition_id: ct.competition_id || ct.competitionId,
-      team_id: ct.team_id || ct.teamId, team_name: ct.team_name || ct.teamName,
-      team_tag: ct.team_tag || ct.teamTag, status: ct.status,
-      enrolled_at: ct.enrolled_at || ct.enrolledAt, updated_at: ct.updated_at || ct.updatedAt,
-      team_logo: t?.logoUrl, captain_name: t?.captainName
+      id: ct.id,
+      competition_id: ct.competition_id || ct.competitionId,
+      team_id: ct.team_id || ct.teamId,
+      team_name: ct.team_name || ct.teamName || t?.name || 'Equipo',
+      team_tag: ct.team_tag || ct.teamTag || t?.tag || '',
+      status: ct.status,
+      enrolled_at: ct.enrolled_at || ct.enrolledAt,
+      updated_at: ct.updated_at || ct.updatedAt,
+      team_logo: t?.logoUrl, captain_name: t?.captainName,
     };
   });
 
@@ -122,11 +125,8 @@ export default async function PublicCompetitionDetailPage({
       reported_score_home: m.reportedScoreHome, reported_score_away: m.reportedScoreAway,
       score_home: m.scoreHome, score_away: m.scoreAway,
       matchday_number: m.matchday, matchday: m.matchday,
-      stage: m.stage,
-      round_name: m.roundName,
-      group_name: m.groupName,
-      scheduled_time: m.scheduledTime,
-      scheduled_at: m.scheduledAt,
+      stage: m.stage, round_name: m.roundName, group_name: m.groupName,
+      scheduled_time: m.scheduledTime, scheduled_at: m.scheduledAt,
     };
   });
 
