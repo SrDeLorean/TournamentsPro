@@ -228,17 +228,17 @@ export function TeamProfileView({
                     Organización: {orgName}
                   </h3>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {players.map((p) => (
-                      <div key={p.id} className="p-3.5 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)] flex items-center justify-between gap-3 text-xs">
-                        <div className="flex items-center gap-3">
-                          <Avatar src={p.avatar_url || p.foto || undefined} fallback={p.user_name} size="md" status="online" />
-                          <div>
-                            <span className="font-bold text-sm text-[var(--text-heading)] block">{p.user_name}</span>
-                            <span className="text-[var(--text-muted)] text-[11px] font-[family-name:var(--font-active)]">{p.gamertag}</span>
+                      <div key={p.id} className="p-3 sm:p-3.5 rounded-xl bg-[var(--bg-card-hover)] border border-[var(--border-card)] flex items-center justify-between gap-3 text-xs min-w-0">
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                          <Avatar src={p.avatar_url || p.foto || undefined} fallback={p.user_name} size="md" status="online" className="shrink-0" />
+                          <div className="min-w-0">
+                            <span className="font-bold text-sm text-[var(--text-heading)] block truncate">{p.user_name}</span>
+                            <span className="text-[var(--text-muted)] text-[11px] font-[family-name:var(--font-active)] truncate block">{p.gamertag}</span>
                           </div>
                         </div>
-                        <Badge variant="cyan">{p.tactical_position || 'DFC'}</Badge>
+                        <Badge variant="cyan" className="shrink-0">{p.tactical_position || 'DFC'}</Badge>
                       </div>
                     ))}
                   </div>

@@ -6552,14 +6552,6 @@
   .esports-entity-card-description { -webkit-line-clamp: 2; }
   .esports-entity-card-footer { grid-template-columns: minmax(0, 1fr) auto; }
   .esports-entity-card-action { display: inline-flex; }
-
-  .public-team-hero-content { padding: 6.5rem 0.85rem 1rem; }
-  .public-team-identity { align-items: flex-start; }
-  .public-team-title-row { align-items: flex-start; flex-wrap: wrap; }
-  .public-team-title-row h1 { width: 100%; white-space: normal; }
-  .public-team-actions { width: 100%; grid-template-columns: 1fr; gap: 0.5rem; }
-  .public-team-actions > *, .public-team-actions button, .public-team-actions a { width: 100%; min-height: 2.5rem; }
-  .public-team-panel { padding: 0.75rem; }
 }
 
 @media (max-width: 479px) {
@@ -7210,107 +7202,484 @@
 .team-directory-main footer svg { width: 0.78rem; transition: transform 180ms ease; }
 .team-directory-link:hover footer svg { transform: translate(0.15rem, -0.15rem); }
 
-/* Public club profile: full-bleed cover followed by centered operational content. */
+/* =============================================================================
+   PUBLIC PROFILES: UNIFIED MATHEMATICAL RESPONSIVE ENGINE (MOBILE, TABLET, WEB)
+   Shared across: Teams (/equipos), Athletes (/usuarios), Organizations (/organizaciones),
+   and Competitions (/competencias).
+   ============================================================================= */
+
 body:has(.public-profile-shell) .app-navbar,
 body:has(.public-team-page) .app-navbar {
   border-color: color-mix(in srgb, var(--profile-accent, var(--accent-cyan)) 18%, transparent);
-  background: color-mix(in srgb, var(--bg-nav) 68%, transparent);
+  background: color-mix(in srgb, var(--bg-nav) 72%, transparent);
+  backdrop-filter: blur(14px);
   box-shadow: none;
 }
-.public-team-page { padding: 0; background: var(--bg-main); }
-.standard-page-wrapper:has(.public-profile-shell) { width: 100%; max-width: none; padding: 0; }
-.public-profile-shell { width: 100%; color: var(--text-primary); }
-.public-team-profile { max-width: none; gap: 0; margin: 0; }
-.public-team-hero {
-  display: flex;
+
+.public-team-page { padding: 0; background: var(--bg-main); min-height: 100dvh; }
+
+.standard-page-wrapper:has(.public-profile-shell) {
   width: 100%;
-  min-height: min(52rem, 100svh);
+  max-width: none;
+  padding: 0;
+}
+
+.public-profile-shell {
+  width: 100%;
+  color: var(--text-primary);
+  display: flex;
   flex-direction: column;
+}
+
+.public-team-profile {
+  max-width: none;
+  gap: 0;
+  margin: 0;
+}
+
+/* ── Hero Container (Fluid Mathematical Bounds) ──────────────────── */
+.public-team-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 100%;
   margin-top: calc(-1 * var(--navbar-stack-height, 3.5rem));
+  min-height: min(52rem, 100svh);
   border: 0;
   border-radius: 0;
   background: color-mix(in srgb, var(--bg-card) 96%, black);
   box-shadow: none;
 }
+
+/* ── Banner: Full-Bleed Continuous Canvas on ALL screens ─────────── */
 .public-team-banner {
   position: absolute;
   z-index: -1;
-  inset: 0 0 auto;
+  inset: 0;
   width: 100%;
-  height: clamp(10.5rem, 42vw, 13.5rem);
+  height: 100%;
   overflow: hidden;
 }
+
 .public-team-banner > img {
-  filter: saturate(1.06) contrast(1.08) brightness(0.72);
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  object-position: center 35%;
+  object-position: center 30%;
+  filter: saturate(1.05) contrast(1.08) brightness(0.68);
+  transform: scale(1.02);
+  transition: transform 600ms ease;
 }
+
 .public-team-banner-overlay {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(2, 6, 23, 0.2) 0%, rgba(2, 6, 23, 0.45) 45%, rgba(2, 6, 23, 0.88) 80%, var(--bg-card) 100%);
+    /* Top contrast shadow to protect navbar links & icons */
+    linear-gradient(180deg, rgba(2, 6, 23, 0.78) 0%, rgba(2, 6, 23, 0.35) 28%, transparent 50%),
+    /* Horizontal cinematic vignette */
+    linear-gradient(90deg, rgba(2, 6, 23, 0.65) 0%, transparent 45%, rgba(2, 6, 23, 0.4) 100%),
+    /* Bottom seamless gradient fading into card/metrics background */
+    linear-gradient(180deg, transparent 0%, rgba(2, 6, 23, 0.3) 50%, rgba(2, 6, 23, 0.82) 80%, var(--bg-main) 100%);
 }
+
+/* ── Hero Content (Fluid Mathematical Spacing) ──────────────────── */
 .public-team-hero-content {
-  width: 100%;
-  min-height: auto;
+  position: relative;
+  z-index: 2;
+  width: min(calc(100% - 2rem), 90rem);
+  margin-inline: auto;
+  padding-top: calc(var(--navbar-stack-height, 3.5rem) + clamp(1rem, 3.5vw, 2.5rem));
+  padding-bottom: clamp(1rem, 2.5vw, 1.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.85rem, 2vw, 1.5rem);
+}
+
+/* ── Identity Block (Logo + Info) ───────────────────────────────── */
+.public-team-identity {
+  display: flex;
+  min-width: 0;
+  align-items: flex-end;
+  gap: clamp(0.75rem, 2vw, 1.35rem);
+}
+
+/* ── Logo: Fluid Mathematical Scaling ────────────────────────────── */
+.public-team-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: clamp(4.5rem, 11vw, 7.25rem);
+  height: clamp(4.5rem, 11vw, 7.25rem);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: clamp(2.5px, 0.35vw, 3.5px) solid var(--profile-accent);
+  border-radius: clamp(1rem, 2vw, 1.5rem);
+  background: var(--app-canvas, #060913);
+  color: var(--profile-accent);
+  font-size: clamp(1.25rem, 2.5vw, 2rem);
+  font-weight: 950;
+  box-shadow: 0 0.5rem 2rem -0.25rem color-mix(in srgb, var(--profile-accent) 45%, transparent), var(--shadow-card);
+}
+
+/* ── Text Copy & Typography ─────────────────────────────────────── */
+.public-team-copy {
+  min-width: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  margin-inline: auto;
-  padding: clamp(6.25rem, 25vw, 8.5rem) 1rem 1.25rem;
-  gap: 0.875rem;
+  gap: 0.3rem;
 }
 
-@media (min-width: 768px) {
-  .public-team-banner {
-    height: 16rem;
+.public-team-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--profile-accent) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--profile-accent) 12%, rgb(2 6 23 / 0.65));
+  color: var(--profile-accent);
+  font: 900 clamp(0.5625rem, 0.9vw, 0.6875rem)/1 var(--font-active, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.public-team-title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.15rem;
+}
+
+.public-team-title-row h1 {
+  margin: 0;
+  color: var(--text-heading);
+  font-family: var(--font-display, var(--font-active)), sans-serif;
+  font-size: clamp(1.4rem, 4vw, 2.85rem);
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-shadow: 0 0.5rem 1.5rem rgba(2, 6, 23, 0.85);
+}
+
+.public-team-title-row span {
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--profile-accent) 45%, transparent);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--profile-accent) 15%, var(--bg-main));
+  padding: 0.22rem 0.5rem;
+  color: var(--profile-accent);
+  font: 900 clamp(0.6rem, 1vw, 0.72rem)/1 var(--font-active, monospace);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+}
+
+.public-team-description {
+  display: -webkit-box;
+  overflow: hidden;
+  max-width: 54rem;
+  margin-top: 0.25rem;
+  color: var(--text-secondary);
+  font-size: clamp(0.75rem, 1.1vw, 0.875rem);
+  line-height: 1.55;
+  text-wrap: pretty;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.public-team-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin-top: 0.4rem;
+  color: var(--text-muted);
+  font-size: clamp(0.625rem, 0.9vw, 0.75rem);
+  font-weight: 750;
+}
+
+.public-team-facts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.public-team-facts svg {
+  color: var(--profile-accent);
+  flex-shrink: 0;
+}
+
+.public-team-facts .is-active {
+  color: var(--profile-accent);
+  font-weight: 850;
+}
+
+/* ── Actions Block (Tactile, Responsive) ────────────────────────── */
+.public-team-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.public-team-actions > *,
+.public-team-actions button,
+.public-team-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.65rem;
+  width: 100%;
+}
+
+.public-team-primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.75rem;
+  background: var(--profile-accent);
+  color: var(--text-inverse, #000);
+  font-weight: 850;
+  font-size: 0.78rem;
+  padding: 0.65rem 1.1rem;
+  box-shadow: 0 0.35rem 1.25rem -0.25rem var(--profile-accent);
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.public-team-primary-action:hover {
+  transform: translateY(-1px);
+  opacity: 0.94;
+}
+
+/* ── Metrics Bar (Mathematical Grid) ────────────────────────────── */
+.public-team-metrics {
+  position: relative;
+  width: 100%;
+  border-top: 1px solid var(--border-card);
+  border-bottom: 1px solid var(--border-card);
+  background: color-mix(in srgb, var(--bg-main) 78%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.public-team-metrics-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(calc(100% - 2 * clamp(0.75rem, 2.5vw, 1.75rem)), 90rem);
+  margin-inline: auto;
+  border-left: 1px solid var(--border-card);
+  border-right: 1px solid var(--border-card);
+}
+
+.public-team-metrics-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.22rem;
+  background: var(--profile-accent);
+  box-shadow: 0 0 1.25rem var(--profile-accent);
+  z-index: 2;
+}
+
+.public-team-metrics-inner > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  gap: 0.25rem;
+  padding: clamp(0.7rem, 1.8vw, 1.15rem) 0.65rem;
+  border-right: 1px solid var(--border-card);
+  border-bottom: 1px solid var(--border-card);
+  text-align: center;
+}
+
+.public-team-metrics-inner > div:nth-child(2n) {
+  border-right: 0;
+}
+
+/* Fix for odd metric counts (e.g. 5 metrics in organizations): last item spans 2 columns in 2-col mobile */
+.public-team-metrics-inner > div:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  border-right: 0;
+}
+
+.public-team-metrics-inner > div:nth-last-child(-n+2) {
+  border-bottom: 0;
+}
+
+.public-team-metrics-inner > div:last-child:nth-child(odd) {
+  border-bottom: 0;
+}
+
+.public-team-metrics strong {
+  overflow: hidden;
+  color: var(--text-heading);
+  font-family: var(--font-active, var(--font-mono)), monospace;
+  font-size: clamp(1.05rem, 2.5vw, 1.45rem);
+  font-weight: 950;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-team-metrics span {
+  color: var(--text-muted);
+  font-size: clamp(0.55rem, 0.9vw, 0.65rem);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  line-height: 1.25;
+}
+
+/* ── Navigation Tabs (Sticky, Centered, Fluid) ──────────────────── */
+.public-team-tabs,
+.public-profile-tabs-slot {
+  position: sticky;
+  z-index: 20;
+  top: var(--navbar-stack-height, 3.5rem);
+  width: min(calc(100% - 2 * clamp(0.75rem, 2.5vw, 1.75rem)), 90rem);
+  margin: clamp(0.65rem, 1.8vw, 1.15rem) auto 0;
+}
+
+.public-profile-tabs-slot .ui-sub-tabs {
+  margin: 0;
+  border-color: color-mix(in srgb, var(--profile-accent) 22%, var(--border-card));
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 0.5rem 1.5rem -0.5rem rgba(0, 0, 0, 0.45);
+}
+
+/* ── Content Area ───────────────────────────────────────────────── */
+.public-team-content,
+.public-profile-content {
+  width: min(calc(100% - 2 * clamp(0.75rem, 2.5vw, 1.75rem)), 90rem);
+  margin: clamp(0.85rem, 2vw, 1.35rem) auto 0;
+  padding-bottom: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.public-team-content > .space-y-6 > .glass-panel {
+  border-color: color-mix(in srgb, var(--profile-accent) 18%, var(--border-card));
+  background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+}
+
+.public-team-content > .space-y-6 > .glass-panel h3::before {
+  content: '';
+  display: inline-block;
+  width: 0.25rem;
+  height: 1em;
+  margin-right: 0.45rem;
+  transform: skewX(-12deg);
+  background: var(--profile-accent);
+  box-shadow: 0 0 0.8rem color-mix(in srgb, var(--profile-accent) 45%, transparent);
+  vertical-align: -0.1em;
+}
+
+.public-team-content > .space-y-6 > .glass-panel .bg-\[var\(--bg-card-hover\)\] {
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.public-team-content > .space-y-6 > .glass-panel .bg-\[var\(--bg-card-hover\)\]:hover {
+  transform: translateY(-0.12rem);
+  border-color: color-mix(in srgb, var(--profile-accent) 34%, var(--border-card));
+  background: color-mix(in srgb, var(--profile-accent) 6%, var(--bg-card-hover));
+}
+
+/* ── Public Profiles Responsive Tiers (Tablet & Desktop) ────────── */
+@media (min-width: 640px) {
+  .public-team-hero {
+    min-height: clamp(21rem, 36vw, 27rem);
   }
-  .public-team-banner-overlay {
-    background:
-      linear-gradient(180deg, rgba(2, 6, 23, 0.25) 0%, rgba(2, 6, 23, 0.5) 45%, rgba(2, 6, 23, 0.92) 85%, var(--bg-card) 100%);
+
+  .public-team-actions {
+    grid-template-columns: repeat(auto-fit, minmax(140px, max-content));
+    width: auto;
   }
-  .public-team-hero-content {
-    padding: 9.5rem 1.5rem 1.5rem;
-    gap: 1.25rem;
+
+  .public-team-actions > *,
+  .public-team-actions button,
+  .public-team-actions a {
+    width: auto;
+  }
+
+  .public-team-metrics-inner {
+    grid-template-columns: repeat(var(--metrics-count, 4), minmax(0, 1fr));
+  }
+
+  .public-team-metrics-inner > div {
+    border-right: 1px solid var(--border-card) !important;
+    border-bottom: 0 !important;
+  }
+
+  .public-team-metrics-inner > div:last-child {
+    border-right: 0 !important;
+    grid-column: auto !important;
+  }
+
+  .public-team-recruitment {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
 }
 
 @media (min-width: 1024px) {
-  .public-team-banner {
-    height: 100%;
+  .public-team-hero {
+    min-height: clamp(25rem, 30vw, 32rem);
   }
-  .public-team-banner > img {
-    filter: saturate(1.04) contrast(1.08) brightness(0.62);
-    object-position: center 25%;
+
+  .public-team-hero-content {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
   }
+
+  .public-team-identity {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .public-team-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
   .public-team-banner-overlay {
     background:
-      linear-gradient(90deg, rgb(2 6 23 / 0.74), rgb(2 6 23 / 0.2) 58%, rgb(2 6 23 / 0.44)),
-      linear-gradient(180deg, transparent 0%, rgb(2 6 23 / 0.04) 46%, rgb(2 6 23 / 0.28) 68%, color-mix(in srgb, var(--bg-main) 94%, transparent) 91%, var(--bg-main) 100%);
-  }
-  .public-team-hero-content {
-    width: min(calc(100% - 2rem), 90rem);
-    min-height: 25rem;
-    padding: clamp(7rem, 22svh, 16rem) 0 2rem;
+      linear-gradient(180deg, rgba(2, 6, 23, 0.72) 0%, rgba(2, 6, 23, 0.25) 30%, transparent 55%),
+      linear-gradient(90deg, rgb(2 6 23 / 0.78), rgb(2 6 23 / 0.22) 58%, rgb(2 6 23 / 0.44)),
+      linear-gradient(180deg, transparent 0%, rgb(2 6 23 / 0.1) 45%, rgb(2 6 23 / 0.5) 75%, var(--bg-main) 100%);
   }
 }
-.public-team-logo { box-shadow: var(--shadow-card), 0 0 2rem -0.65rem var(--profile-accent); }
-.public-team-eyebrow { width: fit-content; padding: 0.3rem 0.5rem; border: 1px solid color-mix(in srgb, var(--profile-accent) 35%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--profile-accent) 10%, rgb(2 6 23 / 0.5)); backdrop-filter: blur(0.7rem); }
-.public-team-title-row h1 { text-shadow: 0 0.8rem 2rem var(--app-overlay); }
-.public-team-metrics { position: relative; width: 100%; background: color-mix(in srgb, var(--bg-main) 68%, transparent); backdrop-filter: blur(1.1rem); }
-.public-team-metrics-inner { position: relative; width: min(calc(100% - 2rem), 90rem); margin-inline: auto; border-left: 1px solid var(--border-card); border-right: 1px solid var(--border-card); }
-.public-team-metrics-inner::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 0.2rem; background: var(--profile-accent); box-shadow: 0 0 1rem var(--profile-accent); z-index: 2; }
-.public-team-metrics strong { color: var(--profile-accent); }
-.public-team-tabs { position: sticky; z-index: 20; top: var(--navbar-stack-height, 4rem); width: min(calc(100% - 2rem), 90rem); margin: 1rem auto 0; border-color: color-mix(in srgb, var(--profile-accent) 18%, var(--border-card)); background: color-mix(in srgb, var(--bg-card) 94%, transparent); backdrop-filter: blur(1rem); }
-.public-profile-tabs-slot { position: sticky; z-index: 20; top: var(--navbar-stack-height, 4rem); width: min(calc(100% - 2rem), 90rem); margin: 1rem auto 0; }
-.public-profile-tabs-slot .ui-sub-tabs { margin: 0; border-color: color-mix(in srgb, var(--profile-accent) 18%, var(--border-card)); background: color-mix(in srgb, var(--bg-card) 94%, transparent); backdrop-filter: blur(1rem); }
-.public-team-content { width: min(calc(100% - 2rem), 90rem); margin: 1rem auto 0; }
-.public-team-content > .space-y-6 > .glass-panel { border-color: color-mix(in srgb, var(--profile-accent) 18%, var(--border-card)); background: color-mix(in srgb, var(--bg-card) 96%, transparent); }
-.public-team-content > .space-y-6 > .glass-panel h3::before { content: ''; display: inline-block; width: 0.25rem; height: 1em; margin-right: 0.45rem; transform: skewX(-12deg); background: var(--profile-accent); box-shadow: 0 0 0.8rem color-mix(in srgb, var(--profile-accent) 45%, transparent); vertical-align: -0.1em; }
-.public-team-content > .space-y-6 > .glass-panel .bg-\[var\(--bg-card-hover\)\] { transition: border-color 160ms ease, background 160ms ease, transform 160ms ease; }
-.public-team-content > .space-y-6 > .glass-panel .bg-\[var\(--bg-card-hover\)\]:hover { transform: translateY(-0.12rem); border-color: color-mix(in srgb, var(--profile-accent) 34%, var(--border-card)); background: color-mix(in srgb, var(--profile-accent) 6%, var(--bg-card-hover)); }
+
+@media (max-width: 479px) {
+  .public-team-identity {
+    align-items: flex-start;
+  }
+  .public-team-actions {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* React/Next shared-element and directional navigation transitions. */
 ::view-transition { pointer-events: none; }
@@ -7344,28 +7713,13 @@ body:has(.public-team-page) .app-navbar {
 @media (min-width: 1120px) {
   .team-directory-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .team-directory-link.is-featured { grid-column: span 2; }
-  .public-team-hero-content { min-height: 32rem; }
-  .public-team-logo { width: 7.5rem; height: 7.5rem; border-radius: 1.35rem; }
-  .public-team-metrics-inner > div { padding-block: 1.1rem; }
-}
-
-@media (min-width: 1024px) {
-  .public-team-hero-content { justify-content: space-between; }
 }
 
 @media (max-width: 699px) {
   .team-directory-hero { min-height: 0; }
   .team-directory-main { padding-inline: 0.85rem; }
   .team-directory-copy strong { font-size: 0.92rem; }
-  .public-team-hero { min-height: 100svh; margin-top: calc(-1 * var(--navbar-stack-height, 3.5rem)); }
-  .public-team-hero-content { width: min(calc(100% - 1.25rem), 90rem); min-height: 24rem; padding: 6rem 0 1rem; }
-  .public-team-identity { align-items: flex-start; }
-  .public-team-title-row { align-items: flex-start; flex-direction: column; }
-  .public-team-title-row h1 { white-space: normal; }
-  .public-team-tabs { top: 3.75rem; }
-  .public-team-tabs, .public-profile-tabs-slot, .public-team-content { width: calc(100% - 1.25rem); }
-  .public-profile-tabs-slot { top: 3.75rem; }
-  .public-team-metrics-inner { width: calc(100% - 1.25rem); }
+  .public-team-hero { min-height: 100svh; }
 }
 
 @media (prefers-reduced-motion: reduce) {

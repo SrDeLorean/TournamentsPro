@@ -76,11 +76,12 @@ export function PublicProfileShell({
               src={bannerUrl}
               alt={bannerAlt}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1440px"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1920px"
               loading="eager"
+              priority
               unoptimized={shouldBypassImageOptimization(bannerUrl)}
               onError={(event) => { event.currentTarget.src = '/images/default/banner-default.jpg'; }}
-              className="object-cover object-center sm:object-[center_25%]"
+              className="object-cover object-center sm:object-[center_30%]"
             />
             <div className="public-team-banner-overlay" />
           </div>
@@ -94,7 +95,7 @@ export function PublicProfileShell({
                     src={logoUrl}
                     alt={logoAlt}
                     fill
-                    sizes="112px"
+                    sizes="(max-width: 640px) 96px, (max-width: 1024px) 120px, 144px"
                     unoptimized={shouldBypassImageOptimization(logoUrl)}
                     onError={(event) => { event.currentTarget.src = '/images/default/logo-default.png'; }}
                     className={logoFit === 'contain' ? 'object-contain p-2' : 'object-cover'}
@@ -119,6 +120,7 @@ export function PublicProfileShell({
           <div className="public-team-metrics">
             <div
               className="public-team-metrics-inner"
+              data-count={metrics.length}
               style={{ '--metrics-count': metrics.length } as CSSProperties}
             >
               {metrics.map((metric, index) => (

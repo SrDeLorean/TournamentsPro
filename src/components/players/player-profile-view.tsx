@@ -123,7 +123,7 @@ export function PlayerProfileView({ player, brandColor = 'var(--app-accent)', is
       facts={<><span><Gamepad2 className="size-3.5" />@{playerTag}</span><span><Monitor className="size-3.5" />{player.platform || 'CROSSPLAY'}</span><span className="is-active"><CheckCircle2 className="size-3.5" />{player.status || 'Activo'}</span></>}
       actions={
         isOwner ? (
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <>
             <Link href={`/${player.gameSlug}/atleta/ajustes`} className="w-full sm:w-auto">
               <Button className="public-team-primary-action w-full sm:w-auto">
                 <Sparkles className="size-4" />
@@ -136,7 +136,7 @@ export function PlayerProfileView({ player, brandColor = 'var(--app-accent)', is
                 Enlace público
               </Button>
             </Link>
-          </div>
+          </>
         ) : (
           <Button className="public-team-primary-action w-full sm:w-auto">
             <Send className="size-4" />

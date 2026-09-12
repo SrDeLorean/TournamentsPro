@@ -163,7 +163,7 @@ export function PublicCompetitionDetailView({
       badge={competition.status === 'Activo' ? 'EN CURSO' : competition.status}
       description={competition.description || `Competencia oficial organizada por ${orgName}.`}
       facts={<><span><Building2 className="size-3.5" />{orgName}</span><span><Users className="size-3.5" />{competition.mode_format || '11v11'}</span><span className="is-active"><CheckCircle2 className="size-3.5" />{isPlayoff ? 'Playoff' : isHybrid ? 'Liga híbrida' : 'Liga de puntos'}</span></>}
-      actions={<Link href={organizationHref}><button className="public-team-primary-action"><Building2 className="size-4" />Ver organización</button></Link>}
+      actions={<Link href={organizationHref} className="public-team-primary-action"><Building2 className="size-4" />Ver organización</Link>}
       metrics={[
         { value: competition.prize_pool || '—', label: 'prize pool' },
         { value: `${regCount}/${maxCount}`, label: `${percent}% de equipos inscritos` },
