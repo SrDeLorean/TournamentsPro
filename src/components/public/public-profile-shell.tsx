@@ -76,11 +76,11 @@ export function PublicProfileShell({
               src={bannerUrl}
               alt={bannerAlt}
               fill
-              sizes="100vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1440px"
               loading="eager"
               unoptimized={shouldBypassImageOptimization(bannerUrl)}
               onError={(event) => { event.currentTarget.src = '/images/default/banner-default.jpg'; }}
-              className="object-cover"
+              className="object-cover object-center sm:object-[center_25%]"
             />
             <div className="public-team-banner-overlay" />
           </div>

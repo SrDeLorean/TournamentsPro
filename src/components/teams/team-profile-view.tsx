@@ -173,12 +173,12 @@ export function TeamProfileView({
       facts={<><span><Gamepad2 className="size-3.5" />{game?.name}</span><span><Monitor className="size-3.5" />{team.platform}</span><span className="is-active"><CheckCircle2 className="size-3.5" />{team.status}</span></>}
       actions={<>
             {canManage ? (
-              <Button onClick={() => setIsManageModalOpen(true)} variant="outline">
+              <Button onClick={() => setIsManageModalOpen(true)} variant="outline" className="w-full sm:w-auto">
                 <Settings className="size-4" />Administrar club
               </Button>
             ) : null}
-            <Link href="/mensajes">
-              <Button className="public-team-primary-action">
+            <Link href="/mensajes" className="w-full sm:w-auto">
+              <Button className="public-team-primary-action w-full sm:w-auto">
                 <MessageSquare className="size-4" />Contactar capitán
               </Button>
             </Link>

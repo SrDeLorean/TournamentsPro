@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
 import type { TeamData } from '@/lib/data-store';
-import { GameLogo } from '@/components/ui/game-logo';
 import { Badge } from '@/components/ui/badge';
+import { GameLogo } from '@/components/ui/game-logo';
 import { ModalForm } from '@/components/ui/modal-form';
+import { useCrudNotifier, CrudAlertBanner } from '@/components/ui/crud-alert';
 import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
   const router = useRouter();
   const { currentUser, updateCurrentUser, refetchUser } = useAuth();
   const { userTeams, refetchTeams } = useTeams();
+  const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
 
   const [teamName, setTeamName] = useState('');
   const [tag, setTag] = useState('');
@@ -54,7 +56,24 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
   const selectedGameObj = GAMES_CATALOG[gameSlug] || GAMES_CATALOG.eafc26;
   const color = selectedGameObj.brandColor;
 
-  if (!isOpen) return null;
+  const resetFormState = () => {
+    setTeamName('');
+    setTag('');
+    setDescription('');
+    setLogoUrl('');
+    setBannerUrl('');
+    setExtractedTeams([]);
+    setApiMessage('');
+    setApiQuery('');
+    setErrorMsg('');
+  };
+
+  const handleModalClose = () => {
+    resetFormState();
+    onClose();
+  };
+
+  if (!isOpen && crudState.status === 'IDLE') return null;
 
   const logoTextPreview = tag.trim() ? tag.trim().substring(0, 3).toUpperCase() : 'TP';
 
@@ -162,6 +181,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
     }
 
     setIsSubmitting(true);
+    startOperation(`Fundar club: ${cleanName}`);
 
     try {
       const res = await fetch('/api/teams', {
@@ -172,7 +192,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
           tag: cleanTag,
           gameSlug,
           captainId: currentUser?.id || 'usr-current',
-          captainName: currentUser?.name || 'Nuevo Capitán',
+          captainName: currentUser?.name || currentUser?.gamertag || 'Nuevo Capitán',
           platform,
           description,
           color,
@@ -184,7 +204,9 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMsg(data.error || 'Error al registrar el club en el servidor');
+        const errorDetail = data.error || 'Error al registrar el club en el servidor';
+        setErrorMsg(errorDetail);
+        endError(errorDetail);
         setIsSubmitting(false);
         return;
       }
@@ -192,11 +214,17 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
       const createdTeam: TeamData | undefined = data.data?.team || data.team || (data.data?.id ? data.data : undefined);
 
       if (!createdTeam || !createdTeam.id) {
-        setErrorMsg('No se recibieron los datos del club creado por parte del servidor');
+        const errorDetail = 'No se recibieron los datos del club creado por parte del servidor';
+        setErrorMsg(errorDetail);
+        endError(errorDetail);
         setIsSubmitting(false);
         return;
       }
 
+      // Reset form fields immediately so duplicate submissions cannot occur
+      resetFormState();
+
+      // Update current user state with new captain role and team
       updateCurrentUser({
         role: 'Capitán',
         teamId: createdTeam.id,
@@ -205,33 +233,42 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
         teamBannerUrl: createdTeam.bannerUrl || bannerUrl,
       } as any);
 
+      // Refresh global states
       if (refetchTeams) refetchTeams();
       if (refetchUser) await refetchUser();
       window.dispatchEvent(new Event('teams_updated'));
+      window.dispatchEvent(new Event('user_profile_updated'));
       router.refresh();
 
+      endSuccess(`¡El club "${createdTeam.name || cleanName}" fue fundado exitosamente! Eres el nuevo Capitán.`);
       setIsSubmitting(false);
-      if (onSuccess) onSuccess(createdTeam);
+
+      // Close modal immediately
       onClose();
+
+      if (onSuccess) onSuccess(createdTeam);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'No se pudo crear el equipo');
+      const errorDetail = err instanceof Error ? err.message : 'No se pudo crear el equipo';
+      setErrorMsg(errorDetail);
+      endError(errorDetail);
       setIsSubmitting(false);
     }
   };
 
   return (
-    <ModalForm
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Fundar nueva escuadra"
-      subtitle="Crea el club, extrae o registra su identidad visual y asume su capitanía."
-      onSubmit={handleSubmit}
-      isSubmitting={isSubmitting}
-      submitButtonText="Crear club y asumir capitanía"
-      errorMessage={errorMsg}
-      brandColor={color}
-      size="lg"
-    >
+    <>
+      <ModalForm
+        isOpen={isOpen}
+        onClose={handleModalClose}
+        title="Fundar nueva escuadra"
+        subtitle="Crea el club, extrae o registra su identidad visual y asume su capitanía."
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+        submitButtonText="Crear club y asumir capitanía"
+        errorMessage={errorMsg}
+        brandColor={color}
+        size="lg"
+      >
       <div className="space-y-5 font-[family-name:var(--font-active)] text-xs">
 
         {/* Live Crest Card Preview */}
@@ -484,5 +521,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
 
       </div>
     </ModalForm>
+    <CrudAlertBanner state={crudState} onClose={resetAlert} />
+  </>
   );
 }

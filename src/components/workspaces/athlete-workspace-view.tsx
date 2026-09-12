@@ -5,15 +5,9 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
   Activity,
-  BarChart3,
   BriefcaseBusiness,
-  CheckCircle2,
-  Clock3,
   Eye,
-  FileText,
-  History,
   MessageSquare,
-  Sparkles,
   Star,
   Trophy,
   User,
@@ -40,41 +34,26 @@ import {
 } from '@/app/actions/transfers';
 import { getUserEnrolledTeamsAction } from '@/app/actions/squads';
 import type { AthleteWorkspaceSection } from '@/lib/workspace-sections';
-import { AthleteOverview, AthleteTeams, type AthleteMatchSummary, type AthleteTeamSummary } from '@/components/workspaces/athlete-dashboard-summary';
+import {
+  AthleteOverview,
+  AthleteStats,
+  AthleteOffers,
+  AthleteTeams,
+  AthleteHistory,
+  WorkspaceLoading,
+  type AthleteMatchSummary,
+  type AthleteTeamSummary,
+  type ContractOffer,
+  type TransferHistoryEntry,
+  type AthleteStatsData,
+} from '@/components/workspaces/athlete-workspace-components';
 
 const ChatSystem = dynamic(() => import('@/components/chat/chat-system').then((module) => module.ChatSystem), {
-  loading: WorkspaceLoading,
+  loading: () => <WorkspaceLoading />,
 });
 const UserProfileSettingsView = dynamic(() => import('@/components/user/user-profile-settings-view').then((module) => module.UserProfileSettingsView), {
-  loading: WorkspaceLoading,
+  loading: () => <WorkspaceLoading />,
 });
-
-interface ContractOffer {
-  id: string;
-  teamId: string;
-  teamName: string;
-  teamTag: string;
-  position: string;
-  pitchMessage: string;
-  status: string;
-  createdAt: string;
-}
-
-interface TransferHistoryEntry {
-  id: string;
-  fromTeamName: string;
-  toTeamName: string;
-  signedAt: string;
-  transferType: string;
-}
-
-interface AthleteStatsData {
-  matches: number;
-  goals: number;
-  assists: number;
-  mvps: number;
-  winrate: string;
-}
 
 const sectionCopy: Record<AthleteWorkspaceSection, { eyebrow: string; title: string; description: string }> = {
   resumen: { eyebrow: 'Centro personal', title: 'Panel del atleta', description: 'Tu actividad competitiva, situación contractual y accesos principales dentro de esta disciplina.' },
@@ -310,15 +289,23 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
         tone="cyan"
         badge={game.name}
         actions={
-          <Link href={publicProfileHref}>
-            <Button variant="outline" className="w-full sm:w-auto"><Eye className="size-4" />Ver ficha pública</Button>
+          <Link href={publicProfileHref} className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto">
+              <Eye className="size-4" />
+              Ver ficha pública
+            </Button>
           </Link>
         }
       >
         <div className="context-workspace-identity">
           <Avatar fallback={player.name} src={player.avatarUrl} status="online" size="lg" />
-          <div><strong>{player.name}</strong><span>@{player.gamertag} · {player.position}</span></div>
-          <Badge variant={resolvedTeam.name !== 'Agencia libre' ? 'emerald' : 'gold'}>{resolvedTeam.name}</Badge>
+          <div>
+            <strong>{player.name}</strong>
+            <span>@{player.gamertag} · {player.position}</span>
+          </div>
+          <Badge variant={resolvedTeam.name !== 'Agencia libre' ? 'emerald' : 'gold'}>
+            {resolvedTeam.name}
+          </Badge>
         </div>
       </ManagementHero>
 
@@ -331,13 +318,52 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
         </ManagementMetrics>
       ) : null}
 
-      {section === 'resumen' ? <AthleteOverview base={base} player={player} teams={teams} matches={matches} offerCount={offers.length} /> : null}
+      {section === 'resumen' ? (
+        <AthleteOverview
+          base={base}
+          player={player}
+          teams={teams}
+          matches={matches}
+          offerCount={offers.length}
+        />
+      ) : null}
       {section === 'estadisticas' ? <AthleteStats stats={stats} /> : null}
-      {section === 'ofertas' ? <AthleteOffers offers={offers} loading={isLoading} onDecision={(offer, accept) => setOfferDecision({ offer, accept })} /> : null}
-      {section === 'equipos' ? <AthleteTeams player={player} gameSlug={game.slug} teams={teams} /> : null}
-      {section === 'historial' ? <AthleteHistory history={history} loading={isLoading} /> : null}
-      {section === 'mensajes' ? <ManagementSection title="Conversaciones" description="Canales privados y soporte competitivo." icon={MessageSquare} tone="cyan" className="[&>div:last-child]:p-0"><ChatSystem /></ManagementSection> : null}
-      {section === 'ajustes' ? <div className="context-workspace-embedded"><UserProfileSettingsView brandColor={game.brandColor} embedded /></div> : null}
+      {section === 'ofertas' ? (
+        <AthleteOffers
+          offers={offers}
+          loading={isLoading}
+          onDecision={(offer, accept) => setOfferDecision({ offer, accept })}
+        />
+      ) : null}
+      {section === 'equipos' ? (
+        <AthleteTeams
+          player={player}
+          gameSlug={game.slug}
+          teams={teams}
+        />
+      ) : null}
+      {section === 'historial' ? (
+        <AthleteHistory
+          history={history}
+          loading={isLoading}
+        />
+      ) : null}
+      {section === 'mensajes' ? (
+        <ManagementSection
+          title="Conversaciones"
+          description="Canales privados y soporte competitivo."
+          icon={MessageSquare}
+          tone="cyan"
+          className="[&>div:last-child]:p-0"
+        >
+          <ChatSystem />
+        </ManagementSection>
+      ) : null}
+      {section === 'ajustes' ? (
+        <div className="context-workspace-embedded">
+          <UserProfileSettingsView brandColor={game.brandColor} embedded />
+        </div>
+      ) : null}
 
       <ConfirmModal
         isOpen={Boolean(offerDecision)}
@@ -352,18 +378,3 @@ export function AthleteWorkspaceView({ gameSlug, section = 'resumen' }: { gameSl
     </ManagementPage>
   );
 }
-
-function AthleteStats({ stats }: { stats: AthleteStatsData | null }) {
-  return <ManagementSection title="Rendimiento registrado" description="Datos agregados desde los reportes oficiales de encuentros." icon={BarChart3} tone="emerald">{stats && stats.matches > 0 ? <div className="context-workspace-facts"><div><span>Partidos</span><strong>{stats.matches}</strong></div><div><span>Goles / kills</span><strong>{stats.goals}</strong></div><div><span>Asistencias</span><strong>{stats.assists}</strong></div><div><span>Victorias</span><strong>{stats.winrate}</strong></div></div> : <WorkspaceEmpty icon={BarChart3} title="Aún no hay estadísticas verificadas" description="Los indicadores aparecerán cuando existan reportes oficiales vinculados a tu usuario." />}</ManagementSection>;
-}
-
-function AthleteOffers({ offers, loading, onDecision }: { offers: ContractOffer[]; loading: boolean; onDecision: (offer: ContractOffer, accept: boolean) => void }) {
-  return <ManagementSection title="Propuestas recibidas" description="Contratos pendientes de una respuesta." icon={FileText} tone="violet">{loading ? <WorkspaceLoading /> : offers.length ? <div className="context-record-list">{offers.map((offer) => <article key={offer.id}><div className="context-record-icon">{offer.teamTag?.slice(0, 2) || 'CL'}</div><div><strong>{offer.teamName}</strong><span>{offer.position} · {offer.pitchMessage}</span><small><Clock3 />{new Date(offer.createdAt).toLocaleDateString('es-CL')}</small></div><div className="context-record-actions"><Button size="sm" onClick={() => onDecision(offer, true)}><CheckCircle2 className="size-3.5" />Aceptar</Button><Button size="sm" variant="ghost" onClick={() => onDecision(offer, false)}>Rechazar</Button></div></article>)}</div> : <WorkspaceEmpty icon={Sparkles} title="No tienes ofertas pendientes" description="Cuando un club envíe una propuesta contractual aparecerá aquí." />}</ManagementSection>;
-}
-
-function AthleteHistory({ history, loading }: { history: TransferHistoryEntry[]; loading: boolean }) {
-  return <ManagementSection title="Movimientos registrados" description="Historial verificable de incorporaciones y salidas." icon={History} tone="gold">{loading ? <WorkspaceLoading /> : history.length ? <div className="context-timeline">{history.map((entry) => <div key={entry.id}><i /><div><strong>{entry.fromTeamName} → {entry.toTeamName}</strong><span>{entry.transferType} · {new Date(entry.signedAt).toLocaleDateString('es-CL')}</span></div></div>)}</div> : <WorkspaceEmpty icon={History} title="Sin movimientos registrados" description="Tu historial se completará automáticamente al procesar fichajes." />}</ManagementSection>;
-}
-
-function WorkspaceLoading() { return <div className="context-workspace-loading">Cargando información...</div>; }
-function WorkspaceEmpty({ icon: Icon, title, description }: { icon: typeof History; title: string; description: string }) { return <div className="context-workspace-empty"><Icon /><strong>{title}</strong><span>{description}</span></div>; }

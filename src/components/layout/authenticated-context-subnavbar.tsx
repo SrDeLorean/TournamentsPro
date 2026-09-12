@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { CreateTeamModal } from '@/components/teams/create-team-modal';
 import { TabList } from '@/components/ui/tab-list';
@@ -55,6 +55,7 @@ const iconById: Record<AuthenticatedNavItemId, React.ReactNode> = {
 const NAV_GROUP_STARTS = new Set<AuthenticatedNavItemId>(['offers', 'messages', 'recruitment', 'club-messages']);
 
 export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }) {
+  const router = useRouter();
   const pathname = usePathname();
   const { currentUser } = useAuth();
   const { userTeams, refetchTeams } = useTeams();
@@ -160,7 +161,13 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
         isOpen={isCreateClubOpen}
         onClose={() => setIsCreateClubOpen(false)}
         defaultGameSlug={gameSlug}
-        onSuccess={() => refetchTeams()}
+        onSuccess={(team) => {
+          setIsCreateClubOpen(false);
+          if (refetchTeams) refetchTeams();
+          if (team?.id) {
+            router.push(`/${team.gameSlug || gameSlug}/club`);
+          }
+        }}
       />
     </div>
   );

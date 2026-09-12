@@ -54,14 +54,14 @@ export function ProfileGamertagsTab({
               className="p-4 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-card)] space-y-3"
               style={{ '--ui-dynamic-brand': g.brandColor } as React.CSSProperties}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="game-brand-dot" />
                   <h4 className="font-black text-sm uppercase text-[var(--text-heading)]">{g.name}</h4>
-                  <Badge variant="cyan" className="text-[10px] ">{g.category}</Badge>
+                  <Badge variant="cyan" className="text-[10px]">{g.category}</Badge>
                 </div>
                 {p.position && (
-                  <Badge variant="violet" className="text-[10px]  font-bold">
+                  <Badge variant="violet" className="text-[10px] font-bold">
                     Posición: {p.position}
                   </Badge>
                 )}

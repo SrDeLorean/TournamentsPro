@@ -68,9 +68,9 @@ export function ProfileAccountTab({
           <label className="font-bold text-[var(--text-muted)] uppercase block flex items-center gap-1">
             Correo Electrónico (No Modificable)
           </label>
-          <div className="p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-card)] flex items-center justify-between">
-            <span className="font-semibold text-[var(--text-secondary)] ">{email || currentUser?.email || 'email@tournamentspro.com'}</span>
-            <Badge variant="slate" className="text-[10px] ">Correo Registrado 🔒</Badge>
+          <div className="p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-card)] flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
+            <span className="font-semibold text-[var(--text-secondary)] truncate min-w-0">{email || currentUser?.email || 'email@tournamentspro.com'}</span>
+            <Badge variant="slate" className="text-[10px] shrink-0">Correo Registrado 🔒</Badge>
           </div>
         </div>
 

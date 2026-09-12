@@ -18,7 +18,7 @@ import { canManageTeam, findActiveManagedTeam, getExploreLinks } from '@/compone
 import { shouldBypassImageOptimization } from '@/lib/image-utils';
 import type { TeamData } from '@/lib/data-store';
 import {
-  Trophy, Shield, LogOut, Settings, Plus, Sparkles, ChevronDown, LayoutDashboard, CheckCircle2, Compass, UserRoundCog, Mail, SlidersHorizontal
+  Trophy, Shield, LogOut, Settings, Plus, Sparkles, ChevronDown, LayoutDashboard, CheckCircle2, Compass, UserRoundCog, Mail, SlidersHorizontal, Menu
 } from 'lucide-react';
 
 const AdminNavbarTeamModals = dynamic(() => import('@/components/layout/admin-navbar-team-modals').then((module) => module.AdminNavbarTeamModals));
@@ -399,21 +399,30 @@ export function AdminNavbar() {
                   setIsSettingsOpen(false);
                   setIsUserMenuOpen((open) => !open);
                 }}
-                aria-label="Abrir menú de usuario"
+                aria-label="Abrir menú de usuario y configuración"
                 aria-expanded={isUserMenuOpen}
                 aria-controls="player-user-menu"
-                className="admin-navbar-user flex items-center gap-2 p-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--navigation-brand)] transition-all shadow-sm"
+                className="admin-navbar-user flex items-center gap-1.5 sm:gap-2 px-1.5 py-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] hover:border-[var(--navigation-brand)] transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--navigation-brand)]/40 min-h-[2.35rem]"
               >
-                <Avatar src={currentUser?.avatarUrl || currentUser?.foto} fallback={currentUser?.name || 'User'} size="sm" status="online" />
-                <div className="text-left hidden md:block leading-none">
+                <Avatar
+                  src={currentUser?.avatarUrl || currentUser?.foto}
+                  fallback={currentUser?.name || currentUser?.gamertag || 'User'}
+                  size="sm"
+                  status="online"
+                  className="flex-shrink-0"
+                />
+                <div className="admin-navbar-user-info text-left hidden md:block leading-none">
                   <span className="text-xs font-black text-[var(--text-heading)] block truncate max-w-[110px]">
-                    {currentUser?.gamertag}
+                    {currentUser?.gamertag || currentUser?.name}
                   </span>
                   <span className="text-[9px] text-[var(--navigation-brand)] font-[family-name:var(--font-active)] font-bold">
                     ★ {currentUser?.rating || '9.8'}
                   </span>
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] hidden md:block transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180 text-[var(--navigation-brand)]' : ''}`} />
+                <div className="flex items-center justify-center text-[var(--text-muted)] flex-shrink-0">
+                  <Menu className="w-4 h-4 md:hidden" aria-hidden="true" />
+                  <ChevronDown className={`w-3.5 h-3.5 hidden md:block transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180 text-[var(--navigation-brand)]' : ''}`} aria-hidden="true" />
+                </div>
               </button>
 
               {isUserMenuOpen && (

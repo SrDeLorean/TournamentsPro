@@ -6557,6 +6557,8 @@
   .public-team-identity { align-items: flex-start; }
   .public-team-title-row { align-items: flex-start; flex-wrap: wrap; }
   .public-team-title-row h1 { width: 100%; white-space: normal; }
+  .public-team-actions { width: 100%; grid-template-columns: 1fr; gap: 0.5rem; }
+  .public-team-actions > *, .public-team-actions button, .public-team-actions a { width: 100%; min-height: 2.5rem; }
   .public-team-panel { padding: 0.75rem; }
 }
 
@@ -6566,9 +6568,8 @@
   .app-navbar-mobile-toggle { min-width: 2.5rem; min-height: 2.5rem; }
   .admin-navbar-frame { padding-inline: max(0.4rem, env(safe-area-inset-left)); }
   .admin-navbar-context { flex: 0 1 auto; }
-  .admin-navbar-user { max-width: 3rem; }
-  .admin-navbar-user > div,
-  .admin-navbar-user > svg { display: none; }
+  .admin-navbar-user { max-width: none; flex-shrink: 0; }
+  .admin-navbar-user-info { display: none; }
   .authenticated-context-frame { gap: 0.3rem; }
   .authenticated-context-tab,
   .authenticated-context-link { padding-inline: 0.55rem; }
@@ -6892,17 +6893,31 @@
 
 @media (max-width: 640px) {
   .context-workspace { padding-inline: 0.55rem; }
+  .context-workspace-identity { flex-wrap: wrap; gap: 0.65rem; }
+  .context-workspace-identity > div { flex: 1 1 auto; min-width: 0; }
+  .context-workspace-identity > .ui-badge { width: fit-content; margin-left: auto; }
   .context-workspace-grid { grid-template-columns: minmax(0, 1fr); gap: 0.6rem; }
   .context-workspace-shortcut { min-height: 4.35rem; padding: 0.75rem; }
-  .context-workspace-facts { grid-template-columns: minmax(0, 1fr); }
-  .context-record-list article { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
-  .context-record-actions,
-  .context-record-list article > .ui-badge { grid-column: 1 / -1; width: 100%; }
+  .context-workspace-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+  .context-record-list article { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
+  .context-record-list article > .context-record-icon,
+  .context-record-list article > .ui-avatar { flex-shrink: 0; }
+  .context-record-list article > div:nth-child(2) { flex: 1 1 12rem; min-width: 0; }
+  .context-record-list article strong { white-space: normal; word-break: break-word; }
+  .context-record-list article span { white-space: normal; word-break: break-word; }
+  .context-record-actions { width: 100%; flex-basis: 100%; display: flex; gap: 0.5rem; margin-top: 0.25rem; }
   .context-record-actions > * { flex: 1; }
-  .context-team-card { grid-template-columns: auto minmax(0, 1fr); }
-  .context-team-card > a { grid-column: 1 / -1; }
+  .context-record-list article > .ui-badge { width: fit-content; }
+  .context-team-card { display: flex; flex-direction: column; align-items: stretch; gap: 0.75rem; }
+  .context-team-card > div { width: 100%; }
+  .context-team-card > a,
   .context-team-card > a > * { width: 100%; }
   .context-workspace-embedded { margin-inline: -0.1rem; border-radius: 0.9rem; }
+}
+
+@media (max-width: 380px) {
+  .management-metrics { grid-template-columns: 1fr; }
+  .context-workspace-facts { grid-template-columns: 1fr; }
 }
 
 /* Final cascade for V2 portal art direction. Brand colors belong to gameSlug,
@@ -7217,20 +7232,69 @@ body:has(.public-team-page) .app-navbar {
   background: color-mix(in srgb, var(--bg-card) 96%, black);
   box-shadow: none;
 }
-.public-team-banner { height: 100%; }
-.public-team-banner > img { filter: saturate(1.04) contrast(1.08) brightness(0.62); }
+.public-team-banner {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  width: 100%;
+  height: clamp(10.5rem, 42vw, 13.5rem);
+  overflow: hidden;
+}
+.public-team-banner > img {
+  filter: saturate(1.06) contrast(1.08) brightness(0.72);
+  object-fit: cover;
+  object-position: center 35%;
+}
 .public-team-banner-overlay {
+  position: absolute;
+  inset: 0;
   background:
-    linear-gradient(90deg, rgb(2 6 23 / 0.74), rgb(2 6 23 / 0.2) 58%, rgb(2 6 23 / 0.44)),
-    linear-gradient(180deg, transparent 0%, rgb(2 6 23 / 0.04) 46%, rgb(2 6 23 / 0.28) 68%, color-mix(in srgb, var(--bg-main) 94%, transparent) 91%, var(--bg-main) 100%);
+    linear-gradient(180deg, rgba(2, 6, 23, 0.2) 0%, rgba(2, 6, 23, 0.45) 45%, rgba(2, 6, 23, 0.88) 80%, var(--bg-card) 100%);
 }
 .public-team-hero-content {
-  width: min(calc(100% - 2rem), 90rem);
-  min-height: 26rem;
+  width: 100%;
+  min-height: auto;
   flex: 1;
+  display: flex;
+  flex-direction: column;
   justify-content: flex-end;
   margin-inline: auto;
-  padding: clamp(7rem, 22svh, 16rem) 0 2rem;
+  padding: clamp(6.25rem, 25vw, 8.5rem) 1rem 1.25rem;
+  gap: 0.875rem;
+}
+
+@media (min-width: 768px) {
+  .public-team-banner {
+    height: 16rem;
+  }
+  .public-team-banner-overlay {
+    background:
+      linear-gradient(180deg, rgba(2, 6, 23, 0.25) 0%, rgba(2, 6, 23, 0.5) 45%, rgba(2, 6, 23, 0.92) 85%, var(--bg-card) 100%);
+  }
+  .public-team-hero-content {
+    padding: 9.5rem 1.5rem 1.5rem;
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .public-team-banner {
+    height: 100%;
+  }
+  .public-team-banner > img {
+    filter: saturate(1.04) contrast(1.08) brightness(0.62);
+    object-position: center 25%;
+  }
+  .public-team-banner-overlay {
+    background:
+      linear-gradient(90deg, rgb(2 6 23 / 0.74), rgb(2 6 23 / 0.2) 58%, rgb(2 6 23 / 0.44)),
+      linear-gradient(180deg, transparent 0%, rgb(2 6 23 / 0.04) 46%, rgb(2 6 23 / 0.28) 68%, color-mix(in srgb, var(--bg-main) 94%, transparent) 91%, var(--bg-main) 100%);
+  }
+  .public-team-hero-content {
+    width: min(calc(100% - 2rem), 90rem);
+    min-height: 25rem;
+    padding: clamp(7rem, 22svh, 16rem) 0 2rem;
+  }
 }
 .public-team-logo { box-shadow: var(--shadow-card), 0 0 2rem -0.65rem var(--profile-accent); }
 .public-team-eyebrow { width: fit-content; padding: 0.3rem 0.5rem; border: 1px solid color-mix(in srgb, var(--profile-accent) 35%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--profile-accent) 10%, rgb(2 6 23 / 0.5)); backdrop-filter: blur(0.7rem); }

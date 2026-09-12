@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GameConfig } from '@/lib/games-data';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
@@ -31,6 +31,7 @@ interface MobileResponsiveSubnavbarProps {
 }
 
 export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection }: MobileResponsiveSubnavbarProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const { currentUser, isAuthenticated } = useAuth();
   const { userTeams, refetchTeams } = useTeams();
@@ -257,7 +258,13 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
         isOpen={isCreateClubOpen}
         onClose={() => setIsCreateClubOpen(false)}
         defaultGameSlug={game.slug}
-        onSuccess={() => refetchTeams()}
+        onSuccess={(team) => {
+          setIsCreateClubOpen(false);
+          if (refetchTeams) refetchTeams();
+          if (team?.id) {
+            router.push(`/${team.gameSlug || game.slug}/club`);
+          }
+        }}
       />
     </div>
   );

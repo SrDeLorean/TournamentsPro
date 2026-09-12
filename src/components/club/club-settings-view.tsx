@@ -340,11 +340,11 @@ export function ClubSettingsView({ team, activeGameSlug = 'eafc26', refetchTeams
         />
 
         {/* BOTÓN DE GUARDAR Y NOTIFICACIÓN */}
-        <div className="pt-4 flex items-center gap-3">
+        <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <Button
             type="submit"
             disabled={isSaving}
-            className="ui-dynamic-brand-button font-black text-xs px-6 py-3 rounded-xl flex items-center gap-2 transition-all"
+            className="ui-dynamic-brand-button font-black text-xs px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-all w-full sm:w-auto"
           >
             <Save className="w-4 h-4" />
             <span>{isSaving ? 'Guardando...' : 'Guardar Todos los Cambios del Club'}</span>

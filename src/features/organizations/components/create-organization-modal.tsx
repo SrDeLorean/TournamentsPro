@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ModalForm } from '@/components/ui/modal-form';
+import { useCrudNotifier, CrudAlertBanner } from '@/components/ui/crud-alert';
 import { BrandedImageUploadSection } from '@/components/ui/branded-image-upload-section';
 import { SocialMediaGroup } from '@/components/ui/social-media-group';
 import { Avatar } from '@/components/ui/avatar';
@@ -22,9 +23,11 @@ interface CreateOrganizationModalProps {
 }
 
 export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUser }: CreateOrganizationModalProps) {
+  const { crudState, startOperation, endSuccess, endError, resetAlert } = useCrudNotifier();
   const [modalLogoUrl, setModalLogoUrl] = useState('');
   const [modalBannerUrl, setModalBannerUrl] = useState('');
   const [availableOrganizers, setAvailableOrganizers] = useState<OrganizerOption[]>([]);
+  const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -43,25 +46,30 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
   const handleClose = () => {
     setModalLogoUrl('');
     setModalBannerUrl('');
+    setErrorMsg('');
     onClose();
   };
 
   const handleCreateOrg = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setErrorMsg('');
     setIsSubmitting(true);
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const orgName = (formData.get('name') as string)?.trim() || 'Organización';
     const selectedGames = Object.keys(GAMES_CATALOG).filter((slug) => formData.get(`game_${slug}`));
     const selectedOrganizers = availableOrganizers
       .filter((o) => formData.get(`organizer_${o.id}`))
       .map((o) => o.id);
+
+    startOperation(`Crear organización: ${orgName}`);
 
     try {
       const res = await fetch('/api/admin/organizations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.get('name'),
+          name: orgName,
           tag: formData.get('tag'),
           ownerId: currentUser?.id,
           allowedGames: selectedGames,
@@ -87,30 +95,39 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
         form.reset();
         setModalLogoUrl('');
         setModalBannerUrl('');
+        setErrorMsg('');
+        endSuccess(`¡La organización "${orgName}" fue registrada exitosamente!`);
         window.dispatchEvent(new Event('organization_updated'));
         onSuccess();
         onClose();
       } else {
-        alert(data.error || 'Error al crear organización');
+        const errorDetail = data.error || 'Error al crear la organización';
+        setErrorMsg(errorDetail);
+        endError(errorDetail);
       }
     } catch (error) {
-      console.error(error);
-      alert('Error en la conexión');
+      const errorDetail = error instanceof Error ? error.message : 'Error en la conexión con el servidor';
+      setErrorMsg(errorDetail);
+      endError(errorDetail);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (!isOpen && crudState.status === 'IDLE') return null;
+
   return (
-    <ModalForm
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Crear Nueva Organización eSports"
-      subtitle="Registrar organización en la base de datos MySQL"
-      onSubmit={handleCreateOrg}
-      isSubmitting={isSubmitting}
-      brandColor="var(--app-accent-2)"
-    >
+    <>
+      <ModalForm
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Crear Nueva Organización eSports"
+        subtitle="Registrar organización en la base de datos MySQL"
+        onSubmit={handleCreateOrg}
+        isSubmitting={isSubmitting}
+        errorMessage={errorMsg}
+        brandColor="var(--app-accent-2)"
+      >
       <div className="space-y-4">
         <BrandedImageUploadSection title="Identidad visual de la organización" brandColor="var(--app-accent-2)" entityType="organization" items={[
           { label: 'Logo / Escudo Oficial', currentUrl: modalLogoUrl, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Subir Escudo', entityName: 'org-new', entityId: 'new-organization', onUploadSuccess: (url) => setModalLogoUrl(url) },
@@ -179,5 +196,7 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
         <SocialMediaGroup prefixName="social" />
       </div>
     </ModalForm>
+    <CrudAlertBanner state={crudState} onClose={resetAlert} />
+  </>
   );
 }

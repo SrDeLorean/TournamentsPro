@@ -113,12 +113,12 @@ export function ProfileGameTab({
         </div>
 
         {/* Game Selector for Position Configuration */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
           <span className="text-xs font-bold text-[var(--text-secondary)] uppercase">Juego a Configurar:</span>
           <select
             value={configuredGame}
             onChange={(e) => setConfiguredGame(e.target.value)}
-            className="ui-dynamic-brand-border ui-dynamic-brand-ink px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] border font-bold text-xs focus:outline-none transition-all"
+            className="ui-dynamic-brand-border ui-dynamic-brand-ink px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] border font-bold text-xs focus:outline-none transition-all w-full sm:w-auto"
           >
             {Object.entries(GAMES_CATALOG).map(([slug, g]) => (
               <option key={slug} value={slug}>{g.name}</option>
@@ -129,7 +129,7 @@ export function ProfileGameTab({
 
       {/* Game Badge Banner Indicator (Dynamic Theme Color) */}
       <div
-        className="ui-dynamic-brand-chip p-3.5 rounded-xl border flex items-center justify-between text-xs transition-all"
+        className="ui-dynamic-brand-chip p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs transition-all"
       >
         <div className="flex items-center gap-2">
           <span className="game-brand-dot animate-pulse" />

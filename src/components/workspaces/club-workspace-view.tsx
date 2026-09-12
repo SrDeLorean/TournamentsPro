@@ -1,26 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
-  ArrowRight,
-  BarChart3,
   CalendarCheck,
   Eye,
-  History,
   MessageSquare,
   Shield,
-  Shirt,
   Sparkles,
   Trophy,
   UserPlus,
   Users,
-  type LucideIcon,
 } from 'lucide-react';
 import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import type { TeamData } from '@/lib/data-store';
 import { findManagedTeamForUser } from '@/lib/authenticated-navigation';
 import { ManagementHero, ManagementMetrics, ManagementPage, ManagementSection, MetricCard } from '@/components/dashboard/management-ui';
 import { Avatar } from '@/components/ui/avatar';
@@ -28,22 +22,33 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getCaptainDashboardDataAction, getTeamSquadAction, type SquadMemberData } from '@/app/actions/squads';
 import type { ClubWorkspaceSection } from '@/lib/workspace-sections';
+import {
+  ClubOverview,
+  ClubRoster,
+  ClubStats,
+  ClubHistory,
+  WorkspaceLoading,
+  WorkspaceEmpty,
+  type ClubMatchSummary,
+  type CaptainRequestSummary,
+  type CompetitionEntrySummary,
+} from '@/components/workspaces/club-workspace-components';
 
 const ChatSystem = dynamic(() => import('@/components/chat/chat-system').then((module) => module.ChatSystem), {
-  loading: WorkspaceLoading,
+  loading: () => <WorkspaceLoading />,
 });
 const ClubSettingsView = dynamic(() => import('@/components/club/club-settings-view').then((module) => module.ClubSettingsView), {
-  loading: WorkspaceLoading,
+  loading: () => <WorkspaceLoading />,
 });
 const MatchdayReportView = dynamic(() => import('@/components/matches/matchday-report-view').then((module) => module.MatchdayReportView), {
-  loading: WorkspaceLoading,
+  loading: () => <WorkspaceLoading />,
 });
 const TeamProfileView = dynamic(() => import('@/components/teams/team-profile-view').then((module) => module.TeamProfileView), {
-  loading: WorkspaceLoading,
+  loading: () => <WorkspaceLoading />,
 });
 const SquadRosterModal = dynamic(() => import('@/components/teams/squad-roster-modal').then((module) => module.SquadRosterModal));
 const TransferMarket = dynamic(() => import('@/components/transfers/transfer-market').then((module) => module.TransferMarket), {
-  loading: WorkspaceLoading,
+  loading: () => <WorkspaceLoading />,
 });
 
 const sectionCopy: Record<ClubWorkspaceSection, { eyebrow: string; title: string; description: string }> = {
@@ -57,23 +62,6 @@ const sectionCopy: Record<ClubWorkspaceSection, { eyebrow: string; title: string
   mensajes: { eyebrow: 'Comunicación interna', title: 'Chat del club', description: 'Conversaciones de plantilla, fichajes y coordinación competitiva.' },
   ajustes: { eyebrow: 'Administración', title: 'Configuración del club', description: 'Actualiza identidad, imágenes, datos institucionales y presencia digital.' },
 };
-
-interface ClubMatchSummary {
-  id: string;
-  teamHomeId?: string | null;
-  homeTeamId?: string | null;
-  teamAwayId?: string | null;
-  awayTeamId?: string | null;
-  home_team_name: string;
-  away_team_name: string;
-  scoreHome?: number | null;
-  scoreAway?: number | null;
-  scheduled_at?: string | null;
-  status: string;
-}
-
-interface CaptainRequestSummary { id: string; applicant_name?: string; applicant_gamertag?: string; position?: string; status?: string }
-interface CompetitionEntrySummary { id: string; competition_name?: string; status?: string }
 
 export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug: string; section?: ClubWorkspaceSection }) {
   const { currentUser } = useAuth();
@@ -122,7 +110,38 @@ export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug:
   }, [game.slug, section, team?.id]);
 
   if (!team) {
-    return <ManagementPage className="context-workspace"><ManagementHero eyebrow="Espacio de club" title="Aún no administras un club" description="El panel del club se habilita cuando eres capitán o encargado de una escuadra en esta disciplina." icon={Shield} tone="violet" badge={game.name} /><ManagementSection title="Continúa desde tu espacio de atleta" description="Puedes revisar ofertas, tu ficha o equipos asociados mientras se confirma la vinculación." icon={Sparkles} tone="cyan"><WorkspaceEmpty icon={Shield} title={`Sin club administrable en ${game.name}`} description="Si ya perteneces a uno, solicita al capitán que te registre como encargado." action={<Link href={`/${game.slug}/atleta`}><Button>Ir a mi panel de atleta<ArrowRight className="size-4" /></Button></Link>} /></ManagementSection></ManagementPage>;
+    return (
+      <ManagementPage className="context-workspace">
+        <ManagementHero
+          eyebrow="Espacio de club"
+          title="Aún no administras un club"
+          description="El panel del club se habilita cuando eres capitán o encargado de una escuadra en esta disciplina."
+          icon={Shield}
+          tone="violet"
+          badge={game.name}
+        />
+        <ManagementSection
+          title="Continúa desde tu espacio de atleta"
+          description="Puedes revisar ofertas, tu ficha o equipos asociados mientras se confirma la vinculación."
+          icon={Sparkles}
+          tone="cyan"
+        >
+          <WorkspaceEmpty
+            icon={Shield}
+            title={`Sin club administrable en ${game.name}`}
+            description="Si ya perteneces a uno, solicita al capitán que te registre como encargado."
+            action={
+              <Link href={`/${game.slug}/atleta`} className="w-full sm:w-auto mt-2 inline-block">
+                <Button className="w-full sm:w-auto">
+                  Ir a mi panel de atleta
+                  <Eye className="size-4" />
+                </Button>
+              </Link>
+            }
+          />
+        </ManagementSection>
+      </ManagementPage>
+    );
   }
 
   const publicTeamHref = `/${game.slug}/equipos/${team.id}`;
@@ -131,52 +150,118 @@ export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug:
 
   return (
     <ManagementPage className="context-workspace">
-      <ManagementHero eyebrow={copy.eyebrow} title={copy.title} description={copy.description} icon={Shield} tone="violet" badge={game.name} actions={<Link href={publicTeamHref}><Button variant="outline" className="w-full sm:w-auto"><Eye className="size-4" />Ver ficha pública</Button></Link>}>
-        <div className="context-workspace-identity"><Avatar fallback={team.tag || team.name} src={team.logoUrl} status="online" size="lg" /><div><strong>{team.name}</strong><span>{team.tag} · {team.platform}</span></div><Badge variant={team.status === 'ACTIVO' ? 'emerald' : 'slate'}>{team.status}</Badge></div>
+      <ManagementHero
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
+        icon={Shield}
+        tone="violet"
+        badge={game.name}
+        actions={
+          <Link href={publicTeamHref} className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto">
+              <Eye className="size-4" />
+              Ver ficha pública
+            </Button>
+          </Link>
+        }
+      >
+        <div className="context-workspace-identity">
+          <Avatar fallback={team.tag || team.name} src={team.logoUrl} status="online" size="lg" />
+          <div>
+            <strong>{team.name}</strong>
+            <span>{team.tag} · {team.platform}</span>
+          </div>
+          <Badge variant={team.status === 'ACTIVO' ? 'emerald' : 'slate'}>
+            {team.status}
+          </Badge>
+        </div>
       </ManagementHero>
 
-      {!['mensajes', 'ajustes', 'ficha', 'matchday', 'fichajes'].includes(section) ? <ManagementMetrics><MetricCard label="Plantilla" value={memberCount} hint={`Capacidad: ${capacity}`} icon={Users} tone="cyan" /><MetricCard label="Solicitudes" value={transferRequests.length} hint="Pendientes de respuesta" icon={UserPlus} tone="violet" /><MetricCard label="Competencias" value={competitionEntries.length} hint="Inscripciones del club" icon={Trophy} tone="gold" /><MetricCard label="Próximos" value={matches.filter((match) => !match.status.toUpperCase().includes('FINAL')).length} hint="Partidos programados" icon={CalendarCheck} tone="cyan" /></ManagementMetrics> : null}
+      {!['mensajes', 'ajustes', 'ficha', 'matchday', 'fichajes'].includes(section) ? (
+        <ManagementMetrics>
+          <MetricCard label="Plantilla" value={memberCount} hint={`Capacidad: ${capacity}`} icon={Users} tone="cyan" />
+          <MetricCard label="Solicitudes" value={transferRequests.length} hint="Pendientes de respuesta" icon={UserPlus} tone="violet" />
+          <MetricCard label="Competencias" value={competitionEntries.length} hint="Inscripciones del club" icon={Trophy} tone="gold" />
+          <MetricCard label="Próximos" value={matches.filter((match) => !match.status.toUpperCase().includes('FINAL')).length} hint="Partidos programados" icon={CalendarCheck} tone="cyan" />
+        </ManagementMetrics>
+      ) : null}
 
-      {section === 'resumen' ? <ClubOverview base={base} team={team} memberCount={memberCount} matches={matches} transferRequests={transferRequests} competitionEntries={competitionEntries} /> : null}
-      {section === 'ficha' ? <div className="context-workspace-embedded"><TeamProfileView team={team} brandColor={game.brandColor} /></div> : null}
-      {section === 'plantilla' ? <ClubRoster team={team} squad={squad} loading={isLoadingSquad} onManage={() => setIsRosterOpen(true)} /> : null}
-      {section === 'fichajes' ? <div className="context-workspace-embedded"><TransferMarket game={game} /></div> : null}
-      {section === 'matchday' ? <div className="context-workspace-embedded"><MatchdayReportView /></div> : null}
-      {section === 'estadisticas' ? <ClubStats team={team} memberCount={memberCount} capacity={capacity} /> : null}
-      {section === 'historial' ? <ClubHistory team={team} /> : null}
-      {section === 'mensajes' ? <ManagementSection title="Conversaciones del club" description="Coordinación interna y contactos de mercado." icon={MessageSquare} tone="violet" className="[&>div:last-child]:p-0"><ChatSystem /></ManagementSection> : null}
-      {section === 'ajustes' ? <div className="context-workspace-embedded"><ClubSettingsView team={team} activeGameSlug={game.slug} refetchTeams={refetchTeams} /></div> : null}
+      {section === 'resumen' ? (
+        <ClubOverview
+          base={base}
+          team={team}
+          memberCount={memberCount}
+          matches={matches}
+          transferRequests={transferRequests}
+          competitionEntries={competitionEntries}
+        />
+      ) : null}
+      {section === 'ficha' ? (
+        <div className="context-workspace-embedded">
+          <TeamProfileView team={team} brandColor={game.brandColor} />
+        </div>
+      ) : null}
+      {section === 'plantilla' ? (
+        <ClubRoster
+          team={team}
+          squad={squad}
+          loading={isLoadingSquad}
+          onManage={() => setIsRosterOpen(true)}
+        />
+      ) : null}
+      {section === 'fichajes' ? (
+        <div className="context-workspace-embedded">
+          <TransferMarket game={game} />
+        </div>
+      ) : null}
+      {section === 'matchday' ? (
+        <div className="context-workspace-embedded">
+          <MatchdayReportView />
+        </div>
+      ) : null}
+      {section === 'estadisticas' ? (
+        <ClubStats
+          team={team}
+          memberCount={memberCount}
+          capacity={capacity}
+        />
+      ) : null}
+      {section === 'historial' ? (
+        <ClubHistory team={team} />
+      ) : null}
+      {section === 'mensajes' ? (
+        <ManagementSection
+          title="Conversaciones del club"
+          description="Coordinación interna y contactos de mercado."
+          icon={MessageSquare}
+          tone="violet"
+          className="[&>div:last-child]:p-0"
+        >
+          <ChatSystem />
+        </ManagementSection>
+      ) : null}
+      {section === 'ajustes' ? (
+        <div className="context-workspace-embedded">
+          <ClubSettingsView team={team} activeGameSlug={game.slug} refetchTeams={refetchTeams} />
+        </div>
+      ) : null}
 
-      <SquadRosterModal isOpen={isRosterOpen} onClose={() => setIsRosterOpen(false)} team={{ id: team.id, name: team.name, tag: team.tag, game_slug: team.gameSlug, members_count: memberCount, max_members: capacity, logo_text: team.logoText, logo_url: team.logoUrl }} onRosterUpdated={() => void loadSquad()} />
+      <SquadRosterModal
+        isOpen={isRosterOpen}
+        onClose={() => setIsRosterOpen(false)}
+        team={{
+          id: team.id,
+          name: team.name,
+          tag: team.tag,
+          game_slug: team.gameSlug,
+          members_count: memberCount,
+          max_members: capacity,
+          logo_text: team.logoText,
+          logo_url: team.logoUrl,
+        }}
+        onRosterUpdated={() => void loadSquad()}
+      />
     </ManagementPage>
   );
 }
-
-function ClubOverview({ base, team, memberCount, matches, transferRequests, competitionEntries }: { base: string; team: TeamData; memberCount: number; matches: ClubMatchSummary[]; transferRequests: CaptainRequestSummary[]; competitionEntries: CompetitionEntrySummary[] }) {
-  const shortcuts: Array<{ href: string; label: string; detail: string; icon: LucideIcon }> = [{ href: `${base}/plantilla`, label: 'Plantilla', detail: `${memberCount} integrantes registrados`, icon: Shirt }, { href: `${base}/fichajes`, label: 'Fichajes', detail: 'Vacantes y mercado', icon: UserPlus }, { href: `${base}/matchday`, label: 'Matchday', detail: 'Partidos y reportes', icon: CalendarCheck }, { href: `${base}/mensajes`, label: 'Chat del club', detail: 'Coordina la escuadra', icon: MessageSquare }];
-  const finished = matches.filter((match) => match.status.toUpperCase().includes('FINAL')).slice(0, 3);
-  const upcoming = matches.filter((match) => !['FINALIZADO', 'FINALIZADA', 'CANCELADO'].includes(match.status.toUpperCase())).sort((a, b) => new Date(a.scheduled_at || 0).getTime() - new Date(b.scheduled_at || 0).getTime()).slice(0, 3);
-  return <div className="context-workspace-grid">{shortcuts.map(({ href, label, detail, icon: Icon }) => <Link key={href} href={href} className="context-workspace-shortcut"><Icon /><div><strong>{label}</strong><span>{detail}</span></div><ArrowRight /></Link>)}<ManagementSection title="Estado institucional" description="Información esencial de la escuadra." icon={Shield} tone="violet" className="context-workspace-wide"><div className="context-workspace-facts"><div><span>Capitán</span><strong>{team.captainName || 'Sin asignar'}</strong></div><div><span>Solicitudes de plantilla</span><strong>{transferRequests.length}</strong></div><div><span>Competencias vinculadas</span><strong>{competitionEntries.length}</strong></div><div><span>Estado</span><strong>{team.status}</strong></div></div></ManagementSection><ClubMatchSummarySection title="Últimos resultados" matches={finished} empty="Aún no hay resultados cerrados." /><ClubMatchSummarySection title="Próximos partidos" matches={upcoming} empty="No hay partidos próximos programados." />{competitionEntries.length ? <ManagementSection title="Solicitudes e inscripciones de competencia" description="Estado informado por cada organización para este club." icon={Trophy} tone="gold" className="context-workspace-wide"><div className="context-record-list">{competitionEntries.slice(0, 5).map((entry) => <article key={entry.id}><div className="context-record-icon"><Trophy /></div><div><strong>{entry.competition_name || 'Competencia'}</strong><span>Inscripción del equipo</span></div><Badge variant={entry.status === 'CONFIRMADO' ? 'cyan' : 'gold'}>{entry.status || 'Pendiente'}</Badge></article>)}</div></ManagementSection> : null}{transferRequests.length ? <ManagementSection title="Solicitudes pendientes" description="Jugadores que esperan una respuesta del club." icon={UserPlus} tone="violet" className="context-workspace-wide"><div className="context-record-list">{transferRequests.slice(0, 4).map((request) => <article key={request.id}><div className="context-record-icon"><UserPlus /></div><div><strong>@{request.applicant_gamertag || request.applicant_name}</strong><span>{request.position || 'Posición sin indicar'}</span></div><Badge variant="gold">Pendiente</Badge></article>)}</div></ManagementSection> : null}</div>;
-}
-
-function ClubMatchSummarySection({ title, matches, empty }: { title: string; matches: ClubMatchSummary[]; empty: string }) {
-  return <ManagementSection title={title} description="Actividad oficial del equipo." icon={CalendarCheck} tone="cyan" className="context-workspace-wide">{matches.length ? <div className="context-record-list">{matches.map((match) => <article key={match.id}><div className="context-record-icon"><Trophy /></div><div><strong>{match.home_team_name} vs {match.away_team_name}</strong><span>{match.scheduled_at ? new Date(match.scheduled_at).toLocaleString('es-CL') : 'Fecha por confirmar'}</span></div><Badge variant={match.status.toUpperCase().includes('FINAL') ? 'slate' : 'cyan'}>{match.scoreHome ?? '—'} - {match.scoreAway ?? '—'}</Badge></article>)}</div> : <WorkspaceEmpty icon={CalendarCheck} title={empty} description="La información aparecerá cuando la organización actualice el calendario." />}</ManagementSection>;
-}
-
-function ClubRoster({ team, squad, loading, onManage }: { team: TeamData; squad: SquadMemberData[]; loading: boolean; onManage: () => void }) {
-  return <ManagementSection title="Nómina registrada" description="Integrantes, roles y posiciones del club." icon={Users} tone="cyan" action={<Button onClick={onManage}><UserPlus className="size-4" />Administrar plantilla</Button>}>{loading ? <WorkspaceLoading /> : squad.length ? <div className="context-record-list">{squad.map((member) => <article key={member.id}><Avatar fallback={member.gamertag || member.user_name} src={member.avatar_url || member.foto || undefined} size="md" /><div><strong>{member.gamertag || member.user_name}</strong><span>{member.tactical_position || 'Sin posición'} · {member.role_in_team}</span><small>Desde {new Date(member.joined_at).toLocaleDateString('es-CL')}</small></div><Badge variant={member.role_in_team.includes('Cap') ? 'gold' : 'cyan'}>{member.role_in_team}</Badge></article>)}</div> : <WorkspaceEmpty icon={Users} title="Plantilla sin integrantes visibles" description={`Abre la gestión de ${team.name} para agregar jugadores.`} action={<Button onClick={onManage}>Gestionar plantilla</Button>} />}</ManagementSection>;
-}
-
-function ClubStats({ team, memberCount, capacity }: { team: TeamData; memberCount: number; capacity: number }) {
-  const occupancy = Math.min(Math.round((memberCount / Math.max(capacity, 1)) * 100), 100);
-  const profile = team.description && team.logoUrl ? 100 : team.description || team.logoUrl ? 65 : 30;
-  return <ManagementSection title="Indicadores disponibles" description="Datos calculados a partir de la configuración y plantilla registradas." icon={BarChart3} tone="emerald"><div className="context-progress-list">{[{ label: 'Ocupación de plantilla', value: occupancy }, { label: 'Perfil institucional', value: profile }].map((bar) => <div key={bar.label}><div><span>{bar.label}</span><strong>{bar.value}%</strong></div><div><i style={{ width: `${bar.value}%` }} /></div></div>)}</div></ManagementSection>;
-}
-
-function ClubHistory({ team }: { team: TeamData }) {
-  const entries = [{ title: 'Competición vigente', detail: team.disputando || 'Sin competición registrada' }, { title: 'Palmarés', detail: team.palmares || 'Sin títulos registrados' }, { title: 'Estado institucional', detail: team.status }];
-  return <ManagementSection title="Registro del club" description="Hitos e información histórica disponible." icon={History} tone="gold"><div className="context-timeline">{entries.map((entry) => <div key={entry.title}><i /><div><strong>{entry.title}</strong><span>{entry.detail}</span></div></div>)}</div></ManagementSection>;
-}
-
-function WorkspaceLoading() { return <div className="context-workspace-loading">Cargando información...</div>; }
-function WorkspaceEmpty({ icon: Icon, title, description, action }: { icon: LucideIcon; title: string; description: string; action?: ReactNode }) { return <div className="context-workspace-empty"><Icon /><strong>{title}</strong><span>{description}</span>{action}</div>; }
