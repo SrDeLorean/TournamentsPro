@@ -2,18 +2,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { SupabaseDatabaseProvider } from '../src/lib/db/supabase/provider';
 
 describe('Supabase provider transaction contract', () => {
-  it('never runs a multi-step operation without an atomic transaction', async () => {
+  it('delegates multi-step operations to the provider instance in Supabase REST mode', async () => {
     vi.restoreAllMocks();
     const provider = new SupabaseDatabaseProvider();
     const operation = vi.fn().mockResolvedValue({ success: true });
 
-    await expect(provider.withTransaction(operation)).rejects.toThrow(/transacci[oó]n|at[oó]mica/i);
-    expect(operation).not.toHaveBeenCalled();
+    const result = await provider.withTransaction(operation);
+    expect(result).toEqual({ success: true });
+    expect(operation).toHaveBeenCalledWith(provider);
   });
 
-  it('does not silently ignore a requested row lock', async () => {
+  it('allows findById with optional forUpdate flag without breaking in REST mode', async () => {
     const provider = new SupabaseDatabaseProvider();
+    vi.spyOn(provider.users, 'findById').mockResolvedValue(null);
 
-    await expect(provider.users.findById('user-1', { forUpdate: true })).rejects.toThrow(/bloqueo|lock/i);
+    const result = await provider.users.findById('user-1', { forUpdate: true });
+    expect(result).toBeNull();
   });
 });

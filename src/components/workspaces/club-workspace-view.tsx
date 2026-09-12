@@ -3,11 +3,24 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import type { LucideIcon } from 'lucide-react';
-import { ArrowRight, BarChart3, CalendarCheck, Eye, History, MessageSquare, Shield, Shirt, Sparkles, Trophy, UserPlus, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  BarChart3,
+  CalendarCheck,
+  Eye,
+  History,
+  MessageSquare,
+  Shield,
+  Shirt,
+  Sparkles,
+  Trophy,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { initialTeams, type TeamData } from '@/lib/data-store';
+import type { TeamData } from '@/lib/data-store';
 import { findManagedTeamForUser } from '@/lib/authenticated-navigation';
 import { ManagementHero, ManagementMetrics, ManagementPage, ManagementSection, MetricCard } from '@/components/dashboard/management-ui';
 import { Avatar } from '@/components/ui/avatar';
@@ -68,7 +81,7 @@ export function ClubWorkspaceView({ gameSlug, section = 'resumen' }: { gameSlug:
   const game = GAMES_CATALOG[gameSlug] || GAMES_CATALOG.eafc26;
   const base = `/${game.slug}/club`;
   const copy = sectionCopy[section];
-  const team = useMemo(() => findManagedTeamForUser(userTeams.length ? userTeams : initialTeams, currentUser, game.slug), [currentUser, game.slug, userTeams]);
+  const team = useMemo(() => findManagedTeamForUser(userTeams, currentUser, game.slug), [currentUser, game.slug, userTeams]);
   const [squad, setSquad] = useState<SquadMemberData[]>([]);
   const [isLoadingSquad, setIsLoadingSquad] = useState(true);
   const [isRosterOpen, setIsRosterOpen] = useState(false);

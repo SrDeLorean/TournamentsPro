@@ -91,8 +91,8 @@ export function TeamManagementModal({
       : [
           currentUser || {
             id: 'usr-current',
-            name: 'Sebastián Rodríguez',
-            gamertag: 'SrDeLorean',
+            name: 'Capitán del Club',
+            gamertag: 'Capitan',
             role: 'Capitán',
             primaryGame: 'eafc26',
             platform: 'CROSSPLAY',

@@ -7,7 +7,6 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { initialTeams } from '@/lib/data-store';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { GameLogo } from '@/components/ui/game-logo';
@@ -79,7 +78,7 @@ export function AdminNavbar() {
     };
   }, []);
 
-  const teamsPool = userTeams && userTeams.length > 0 ? userTeams : initialTeams;
+  const teamsPool = userTeams || [];
   const myTeamInActiveDiscipline = findActiveManagedTeam(
     teamsPool,
     activeGameSlug,

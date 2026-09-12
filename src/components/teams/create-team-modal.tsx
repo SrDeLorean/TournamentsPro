@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GAMES_CATALOG } from '@/lib/games-data';
-import { checkTeamNameAvailability, initialTeams, TeamData } from '@/lib/data-store';
+import type { TeamData } from '@/lib/data-store';
 import { GameLogo } from '@/components/ui/game-logo';
 import { Badge } from '@/components/ui/badge';
 import { ModalForm } from '@/components/ui/modal-form';
@@ -25,7 +25,7 @@ interface CreateTeamModalProps {
 export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 'eafc26' }: CreateTeamModalProps) {
   const router = useRouter();
   const { currentUser, updateCurrentUser, refetchUser } = useAuth();
-  const { refetchTeams } = useTeams();
+  const { userTeams, refetchTeams } = useTeams();
 
   const [teamName, setTeamName] = useState('');
   const [tag, setTag] = useState('');
@@ -139,7 +139,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
     }
 
     // Rule Validation 1: One team per discipline per user
-    const existingTeamInDiscipline = initialTeams.find(
+    const existingTeamInDiscipline = (userTeams || []).find(
       (t) =>
         t.gameSlug === gameSlug &&
         (t.captainName?.toLowerCase() === currentUser?.name?.toLowerCase() ||
@@ -153,7 +153,9 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
     }
 
     // Rule Validation 2: Unique team name within the SAME discipline
-    const isAvailable = checkTeamNameAvailability(cleanName, gameSlug);
+    const isAvailable = !(userTeams || []).some(
+      (t) => t.name.toLowerCase() === cleanName.toLowerCase() && t.gameSlug === gameSlug
+    );
     if (!isAvailable) {
       setErrorMsg(`El nombre "${cleanName}" ya está registrado por otro club en ${selectedGameObj.name}. ¡Elige otro nombre!`);
       return;
@@ -261,7 +263,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, defaultGameSlug = 
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {Object.values(GAMES_CATALOG).map((g) => {
-              const userHasTeamInThisGame = initialTeams.some(
+              const userHasTeamInThisGame = (userTeams || []).some(
                 (t) =>
                   t.gameSlug === g.slug &&
                   (t.captainName?.toLowerCase() === currentUser?.name?.toLowerCase() ||

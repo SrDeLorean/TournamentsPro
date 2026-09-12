@@ -89,8 +89,8 @@ export function ClubManagementModal({
   const [membersList, setMembersList] = useState<UserProfile[]>(team.members && team.members.length > 0 ? team.members : [
     currentUser || {
       id: 'usr-current',
-      name: 'Sebastián Rodríguez',
-      gamertag: 'SrDeLorean',
+      name: 'Capitán del Club',
+      gamertag: 'Capitan',
       role: 'Capitán',
       primaryGame: 'eafc26',
       platform: 'CROSSPLAY',

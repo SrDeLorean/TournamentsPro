@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth, useTeams } from '@/components/providers/auth-provider';
-import { initialTeams } from '@/lib/data-store';
 import { CreateTeamModal } from '@/components/teams/create-team-modal';
 import { TabList } from '@/components/ui/tab-list';
 import {
@@ -59,7 +58,7 @@ export function AuthenticatedContextSubnavbar({ gameSlug }: { gameSlug: string }
   const pathname = usePathname();
   const { currentUser } = useAuth();
   const { userTeams, refetchTeams } = useTeams();
-  const teamsPool = userTeams?.length ? userTeams : initialTeams;
+  const teamsPool = userTeams || [];
   const myTeam = findManagedTeamForUser(teamsPool, currentUser, gameSlug);
 
   const [preferredContext, setPreferredContext] = useState<Context>(() => (myTeam ? 'club' : 'athlete'));

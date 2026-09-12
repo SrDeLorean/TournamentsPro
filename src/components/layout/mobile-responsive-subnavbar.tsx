@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth, useTeams } from '@/components/providers/auth-provider';
 import { GameConfig } from '@/lib/games-data';
-import { initialTeams } from '@/lib/data-store';
 import type { GameSection } from '@/components/layout/game-sub-navbar';
 import { PUBLIC_GAME_NAV_ITEMS } from '@/lib/section-config';
 import { TabList } from '@/components/ui/tab-list';
@@ -60,7 +59,7 @@ export function MobileResponsiveSubnavbar({ game, activeSection, onSelectSection
   const isAdminOrOrganizer = roleStr === 'administrador' || roleStr === 'admin' || roleStr === 'organizador';
 
   // Check if user has team in THIS active discipline
-  const teamsPool = userTeams && userTeams.length > 0 ? userTeams : initialTeams;
+  const teamsPool = userTeams || [];
   const myTeam = findManagedTeamForUser(teamsPool, currentUser, game.slug);
 
   // 1. Game Sections

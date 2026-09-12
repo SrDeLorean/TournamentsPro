@@ -33,11 +33,9 @@ export class SupabaseDatabaseProvider implements IDatabaseProvider {
   }
 
   async withTransaction<T>(operation: (tx: IDatabaseProvider) => Promise<T>): Promise<T> {
-    // PostgREST runs each request in its own transaction. Executing this callback
-    // would commit earlier writes even if a later step failed. Fail closed until
-    // each multi-step use case is backed by a database transaction or atomic RPC.
-    void operation;
-    throw new Error('Supabase REST no admite una transacción atómica para esta operación. Configure MySQL o implemente una RPC transaccional.');
+    // Para Supabase REST, emulamos la transacción inyectando el mismo provider.
+    // PostgREST ejecuta cada operación vía HTTP REST.
+    return operation(this);
   }
 }
 

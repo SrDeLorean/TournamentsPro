@@ -152,10 +152,10 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
   const router = useRouter();
   const currentMatch = useMemo(() => match || {
     id: 'm-103',
-    homeTeam: 'SAN LORENZO ESP',
-    awayTeam: 'SANGRE NUEVA FC',
+    homeTeam: 'Equipo Local',
+    awayTeam: 'Equipo Visitante',
     gameSlug: 'eafc26',
-    tournamentName: 'Liga Élite Pro 11v11 2026',
+    tournamentName: 'Torneo Oficial',
   }, [match]);
 
   const gameCatalog = GAMES_CATALOG[currentMatch.gameSlug] || GAMES_CATALOG['eafc26'];

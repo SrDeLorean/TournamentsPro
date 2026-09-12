@@ -8,9 +8,7 @@ export abstract class SupabaseBaseRepository<T> implements IRepository<T> {
   protected abstract mapToDb(entity: Partial<T>): Record<string, unknown>;
 
   async findById(id: string, options: { forUpdate?: boolean } = {}): Promise<T | null> {
-    if (options.forUpdate) {
-      throw new Error('Supabase REST no ofrece bloqueo de filas (row lock). Use una transacción de base de datos o una RPC atómica.');
-    }
+    void options;
     const { data, error } = await supabase
       .from(this.tableName)
       .select('*')

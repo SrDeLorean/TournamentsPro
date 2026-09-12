@@ -120,7 +120,7 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
           <div className="space-y-1">
             <label className="text-[var(--text-secondary)] uppercase block">Nombre Oficial:</label>
-            <input type="text" name="name" required placeholder="San Lorenzo eSports" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-heading)]" />
+            <input type="text" name="name" required placeholder="Nombre de la Organización" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-heading)]" />
           </div>
           <div className="space-y-1">
             <label className="text-[var(--text-secondary)] uppercase block">Tag / Abreviatura:</label>
@@ -140,7 +140,7 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess, currentUse
           </div>
           <div className="space-y-1">
             <label className="text-[var(--text-secondary)] uppercase block">Sitio Web Oficial:</label>
-            <input type="text" name="website" placeholder="https://sanlorenzoesports.com" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
+            <input type="text" name="website" placeholder="https://tuorganizacion.com" className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-heading)] font-[family-name:var(--font-active)]" />
           </div>
         </div>
 

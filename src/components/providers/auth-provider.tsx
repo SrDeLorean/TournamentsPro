@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { UserProfile, TeamData, initialTeams } from '@/lib/data-store';
+import { UserProfile, TeamData } from '@/lib/data-store';
 import { normalizeTeamApiRecords } from '@/lib/normalize-team-api-records';
 
 // ── Separate Contexts to prevent unnecessary re-renders ─────────────────────
@@ -37,7 +37,7 @@ const TeamsContext = createContext<TeamsContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [activeGameSlug, setActiveGameSlug] = useState<string>('eafc26');
-  const [userTeams, setUserTeams] = useState<TeamData[]>(initialTeams);
+  const [userTeams, setUserTeams] = useState<TeamData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const authenticatedUserId = currentUser?.id;
 
@@ -56,8 +56,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .then((data) => {
         const teams = data.teams || data.data?.teams;
-        if (Array.isArray(teams) && teams.length > 0) {
-          setUserTeams(normalizeTeamApiRecords(teams));
+        if (Array.isArray(teams)) {
+          setUserTeams(teams.length > 0 ? normalizeTeamApiRecords(teams) : []);
         }
       })
       .catch((err) => console.error('Error fetching global teams:', err));
@@ -246,7 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     setCurrentUser(null);
-    setUserTeams(initialTeams);
+    setUserTeams([]);
     // Clear HttpOnly cookie by calling logout endpoint
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   }, []);

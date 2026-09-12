@@ -8,7 +8,7 @@ export async function GET(request: Request) {
 
   try {
     const vacancies = [
-      { id: 'vac-1', teamName: 'SAN LORENZO ESP', gameSlug: 'eafc26', position: 'DFC', membersCount: 11, maxMembers: 45, platform: 'PS5' },
+      { id: 'vac-1', teamName: 'ESCUDRA PRO', gameSlug: 'eafc26', position: 'DFC', membersCount: 11, maxMembers: 45, platform: 'PS5' },
       { id: 'vac-2', teamName: 'HIGHFIELD XX', gameSlug: 'csgo', position: 'AWP', membersCount: 5, maxMembers: 7, platform: 'PC' },
       { id: 'vac-3', teamName: 'SANGRE NUEVA FC', gameSlug: 'eafc26', position: 'DC', membersCount: 8, maxMembers: 45, platform: 'CROSSPLAY' },
     ];

@@ -69,7 +69,7 @@ const ROLE_ANALYTICS_DATA: Record<string, Record<string, {
         { title: 'Efectividad General Victoria', value: '78.4%', detail: 'Promedio de victorias equipo local', color: 'var(--app-accent)' },
         { title: 'Goles por Partido', value: '3.2', detail: 'Promedio anotaciones por encuentro', color: 'var(--app-positive)' },
         { title: 'Atletas Inscriptos', value: '248', detail: 'Jugadores eSports verificados', color: 'var(--app-accent-2)' },
-        { title: 'Rating Máximo MVP', value: '9.8 ★', detail: 'SrDeLorean (SAN LORENZO ESP)', color: 'var(--app-warning)' },
+        { title: 'Rating Máximo MVP', value: '9.8 ★', detail: 'Atleta Destacado (División 1)', color: 'var(--app-warning)' },
       ],
       bars: [
         { name: 'Efectividad de Pases en Medio', percentage: 92, color: 'var(--app-accent)' },
