@@ -16,15 +16,10 @@ interface PlayerPageProps {
 export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) {
   const { gameSlug, playerId } = use(params);
   const { currentUser } = useAuth();
-
-  let game = GAMES_CATALOG[gameSlug];
-  if (!game && (gameSlug === 'cs2' || gameSlug === 'csgo')) {
-    game = GAMES_CATALOG['csgo'];
-  }
+  const game = GAMES_CATALOG[gameSlug] ?? (['cs2', 'csgo'].includes(gameSlug) ? GAMES_CATALOG['csgo'] : undefined);
 
   const normalizedId = playerId?.toLowerCase();
   const isSelf = normalizedId === 'me' || normalizedId === 'ficha' || (currentUser?.id && normalizedId === currentUser.id.toLowerCase());
-
   const [dbUser, setDbUser] = React.useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState('');
@@ -32,24 +27,15 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
   React.useEffect(() => {
     let active = true;
     const fetchId = (playerId === 'me' || playerId === 'ficha') ? currentUser?.id : playerId;
-    if (!fetchId) {
-      setIsLoading(false);
-      return;
-    }
+    if (!fetchId) { setIsLoading(false); return; }
 
     setIsLoading(true);
     fetch(`/api/users?id=${encodeURIComponent(fetchId)}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`No se pudo cargar el atleta (${res.status})`);
-        return res.json();
-      })
+      .then((res) => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
       .then((payload: { success?: boolean; user?: UserProfile; data?: { user?: UserProfile } }) => {
         const u = payload.data?.user ?? payload.user;
-        if (active && payload.success && u) {
-          setDbUser(u);
-        } else if (active) {
-          setLoadError('El atleta solicitado no existe o ya no está disponible.');
-        }
+        if (active && payload.success && u) setDbUser(u);
+        else if (active) setLoadError('El atleta solicitado no existe o ya no está disponible.');
       })
       .catch((err: unknown) => {
         if (active) {
@@ -57,13 +43,9 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
           setLoadError(err instanceof Error ? err.message : 'Error al consultar el perfil.');
         }
       })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+      .finally(() => { if (active) setIsLoading(false); });
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [currentUser?.id, playerId]);
 
   const activeUser = dbUser || (isSelf ? currentUser : (currentUser?.id && currentUser.id.toLowerCase() === normalizedId ? currentUser : null));
@@ -73,9 +55,7 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
       <div className="max-w-4xl mx-auto px-4 py-24 text-center">
         <h1 className="text-3xl font-bold mb-4 text-[var(--text-heading)]">Juego no encontrado</h1>
         <p className="text-[var(--text-muted)] mb-6">El juego solicitado no existe en nuestro catálogo eSports.</p>
-        <Link href="/">
-          <Button variant="primary">Volver al Inicio</Button>
-        </Link>
+        <Link href="/"><Button variant="primary">Volver al Inicio</Button></Link>
       </div>
     );
   }
@@ -106,19 +86,9 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
   const resolvedPosition = (rawPos && validPositions.includes(rawPos)) ? rawPos : validPositions[0] || 'DFC';
 
   const rawSecPos = activeUser?.gameProfiles?.[gameSlug]?.secondaryPosition || (gameSlug === activeUser?.primaryGame ? activeUser?.secondaryPosition : undefined);
-  let resolvedSecPos: string | undefined = undefined;
-  if (
-    rawSecPos &&
-    typeof rawSecPos === 'string' &&
-    rawSecPos.trim() !== '' &&
-    !['n/a', 'na', 'sin posición', 'sin posicion', 'ninguna', 'none', '-'].includes(rawSecPos.trim().toLowerCase()) &&
-    rawSecPos.trim() !== resolvedPosition &&
-    validPositions.includes(rawSecPos.trim())
-  ) {
-    resolvedSecPos = rawSecPos.trim();
-  }
+  const isInvalidSec = !rawSecPos || typeof rawSecPos !== 'string' || !rawSecPos.trim() || ['n/a', 'na', 'sin posición', 'sin posicion', 'ninguna', 'none', '-'].includes(rawSecPos.trim().toLowerCase()) || rawSecPos.trim() === resolvedPosition || !validPositions.includes(rawSecPos.trim());
+  const resolvedSecPos = isInvalidSec ? undefined : (rawSecPos as string).trim();
 
-  // Construct player profile data dynamically from real user
   const player: PlayerData = {
     id: activeUser.id,
     name: activeUser.name || activeUser.gamertag || 'Atleta eSports',
@@ -129,25 +99,17 @@ export default function DedicatedPlayerProfilePage({ params }: PlayerPageProps) 
     teamId: activeUser.teamId,
     rating: Number(activeUser.rating) || 85,
     platform: activeUser.platform || 'CROSSPLAY',
-    gameSlug: gameSlug,
+    gameSlug,
     status: activeUser.status || 'Atleta Activo en Circuito',
     bio: activeUser.biografia || (activeUser as any)?.bio || `Deportista eSports oficial compitiendo en el circuito profesional de ${game?.name || gameSlug.toUpperCase()}.`,
     gameId: activeUser.gameProfiles?.[gameSlug]?.gameId || `${gameSlug.toUpperCase()}-ID #${activeUser.id.replace(/^usr-/, '').substring(0, 6)}`,
     nacionalidad: activeUser.nacionalidad || 'Chile',
-    instagram: activeUser.instagram,
-    twitch: activeUser.twitch,
-    youtube: activeUser.youtube,
-    discord: activeUser.discord,
-    whatsapp: activeUser.whatsapp,
-    website: activeUser.website,
+    instagram: activeUser.instagram, twitch: activeUser.twitch, youtube: activeUser.youtube,
+    discord: activeUser.discord, whatsapp: activeUser.whatsapp, website: activeUser.website,
     avatarUrl: activeUser.avatarUrl || activeUser.foto || '/images/default/logo-default.png',
     bannerUrl: activeUser.bannerUrl || game?.bannerUrl || '/images/games-background/eafc.jpg',
     stats: (activeUser as (UserProfile & { aggregatedStats?: PlayerData['stats'] }) | null)?.aggregatedStats || {
-      matches: 0,
-      goals: 0,
-      assists: 0,
-      mvps: 0,
-      winrate: '0%',
+      matches: 0, goals: 0, assists: 0, mvps: 0, winrate: '0%',
     },
   };
 
