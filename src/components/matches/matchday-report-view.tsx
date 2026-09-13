@@ -68,6 +68,8 @@ export function MatchdayReportView() {
   const [selectedTournName, setSelectedTournName] = useState<string>('TODAS');
   const [clubSearch, setClubSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('TODOS');
+  const [selectedJornada, setSelectedJornada] = useState<string>('TODAS');
+  const [selectedTime, setSelectedTime] = useState<string>('TODOS');
   const deferredClubSearch = useDeferredValue(clubSearch.trim());
 
   // Modal State
@@ -178,6 +180,15 @@ export function MatchdayReportView() {
   const handleGameSelect = (gSlug: string) => {
     setSelectedGameSlug(gSlug);
     setSelectedTournName('TODAS');
+    setSelectedJornada('TODAS');
+    setSelectedTime('TODOS');
+  };
+
+  // Handle Tournament Selection
+  const handleTournSelect = (tournName: string) => {
+    setSelectedTournName(tournName);
+    setSelectedJornada('TODAS');
+    setSelectedTime('TODOS');
   };
 
   // Filtered Tournaments based on active game
@@ -195,6 +206,65 @@ export function MatchdayReportView() {
     });
     return Array.from(map.values());
   }, [tournaments, matches, selectedGameSlug]);
+
+  // Available matchdays / jornadas derived from current matches
+  const availableJornadas = useMemo(() => {
+    const set = new Set<string>();
+    matches.forEach((m) => {
+      if (m.groupJornada) {
+        set.add(m.groupJornada.trim());
+      }
+    });
+
+    return Array.from(set).sort((a, b) => {
+      const numA = a.match(/\d+/);
+      const numB = b.match(/\d+/);
+      if (numA && numB) {
+        const diff = parseInt(numA[0], 10) - parseInt(numB[0], 10);
+        if (diff !== 0) return diff;
+      } else if (numA && !numB) {
+        return -1;
+      } else if (!numA && numB) {
+        return 1;
+      }
+      return a.localeCompare(b, undefined, { numeric: true });
+    });
+  }, [matches]);
+
+  // Available transmission times derived from current matches
+  const availableTimes = useMemo(() => {
+    const set = new Set<string>();
+    matches.forEach((m) => {
+      if (m.transmissionTime) {
+        set.add(m.transmissionTime.trim());
+      }
+    });
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [matches]);
+
+  // Filtered matches matching all active criteria (including Jornada & Horario)
+  const filteredMatches = useMemo(() => {
+    return matches.filter((match) => {
+      if (selectedJornada !== 'TODAS') {
+        const jVal = selectedJornada.toLowerCase().trim();
+        const matchJornada = (match.groupJornada || '').toLowerCase().trim();
+        if (matchJornada !== jVal && !matchJornada.includes(jVal)) {
+          return false;
+        }
+      }
+
+      if (selectedTime !== 'TODOS') {
+        const tVal = selectedTime.trim();
+        const matchTime = (match.transmissionTime || '').slice(0, 5);
+        if (matchTime !== tVal) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [matches, selectedJornada, selectedTime]);
 
   // Derived available games based on fetched tournaments and matches
   const availableGameSlugs = useMemo(() => {
@@ -215,13 +285,21 @@ export function MatchdayReportView() {
       .map((game) => ({ id: game.slug, label: game.name })),
   ], [availableGameSlugs]);
 
-  const hasActiveFilters = selectedGameSlug !== 'TODOS' || selectedTournName !== 'TODAS' || statusFilter !== 'TODOS' || clubSearch.length > 0;
+  const hasActiveFilters =
+    selectedGameSlug !== 'TODOS' ||
+    selectedTournName !== 'TODAS' ||
+    statusFilter !== 'TODOS' ||
+    selectedJornada !== 'TODAS' ||
+    selectedTime !== 'TODOS' ||
+    clubSearch.length > 0;
 
   const resetFilters = () => {
     setSelectedGameSlug('TODOS');
     setSelectedTournName('TODAS');
     setClubSearch('');
     setStatusFilter('TODOS');
+    setSelectedJornada('TODAS');
+    setSelectedTime('TODOS');
   };
 
   // Regional Times Calculator (Chile Base)
@@ -283,14 +361,14 @@ export function MatchdayReportView() {
         description="Módulo oficial de reporte de fichas de juego, envío de comprobantes y validación de visto bueno para organizadores y capitanes."
         icon={FileCheck}
         tone="crimson"
-        badge={`${matches.length} encuentros`}
+        badge={`${filteredMatches.length} encuentros`}
       />
 
       <ManagementMetrics>
-        <MetricCard label="Encuentros" value={matches.length} hint="Resultados filtrados" icon={Trophy} tone="violet" />
-        <MetricCard label="Programados" value={matches.filter((match) => match.status === 'PROGRAMADO').length} hint="Pendientes de disputa" icon={Gamepad2} tone="gold" />
-        <MetricCard label="Por revisar" value={matches.filter((match) => match.status === 'POR_REVISAR').length} hint="Esperan visto bueno" icon={FileCheck} tone="crimson" />
-        <MetricCard label="Finalizados" value={matches.filter((match) => match.status === 'FINALIZADO').length} hint="Resultados confirmados" icon={CheckCircle2} tone="emerald" />
+        <MetricCard label="Encuentros" value={filteredMatches.length} hint="Resultados filtrados" icon={Trophy} tone="violet" />
+        <MetricCard label="Programados" value={filteredMatches.filter((match) => match.status === 'PROGRAMADO').length} hint="Pendientes de disputa" icon={Gamepad2} tone="gold" />
+        <MetricCard label="Por revisar" value={filteredMatches.filter((match) => match.status === 'POR_REVISAR').length} hint="Esperan visto bueno" icon={FileCheck} tone="crimson" />
+        <MetricCard label="Finalizados" value={filteredMatches.filter((match) => match.status === 'FINALIZADO').length} hint="Resultados confirmados" icon={CheckCircle2} tone="emerald" />
       </ManagementMetrics>
 
       {actionSuccessMsg && (
@@ -310,21 +388,57 @@ export function MatchdayReportView() {
         onFilterChange={handleGameSelect}
         renderAsSelect
         brandColor="var(--app-danger)"
-        count={matches.length}
+        count={filteredMatches.length}
         countLabel="ENCUENTROS"
         searchHint="CLUB"
       >
         <div className="matchday-filter-extras">
           <label className="matchday-filter-select">
             <span>Competencia</span>
-            <select value={selectedTournName} onChange={(event) => setSelectedTournName(event.target.value)} aria-label="Filtrar por competencia">
+            <select
+              value={selectedTournName}
+              onChange={(event) => handleTournSelect(event.target.value)}
+              aria-label="Filtrar por competencia"
+            >
               <option value="TODAS">Todas las competencias</option>
-              {availableTournaments.map((name) => <option key={name} value={name}>{name}</option>)}
+              {availableTournaments.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="matchday-filter-select">
+            <span>Jornada / Ronda</span>
+            <select
+              value={selectedJornada}
+              onChange={(event) => setSelectedJornada(event.target.value)}
+              aria-label="Filtrar por jornada o ronda"
+            >
+              <option value="TODAS">Todas las jornadas</option>
+              {availableJornadas.map((jornada) => (
+                <option key={jornada} value={jornada}>{jornada}</option>
+              ))}
+            </select>
+          </label>
+          <label className="matchday-filter-select">
+            <span>Horario (CLT)</span>
+            <select
+              value={selectedTime}
+              onChange={(event) => setSelectedTime(event.target.value)}
+              aria-label="Filtrar por horario de transmisión"
+            >
+              <option value="TODOS">Todos los horarios</option>
+              {availableTimes.map((time) => (
+                <option key={time} value={time}>{time} hrs</option>
+              ))}
             </select>
           </label>
           <label className="matchday-filter-select">
             <span>Estado</span>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filtrar por estado">
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              aria-label="Filtrar por estado"
+            >
               <option value="TODOS">Todos los estados</option>
               <option value="PROGRAMADO">Programados</option>
               <option value="EN_VIVO">En vivo</option>
@@ -332,11 +446,84 @@ export function MatchdayReportView() {
               <option value="FINALIZADO">Finalizados</option>
             </select>
           </label>
-          <Button variant="outline" size="sm" onClick={resetFilters} disabled={!hasActiveFilters} className="matchday-filter-reset">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+            className="matchday-filter-reset"
+          >
             <RefreshCw className="size-3.5" /> <span>Restablecer</span>
           </Button>
         </div>
       </FilterBar>
+
+      {/* Active filter badges */}
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
+          <span className="text-[11px] font-bold text-[var(--text-muted)] tracking-wider uppercase">Filtros activos:</span>
+          {selectedGameSlug !== 'TODOS' && (
+            <button
+              type="button"
+              onClick={() => handleGameSelect('TODOS')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-primary)] hover:border-[var(--app-danger)] transition-colors"
+            >
+              <span>Juego: {GAMES_CATALOG[selectedGameSlug]?.name || selectedGameSlug}</span>
+              <X className="size-3 text-[var(--text-muted)]" />
+            </button>
+          )}
+          {selectedTournName !== 'TODAS' && (
+            <button
+              type="button"
+              onClick={() => handleTournSelect('TODAS')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-primary)] hover:border-[var(--app-danger)] transition-colors"
+            >
+              <span>Torneo: {selectedTournName}</span>
+              <X className="size-3 text-[var(--text-muted)]" />
+            </button>
+          )}
+          {selectedJornada !== 'TODAS' && (
+            <button
+              type="button"
+              onClick={() => setSelectedJornada('TODAS')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-primary)] hover:border-[var(--app-danger)] transition-colors"
+            >
+              <span>Jornada: {selectedJornada}</span>
+              <X className="size-3 text-[var(--text-muted)]" />
+            </button>
+          )}
+          {selectedTime !== 'TODOS' && (
+            <button
+              type="button"
+              onClick={() => setSelectedTime('TODOS')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-primary)] hover:border-[var(--app-danger)] transition-colors"
+            >
+              <span>Horario: {selectedTime} hrs</span>
+              <X className="size-3 text-[var(--text-muted)]" />
+            </button>
+          )}
+          {statusFilter !== 'TODOS' && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter('TODOS')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-primary)] hover:border-[var(--app-danger)] transition-colors"
+            >
+              <span>Estado: {statusFilter}</span>
+              <X className="size-3 text-[var(--text-muted)]" />
+            </button>
+          )}
+          {clubSearch.trim() && (
+            <button
+              type="button"
+              onClick={() => setClubSearch('')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--app-surface-2)] border border-[var(--border-card)] text-[var(--text-primary)] hover:border-[var(--app-danger)] transition-colors"
+            >
+              <span>Búsqueda: &ldquo;{clubSearch}&rdquo;</span>
+              <X className="size-3 text-[var(--text-muted)]" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Reusable encounter cards */}
       <section className="matchday-results" aria-labelledby="matchday-results-title">
@@ -354,16 +541,16 @@ export function MatchdayReportView() {
           <div className="matchday-match-grid" aria-label="Cargando encuentros">
             {[0, 1, 2, 3].map((item) => <div key={item} className="matchday-match-skeleton" />)}
           </div>
-        ) : matches.length === 0 ? (
+        ) : filteredMatches.length === 0 ? (
           <div className="matchday-empty-state">
             <Building2 className="size-10" />
             <h3>Sin encuentros registrados</h3>
-            <p>No existen partidos que coincidan con la disciplina, competencia, estado o club buscado.</p>
+            <p>No existen partidos que coincidan con la disciplina, competencia, jornada, horario, estado o club buscado.</p>
             {hasActiveFilters ? <Button variant="outline" size="sm" onClick={resetFilters}><RefreshCw className="size-3.5" /> Limpiar filtros</Button> : null}
           </div>
         ) : (
           <div className="matchday-match-grid">
-            {matches.map((match) => {
+            {filteredMatches.map((match) => {
               const game = GAMES_CATALOG[match.gameSlug] || GAMES_CATALOG.eafc26;
               const belongsToUserTeam = Boolean(currentUser?.teamName) && (
                 match.homeTeam.toLowerCase() === currentUser?.teamName?.toLowerCase() ||

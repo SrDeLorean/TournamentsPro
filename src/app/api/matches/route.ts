@@ -12,6 +12,8 @@ export async function GET(request: Request) {
     const tournamentName = searchParams.get('tournamentName');
     const tournamentId = searchParams.get('tournamentId');
     const date = searchParams.get('date');
+    const matchday = searchParams.get('matchday') || searchParams.get('jornada');
+    const time = searchParams.get('time') || searchParams.get('horario');
 
     const { dbProvider } = await import('@/lib/db/provider');
     const matchesData = await dbProvider.matches.findAll({ orderBy: 'scheduled_at', orderDirection: 'DESC' });
@@ -135,6 +137,31 @@ export async function GET(request: Request) {
       allMatches = allMatches.filter(m => {
         if (!m.scheduled_at) return false;
         return m.scheduled_at.startsWith(date);
+      });
+    }
+
+    if (matchday && matchday !== 'TODAS') {
+      const jLike = matchday.toLowerCase().trim();
+      allMatches = allMatches.filter(m => {
+        const roundStr = (m.round_name || '').toLowerCase().trim();
+        const groupStr = (m.group_name || '').toLowerCase().trim();
+        const mdayStr = m.matchday ? `jornada ${m.matchday}`.toLowerCase() : '';
+        const mdayNum = m.matchday ? String(m.matchday) : '';
+        return (
+          roundStr === jLike ||
+          roundStr.includes(jLike) ||
+          groupStr === jLike ||
+          mdayStr === jLike ||
+          mdayNum === jLike
+        );
+      });
+    }
+
+    if (time && time !== 'TODOS') {
+      const timeLike = time.trim();
+      allMatches = allMatches.filter(m => {
+        const mTime = (m.scheduled_time || m.transmission_time || '').slice(0, 5);
+        return mTime === timeLike || mTime.startsWith(timeLike);
       });
     }
 

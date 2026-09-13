@@ -4585,9 +4585,18 @@
 .matchday-filter-extras {
   display: grid;
   width: 100%;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) auto;
   align-items: end;
   gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .matchday-filter-extras {
+    grid-template-columns: 1fr 1fr;
+  }
+  .matchday-filter-reset {
+    grid-column: span 2;
+  }
 }
 
 .matchday-filter-select {
