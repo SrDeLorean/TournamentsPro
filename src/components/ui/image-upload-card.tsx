@@ -10,14 +10,14 @@ export interface ImageUploadCardProps {
   label: string;
   subtitle?: string;
   formatLabel?: string;
-  currentUrl?: string;
+  currentUrl?: string | null;
   fallbackType?: 'avatar' | 'banner' | 'logo';
   maxDimension?: number;
   quality?: number;
   brandColor?: string;
   uploadButtonText?: string;
-  entityName?: string;
-  entityId?: string;
+  entityName?: string | null;
+  entityId?: string | null;
   entityType?: UploadEntityType;
   uploadType?: 'logo' | 'banner' | 'avatar';
   mode?: 'persist' | 'preview';
@@ -27,7 +27,7 @@ export interface ImageUploadCardProps {
 export function ImageUploadCard({
   label,
   subtitle = 'Formato WebP optimizado',
-  currentUrl = '',
+  currentUrl,
   fallbackType = 'avatar',
   maxDimension = 600,
   quality = 0.85,
@@ -40,12 +40,13 @@ export function ImageUploadCard({
   mode = 'persist',
   onUploadSuccess,
 }: ImageUploadCardProps) {
+  const safeCurrentUrl = currentUrl || '';
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [stats, setStats] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [previewState, setPreviewState] = useState({ sourceUrl: currentUrl, preview: '' });
-  const localPreview = previewState.sourceUrl === currentUrl ? previewState.preview : '';
-  const setLocalPreview = (preview: string) => setPreviewState({ sourceUrl: currentUrl, preview });
+  const [previewState, setPreviewState] = useState({ sourceUrl: safeCurrentUrl, preview: '' });
+  const localPreview = previewState.sourceUrl === safeCurrentUrl ? previewState.preview : '';
+  const setLocalPreview = (preview: string) => setPreviewState({ sourceUrl: safeCurrentUrl, preview });
 
   const defaultButtonText = uploadType === 'banner' ? 'Subir / Cambiar Banner' : 'Subir / Cambiar Foto';
   const buttonText = uploadButtonText || defaultButtonText;
@@ -88,7 +89,8 @@ export function ImageUploadCard({
         return;
       }
 
-      const cleanSlug = entityName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const rawName = entityName || 'upload';
+      const cleanSlug = rawName.toLowerCase().replace(/[^a-z0-9]/g, '-');
       const { fetchJson } = await import('@/lib/fetch-utils');
 
       const data = await fetchJson<{ success?: boolean; data?: { url?: string }; url?: string }>('/api/upload', {
@@ -98,11 +100,11 @@ export function ImageUploadCard({
           fileName: `${uploadType}-${Date.now()}.webp`,
           entityType,
           entityName: cleanSlug,
-          entityId,
+          entityId: entityId || undefined,
           teamName: cleanSlug,
-          teamId: entityId,
+          teamId: entityId || undefined,
           type: uploadType,
-          previousUrl: currentUrl,
+          previousUrl: currentUrl || undefined,
         }),
       });
 

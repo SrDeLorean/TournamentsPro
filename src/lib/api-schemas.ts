@@ -63,16 +63,16 @@ export const fixtureRequestBodySchema = z.object({
 
 export const uploadRequestBodySchema = z.object({
   fileBase64: z.string().min(1),
-  fileName: z.string().max(255).optional(),
-  type: z.enum(['logo', 'banner', 'avatar', 'image']).optional(),
+  fileName: z.string().max(255).nullable().optional(),
+  type: z.enum(['logo', 'banner', 'avatar', 'image']).nullable().optional(),
   entityType: z.enum(['team', 'organization', 'user', 'game', 'competition']).default('team'),
-  teamId: z.string().max(100).optional(),
-  entityId: z.string().max(100).optional(),
-  teamName: z.string().max(150).optional(),
-  entityName: z.string().max(150).optional(),
-  teamSlug: z.string().max(150).optional(),
-  oldUrl: z.string().max(2048).optional(),
-  previousUrl: z.string().max(2048).optional(),
+  teamId: z.string().max(100).nullable().optional(),
+  entityId: z.string().max(100).nullable().optional(),
+  teamName: z.string().max(150).nullable().optional(),
+  entityName: z.string().max(150).nullable().optional(),
+  teamSlug: z.string().max(150).nullable().optional(),
+  oldUrl: z.string().max(2048).nullable().optional(),
+  previousUrl: z.string().max(2048).nullable().optional(),
 }).passthrough();
 
 const optionalText = (max: number) => z.string().max(max).nullable().optional();

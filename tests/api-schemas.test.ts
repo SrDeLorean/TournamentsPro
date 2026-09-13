@@ -24,6 +24,7 @@ describe('mutable API body schemas', () => {
 
   it('bounds upload metadata and validates fixture time', () => {
     expect(uploadRequestBodySchema.safeParse({ fileBase64: 'data', fileName: 'x'.repeat(256) }).success).toBe(false);
+    expect(uploadRequestBodySchema.safeParse({ fileBase64: 'data', previousUrl: null, oldUrl: null, entityId: null }).success).toBe(true);
     expect(fixtureRequestBodySchema.safeParse({ tournamentId: 'tour-1', matchdayTime: '25:90' }).success).toBe(false);
   });
 

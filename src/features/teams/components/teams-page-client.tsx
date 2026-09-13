@@ -686,8 +686,8 @@ export default function TeamsModulePage() {
         >
           <div className="space-y-4 font-[family-name:var(--font-active)]">
             <BrandedImageUploadSection title="Identidad visual del club" brandColor="var(--app-accent)" entityType="team" items={[
-              { label: 'Escudo Oficial del Club', currentUrl: modalLogoUrl || editingTeam.logo_url, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Cambiar Escudo', entityName: editingTeam.name, entityId: editingTeam.id, onUploadSuccess: (url) => setModalLogoUrl(url) },
-              { label: 'Banner de Portada', currentUrl: modalBannerUrl || editingTeam.banner_url, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Cambiar Banner', entityName: editingTeam.name, entityId: editingTeam.id, onUploadSuccess: (url) => setModalBannerUrl(url) },
+              { label: 'Escudo Oficial del Club', currentUrl: modalLogoUrl || editingTeam.logo_url || '', fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Cambiar Escudo', entityName: editingTeam.name, entityId: editingTeam.id, onUploadSuccess: (url) => setModalLogoUrl(url) },
+              { label: 'Banner de Portada', currentUrl: modalBannerUrl || editingTeam.banner_url || '', fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Cambiar Banner', entityName: editingTeam.name, entityId: editingTeam.id, onUploadSuccess: (url) => setModalBannerUrl(url) },
             ]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

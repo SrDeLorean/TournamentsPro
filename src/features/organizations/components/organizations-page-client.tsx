@@ -539,8 +539,8 @@ export default function OrganizationsModulePage() {
         >
           <div className="space-y-4">
             <BrandedImageUploadSection title="Identidad visual de la organización" brandColor="var(--app-accent)" entityType="organization" items={[
-              { label: 'Logo / Escudo Oficial', currentUrl: modalLogoUrl || editingOrg.logo_url, fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Cambiar Escudo', entityName: editingOrg.name, entityId: editingOrg.id, onUploadSuccess: (url) => setModalLogoUrl(url) },
-              { label: 'Banner de Portada', currentUrl: modalBannerUrl || editingOrg.banner_url, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Cambiar Banner', entityName: editingOrg.name, entityId: editingOrg.id, onUploadSuccess: (url) => setModalBannerUrl(url) },
+              { label: 'Logo / Escudo Oficial', currentUrl: modalLogoUrl || editingOrg.logo_url || '', fallbackType: 'logo', uploadType: 'logo', maxDimension: 512, uploadButtonText: 'Cambiar Escudo', entityName: editingOrg.name, entityId: editingOrg.id, onUploadSuccess: (url) => setModalLogoUrl(url) },
+              { label: 'Banner de Portada', currentUrl: modalBannerUrl || editingOrg.banner_url || '', fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Cambiar Banner', entityName: editingOrg.name, entityId: editingOrg.id, onUploadSuccess: (url) => setModalBannerUrl(url) },
             ]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">

@@ -817,8 +817,8 @@ export default function UsersModulePage() {
         >
           <div className="space-y-4">
             <BrandedImageUploadSection title="Identidad visual del usuario" brandColor="var(--app-accent)" entityType="user" items={[
-              { label: 'Foto de Perfil', currentUrl: modalAvatarUrl || editingUser.avatar_url, fallbackType: 'avatar', uploadType: 'avatar', maxDimension: 400, uploadButtonText: 'Cambiar Foto', entityName: editingUser.gamertag, entityId: editingUser.id, onUploadSuccess: (url) => setModalAvatarUrl(url) },
-              { label: 'Banner Portada', currentUrl: modalBannerUrl || editingUser.banner_url, fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Cambiar Banner', entityName: editingUser.gamertag, entityId: editingUser.id, onUploadSuccess: (url) => setModalBannerUrl(url) },
+              { label: 'Foto de Perfil', currentUrl: modalAvatarUrl || editingUser.avatar_url || '', fallbackType: 'avatar', uploadType: 'avatar', maxDimension: 400, uploadButtonText: 'Cambiar Foto', entityName: editingUser.gamertag, entityId: editingUser.id, onUploadSuccess: (url) => setModalAvatarUrl(url) },
+              { label: 'Banner Portada', currentUrl: modalBannerUrl || editingUser.banner_url || '', fallbackType: 'banner', uploadType: 'banner', maxDimension: 1200, uploadButtonText: 'Cambiar Banner', entityName: editingUser.gamertag, entityId: editingUser.id, onUploadSuccess: (url) => setModalBannerUrl(url) },
             ]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">

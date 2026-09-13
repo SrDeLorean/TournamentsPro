@@ -28,7 +28,7 @@ const SPECIAL_ENTITY_IDS = new Set(['id', 'new-team', 'new-organization', 'new-u
 async function authorizeEntityUpload(
   actor: AuthorizationActor,
   entityType: UploadEntityType,
-  entityId?: string,
+  entityId?: string | null,
 ): Promise<string> {
   const requestedId = entityId?.trim();
   const isTemporary = !requestedId || SPECIAL_ENTITY_IDS.has(requestedId);
