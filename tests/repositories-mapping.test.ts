@@ -137,6 +137,12 @@ describe('repository row mapping', () => {
     expect(dbObj.slug).toBeUndefined();
     expect(dbObj.is_banned).toBeUndefined();
 
+    const dbObjWithNullStatus = repo.toDb({
+      name: 'Comunidad AMC',
+      status: null as any,
+    });
+    expect(dbObjWithNullStatus.status).toBeUndefined();
+
     const mapped = repo.fromRow({
       id: 'org-1',
       name: 'Comunidad AMC',

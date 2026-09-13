@@ -97,17 +97,19 @@ export async function PUT(request: Request) {
     }
 
     const updatePayload: Record<string, unknown> = {};
-    if (name !== undefined) updatePayload.name = name;
-    if (tag !== undefined) updatePayload.tag = tag;
-    if (slug !== undefined) updatePayload.slug = slug;
+    if (name !== undefined && name !== null && String(name).trim() !== '') updatePayload.name = String(name).trim();
+    if (tag !== undefined && tag !== null && String(tag).trim() !== '') updatePayload.tag = String(tag).trim();
+    if (slug !== undefined && slug !== null && String(slug).trim() !== '') updatePayload.slug = String(slug).trim();
     if (description !== undefined) updatePayload.description = description;
-    if (status !== undefined) updatePayload.status = status;
+    if (status !== undefined && status !== null && String(status).trim() !== '') {
+      updatePayload.status = String(status).trim();
+    }
     if (allowedGames !== undefined) updatePayload.allowedGames = Array.isArray(allowedGames) ? allowedGames : [];
     if (logoUrl !== undefined) updatePayload.logoUrl = logoUrl;
     if (bannerUrl !== undefined) updatePayload.bannerUrl = bannerUrl;
-    if (country !== undefined) updatePayload.country = country;
+    if (country !== undefined && country !== null && String(country).trim() !== '') updatePayload.country = String(country).trim();
     if (foundedYear !== undefined) updatePayload.foundedYear = foundedYear;
-    if (rating !== undefined) updatePayload.rating = rating;
+    if (rating !== undefined && rating !== null && rating !== '') updatePayload.rating = rating;
     if (website !== undefined) updatePayload.website = website;
     if (socialMedia !== undefined) updatePayload.socialMedia = socialMedia;
 

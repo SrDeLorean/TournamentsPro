@@ -217,6 +217,17 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
     delete dbData.ban_reason;
     delete dbData.banned_at;
 
+    // Prevent null or empty string values from violating NOT NULL constraints on updates
+    if (dbData.status === null || dbData.status === undefined || dbData.status === '') {
+      delete dbData.status;
+    }
+    if (dbData.name === null || dbData.name === undefined || dbData.name === '') {
+      delete dbData.name;
+    }
+    if (dbData.tag === null || dbData.tag === undefined || dbData.tag === '') {
+      delete dbData.tag;
+    }
+
     return dbData;
   }
 

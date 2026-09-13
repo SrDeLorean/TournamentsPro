@@ -225,7 +225,7 @@ export default function OrganizationsModulePage() {
           id: editingOrg.id,
           name: formData.get('name'),
           tag: formData.get('tag'),
-          status: formData.get('status'),
+          status: formData.get('status') || editingOrg.status || 'Activa',
           allowedGames: selectedGames,
           logoUrl: modalLogoUrl || editingOrg.logo_url,
           bannerUrl: modalBannerUrl || editingOrg.banner_url,
@@ -555,6 +555,14 @@ export default function OrganizationsModulePage() {
               <div className="space-y-1">
                 <label className="text-[var(--text-secondary)] uppercase block">País / Sede:</label>
                 <input type="text" name="country" defaultValue={editingOrg.country || 'Venezuela'} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)]" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[var(--text-secondary)] uppercase block">Estado:</label>
+                <select name="status" defaultValue={editingOrg.status || 'Activa'} className="w-full p-2.5 rounded-xl bg-[var(--app-surface-2)] border border-[var(--text-heading)]/10 text-[var(--text-heading)] font-[family-name:var(--font-active)]">
+                  <option value="Activa">Activa</option>
+                  <option value="Inactiva">Inactiva</option>
+                  <option value="En Revisión">En Revisión</option>
+                </select>
               </div>
               <div className="space-y-1">
                 <label className="text-[var(--text-secondary)] uppercase block">Año de Fundación:</label>
