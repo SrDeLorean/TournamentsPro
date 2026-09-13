@@ -37,7 +37,9 @@ export async function GET(request: Request) {
       ban_reason: o.banReason,
       banned_at: o.bannedAt,
       created_at: o.createdAt,
-      social_media: o.socialMedia
+      social_media: o.socialMedia,
+      rating: o.rating,
+      website: o.website,
     }));
 
     return NextResponse.json({ success: true, organizations: parsedOrganizations });
@@ -52,7 +54,26 @@ export async function PUT(request: Request) {
   try {
     const actor = await requireRequestActor(request, ['Administrador']);
     const body = await request.json();
-    const { id, isBanned, banReason, action, name, slug, description, logoUrl, bannerUrl, socialMedia } = body;
+    const {
+      id,
+      isBanned,
+      banReason,
+      action,
+      name,
+      tag,
+      slug,
+      description,
+      status,
+      allowedGames,
+      logoUrl,
+      bannerUrl,
+      country,
+      foundedYear,
+      rating,
+      website,
+      socialMedia,
+      organizerIds,
+    } = body;
 
     const orgId = (id || '').trim().slice(0, 36);
     if (!orgId) {
@@ -75,9 +96,34 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: true, message: 'Organización baneada del sistema' });
     }
 
-    await dbProvider.organizations.update(orgId, {
-      name, slug, description, logoUrl, bannerUrl, socialMedia
-    });
+    const updatePayload: Record<string, unknown> = {};
+    if (name !== undefined) updatePayload.name = name;
+    if (tag !== undefined) updatePayload.tag = tag;
+    if (slug !== undefined) updatePayload.slug = slug;
+    if (description !== undefined) updatePayload.description = description;
+    if (status !== undefined) updatePayload.status = status;
+    if (allowedGames !== undefined) updatePayload.allowedGames = Array.isArray(allowedGames) ? allowedGames : [];
+    if (logoUrl !== undefined) updatePayload.logoUrl = logoUrl;
+    if (bannerUrl !== undefined) updatePayload.bannerUrl = bannerUrl;
+    if (country !== undefined) updatePayload.country = country;
+    if (foundedYear !== undefined) updatePayload.foundedYear = foundedYear;
+    if (rating !== undefined) updatePayload.rating = rating;
+    if (website !== undefined) updatePayload.website = website;
+    if (socialMedia !== undefined) updatePayload.socialMedia = socialMedia;
+
+    await dbProvider.organizations.update(orgId, updatePayload);
+
+    if (Array.isArray(organizerIds)) {
+      const currentOrganizers = await dbProvider.users.findAll({ where: { organization_id: orgId } });
+      for (const orgUser of currentOrganizers) {
+        if (!organizerIds.includes(orgUser.id)) {
+          await dbProvider.users.update(orgUser.id, { organizationId: null });
+        }
+      }
+      for (const orgUserId of organizerIds) {
+        await dbProvider.users.update(orgUserId, { organizationId: orgId });
+      }
+    }
 
     return NextResponse.json({ success: true, message: 'Organización actualizada exitosamente' });
   } catch (error: unknown) {
@@ -124,6 +170,10 @@ export async function POST(request: Request) {
       logoUrl: logoUrl || null,
       bannerUrl: bannerUrl || null,
       country: country || 'AR',
+      foundedYear: foundedYear || null,
+      rating: rating ? Number(rating) : 4.95,
+      website: website || null,
+      socialMedia: socialMedia || null,
       createdAt: new Date().toISOString()
     });
 

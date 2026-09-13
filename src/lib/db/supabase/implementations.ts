@@ -162,19 +162,61 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
 
   protected mapRow(rawRow: Record<string, unknown>): Organization {
     const row = rawRow as SupabaseRow<Organization>;
+    const rawSocial = (row as Record<string, unknown>).redes_sociales ?? (row as Record<string, unknown>).social_media;
+    let parsedSocialMedia: Record<string, unknown> | null = null;
+    if (rawSocial) {
+      try {
+        parsedSocialMedia = typeof rawSocial === 'string' ? JSON.parse(rawSocial) : (rawSocial as Record<string, unknown>);
+      } catch {
+        parsedSocialMedia = null;
+      }
+    }
+
     return {
-      id: row.id, name: row.name, tag: row.tag, ownerId: row.owner_id, logoUrl: row.logo_url,
-      bannerUrl: row.banner_url, description: row.description, country: row.country, status: row.status, isBanned: Boolean(row.is_banned), banReason: row.ban_reason,
+      id: row.id,
+      name: row.name,
+      tag: row.tag,
+      ownerId: row.owner_id,
+      logoUrl: row.logo_url,
+      bannerUrl: row.banner_url,
+      description: row.description,
+      country: row.country,
+      status: row.status,
+      isBanned: Boolean(row.is_banned || row.status === 'Baneada'),
+      banReason: (row.ban_reason as string) ?? null,
       allowedGames: row.allowed_games ? (typeof row.allowed_games === 'string' ? JSON.parse(row.allowed_games) : row.allowed_games) : [],
+      foundedYear: (row.founded_year as string) ?? null,
+      rating: (row.rating as string | number) ?? null,
+      website: (row.website as string) ?? null,
+      socialMedia: parsedSocialMedia,
       createdAt: row.created_at
     };
   }
   
   protected mapToDb(entity: Partial<Organization>): Record<string, unknown> {
     const dbData = toSnakeCase(entity);
-    if (entity.allowedGames) {
-      dbData.allowed_games = JSON.stringify(entity.allowedGames);
+    if (entity.allowedGames !== undefined) {
+      dbData.allowed_games = Array.isArray(entity.allowedGames)
+        ? JSON.stringify(entity.allowedGames)
+        : entity.allowedGames;
     }
+
+    // Map socialMedia / social_media to actual database column 'redes_sociales'
+    const incomingSocial = (entity as Record<string, unknown>).redes_sociales ?? entity.socialMedia ?? (entity as Record<string, unknown>).social_media;
+    if (incomingSocial !== undefined) {
+      dbData.redes_sociales = typeof incomingSocial === 'object' && incomingSocial !== null
+        ? JSON.stringify(incomingSocial)
+        : incomingSocial;
+    }
+    delete dbData.social_media;
+    delete dbData.socialMedia;
+
+    // Remove columns that do not exist in the Supabase organizations table
+    delete dbData.slug;
+    delete dbData.is_banned;
+    delete dbData.ban_reason;
+    delete dbData.banned_at;
+
     return dbData;
   }
 
@@ -191,6 +233,7 @@ export class SupabaseOrganizationRepository extends SupabaseBaseRepository<Organ
       allowed_games: o.allowedGames,
       logo_url: o.logoUrl,
       banner_url: o.bannerUrl,
+      redes_sociales: o.socialMedia,
       comp_count: 0
     }));
   }
@@ -243,6 +286,14 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
     if (entity.vacantPositions) {
       dbData.vacant_positions = JSON.stringify(entity.vacantPositions);
     }
+    const incomingSocial = (entity as Record<string, unknown>).redes_sociales ?? (entity as Record<string, unknown>).socialMedia ?? (entity as Record<string, unknown>).social_media;
+    if (incomingSocial !== undefined) {
+      dbData.redes_sociales = typeof incomingSocial === 'object' && incomingSocial !== null
+        ? JSON.stringify(incomingSocial)
+        : incomingSocial;
+    }
+    delete dbData.social_media;
+    delete dbData.socialMedia;
     return dbData;
   }
 

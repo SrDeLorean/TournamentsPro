@@ -22,7 +22,10 @@ export class OrganizationRepository extends BaseRepository<Organization> impleme
       isBanned: Boolean(row.is_banned),
       banReason: row.ban_reason,
       bannedAt: row.banned_at,
-      socialMedia: row.social_media ? JSON.parse(row.social_media) : null,
+      socialMedia: ((row as Record<string, unknown>).redes_sociales || row.social_media) ? JSON.parse(((row as Record<string, unknown>).redes_sociales || row.social_media) as string) : null,
+      foundedYear: ((row as Record<string, unknown>).founded_year as string) || null,
+      rating: ((row as Record<string, unknown>).rating as number) || null,
+      website: ((row as Record<string, unknown>).website as string) || null,
       createdAt: row.created_at,
     };
   }
@@ -82,7 +85,8 @@ export class OrganizationRepository extends BaseRepository<Organization> impleme
       name: 'name', tag: 'tag', logoUrl: 'logo_url', bannerUrl: 'banner_url',
       description: 'description', country: 'country', allowedGames: 'allowed_games',
       status: 'status', slug: 'slug', isBanned: 'is_banned', banReason: 'ban_reason',
-      bannedAt: 'banned_at', socialMedia: 'social_media'
+      bannedAt: 'banned_at', socialMedia: 'redes_sociales',
+      foundedYear: 'founded_year', rating: 'rating', website: 'website'
     };
     
     for (const [key, value] of Object.entries(data)) {

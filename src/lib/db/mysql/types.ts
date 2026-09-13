@@ -28,7 +28,8 @@ export interface OrganizationRow extends RowDataPacket {
   banner_url: string | null; description: string | null; country: string;
   allowed_games: string | null; created_at: string;
   status?: string; slug?: string; is_banned?: number; ban_reason?: string | null;
-  banned_at?: string | null; social_media?: string | null;
+  banned_at?: string | null; social_media?: string | null; redes_sociales?: string | null;
+  founded_year?: string | null; rating?: number | null; website?: string | null;
 }
 
 export interface MatchRow extends RowDataPacket {

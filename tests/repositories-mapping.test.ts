@@ -112,4 +112,52 @@ describe('repository row mapping', () => {
       description: 'Desc',
     });
   });
+
+  it('maps organization socialMedia to redes_sociales column and strips non-existent columns', async () => {
+    const { SupabaseOrganizationRepository } = await import('../src/lib/db/supabase/implementations');
+    class TestOrgRepo extends SupabaseOrganizationRepository {
+      toDb(entity: any) { return this.mapToDb(entity); }
+      fromRow(row: any) { return this.mapRow(row); }
+    }
+
+    const repo = new TestOrgRepo();
+    const dbObj = repo.toDb({
+      name: 'Comunidad AMC',
+      socialMedia: { twitter: '@AMC_eSports', instagram: '@amc.gaming' },
+      allowedGames: ['valorant', 'eafc26'],
+      slug: 'comunidad-amc',
+      isBanned: false,
+    });
+
+    expect(dbObj.name).toBe('Comunidad AMC');
+    expect(dbObj.redes_sociales).toBe(JSON.stringify({ twitter: '@AMC_eSports', instagram: '@amc.gaming' }));
+    expect(dbObj.allowed_games).toBe(JSON.stringify(['valorant', 'eafc26']));
+    expect(dbObj.social_media).toBeUndefined();
+    expect(dbObj.socialMedia).toBeUndefined();
+    expect(dbObj.slug).toBeUndefined();
+    expect(dbObj.is_banned).toBeUndefined();
+
+    const mapped = repo.fromRow({
+      id: 'org-1',
+      name: 'Comunidad AMC',
+      tag: 'AMC',
+      owner_id: 'usr-1',
+      logo_url: null,
+      banner_url: null,
+      description: null,
+      country: 'Chile',
+      status: 'Activo',
+      redes_sociales: '{"twitter":"@AMC_eSports"}',
+      allowed_games: '["valorant"]',
+      founded_year: '2020',
+      rating: 4.95,
+      website: 'https://amc.gg',
+      created_at: '2026-01-01',
+    });
+
+    expect(mapped.socialMedia).toEqual({ twitter: '@AMC_eSports' });
+    expect(mapped.foundedYear).toBe('2020');
+    expect(mapped.rating).toBe(4.95);
+    expect(mapped.website).toBe('https://amc.gg');
+  });
 });

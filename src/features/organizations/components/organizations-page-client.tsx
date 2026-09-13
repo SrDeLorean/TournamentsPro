@@ -239,6 +239,7 @@ export default function OrganizationsModulePage() {
             instagram: formData.get('social_instagram'),
             twitch: formData.get('social_twitch'),
             youtube: formData.get('social_youtube'),
+            discord: formData.get('social_discord'),
           },
         }),
       });
@@ -608,6 +609,8 @@ export default function OrganizationsModulePage() {
               twitter={editingOrg.socialMedia?.twitter}
               instagram={editingOrg.socialMedia?.instagram}
               twitch={editingOrg.socialMedia?.twitch}
+              discord={editingOrg.socialMedia?.discord}
+              youtube={editingOrg.socialMedia?.youtube}
               prefixName="social"
             />
           </div>
