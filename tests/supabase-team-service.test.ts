@@ -164,5 +164,62 @@ describe('Team operations via dbProvider repositories (Supabase / MySQL compatib
       expect(resInvalid.success).toBe(false);
       expect(resInvalid.error).toContain('El tag solo puede contener letras, números, espacios, guiones y puntos');
     });
+
+    it('allows creating a team without an official captain (unassigned / pending)', async () => {
+      const mockSentinelUser = {
+        id: 'usr-sin-capitan',
+        name: 'Sin Capitán Asignado',
+        gamertag: 'SinCapitan',
+        role: 'Jugador',
+      };
+
+      vi.spyOn(dbProvider.users, 'findById').mockResolvedValue(mockSentinelUser as User);
+      const findByCaptainSpy = vi.spyOn(dbProvider.teams, 'findByCaptain');
+      vi.spyOn(dbProvider.teams, 'create').mockImplementation(async (teamData) => teamData as Team);
+      const syncStaffSpy = vi.spyOn(dbProvider.teams, 'syncStaff').mockResolvedValue(undefined);
+
+      const res = await createTeamService({
+        name: 'Colo-Colo Esports',
+        tag: 'CC',
+        gameSlug: 'eafc26',
+      }, '', '');
+
+      expect(res.success).toBe(true);
+      expect(res.team?.captainId).toBe('usr-sin-capitan');
+      expect(res.team?.captainName).toBe('Sin Capitán Asignado');
+      expect(res.team?.membersCount).toBe(0);
+      expect(findByCaptainSpy).not.toHaveBeenCalled();
+      expect(syncStaffSpy).toHaveBeenCalledWith(expect.any(String), 'usr-sin-capitan', [], 'DFC');
+    });
+
+    it('allows creating multiple unassigned teams in the same discipline without DUPLICATE_TEAM error', async () => {
+      const mockSentinelUser = {
+        id: 'usr-sin-capitan',
+        name: 'Sin Capitán Asignado',
+        gamertag: 'SinCapitan',
+        role: 'Jugador',
+      };
+
+      vi.spyOn(dbProvider.users, 'findById').mockResolvedValue(mockSentinelUser as User);
+      vi.spyOn(dbProvider.teams, 'create').mockImplementation(async (teamData) => teamData as Team);
+      vi.spyOn(dbProvider.teams, 'syncStaff').mockResolvedValue(undefined);
+
+      const res1 = await createTeamService({
+        name: 'Real Madrid Esports',
+        tag: 'RMA',
+        gameSlug: 'eafc26',
+      }, undefined, undefined);
+
+      const res2 = await createTeamService({
+        name: 'Barcelona Esports',
+        tag: 'FCB',
+        gameSlug: 'eafc26',
+      }, undefined, undefined);
+
+      expect(res1.success).toBe(true);
+      expect(res2.success).toBe(true);
+      expect(res1.team?.captainId).toBe('usr-sin-capitan');
+      expect(res2.team?.captainId).toBe('usr-sin-capitan');
+    });
   });
 });

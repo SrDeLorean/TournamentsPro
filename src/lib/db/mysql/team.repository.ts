@@ -132,12 +132,15 @@ export class TeamRepository extends BaseRepository<Team> implements ITeamReposit
       "DELETE FROM team_members WHERE team_id = ? AND role_in_team IN ('Capitan', 'Capitán', 'Encargado')",
       [teamId]
     );
-    await this.runCommand(
-      `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, ?, 'Capitán')`,
-      [randomUUID(), teamId, captainId, captainPosition || 'CAPITAN']
-    );
+    const isUnassigned = !captainId || captainId === 'usr-sin-capitan' || captainId === 'unassigned';
+    if (!isUnassigned) {
+      await this.runCommand(
+        `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, ?, 'Capitán')`,
+        [randomUUID(), teamId, captainId, captainPosition || 'CAPITAN']
+      );
+    }
     for (const managerId of managerIds) {
-      if (managerId === captainId) continue;
+      if (managerId === captainId || managerId === 'usr-sin-capitan') continue;
       await this.runCommand(
         `INSERT INTO team_members (id, team_id, user_id, tactical_position, role_in_team) VALUES (?, ?, ?, 'ENCARGADO', 'Encargado')`,
         [randomUUID(), teamId, managerId]

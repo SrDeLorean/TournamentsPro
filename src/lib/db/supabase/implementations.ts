@@ -347,16 +347,17 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
       .eq('team_id', teamId)
       .in('role_in_team', ['Capitan', 'Capitán', 'Encargado']);
 
+    const isUnassigned = !captainId || captainId === 'usr-sin-capitan' || captainId === 'unassigned';
     const rows = [
-      {
+      ...(isUnassigned ? [] : [{
         id: randomUUID(),
         team_id: teamId,
         user_id: captainId,
         tactical_position: captainPosition || 'CAPITAN',
         role_in_team: 'Capitán',
-      },
+      }]),
       ...managerIds
-        .filter((mId) => mId && mId !== captainId)
+        .filter((mId) => mId && mId !== captainId && mId !== 'usr-sin-capitan')
         .map((mId) => ({
           id: randomUUID(),
           team_id: teamId,
@@ -366,8 +367,10 @@ export class SupabaseTeamRepository extends SupabaseBaseRepository<Team> impleme
         })),
     ];
 
-    const { error } = await supabase.from('team_members').insert(rows);
-    if (error) throw error;
+    if (rows.length > 0) {
+      const { error } = await supabase.from('team_members').insert(rows);
+      if (error) throw error;
+    }
     await this.updateMembersCount(teamId);
   }
 

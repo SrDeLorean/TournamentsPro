@@ -98,11 +98,14 @@ export async function POST(request: Request) {
     }
 
     const canAssignCaptain = isAdministrator(actor) || isOrganizer(actor);
-    const effectiveCaptainId = canAssignCaptain && captainId ? captainId : actor.userId;
-    const captainUser = await dbProvider.users.findById(effectiveCaptainId);
-    const effectiveCaptainName = canAssignCaptain && captainName
-      ? captainName
-      : (captainUser?.gamertag || captainUser?.name || 'Capitán');
+    const isUnassigned = canAssignCaptain && (!captainId || captainId === 'usr-sin-capitan' || captainId === 'unassigned');
+    const effectiveCaptainId = isUnassigned
+      ? 'usr-sin-capitan'
+      : (canAssignCaptain && captainId ? captainId : actor.userId);
+    const captainUser = isUnassigned ? null : await dbProvider.users.findById(effectiveCaptainId);
+    const effectiveCaptainName = isUnassigned
+      ? 'Sin Capitán Asignado'
+      : (canAssignCaptain && captainName ? captainName : (captainUser?.gamertag || captainUser?.name || 'Capitán'));
     const allowedGames = ['eafc26', 'valorant', 'csgo', 'lol', 'rocketleague', 'fortnite'] as const;
     const effectiveGameSlug = allowedGames.find((slug) => slug === gameSlug) || 'eafc26';
     const allowedPlatforms = ['PS5', 'PS4', 'XBOX', 'PC', 'CROSSPLAY'] as const;

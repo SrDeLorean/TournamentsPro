@@ -165,14 +165,17 @@ export async function POST(request: Request) {
     const targetOrganizationId = isAdministrator(actor) ? (organizationId || null) : (organizationId || actor.organizationId || null);
 
     const encargadosArray = Array.isArray(encargados) ? encargados : [];
+    const isUnassigned = !captainId || captainId === 'usr-sin-capitan' || captainId === 'unassigned';
+    const safeCaptainId = isUnassigned ? 'usr-sin-capitan' : captainId.slice(0, 36);
+    const safeCaptainName = isUnassigned ? 'Sin Capitán Asignado' : (captainName || 'Capitán Oficial');
+
     const staffIds = [
-      captainId,
+      isUnassigned ? null : safeCaptainId,
       ...encargadosArray.map((entry) => typeof entry === 'string' ? entry : entry?.id),
     ].filter((userId): userId is string => Boolean(userId));
     if (!await canAssignTeamStaff(actor, targetOrganizationId, staffIds)) {
       return NextResponse.json({ error: 'No puedes asignar responsables externos a tu Organización' }, { status: 403 });
     }
-    const safeCaptainId = (captainId || actor.userId).slice(0, 36);
     const result = await createTeamService({
       name: cleanName,
       tag: cleanTag,
@@ -187,7 +190,7 @@ export async function POST(request: Request) {
       clubIdEa: clubIdEa || null,
       logoUrl: logoUrl || null,
       bannerUrl: bannerUrl || null,
-    }, safeCaptainId, captainName || 'Capitán Oficial');
+    }, safeCaptainId, safeCaptainName);
     if (!result.success || !result.team) {
       return NextResponse.json({ error: result.error || 'No se pudo crear el equipo' }, { status: 409 });
     }
@@ -258,8 +261,9 @@ export async function PUT(request: Request) {
     if (organizationId !== undefined && !isAdministrator(actor) && !isOrganizer(actor) && organizationId !== actor.organizationId) {
       return NextResponse.json({ error: 'No puedes mover el equipo fuera de tu Organización' }, { status: 403 });
     }
+    const isUnassignedEdit = captainId === '' || captainId === 'usr-sin-capitan' || captainId === 'unassigned';
     const requestedStaffIds = [
-      captainId,
+      isUnassignedEdit ? null : captainId,
       ...(Array.isArray(encargados) ? encargados.map((entry) => typeof entry === 'string' ? entry : entry?.id) : []),
     ].filter((userId): userId is string => Boolean(userId));
     if (!await canAssignTeamStaff(actor, teamScope.organizationId || null, requestedStaffIds)) {
@@ -289,7 +293,8 @@ export async function PUT(request: Request) {
     }
 
     const canReassignCaptain = actor.role === 'Administrador' || actor.role === 'Organizador';
-    const effectiveCaptainId = canReassignCaptain ? captainId : undefined;
+    const effectiveCaptainId = canReassignCaptain ? (isUnassignedEdit ? 'usr-sin-capitan' : captainId) : undefined;
+    const effectiveCaptainName = canReassignCaptain ? (isUnassignedEdit ? 'Sin Capitán Asignado' : captainName) : undefined;
     const encargadosArray = Array.isArray(encargados) ? encargados : undefined;
     const result = await updateManagedTeamService(teamId, {
       name,
@@ -297,7 +302,7 @@ export async function PUT(request: Request) {
       gameSlug,
       organizationId,
       captainId: effectiveCaptainId,
-      captainName: canReassignCaptain ? captainName : undefined,
+      captainName: effectiveCaptainName,
       managerIds: encargadosArray?.map((entry) => typeof entry === 'string' ? entry : entry.id).filter(Boolean),
       platform,
       color,

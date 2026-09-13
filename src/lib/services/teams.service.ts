@@ -35,7 +35,18 @@ export interface CreateTeamResult {
   code?: string;
 }
 
-export async function createTeamService(data: CreateTeamInput, captainId: string, captainName: string): Promise<CreateTeamResult> {
+export const UNASSIGNED_CAPTAIN_ID = 'usr-sin-capitan';
+export const UNASSIGNED_CAPTAIN_NAME = 'Sin Capitán Asignado';
+
+export function isUnassignedCaptain(captainId?: string | null): boolean {
+  return !captainId || captainId === UNASSIGNED_CAPTAIN_ID || captainId === 'unassigned';
+}
+
+export async function createTeamService(
+  data: CreateTeamInput,
+  captainId?: string | null,
+  captainName?: string | null
+): Promise<CreateTeamResult> {
   const validation = validateSchema(
     z.object({
       id: z.string().min(1).max(36).optional(),
@@ -63,15 +74,43 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
   }
 
   return dbProvider.withTransaction(async (transaction) => {
-    const captain = await transaction.users.findById(captainId, { forUpdate: true });
-    if (!captain) return { success: false, error: 'Capitán no encontrado', code: 'CAPTAIN_NOT_FOUND' };
+    const unassigned = isUnassignedCaptain(captainId);
+    const resolvedCaptainId = unassigned ? UNASSIGNED_CAPTAIN_ID : captainId!;
+    const resolvedCaptainName = unassigned ? UNASSIGNED_CAPTAIN_NAME : (captainName || UNASSIGNED_CAPTAIN_NAME);
+
+    let captain = await transaction.users.findById(resolvedCaptainId, { forUpdate: true });
+    if (!captain) {
+      if (unassigned) {
+        try {
+          await transaction.users.create({
+            id: UNASSIGNED_CAPTAIN_ID,
+            name: UNASSIGNED_CAPTAIN_NAME,
+            gamertag: 'SinCapitan',
+            role: 'Jugador',
+            email: 'sistema-sin-capitan@torneosesport.com',
+            status: 'Inactivo',
+            platform: 'CROSSPLAY',
+            position: 'DFC',
+            rating: 5.0,
+            primaryGameSlug: validation.data.gameSlug,
+            rankBadge: 'División 1',
+          });
+          captain = await transaction.users.findById(resolvedCaptainId);
+        } catch {
+          // Si ya existe por concurrencia o lock, continuar
+        }
+      }
+      if (!captain && !unassigned) {
+        return { success: false, error: 'Capitán no encontrado', code: 'CAPTAIN_NOT_FOUND' };
+      }
+    }
 
     if (validation.data.organizationId) {
       const org = await transaction.organizations.findById(validation.data.organizationId, { forUpdate: true });
       if (!org) return { success: false, error: 'Organización no encontrada', code: 'ORG_NOT_FOUND' };
     }
 
-    const managerIds = [...new Set(validation.data.managerIds || [])].filter((userId) => userId !== captainId);
+    const managerIds = [...new Set(validation.data.managerIds || [])].filter((userId) => userId !== resolvedCaptainId);
     if (managerIds.length > 0) {
       const managers = await Promise.all(managerIds.map((id) => transaction.users.findById(id, { forUpdate: true })));
       if (managers.some((m) => !m)) {
@@ -79,26 +118,29 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
       }
     }
 
-    const existingTeams = await transaction.teams.findByCaptain(captainId, validation.data.gameSlug);
-    if (existingTeams.length > 0) {
-      return {
-        success: false,
-        error: `Ya posees el club "${existingTeams[0].name}" en esta disciplina. Solo se permite 1 club por disciplina por usuario.`,
-        code: 'DUPLICATE_TEAM',
-      };
+    if (!unassigned) {
+      const existingTeams = await transaction.teams.findByCaptain(resolvedCaptainId, validation.data.gameSlug);
+      if (existingTeams.length > 0) {
+        return {
+          success: false,
+          error: `Ya posees el club "${existingTeams[0].name}" en esta disciplina. Solo se permite 1 club por disciplina por usuario.`,
+          code: 'DUPLICATE_TEAM',
+        };
+      }
     }
 
     const teamId = validation.data.id || randomUUID();
+    const initialMembersCount = unassigned ? managerIds.length : 1 + managerIds.length;
     const createdTeam = await transaction.teams.create({
       id: teamId,
       name: validation.data.name,
       tag: validation.data.tag,
       gameSlug: validation.data.gameSlug,
       organizationId: validation.data.organizationId || null,
-      captainId,
-      captainName,
+      captainId: resolvedCaptainId,
+      captainName: resolvedCaptainName,
       platform: validation.data.platform,
-      membersCount: 1,
+      membersCount: initialMembersCount,
       maxMembers: 45,
       color: validation.data.color,
       logoText: validation.data.logoText,
@@ -110,15 +152,15 @@ export async function createTeamService(data: CreateTeamInput, captainId: string
       bannerUrl: validation.data.bannerUrl || null,
     });
 
-    await transaction.teams.syncStaff(teamId, captainId, managerIds, validation.data.position || 'DFC');
+    await transaction.teams.syncStaff(teamId, resolvedCaptainId, managerIds, validation.data.position || 'DFC');
 
-    if (validation.data.organizationId && !captain.organizationId) {
-      await transaction.users.update(captainId, { organizationId: validation.data.organizationId });
+    if (validation.data.organizationId && captain && !captain.organizationId && !unassigned) {
+      await transaction.users.update(resolvedCaptainId, { organizationId: validation.data.organizationId });
     }
 
     return {
       success: true,
-      team: { ...createdTeam, id: teamId, ...validation.data, captainId, captainName, membersCount: 1, maxMembers: 45 },
+      team: { ...createdTeam, id: teamId, ...validation.data, captainId: resolvedCaptainId, captainName: resolvedCaptainName, membersCount: initialMembersCount, maxMembers: 45 },
     };
   });
 }
@@ -146,10 +188,16 @@ export async function updateManagedTeamService(teamId: string, data: ManagedTeam
     const existingTeam = await transaction.teams.findById(teamId, { forUpdate: true });
     if (!existingTeam) return { success: false, error: 'Equipo no encontrado.' };
 
-    const captainId = data.captainId || existingTeam.captainId;
-    const staffIds = [...new Set([captainId, ...(data.managerIds || [])])];
-    const staffUsers = await Promise.all(staffIds.map((id) => transaction.users.findById(id, { forUpdate: true })));
-    if (staffUsers.some((u) => !u)) return { success: false, error: 'Uno o más responsables no existen.' };
+    const rawCaptainId = data.captainId !== undefined ? data.captainId : existingTeam.captainId;
+    const unassigned = isUnassignedCaptain(rawCaptainId);
+    const captainId = unassigned ? UNASSIGNED_CAPTAIN_ID : rawCaptainId;
+    const captainName = unassigned ? UNASSIGNED_CAPTAIN_NAME : (data.captainName ?? existingTeam.captainName);
+
+    const staffIds = [...new Set([unassigned ? null : captainId, ...(data.managerIds || [])])].filter((id): id is string => Boolean(id));
+    if (staffIds.length > 0) {
+      const staffUsers = await Promise.all(staffIds.map((id) => transaction.users.findById(id, { forUpdate: true })));
+      if (staffUsers.some((u) => !u)) return { success: false, error: 'Uno o más responsables no existen.' };
+    }
 
     if (data.organizationId) {
       const org = await transaction.organizations.findById(data.organizationId, { forUpdate: true });
@@ -162,7 +210,7 @@ export async function updateManagedTeamService(teamId: string, data: ManagedTeam
       gameSlug: data.gameSlug ?? existingTeam.gameSlug,
       organizationId: data.organizationId !== undefined ? data.organizationId : existingTeam.organizationId,
       captainId,
-      captainName: data.captainName ?? existingTeam.captainName,
+      captainName,
       platform: data.platform ?? existingTeam.platform,
       color: data.color ?? existingTeam.color,
       logoText: data.logoText ?? existingTeam.logoText,

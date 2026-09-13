@@ -152,14 +152,15 @@ export default function TeamsModulePage() {
   const openCreateModal = () => {
     setModalLogoUrl('');
     setModalBannerUrl('');
-    setCreateCaptainId(currentUser?.id || usersList[0]?.id || '');
+    setCreateCaptainId('');
     setIsCreateModalOpen(true);
   };
 
   const openEditModal = (team: AdminTeam) => {
     setModalLogoUrl(team.logo_url || team.logoUrl || '');
     setModalBannerUrl(team.banner_url || team.bannerUrl || '');
-    setEditCaptainId(team.captain_id || team.captainId || usersList[0]?.id || '');
+    const currentCapId = team.captain_id || team.captainId || '';
+    setEditCaptainId(currentCapId === 'usr-sin-capitan' ? '' : currentCapId);
     setEditEncargados(Array.isArray(team.encargados) ? team.encargados : []);
     setEditingTeam(team);
   };
@@ -179,7 +180,10 @@ export default function TeamsModulePage() {
 
     startOperation(`Creación de Escuadra eSports: ${teamName}`);
 
-    const selectedCapUser = usersList.find((u) => u.id === createCaptainId);
+    const isUnassigned = !createCaptainId || createCaptainId === 'usr-sin-capitan';
+    const cap = !isUnassigned ? usersList.find((u) => u.id === createCaptainId) : null;
+    const resolvedCaptainId = isUnassigned ? 'usr-sin-capitan' : createCaptainId;
+    const resolvedCaptainName = isUnassigned ? 'Sin Capitán Asignado' : (cap?.name || cap?.gamertag || 'Capitán Oficial');
 
     try {
       const res = await fetch('/api/admin/teams', {
@@ -194,18 +198,12 @@ export default function TeamsModulePage() {
           description: formData.get('description'),
           clubIdEa: formData.get('clubIdEa'),
           color: brandColor,
-          captainId: createCaptainId || currentUser?.id,
-          captainName: selectedCapUser?.name || selectedCapUser?.gamertag || currentUser?.gamertag || currentUser?.name,
+          captainId: resolvedCaptainId,
+          captainName: resolvedCaptainName,
           encargados: createEncargados,
           logoUrl: modalLogoUrl,
           bannerUrl: modalBannerUrl,
-          socialMedia: {
-            twitter: formData.get('social_twitter'),
-            instagram: formData.get('social_instagram'),
-            twitch: formData.get('social_twitch'),
-            youtube: formData.get('social_youtube'),
-            discord: formData.get('social_discord'),
-          },
+          socialMedia: { twitter: formData.get('social_twitter'), instagram: formData.get('social_instagram'), twitch: formData.get('social_twitch'), youtube: formData.get('social_youtube'), discord: formData.get('social_discord') },
         }),
       });
 
@@ -242,7 +240,10 @@ export default function TeamsModulePage() {
 
     startOperation(`Edición de Escuadra eSports: ${teamName}`);
 
-    const selectedCapUser = usersList.find((u) => u.id === editCaptainId);
+    const isUnassigned = !editCaptainId || editCaptainId === 'usr-sin-capitan';
+    const cap = !isUnassigned ? usersList.find((u) => u.id === editCaptainId) : null;
+    const resolvedCaptainId = isUnassigned ? 'usr-sin-capitan' : editCaptainId;
+    const resolvedCaptainName = isUnassigned ? 'Sin Capitán Asignado' : (cap?.name || cap?.gamertag || formData.get('captainName') || editingTeam.captain_name || 'Capitán Oficial');
 
     try {
       const res = await fetch('/api/admin/teams', {
@@ -257,18 +258,12 @@ export default function TeamsModulePage() {
           status: formData.get('status'),
           description: formData.get('description'),
           clubIdEa: formData.get('clubIdEa'),
-          captainId: editCaptainId,
-          captainName: selectedCapUser?.name || selectedCapUser?.gamertag || formData.get('captainName') || editingTeam.captain_name,
+          captainId: resolvedCaptainId,
+          captainName: resolvedCaptainName,
           encargados: editEncargados,
           logoUrl: modalLogoUrl || editingTeam.logo_url,
           bannerUrl: modalBannerUrl || editingTeam.banner_url,
-          socialMedia: {
-            twitter: formData.get('social_twitter'),
-            instagram: formData.get('social_instagram'),
-            twitch: formData.get('social_twitch'),
-            youtube: formData.get('social_youtube'),
-            discord: formData.get('social_discord'),
-          },
+          socialMedia: { twitter: formData.get('social_twitter'), instagram: formData.get('social_instagram'), twitch: formData.get('social_twitch'), youtube: formData.get('social_youtube'), discord: formData.get('social_discord') },
         }),
       });
 
@@ -367,7 +362,15 @@ export default function TeamsModulePage() {
         );
       },
     },
-    { header: 'Capitán Oficial', accessorKey: 'captain_name', sortable: true, className: 'font-bold text-[var(--table-cell-text)] text-xs' },
+    {
+      header: 'Capitán Oficial',
+      accessorKey: 'captain_name',
+      sortable: true,
+      className: 'font-bold text-[var(--table-cell-text)] text-xs',
+      cell: (r) => (!r.captain_id || r.captain_id === 'usr-sin-capitan' || r.captain_name === 'Sin Capitán Asignado')
+        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[var(--app-surface-2)] text-[var(--text-muted)] border border-[var(--border-subtle)]">⚪ Sin Asignar (Pendiente)</span>
+        : <span>👑 {r.captain_name}</span>,
+    },
     { header: 'Plataforma', accessorKey: 'platform', sortable: true, className: 'font-[family-name:var(--font-active)] text-[var(--app-accent)] text-xs' },
     {
       header: 'Plantilla',
@@ -566,17 +569,10 @@ export default function TeamsModulePage() {
             <Input label="Nombre de la Escuadra:" name="name" required placeholder="ViperX Gaming" />
             <Input label="Tag / Trigram:" name="tag" required maxLength={5} placeholder="VPX" className="uppercase text-[var(--app-accent-2)]" />
 
-            <Select
-              label="Capitán Oficial (Seleccionar del listado de Jugadores):"
-              name="captainId"
-              value={createCaptainId}
-              onChange={(e) => setCreateCaptainId(e.target.value)}
-              required
-            >
-              {usersList.map((u) => (
-                <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">
-                  👑 {u.name} (@{u.gamertag}) — {u.role}
-                </option>
+            <Select label="Capitán Oficial (Seleccionar del listado de Jugadores):" name="captainId" value={createCaptainId} onChange={(e) => setCreateCaptainId(e.target.value)}>
+              <option value="" className="bg-[var(--app-surface-2)] text-[var(--text-muted)] font-semibold">⚪ Sin Capitán Oficial (Asignar más tarde)</option>
+              {usersList.filter((u) => u.id !== 'usr-sin-capitan').map((u) => (
+                <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">👑 {u.name} (@{u.gamertag}) — {u.role}</option>
               ))}
             </Select>
 
@@ -623,7 +619,7 @@ export default function TeamsModulePage() {
               >
                 <option value="" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">-- Seleccionar Jugador para Asignar Encargado --</option>
                 {usersList
-                  .filter((u) => u.id !== createCaptainId && !createEncargados.some((e) => e.id === u.id))
+                  .filter((u) => u.id !== 'usr-sin-capitan' && u.id !== createCaptainId && !createEncargados.some((e) => e.id === u.id))
                   .map((u) => (
                     <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">
                       👤 {u.name} (@{u.gamertag}) — {u.role}
@@ -698,17 +694,10 @@ export default function TeamsModulePage() {
               <Input label="Nombre de la Escuadra:" name="name" defaultValue={editingTeam.name} required />
               <Input label="Tag:" name="tag" defaultValue={editingTeam.tag} required maxLength={5} className="uppercase text-[var(--app-accent)]" />
 
-              <Select
-                label="Capitán Oficial (Seleccionar del listado de Jugadores):"
-                name="captainId"
-                value={editCaptainId}
-                onChange={(e) => setEditCaptainId(e.target.value)}
-                required
-              >
-                {usersList.map((u) => (
-                  <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">
-                    👑 {u.name} (@{u.gamertag}) — {u.role}
-                  </option>
+              <Select label="Capitán Oficial (Seleccionar del listado de Jugadores):" name="captainId" value={editCaptainId} onChange={(e) => setEditCaptainId(e.target.value)}>
+                <option value="" className="bg-[var(--app-surface-2)] text-[var(--text-muted)] font-semibold">⚪ Sin Capitán Oficial (Asignar más tarde)</option>
+                {usersList.filter((u) => u.id !== 'usr-sin-capitan').map((u) => (
+                  <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">👑 {u.name} (@{u.gamertag}) — {u.role}</option>
                 ))}
               </Select>
               
@@ -753,7 +742,7 @@ export default function TeamsModulePage() {
                 >
                   <option value="" className="bg-[var(--app-surface-2)] text-[var(--text-heading)]">-- Seleccionar Jugador para Asignar Encargado --</option>
                   {usersList
-                    .filter((u) => u.id !== editCaptainId && !editEncargados.some((e) => e.id === u.id))
+                    .filter((u) => u.id !== 'usr-sin-capitan' && u.id !== editCaptainId && !editEncargados.some((e) => e.id === u.id))
                     .map((u) => (
                       <option key={u.id} value={u.id} className="bg-[var(--app-surface-2)] text-[var(--text-heading)] font-semibold">
                         👤 {u.name} (@{u.gamertag}) — {u.role}
