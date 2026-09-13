@@ -24,11 +24,17 @@ import {
   Search,
   Layers,
   Calculator,
+  Zap,
+  ClipboardList,
+  Globe,
 } from 'lucide-react';
+
+export type MatchReportModalMode = 'SIMPLE' | 'MEDIANA' | 'API';
 
 interface MatchReportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: MatchReportModalMode;
   match?: {
     id: string;
     homeTeam: string;
@@ -148,7 +154,7 @@ function getModePresetsForGame(gameSlug: string): GameModePreset[] {
   }
 }
 
-export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalProps) {
+export function MatchReportModal({ isOpen, onClose, initialMode, match }: MatchReportModalProps) {
   const router = useRouter();
   const currentMatch = useMemo(() => match || {
     id: 'm-103',
@@ -157,6 +163,15 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
     gameSlug: 'eafc26',
     tournamentName: 'Torneo Oficial',
   }, [match]);
+
+  // Active reporting modality: SIMPLE | MEDIANA | API
+  const [reportMode, setReportMode] = useState<MatchReportModalMode>(initialMode || 'SIMPLE');
+
+  useEffect(() => {
+    if (initialMode) {
+      setReportMode(initialMode);
+    }
+  }, [initialMode]);
 
   const gameCatalog = GAMES_CATALOG[currentMatch.gameSlug] || GAMES_CATALOG['eafc26'];
   const modePresets = useMemo(() => getModePresetsForGame(currentMatch.gameSlug), [currentMatch.gameSlug]);
@@ -467,7 +482,7 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
         }))
       );
 
-      setApiSuccessMessage(`¡${rawParticipants.length} jugadores y estadísticas sincronizados correctamente!`);
+      setApiSuccessMessage(`¡${rawParticipants.length} atletas y estadísticas sincronizados correctamente!`);
       setSuccessNotice(`Datos oficiales cargados desde la API (${rawParticipants.length} atletas)`);
     }
   };
@@ -482,30 +497,44 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
       return;
     }
 
-    // Identify MVP
-    const allPlayers = [
-      ...homePlayers.map((p) => ({ ...p, team: 'home' })),
-      ...awayPlayers.map((p) => ({ ...p, team: 'away' })),
-    ];
-    const mvpPlayer = allPlayers.find((p) => p.isMvp) || allPlayers[0];
+    if (reportMode === 'API' && !apiSuccessMessage && !apiSearchQuery.trim()) {
+      setErrorMsg('En la modalidad API debes consultar y sincronizar los datos antes de enviar.');
+      return;
+    }
+
+    const isSimple = reportMode === 'SIMPLE';
+    const isApi = reportMode === 'API';
+
+    // Identify MVP (only for Mediana and API)
+    const allPlayers = !isSimple
+      ? [
+          ...homePlayers.map((p) => ({ ...p, team: 'home' })),
+          ...awayPlayers.map((p) => ({ ...p, team: 'away' })),
+        ]
+      : [];
+    const mvpPlayer = allPlayers.find((p) => p.isMvp) || (allPlayers.length > 0 ? allPlayers[0] : null);
 
     setIsSubmitting(true);
 
     try {
-      const participantsStatsPayload = allPlayers.map((p) => ({
-        gamertag: p.gamertag,
-        team: p.team,
-        position: p.position,
-        isMvp: p.isMvp,
-        stats: p.stats,
-      }));
+      const participantsStatsPayload = !isSimple
+        ? allPlayers.map((p) => ({
+            gamertag: p.gamertag,
+            team: p.team,
+            position: p.position,
+            isMvp: p.isMvp,
+            stats: p.stats,
+          }))
+        : undefined;
 
       const payload = {
         matchId: currentMatch.id,
         gameSlug: currentMatch.gameSlug,
         homeScore,
         awayScore,
-        mvpName: mvpPlayer ? mvpPlayer.gamertag : '',
+        reportMode,
+        isApiVerified: isApi && Boolean(apiSuccessMessage),
+        mvpName: mvpPlayer ? mvpPlayer.gamertag : undefined,
         participantsStats: participantsStatsPayload,
         proofUrl: evidencePreview || undefined,
       };
@@ -522,12 +551,12 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
       }
 
       setIsSubmitting(false);
-      setSuccessNotice(`¡Marcador ${homeScore} - ${awayScore} guardado correctamente! Actualizando...`);
+      setSuccessNotice(data.message || `¡Marcador ${homeScore} - ${awayScore} guardado correctamente!`);
       router.refresh();
       setTimeout(() => {
         setSuccessNotice('');
         onClose();
-      }, 1500);
+      }, 1600);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al enviar el reporte de partido');
       setIsSubmitting(false);
@@ -596,379 +625,591 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
       )}
 
       <form onSubmit={handleSubmitReport} className="space-y-6">
-        {/* Format & Squad Size Selector */}
-        <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-[var(--app-accent)]" />
-              <span className="text-xs font-black uppercase text-[var(--text-heading)] tracking-wider">
-                Formato y Jugadores por Equipo ({currentMatch.gameSlug.toUpperCase()})
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-medium">
-              <span>Plantilla:</span>
-              <span className="px-2 py-0.5 rounded-full bg-[var(--app-accent-soft)] text-[var(--app-accent)] font-black">
-                {squadSize} vs {squadSize}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {modePresets.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => handleSelectModePreset(preset)}
-                className={`p-2.5 rounded-xl text-left border transition-all ${
-                  selectedModeId === preset.id
-                    ? 'border-[var(--app-accent)] bg-[var(--app-accent-soft)] shadow-sm'
-                    : 'border-[var(--border-card)] bg-[var(--bg-main)] hover:border-[var(--border-strong)]'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-[var(--text-heading)]">{preset.name}</span>
-                  <span className="text-[10px] font-bold text-[var(--app-accent)]">{preset.squadSize}P</span>
-                </div>
-                <p className="text-[10px] text-[var(--text-muted)] mt-1 truncate">{preset.description}</p>
-              </button>
-            ))}
-          </div>
-
-          {/* Stepper to adjust squad size */}
-          <div className="flex items-center justify-between pt-1 border-t border-[var(--border-card)] text-xs">
-            <span className="text-[11px] text-[var(--text-muted)] font-medium">
-              ¿Ajustar número de cupos en la planilla?
+        {/* Selector de Modalidad de Reporte (3 Modos) */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-black uppercase tracking-wider text-[var(--text-muted)] text-[11px]">
+              Selecciona la Modalidad de Reporte
             </span>
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 w-7 p-0"
-                disabled={squadSize <= 1}
-                onClick={() => adjustRosterSize(squadSize - 1)}
-              >
-                -
-              </Button>
-              <span className="w-8 text-center font-black text-xs text-[var(--text-heading)]">{squadSize}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 w-7 p-0"
-                disabled={squadSize >= 11}
-                onClick={() => adjustRosterSize(squadSize + 1)}
-              >
-                +
-              </Button>
-            </div>
+            <span className="text-[10px] text-[var(--app-accent)] font-black uppercase">
+              {reportMode === 'SIMPLE' && '⚡ Rápido • Solo Marcador'}
+              {reportMode === 'MEDIANA' && '📋 Completo • Planilla y Stats'}
+              {reportMode === 'API' && '🌐 Oficial • Sincronización API'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 p-1.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)]">
+            <button
+              type="button"
+              onClick={() => setReportMode('SIMPLE')}
+              className={`py-2 px-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
+                reportMode === 'SIMPLE'
+                  ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] shadow-md'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+              }`}
+            >
+              <Zap className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">1. Simple</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReportMode('MEDIANA')}
+              className={`py-2 px-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
+                reportMode === 'MEDIANA'
+                  ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] shadow-md'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+              }`}
+            >
+              <ClipboardList className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">2. Mediana</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReportMode('API')}
+              className={`py-2 px-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
+                reportMode === 'API'
+                  ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] shadow-md'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+              }`}
+            >
+              <Globe className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">3. API Oficial</span>
+            </button>
+          </div>
+
+          {/* Description banner for chosen mode */}
+          <div className="p-3 rounded-xl bg-[var(--app-surface-2)] border border-[var(--border-card)] text-xs text-[var(--text-muted)] flex items-center gap-2">
+            {reportMode === 'SIMPLE' && (
+              <>
+                <Zap className="w-4 h-4 text-[var(--app-accent)] flex-shrink-0" />
+                <span>
+                  <strong>Modalidad Simple:</strong> Solo ingresas el resultado final del partido (marcador) y comprobante opcional. Ideal para reportes instantáneos.
+                </span>
+              </>
+            )}
+            {reportMode === 'MEDIANA' && (
+              <>
+                <ClipboardList className="w-4 h-4 text-[var(--app-accent-2)] flex-shrink-0" />
+                <span>
+                  <strong>Modalidad Mediana:</strong> Agrega los jugadores de los equipos, el resultado final y las estadísticas individuales ({gameCatalog?.name || currentMatch.gameSlug}) con selección del MVP.
+                </span>
+              </>
+            )}
+            {reportMode === 'API' && (
+              <>
+                <Sparkles className="w-4 h-4 text-[var(--app-warning)] flex-shrink-0 animate-pulse" />
+                <span>
+                  <strong>Modalidad Completa (API):</strong> Conexión directa a los servidores oficiales ({gameCatalog?.name || currentMatch.gameSlug}). Consulta por Gamertag o Match ID y autocompleta el acta con datos oficiales.
+                </span>
+              </>
+            )}
           </div>
         </div>
 
-        {/* API Integration Hub */}
-        <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[var(--app-warning)] animate-pulse" />
-              <span className="text-xs font-black uppercase text-[var(--text-heading)] tracking-wider">
-                Integración API Oficial ({gameCatalog?.name || currentMatch.gameSlug})
+        {/* CONTENIDO SEGÚN LA MODALIDAD SELECCIONADA */}
+
+        {/* ----------------- MODALIDAD SIMPLE ----------------- */}
+        {reportMode === 'SIMPLE' && (
+          <div className="space-y-4">
+            {/* Marcador Central Grande */}
+            <div className="p-6 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4">
+              <span className="text-[10px] font-black uppercase text-[var(--app-accent)] block tracking-wider text-center">
+                Marcador Final del Encuentro (Modo Rápido)
               </span>
+
+              <div className="grid grid-cols-5 items-center gap-2 text-center">
+                {/* Local */}
+                <div className="col-span-2 space-y-2">
+                  <span className="text-sm font-black text-[var(--text-heading)] uppercase block truncate">
+                    {currentMatch.homeTeam}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={homeScore}
+                    onChange={(e) => setHomeScore(parseInt(e.target.value) || 0)}
+                    className="w-20 h-16 mx-auto text-center rounded-2xl bg-[var(--bg-card)] border-2 border-[var(--app-accent)] font-black text-3xl text-[var(--app-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)]"
+                  />
+                </div>
+
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-xl font-black text-[var(--text-muted)] font-[family-name:var(--font-active)]">
+                    VS
+                  </span>
+                </div>
+
+                {/* Visitante */}
+                <div className="col-span-2 space-y-2">
+                  <span className="text-sm font-black text-[var(--text-heading)] uppercase block truncate">
+                    {currentMatch.awayTeam}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={awayScore}
+                    onChange={(e) => setAwayScore(parseInt(e.target.value) || 0)}
+                    className="w-20 h-16 mx-auto text-center rounded-2xl bg-[var(--bg-card)] border-2 border-[var(--app-accent-2)] font-black text-3xl text-[var(--app-accent-2)] focus:outline-none focus:ring-2 focus:ring-[var(--app-accent-2)]"
+                  />
+                </div>
+              </div>
+
+              {/* Indicador de Ganador Proyectado */}
+              <div className="text-center pt-2 border-t border-[var(--border-card)] text-xs text-[var(--text-muted)] font-medium">
+                {homeScore > awayScore && (
+                  <span>🏆 Ganador: <strong className="text-[var(--text-heading)]">{currentMatch.homeTeam}</strong></span>
+                )}
+                {awayScore > homeScore && (
+                  <span>🏆 Ganador: <strong className="text-[var(--text-heading)]">{currentMatch.awayTeam}</strong></span>
+                )}
+                {homeScore === awayScore && (
+                  <span>🤝 Marcador igualado (Empate)</span>
+                )}
+              </div>
             </div>
-            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              Autocompletado de Alineación y Estadísticas
-            </span>
           </div>
+        )}
 
-          <p className="text-xs text-[var(--text-muted)]">
-            {currentMatch.gameSlug === 'lol' || currentMatch.gameSlug === 'valorant'
-              ? 'Busca por Riot ID (ej. Faker#SKT o TenZ#VCT) para autocompletar la alineación y marcador.'
-              : currentMatch.gameSlug === 'fortnite'
-              ? 'Conecta con la API de Fortnite ingresando el Gamertag de Epic Games para importar la partida.'
-              : currentMatch.gameSlug === 'rocketleague'
-              ? 'Busca repetición oficial en Ballchasing o ingresa el Gamertag del piloto para cargar las estadísticas del partido.'
-              : currentMatch.gameSlug === 'eafc26'
-              ? 'Ingresa el Club ID de EA Sports FC Pro Clubs o Gamertag del capitán para sincronizar la ficha oficial.'
-              : 'Ingresa el ID de la partida o Gamertag del capitán para importar las estadísticas oficiales.'}
-          </p>
+        {/* ----------------- MODALIDAD COMPLETA (API) ----------------- */}
+        {reportMode === 'API' && (
+          <div className="space-y-4">
+            {/* Hub de Búsqueda API */}
+            <div className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[var(--app-warning)] animate-pulse" />
+                  <span className="text-xs font-black uppercase text-[var(--text-heading)] tracking-wider">
+                    Conectar con Servidores ({gameCatalog?.name || currentMatch.gameSlug})
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                  Sincronización Automática
+                </span>
+              </div>
 
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-              <input
-                type="text"
-                placeholder={
-                  currentMatch.gameSlug === 'lol' || currentMatch.gameSlug === 'valorant'
-                    ? 'Riot ID (ej. Jugador#LAS)'
-                    : currentMatch.gameSlug === 'fortnite'
-                    ? 'Epic Games Nickname (ej. Ninja)'
-                    : currentMatch.gameSlug === 'rocketleague'
-                    ? 'Gamertag o Replay ID (Ballchasing)'
-                    : currentMatch.gameSlug === 'eafc26'
-                    ? 'EA Club ID o Gamertag Capitán'
-                    : 'Gamertag o Match ID'
-                }
-                value={apiSearchQuery}
-                onChange={(e) => setApiSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] font-[family-name:var(--font-active)] outline-none focus:border-[var(--app-accent)]"
-              />
-            </div>
-            <Button
-              type="button"
-              onClick={handleSearchExternalApi}
-              disabled={isApiLoading}
-              className="bg-[var(--app-accent)] hover:bg-[var(--app-accent)] text-[var(--accent-contrast)] text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5"
-            >
-              {isApiLoading ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Consultando...</span>
-                </>
-              ) : (
-                <>
-                  <Gamepad2 className="w-3.5 h-3.5" />
-                  <span>Buscar y Cargar API</span>
-                </>
+              <p className="text-xs text-[var(--text-muted)]">
+                {currentMatch.gameSlug === 'lol' || currentMatch.gameSlug === 'valorant'
+                  ? 'Ingresa tu Riot ID (ej. Faker#SKT o TenZ#VCT) para buscar la partida en la API de Riot Games.'
+                  : currentMatch.gameSlug === 'fortnite'
+                  ? 'Ingresa el Nickname de Epic Games para consultar el registro oficial de la partida.'
+                  : currentMatch.gameSlug === 'rocketleague'
+                  ? 'Ingresa el Gamertag o Replay ID de Ballchasing para importar estadísticas del match.'
+                  : currentMatch.gameSlug === 'eafc26'
+                  ? 'Ingresa el EA Club ID o Gamertag del capitán para sincronizar el partido de Clubes Pro.'
+                  : 'Ingresa el Match ID o Gamertag para consultar el servidor oficial.'}
+              </p>
+
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    placeholder={
+                      currentMatch.gameSlug === 'lol' || currentMatch.gameSlug === 'valorant'
+                        ? 'Riot ID (ej. Jugador#LAS)'
+                        : currentMatch.gameSlug === 'fortnite'
+                        ? 'Epic Games Nickname (ej. Ninja)'
+                        : currentMatch.gameSlug === 'rocketleague'
+                        ? 'Gamertag o Replay ID'
+                        : currentMatch.gameSlug === 'eafc26'
+                        ? 'EA Club ID o Gamertag Capitán'
+                        : 'Gamertag o Match ID'
+                    }
+                    value={apiSearchQuery}
+                    onChange={(e) => setApiSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-card)] text-xs text-[var(--text-primary)] font-[family-name:var(--font-active)] outline-none focus:border-[var(--app-accent)]"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleSearchExternalApi}
+                  disabled={isApiLoading}
+                  className="bg-[var(--app-accent)] hover:bg-[var(--app-accent)] text-[var(--accent-contrast)] text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5"
+                >
+                  {isApiLoading ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Consultando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Gamepad2 className="w-3.5 h-3.5" />
+                      <span>Buscar y Cargar API</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {apiSuccessMessage && (
+                <div className="p-2.5 rounded-xl bg-[var(--app-positive-soft)] border border-[var(--app-positive)] text-[var(--app-positive)] text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  <span>{apiSuccessMessage}</span>
+                </div>
               )}
-            </Button>
-          </div>
 
-          {apiSuccessMessage && (
-            <div className="p-2.5 rounded-lg bg-[var(--app-positive-soft)] border border-[var(--app-positive)] text-[var(--app-positive)] text-xs font-bold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-              <span>{apiSuccessMessage}</span>
+              {/* Riot Match History Dropdown/List */}
+              {apiHistoryItems.length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  <span className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider block">
+                    Partidas Recientes Encontradas (Haz clic para importar)
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {apiHistoryItems.map((h, i) => (
+                      <div
+                        key={i}
+                        onClick={() => handleSelectRiotMatchItem(h.matchId)}
+                        className="p-2.5 rounded-xl border border-[var(--border-card)] bg-[var(--bg-main)] hover:border-[var(--app-accent)] cursor-pointer transition-all text-xs space-y-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                              h.result === 'Victoria'
+                                ? 'bg-[var(--app-positive-soft)] text-[var(--app-positive)]'
+                                : 'bg-[var(--app-danger-soft)] text-[var(--app-danger)]'
+                            }`}
+                          >
+                            {h.result}
+                          </span>
+                          <span className="font-bold text-[var(--text-heading)]">{h.champion}</span>
+                        </div>
+                        <p className="text-[10px] text-[var(--text-muted)]">KDA: {h.kda} • {h.duration}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
 
-          {/* Riot Match History Dropdown/List */}
-          {apiHistoryItems.length > 0 && (
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-              <span className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider block">
-                Partidas Recientes Encontradas (Haz clic para importar)
+            {/* Marcador importado por API */}
+            <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-3">
+              <span className="text-[10px] font-black uppercase text-[var(--app-accent)] block tracking-wider">
+                Marcador Oficial Detectado vía API
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {apiHistoryItems.map((h, i) => (
-                  <div
-                    key={i}
-                    onClick={() => handleSelectRiotMatchItem(h.matchId)}
-                    className="p-2.5 rounded-xl border border-[var(--border-card)] bg-[var(--bg-main)] hover:border-[var(--app-accent)] cursor-pointer transition-all text-xs space-y-1"
+
+              <div className="grid grid-cols-5 items-center gap-2 text-center">
+                <div className="col-span-2 space-y-2">
+                  <span className="text-xs font-black text-[var(--text-heading)] uppercase block truncate">
+                    {currentMatch.homeTeam}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={homeScore}
+                    onChange={(e) => setHomeScore(parseInt(e.target.value) || 0)}
+                    className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-[var(--app-accent)] font-black text-2xl text-[var(--app-accent)] focus:outline-none"
+                  />
+                </div>
+
+                <span className="text-xl font-black text-[var(--text-muted)] font-[family-name:var(--font-active)]">
+                  VS
+                </span>
+
+                <div className="col-span-2 space-y-2">
+                  <span className="text-xs font-black text-[var(--text-heading)] uppercase block truncate">
+                    {currentMatch.awayTeam}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={awayScore}
+                    onChange={(e) => setAwayScore(parseInt(e.target.value) || 0)}
+                    className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-[var(--app-accent-2)] font-black text-2xl text-[var(--app-accent-2)] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {homePlayers.length > 0 && (
+                <div className="text-xs text-[var(--text-muted)] flex items-center justify-between pt-2 border-t border-[var(--border-card)]">
+                  <span>Atletas Sincronizados: <strong>{homePlayers.length + awayPlayers.length}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setReportMode('MEDIANA')}
+                    className="text-[var(--app-accent)] hover:underline font-bold text-[11px]"
+                  >
+                    Ver / Editar Estadísticas en Modo Mediana →
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ----------------- MODALIDAD MEDIANA (PLANILLA Y STATS) ----------------- */}
+        {reportMode === 'MEDIANA' && (
+          <div className="space-y-6">
+            {/* Format & Squad Size Selector */}
+            <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[var(--app-accent)]" />
+                  <span className="text-xs font-black uppercase text-[var(--text-heading)] tracking-wider">
+                    Formato y Jugadores por Equipo ({currentMatch.gameSlug.toUpperCase()})
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-medium">
+                  <span>Plantilla:</span>
+                  <span className="px-2 py-0.5 rounded-full bg-[var(--app-accent-soft)] text-[var(--app-accent)] font-black">
+                    {squadSize} vs {squadSize}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {modePresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleSelectModePreset(preset)}
+                    className={`p-2.5 rounded-xl text-left border transition-all ${
+                      selectedModeId === preset.id
+                        ? 'border-[var(--app-accent)] bg-[var(--app-accent-soft)] shadow-sm'
+                        : 'border-[var(--border-card)] bg-[var(--bg-main)] hover:border-[var(--border-strong)]'
+                    }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span
-                        className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
-                          h.result === 'Victoria'
-                            ? 'bg-[var(--app-positive-soft)] text-[var(--app-positive)]'
-                            : 'bg-[var(--app-danger-soft)] text-[var(--app-danger)]'
-                        }`}
-                      >
-                        {h.result}
-                      </span>
-                      <span className="font-bold text-[var(--text-heading)]">{h.champion}</span>
+                      <span className="text-xs font-black text-[var(--text-heading)]">{preset.name}</span>
+                      <span className="text-[10px] font-bold text-[var(--app-accent)]">{preset.squadSize}P</span>
                     </div>
-                    <p className="text-[10px] text-[var(--text-muted)]">KDA: {h.kda} • {h.duration}</p>
-                  </div>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1 truncate">{preset.description}</p>
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
 
-        {/* Match Final Score */}
-        <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase text-[var(--app-accent)] block tracking-wider">
-              Marcador Final del Encuentro
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAutoCalculateScore}
-              className="text-[11px] h-7 px-2.5 flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-heading)]"
-            >
-              <Calculator className="w-3.5 h-3.5" />
-              <span>Autocalcular Marcador</span>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-5 items-center gap-2 text-center">
-            {/* Home Team */}
-            <div className="col-span-2 space-y-2">
-              <span className="text-xs font-black text-[var(--text-heading)] uppercase block truncate">
-                {currentMatch.homeTeam}
-              </span>
-              <input
-                type="number"
-                min="0"
-                max="99"
-                value={homeScore}
-                onChange={(e) => setHomeScore(parseInt(e.target.value) || 0)}
-                className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-[var(--app-accent)] font-black text-2xl text-[var(--app-accent)] focus:outline-none"
-              />
-            </div>
-
-            <span className="text-xl font-black text-[var(--text-muted)] font-[family-name:var(--font-active)]">
-              VS
-            </span>
-
-            {/* Away Team */}
-            <div className="col-span-2 space-y-2">
-              <span className="text-xs font-black text-[var(--text-heading)] uppercase block truncate">
-                {currentMatch.awayTeam}
-              </span>
-              <input
-                type="number"
-                min="0"
-                max="99"
-                value={awayScore}
-                onChange={(e) => setAwayScore(parseInt(e.target.value) || 0)}
-                className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-[var(--app-accent-2)] font-black text-2xl text-[var(--app-accent-2)] focus:outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Lineup Rosters by Team */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-2 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveRosterTab('home')}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 ${
-                  activeRosterTab === 'home'
-                    ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] shadow-md'
-                    : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-heading)]'
-                }`}
-              >
-                <span>🏠 {currentMatch.homeTeam}</span>
-                <span className="px-1.5 py-0.2 rounded bg-[var(--app-surface-2)] text-[var(--text-heading)] text-[10px]">
-                  {homePlayers.length}
+              {/* Stepper to adjust squad size */}
+              <div className="flex items-center justify-between pt-1 border-t border-[var(--border-card)] text-xs">
+                <span className="text-[11px] text-[var(--text-muted)] font-medium">
+                  ¿Ajustar número de cupos en la planilla?
                 </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveRosterTab('away')}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 ${
-                  activeRosterTab === 'away'
-                    ? 'bg-[var(--app-accent-2)] text-[var(--accent-contrast)] shadow-md'
-                    : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-heading)]'
-                }`}
-              >
-                <span>✈️ {currentMatch.awayTeam}</span>
-                <span className="px-1.5 py-0.2 rounded bg-[var(--app-surface-2)] text-[var(--text-heading)] text-[10px]">
-                  {awayPlayers.length}
-                </span>
-              </button>
-            </div>
-
-            <span className="text-[11px] text-[var(--text-muted)] font-medium">
-              Haz clic en ⭐ para seleccionar al MVP del encuentro
-            </span>
-          </div>
-
-          {/* Active Roster Table */}
-          {(() => {
-            const currentRoster = activeRosterTab === 'home' ? homePlayers : awayPlayers;
-            const teamName = activeRosterTab === 'home' ? currentMatch.homeTeam : currentMatch.awayTeam;
-
-            return (
-              <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-[var(--text-heading)]">
-                    Alineación Oficial: {teamName} ({currentRoster.length} Atletas)
-                  </span>
-                  <Badge variant="neutral" className="text-[10px]">
-                    {currentMatch.gameSlug.toUpperCase()}
-                  </Badge>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-[var(--border-card)] text-[10px] font-black uppercase text-[var(--text-muted)]">
-                        <th className="py-2 px-2 w-10 text-center">MVP</th>
-                        <th className="py-2 px-2 w-10 text-center">#</th>
-                        <th className="py-2 px-2 min-w-[140px]">Gamertag / Jugador</th>
-                        {statSchema.map((field) => (
-                          <th key={field.key} className="py-2 px-2 text-center min-w-[64px]">
-                            {field.shortLabel || field.label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--border-card)]">
-                      {currentRoster.map((player, idx) => (
-                        <tr
-                          key={player.id}
-                          className={`hover:bg-[var(--bg-card-hover)] transition-colors ${
-                            player.isMvp ? 'bg-[var(--app-warning-soft)]/40' : ''
-                          }`}
-                        >
-                          {/* MVP Star */}
-                          <td className="py-2 px-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleSetMvp(activeRosterTab, idx)}
-                              title="Marcar como MVP del partido"
-                              className={`p-1 rounded-lg transition-transform active:scale-95 ${
-                                player.isMvp
-                                  ? 'text-[var(--app-warning)] scale-110'
-                                  : 'text-[var(--text-muted)] hover:text-[var(--app-warning)]'
-                              }`}
-                            >
-                              <Star className={`w-4 h-4 ${player.isMvp ? 'fill-[var(--app-warning)]' : ''}`} />
-                            </button>
-                          </td>
-
-                          {/* Index / Position */}
-                          <td className="py-2 px-2 text-center text-[10px] font-bold text-[var(--text-muted)]">
-                            {player.position || idx + 1}
-                          </td>
-
-                          {/* Gamertag Input */}
-                          <td className="py-2 px-2">
-                            <input
-                              type="text"
-                              value={player.gamertag}
-                              onChange={(e) =>
-                                handleUpdatePlayerGamertag(activeRosterTab, idx, e.target.value)
-                              }
-                              placeholder="Gamertag"
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-primary)] outline-none focus:border-[var(--app-accent)]"
-                            />
-                          </td>
-
-                          {/* Stats Inputs */}
-                          {statSchema.map((field) => (
-                            <td key={field.key} className="py-2 px-2 text-center">
-                              <input
-                                type={field.type === 'number' ? 'number' : 'text'}
-                                min={field.type === 'number' ? 0 : undefined}
-                                value={player.stats[field.key] ?? 0}
-                                onChange={(e) =>
-                                  handleUpdatePlayerStat(activeRosterTab, idx, field.key, e.target.value)
-                                }
-                                placeholder={field.placeholder || '0'}
-                                className={`w-14 px-1.5 py-1 rounded-lg bg-[var(--bg-main)] border border-[var(--border-card)] text-center text-xs outline-none focus:border-[var(--app-accent)] ${
-                                  field.isPrimaryScore
-                                    ? 'font-black text-[var(--app-accent)]'
-                                    : 'font-bold text-[var(--text-primary)]'
-                                }`}
-                              />
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    disabled={squadSize <= 1}
+                    onClick={() => adjustRosterSize(squadSize - 1)}
+                  >
+                    -
+                  </Button>
+                  <span className="w-8 text-center font-black text-xs text-[var(--text-heading)]">{squadSize}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    disabled={squadSize >= 11}
+                    onClick={() => adjustRosterSize(squadSize + 1)}
+                  >
+                    +
+                  </Button>
                 </div>
               </div>
-            );
-          })()}
-        </div>
+            </div>
 
-        {/* Evidence Upload */}
+            {/* Match Final Score */}
+            <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-card)] space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-[var(--app-accent)] block tracking-wider">
+                  Marcador Final del Encuentro
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAutoCalculateScore}
+                  className="text-[11px] h-7 px-2.5 flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-heading)]"
+                >
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>Autocalcular Marcador</span>
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-5 items-center gap-2 text-center">
+                {/* Home Team */}
+                <div className="col-span-2 space-y-2">
+                  <span className="text-xs font-black text-[var(--text-heading)] uppercase block truncate">
+                    {currentMatch.homeTeam}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={homeScore}
+                    onChange={(e) => setHomeScore(parseInt(e.target.value) || 0)}
+                    className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-[var(--app-accent)] font-black text-2xl text-[var(--app-accent)] focus:outline-none"
+                  />
+                </div>
+
+                <span className="text-xl font-black text-[var(--text-muted)] font-[family-name:var(--font-active)]">
+                  VS
+                </span>
+
+                {/* Away Team */}
+                <div className="col-span-2 space-y-2">
+                  <span className="text-xs font-black text-[var(--text-heading)] uppercase block truncate">
+                    {currentMatch.awayTeam}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={awayScore}
+                    onChange={(e) => setAwayScore(parseInt(e.target.value) || 0)}
+                    className="w-16 h-14 mx-auto text-center rounded-xl bg-[var(--bg-card)] border-2 border-[var(--app-accent-2)] font-black text-2xl text-[var(--app-accent-2)] focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Lineup Rosters by Team */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-[var(--border-card)] pb-2 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveRosterTab('home')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 ${
+                      activeRosterTab === 'home'
+                        ? 'bg-[var(--app-accent)] text-[var(--accent-contrast)] shadow-md'
+                        : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-heading)]'
+                    }`}
+                  >
+                    <span>🏠 {currentMatch.homeTeam}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-[var(--app-surface-2)] text-[var(--text-heading)] text-[10px]">
+                      {homePlayers.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveRosterTab('away')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 ${
+                      activeRosterTab === 'away'
+                        ? 'bg-[var(--app-accent-2)] text-[var(--accent-contrast)] shadow-md'
+                        : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-heading)]'
+                    }`}
+                  >
+                    <span>✈️ {currentMatch.awayTeam}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-[var(--app-surface-2)] text-[var(--text-heading)] text-[10px]">
+                      {awayPlayers.length}
+                    </span>
+                  </button>
+                </div>
+
+                <span className="text-[11px] text-[var(--text-muted)] font-medium">
+                  Haz clic en ⭐ para seleccionar al MVP del encuentro
+                </span>
+              </div>
+
+              {/* Active Roster Table */}
+              {(() => {
+                const currentRoster = activeRosterTab === 'home' ? homePlayers : awayPlayers;
+                const teamName = activeRosterTab === 'home' ? currentMatch.homeTeam : currentMatch.awayTeam;
+
+                return (
+                  <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-card)] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase text-[var(--text-heading)]">
+                        Alineación Oficial: {teamName} ({currentRoster.length} Atletas)
+                      </span>
+                      <Badge variant="neutral" className="text-[10px]">
+                        {currentMatch.gameSlug.toUpperCase()}
+                      </Badge>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-[var(--border-card)] text-[10px] font-black uppercase text-[var(--text-muted)]">
+                            <th className="py-2 px-2 w-10 text-center">MVP</th>
+                            <th className="py-2 px-2 w-10 text-center">#</th>
+                            <th className="py-2 px-2 min-w-[140px]">Gamertag / Jugador</th>
+                            {statSchema.map((field) => (
+                              <th key={field.key} className="py-2 px-2 text-center min-w-[64px]">
+                                {field.shortLabel || field.label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--border-card)]">
+                          {currentRoster.map((player, idx) => (
+                            <tr
+                              key={player.id}
+                              className={`hover:bg-[var(--bg-card-hover)] transition-colors ${
+                                player.isMvp ? 'bg-[var(--app-warning-soft)]/40' : ''
+                              }`}
+                            >
+                              {/* MVP Star */}
+                              <td className="py-2 px-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetMvp(activeRosterTab, idx)}
+                                  title="Marcar como MVP del partido"
+                                  className={`p-1 rounded-lg transition-transform active:scale-95 ${
+                                    player.isMvp
+                                      ? 'text-[var(--app-warning)] scale-110'
+                                      : 'text-[var(--text-muted)] hover:text-[var(--app-warning)]'
+                                  }`}
+                                >
+                                  <Star className={`w-4 h-4 ${player.isMvp ? 'fill-[var(--app-warning)]' : ''}`} />
+                                </button>
+                              </td>
+
+                              {/* Index / Position */}
+                              <td className="py-2 px-2 text-center text-[10px] font-bold text-[var(--text-muted)]">
+                                {player.position || idx + 1}
+                              </td>
+
+                              {/* Gamertag Input */}
+                              <td className="py-2 px-2">
+                                <input
+                                  type="text"
+                                  value={player.gamertag}
+                                  onChange={(e) =>
+                                    handleUpdatePlayerGamertag(activeRosterTab, idx, e.target.value)
+                                  }
+                                  placeholder="Gamertag"
+                                  className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg-main)] border border-[var(--border-card)] text-xs font-bold text-[var(--text-primary)] outline-none focus:border-[var(--app-accent)]"
+                                />
+                              </td>
+
+                              {/* Stats Inputs */}
+                              {statSchema.map((field) => (
+                                <td key={field.key} className="py-2 px-2 text-center">
+                                  <input
+                                    type={field.type === 'number' ? 'number' : 'text'}
+                                    min={field.type === 'number' ? 0 : undefined}
+                                    value={player.stats[field.key] ?? 0}
+                                    onChange={(e) =>
+                                      handleUpdatePlayerStat(activeRosterTab, idx, field.key, e.target.value)
+                                    }
+                                    placeholder={field.placeholder || '0'}
+                                    className={`w-14 px-1.5 py-1 rounded-lg bg-[var(--bg-main)] border border-[var(--border-card)] text-center text-xs outline-none focus:border-[var(--app-accent)] ${
+                                      field.isPrimaryScore
+                                        ? 'font-black text-[var(--app-accent)]'
+                                        : 'font-bold text-[var(--text-primary)]'
+                                    }`}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Evidence Upload (Común para todos los modos) */}
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-[var(--text-heading)] block flex items-center gap-1.5">
             <Camera className="w-4 h-4 text-[var(--app-positive)]" />
@@ -1029,7 +1270,13 @@ export function MatchReportModal({ isOpen, onClose, match }: MatchReportModalPro
             disabled={isSubmitting}
             className="font-black text-xs uppercase bg-[var(--app-positive)] hover:bg-[var(--app-positive)] text-[var(--accent-contrast)] px-6 py-2.5 rounded-xl shadow-lg"
           >
-            {isSubmitting ? 'Enviando Ficha...' : 'Enviar Reporte y Ficha Oficial'}
+            {isSubmitting
+              ? 'Enviando...'
+              : reportMode === 'SIMPLE'
+              ? '⚡ Enviar Marcador Rápido'
+              : reportMode === 'MEDIANA'
+              ? '📋 Enviar Planilla y Estadísticas'
+              : '🌐 Sincronizar y Registrar Oficial (API)'}
           </Button>
         </div>
       </form>

@@ -10,5 +10,6 @@ export * from './squads.service';
 export * from './competitions.service';
 export * from './transfers.service';
 export * from './matches.service';
+export * from './match-auto-advance';
 export * from './chat.service';
 export * from './notifications.service';

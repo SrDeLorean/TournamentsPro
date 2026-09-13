@@ -12,23 +12,34 @@ export interface Bo3MatchLike {
   id: string | number;
   home_team_id?: string | null;
   away_team_id?: string | null;
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
   team_home_id?: string | null;
   team_away_id?: string | null;
+  teamHomeId?: string | null;
+  teamAwayId?: string | null;
   home_team_name?: string | null;
   away_team_name?: string | null;
+  homeTeamName?: string | null;
+  awayTeamName?: string | null;
   homeTeam?: string | null;
   awayTeam?: string | null;
   score_home?: number | null;
   score_away?: number | null;
+  scoreHome?: number | null;
+  scoreAway?: number | null;
   homeScore?: number | null;
   awayScore?: number | null;
   reported_score_home?: number | null;
   reported_score_away?: number | null;
+  reportedScoreHome?: number | null;
+  reportedScoreAway?: number | null;
   status: string;
   round_name?: string | null;
   roundName?: string | null;
   groupJornada?: string | null;
   winner_team_id?: string | null;
+  winnerTeamId?: string | null;
 }
 
 export interface Bo3SeriesEvaluation<T extends Bo3MatchLike = Bo3MatchLike> {
@@ -151,10 +162,10 @@ export function evaluateBo3Series<T extends Bo3MatchLike>(matches: T[]): Bo3Seri
 
   // Determine Team A and Team B from Game 1 (or first available match)
   const anchor = game1 || matches[0];
-  const teamAId = anchor.home_team_id || anchor.team_home_id || anchor.homeTeam || null;
-  const teamBId = anchor.away_team_id || anchor.team_away_id || anchor.awayTeam || null;
-  const teamAName = anchor.home_team_name || anchor.homeTeam || 'Equipo Local';
-  const teamBName = anchor.away_team_name || anchor.awayTeam || 'Equipo Visitante';
+  const teamAId = anchor.home_team_id || anchor.team_home_id || anchor.homeTeamId || anchor.teamHomeId || anchor.homeTeam || null;
+  const teamBId = anchor.away_team_id || anchor.team_away_id || anchor.awayTeamId || anchor.teamAwayId || anchor.awayTeam || null;
+  const teamAName = anchor.home_team_name || anchor.homeTeamName || anchor.homeTeam || 'Equipo Local';
+  const teamBName = anchor.away_team_name || anchor.awayTeamName || anchor.awayTeam || 'Equipo Visitante';
 
   let teamAWins = 0;
   let teamBWins = 0;
@@ -164,12 +175,12 @@ export function evaluateBo3Series<T extends Bo3MatchLike>(matches: T[]): Bo3Seri
   for (const g of orderedGames) {
     if (!isCompletedStatus(g.status)) continue;
 
-    const hScore = g.score_home ?? g.homeScore ?? g.reported_score_home;
-    const aScore = g.score_away ?? g.awayScore ?? g.reported_score_away;
+    const hScore = g.scoreHome ?? g.score_home ?? g.homeScore ?? g.reportedScoreHome ?? g.reported_score_home;
+    const aScore = g.scoreAway ?? g.score_away ?? g.awayScore ?? g.reportedScoreAway ?? g.reported_score_away;
     if (hScore === null || aScore === null || hScore === undefined || aScore === undefined) continue;
 
-    const gHomeId = g.home_team_id || g.team_home_id || g.home_team_name || g.homeTeam;
-    const gAwayId = g.away_team_id || g.team_away_id || g.away_team_name || g.awayTeam;
+    const gHomeId = g.home_team_id || g.team_home_id || g.homeTeamId || g.teamHomeId || g.home_team_name || g.homeTeamName || g.homeTeam;
+    const gAwayId = g.away_team_id || g.team_away_id || g.awayTeamId || g.teamAwayId || g.away_team_name || g.awayTeamName || g.awayTeam;
 
     if (hScore > aScore) {
       if (gHomeId === teamAId || gHomeId === teamAName) teamAWins++;

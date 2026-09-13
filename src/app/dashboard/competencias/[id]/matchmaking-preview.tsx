@@ -18,6 +18,7 @@ import {
 import {
   distributeTeamsIntoGroups,
   generatePlayoffBracket,
+  calculateHybridPlayoffStructure,
   TeamItem,
   GroupDistributionResult,
   PlayoffMatchNode,
@@ -460,7 +461,8 @@ export function MatchmakingPreview({
     );
 
   const groupsPreview = distributeTeamsIntoGroups(teams, groupCount);
-  const playoffTeamCount = isHybrid ? groupCount * qualifiersPerGroup : teams.length;
+  const hybridStructure = isHybrid ? calculateHybridPlayoffStructure(groupCount, qualifiersPerGroup) : null;
+  const playoffTeamCount = isHybrid ? hybridStructure!.bracketSize : teams.length;
   const playoffNodes = generatePlayoffBracket(
     'preview',
     teams.slice(0, playoffTeamCount),
@@ -490,7 +492,7 @@ export function MatchmakingPreview({
             </h3>
             <Badge className="bg-[var(--app-accent-soft)] text-[var(--app-accent)] font-[family-name:var(--font-active)] text-[10px] uppercase border-[var(--app-accent)]/40">
               {isHybrid ? (
-                <>Formato HÍBRIDO (Grupos: {matchMode === 'IdaVuelta' ? 'Ida y Vuelta' : 'Solo Ida'} • Playoffs: {effectivePlayoffMode === 'MejorDe3' ? 'Mejor de 3 (Bo3)' : effectivePlayoffMode === 'IdaVuelta' ? 'Ida y Vuelta' : 'Partido Único'})</>
+                <>Formato HÍBRIDO (Grupos: {matchMode === 'IdaVuelta' ? 'Ida y Vuelta' : 'Solo Ida'} • Playoffs: {effectivePlayoffMode === 'MejorDe3' ? 'Mejor de 3 (Bo3)' : effectivePlayoffMode === 'IdaVuelta' ? 'Ida y Vuelta' : 'Partido Único'}{hybridStructure?.wildcardCount ? ` • Llave ${hybridStructure.bracketSize} con +${hybridStructure.wildcardCount} ${hybridStructure.wildcardLabel}` : ` • Llave ${playoffTeamCount}`})</>
               ) : (
                 <>Formato {format.toUpperCase()} ({matchMode === 'IdaVuelta' ? 'Ida y Vuelta' : matchMode === 'MejorDe3' ? 'Mejor de 3 (Bo3)' : 'Solo Ida'})</>
               )}

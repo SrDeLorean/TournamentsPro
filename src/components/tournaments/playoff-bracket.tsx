@@ -82,7 +82,7 @@ function getRoundWeight(roundName: string): number {
 
 function isPlaceholderTeam(name: string): boolean {
   const normalized = (name || '').toLowerCase().trim();
-  return !name || normalized.includes('definir') || normalized === 'tbd' || normalized.includes('ganador') || normalized.includes('perdedor') || normalized.includes('grupo') || normalized.includes('bye');
+  return !name || normalized.includes('definir') || normalized === 'tbd' || normalized.includes('ganador') || normalized.includes('perdedor') || normalized.includes('grupo') || normalized.includes('bye') || normalized.includes('mejor') || normalized.includes('semilla');
 }
 
 function isByeTeam(name: string): boolean {

@@ -19,6 +19,8 @@ export async function submitMatchReportService(data: {
   scoreHome: number;
   scoreAway: number;
   proofUrl?: string | null;
+  reportMode?: 'SIMPLE' | 'MEDIANA' | 'API';
+  isAdminOrOrg?: boolean;
   playerStats?: Array<{
     userId: string;
     teamId: string;
@@ -30,13 +32,26 @@ export async function submitMatchReportService(data: {
     isMvp: boolean;
   }>;
 }): Promise<SubmitMatchReportResult> {
-  const { matchId, reportedByUserId, scoreHome, scoreAway, proofUrl, playerStats } = data;
+  const { matchId, reportedByUserId, scoreHome, scoreAway, proofUrl, reportMode, isAdminOrOrg, playerStats } = data;
 
   const reportId = `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
   return dbProvider.withTransaction(async (transaction) => {
-    const matches = await transaction.query<{ id: string; status: string; competition_id?: string; tournament_id?: string; round_name?: string }>(
-      'SELECT id, status, competition_id, tournament_id, round_name FROM matches WHERE id = ? FOR UPDATE',
+    const matches = await transaction.query<{
+      id: string;
+      status: string;
+      competition_id?: string;
+      tournament_id?: string;
+      round_name?: string;
+      reported_score_home?: number | null;
+      reported_score_away?: number | null;
+      reported_by_user_id?: string | null;
+      home_team_id?: string | null;
+      team_home_id?: string | null;
+      away_team_id?: string | null;
+      team_away_id?: string | null;
+    }>(
+      'SELECT id, status, competition_id, tournament_id, round_name, reported_score_home, reported_score_away, reported_by_user_id, home_team_id, team_home_id, away_team_id, team_away_id FROM matches WHERE id = ? FOR UPDATE',
       [matchId],
     );
     if (matches.length === 0) return { success: false, error: 'Partido no encontrado', code: 'NOT_FOUND' };
@@ -61,6 +76,28 @@ export async function submitMatchReportService(data: {
       }
     }
 
+    const hasPreviousRivalReport =
+      currentMatch.reported_by_user_id &&
+      currentMatch.reported_by_user_id !== reportedByUserId &&
+      currentMatch.reported_score_home !== null &&
+      currentMatch.reported_score_home !== undefined &&
+      currentMatch.reported_score_away !== null &&
+      currentMatch.reported_score_away !== undefined;
+
+    const scoresMatch =
+      hasPreviousRivalReport &&
+      currentMatch.reported_score_home === scoreHome &&
+      currentMatch.reported_score_away === scoreAway;
+
+    const isOfficial = Boolean(isAdminOrOrg || reportMode === 'API');
+    const shouldFinalize = isOfficial || scoresMatch;
+
+    const winnerTeamId = scoreHome > scoreAway
+      ? (currentMatch.home_team_id || currentMatch.team_home_id)
+      : scoreAway > scoreHome
+        ? (currentMatch.away_team_id || currentMatch.team_away_id)
+        : null;
+
     await transaction.execute(
       `INSERT INTO match_reports (id, match_id, reported_by_user_id, score_home, score_away, proof_url, status)
        VALUES (?, ?, ?, ?, ?, ?, 'PENDIENTE')
@@ -68,13 +105,27 @@ export async function submitMatchReportService(data: {
          score_away = VALUES(score_away), proof_url = VALUES(proof_url), status = 'PENDIENTE'`,
       [reportId, matchId, reportedByUserId, scoreHome, scoreAway, proofUrl || null],
     );
-    await executeCas(transaction,
-      `UPDATE matches
-          SET reported_score_home = ?, reported_score_away = ?, proof_url = ?, reported_by_user_id = ?, status = 'POR_REVISAR'
-        WHERE id = ? AND status IN ('PENDIENTE', 'EN_CURSO', 'DISPUTADO')`,
-      [scoreHome, scoreAway, proofUrl || null, reportedByUserId, matchId],
-      'El partido ya fue reportado o finalizado.',
-    );
+
+    if (shouldFinalize) {
+      await executeCas(
+        transaction,
+        `UPDATE matches
+            SET score_home = ?, score_away = ?, reported_score_home = ?, reported_score_away = ?,
+                proof_url = ?, reported_by_user_id = ?, winner_team_id = ?, status = 'FINALIZADO'
+          WHERE id = ?`,
+        [scoreHome, scoreAway, scoreHome, scoreAway, proofUrl || null, reportedByUserId, winnerTeamId, matchId],
+        'El partido ya fue reportado o finalizado.',
+      );
+    } else {
+      await executeCas(
+        transaction,
+        `UPDATE matches
+            SET reported_score_home = ?, reported_score_away = ?, proof_url = ?, reported_by_user_id = ?, status = 'POR_REVISAR'
+          WHERE id = ? AND status IN ('PENDIENTE', 'EN_CURSO', 'DISPUTADO', 'POR_REVISAR')`,
+        [scoreHome, scoreAway, proofUrl || null, reportedByUserId, matchId],
+        'El partido ya fue reportado o finalizado.',
+      );
+    }
 
     for (const stat of playerStats || []) {
       await transaction.execute(
@@ -90,6 +141,16 @@ export async function submitMatchReportService(data: {
         ],
       );
     }
+
+    if (shouldFinalize) {
+      try {
+        const { processMatchAutoAdvance } = await import('./match-auto-advance');
+        await processMatchAutoAdvance(matchId);
+      } catch (advErr) {
+        console.warn('Error auto-avanzando partido en submitMatchReportService:', advErr);
+      }
+    }
+
     return { success: true, reportId };
   });
 }

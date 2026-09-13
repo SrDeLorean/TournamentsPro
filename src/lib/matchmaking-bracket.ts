@@ -102,6 +102,131 @@ export function getTournamentSeedingPairs(bracketSize: number): [number, number]
   return pairs;
 }
 
+export interface HybridPlayoffStructure {
+  groupCount: number;
+  qualifiersPerGroup: number;
+  directQualifiers: number;
+  bracketSize: number;
+  wildcardCount: number;
+  wildcardRank: number;
+  wildcardLabel: string;
+  wildcardSeeds: string[];
+  initialRoundName: string;
+  seedPairs: Array<{ homeSeed: string; awaySeed: string }>;
+}
+
+function buildHybridSeedList(
+  groupCount: number,
+  qualifiersPerGroup: number,
+  wildcardSeeds: string[]
+): string[] {
+  const groupNames = Array.from({ length: groupCount }, (_, i) => `Grupo ${String.fromCharCode(65 + i)}`);
+  const seeds: string[] = [];
+
+  for (let q = 1; q <= qualifiersPerGroup; q++) {
+    const rankLabel = `${q}°`;
+    const shift = q === 1 ? 0 : 1;
+    for (let g = 0; g < groupCount; g++) {
+      const gIdx = (g + shift) % groupCount;
+      seeds.push(`${rankLabel} de ${groupNames[gIdx]}`);
+    }
+  }
+
+  wildcardSeeds.forEach((ws) => seeds.push(ws));
+  return seeds;
+}
+
+function resolveSameGroupClashes(
+  pairs: Array<{ homeSeed: string; awaySeed: string }>
+): Array<{ homeSeed: string; awaySeed: string }> {
+  const extractGroup = (seed: string): string | null => {
+    const match = seed.match(/Grupo\s+([A-Z0-9]+)/i);
+    return match ? match[1].toUpperCase() : null;
+  };
+
+  const result = pairs.map((p) => ({ ...p }));
+  for (let i = 0; i < result.length; i++) {
+    const homeGrp = extractGroup(result[i].homeSeed);
+    const awayGrp = extractGroup(result[i].awaySeed);
+    if (homeGrp && awayGrp && homeGrp === awayGrp) {
+      for (let j = 0; j < result.length; j++) {
+        if (i === j) continue;
+        const otherHomeGrp = extractGroup(result[j].homeSeed);
+        const otherAwayGrp = extractGroup(result[j].awaySeed);
+        if (homeGrp !== otherAwayGrp && otherHomeGrp !== awayGrp) {
+          const temp = result[i].awaySeed;
+          result[i].awaySeed = result[j].awaySeed;
+          result[j].awaySeed = temp;
+          break;
+        }
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * 2.2 MOTOR DE CIERRE MATEMÁTICO DE PLAYOFF HÍBRIDO (POTENCIAS DE 2 & WILDCARDS)
+ * Calcula clasificados directos, tamaño objetivo de bracket (2, 4, 8, 16, 32...) y
+ * cupos de repesca (Mejores Segundos, Mejores Terceros) cuando los grupos o clasificados
+ * no completan una llave par.
+ */
+export function calculateHybridPlayoffStructure(
+  groupCount: number,
+  qualifiersPerGroup: number
+): HybridPlayoffStructure {
+  const G = Math.max(1, groupCount);
+  const Q = Math.max(1, qualifiersPerGroup);
+  const directQualifiers = G * Q;
+  const bracketSize = Math.pow(2, Math.ceil(Math.log2(Math.max(2, directQualifiers))));
+  const wildcardCount = bracketSize - directQualifiers;
+  const wildcardRank = Q + 1;
+  const rankSuffix = `${wildcardRank}°`;
+
+  let wildcardLabel = '';
+  let wildcardSeeds: string[] = [];
+
+  if (wildcardCount === 1) {
+    wildcardLabel = `Mejor ${rankSuffix}`;
+    wildcardSeeds = [wildcardLabel];
+  } else if (wildcardCount > 1) {
+    wildcardLabel = `${wildcardCount} Mejores ${rankSuffix}`;
+    if (wildcardCount <= G) {
+      wildcardSeeds = Array.from({ length: wildcardCount }, (_, i) => `${i + 1}° Mejor ${rankSuffix}`);
+    } else {
+      const fromFirstRank = Array.from({ length: G }, (_, i) => `${i + 1}° Mejor ${rankSuffix}`);
+      const remaining = wildcardCount - G;
+      const nextRankSuffix = `${wildcardRank + 1}°`;
+      const fromSecondRank = Array.from({ length: remaining }, (_, i) => `${i + 1}° Mejor ${nextRankSuffix}`);
+      wildcardSeeds = [...fromFirstRank, ...fromSecondRank];
+    }
+  }
+
+  const initialRoundName = getRoundNameByTeamCount(bracketSize);
+  const rawSeeds = buildHybridSeedList(G, Q, wildcardSeeds);
+  const seedingPairs = getTournamentSeedingPairs(bracketSize);
+
+  let seedPairs = seedingPairs.map(([homeSeedIdx, awaySeedIdx]) => ({
+    homeSeed: rawSeeds[homeSeedIdx - 1] || `Semilla #${homeSeedIdx}`,
+    awaySeed: rawSeeds[awaySeedIdx - 1] || `Semilla #${awaySeedIdx}`,
+  }));
+
+  seedPairs = resolveSameGroupClashes(seedPairs);
+
+  return {
+    groupCount: G,
+    qualifiersPerGroup: Q,
+    directQualifiers,
+    bracketSize,
+    wildcardCount,
+    wildcardRank,
+    wildcardLabel,
+    wildcardSeeds,
+    initialRoundName,
+    seedPairs,
+  };
+}
+
 /**
  * 3. GENERACIÓN DE LLAVES DE PLAYOFF DE IZQUIERDA A DERECHA (OCTAVOS -> CUARTOS -> SEMIS -> FINAL)
  */
@@ -113,11 +238,16 @@ export function generatePlayoffBracket(
   groupCount = 4,
   qualifiersPerGroup = 2
 ): PlayoffMatchNode[] {
-  const count = isHybrid ? groupCount * qualifiersPerGroup : qualifiedTeams.length;
-  if (count < 2) return [];
+  const hybridStructure = isHybrid
+    ? calculateHybridPlayoffStructure(groupCount, qualifiersPerGroup)
+    : null;
+  const bracketSize = isHybrid
+    ? hybridStructure!.bracketSize
+    : Math.pow(2, Math.ceil(Math.log2(Math.max(2, qualifiedTeams.length))));
+
+  if (bracketSize < 2) return [];
 
   const compClean = competitionId.replace(/[^a-zA-Z0-9]/g, '').slice(-10);
-  const bracketSize = Math.pow(2, Math.ceil(Math.log2(Math.max(2, count))));
   const roundsTotal = Math.ceil(Math.log2(bracketSize));
   const bracketMatches: PlayoffMatchNode[] = [];
 
@@ -130,33 +260,6 @@ export function generatePlayoffBracket(
       roundName: getRoundNameByTeamCount(teamsInRound),
       matchCount: teamsInRound / 2,
     });
-  }
-
-  // Generar semillas para la primera ronda si es Híbrido (1° Grupo A vs 2° Grupo B, etc.)
-  const hybridSeedings: { homeSeed: string; awaySeed: string }[] = [];
-  if (isHybrid) {
-    const groupNames = Array.from({ length: groupCount }, (_, i) => `Grupo ${String.fromCharCode(65 + i)}`);
-    const totalMatchCount = (groupCount * qualifiersPerGroup) / 2;
-    const half = Math.ceil(totalMatchCount / 2);
-
-    for (let m = 0; m < totalMatchCount; m++) {
-      if (m < half) {
-        const gHomeIdx = m % groupCount;
-        const gAwayIdx = (m + 1) % groupCount;
-        hybridSeedings.push({
-          homeSeed: `1° de ${groupNames[gHomeIdx]}`,
-          awaySeed: `2° de ${groupNames[gAwayIdx]}`,
-        });
-      } else {
-        const offset = m - half;
-        const gHomeIdx = (offset + 1) % groupCount;
-        const gAwayIdx = offset % groupCount;
-        hybridSeedings.push({
-          homeSeed: `1° de ${groupNames[gHomeIdx]}`,
-          awaySeed: `2° de ${groupNames[gAwayIdx]}`,
-        });
-      }
-    }
   }
 
   // Emparejamiento por cabezas de serie para torneos estándar
@@ -181,9 +284,9 @@ export function generatePlayoffBracket(
       let winnerTeamId: string | null = null;
 
       if (rIdx === 0) {
-        if (isHybrid && hybridSeedings[m]) {
-          homeTeamName = hybridSeedings[m].homeSeed;
-          awayTeamName = hybridSeedings[m].awaySeed;
+        if (isHybrid && hybridStructure && hybridStructure.seedPairs[m]) {
+          homeTeamName = hybridStructure.seedPairs[m].homeSeed;
+          awayTeamName = hybridStructure.seedPairs[m].awaySeed;
         } else {
           const [seedHome, seedAway] = seedingPairs[m] || [m * 2 + 1, m * 2 + 2];
           const homeTeam = qualifiedTeams[seedHome - 1];
@@ -383,26 +486,12 @@ export function generatePlayoffBracket(
 }
 
 /**
- * 4. EMPAREJAMIENTOS CRUZADOS HÍBRIDOS (CRUZAR 1ROS Y 2DOS DE GRUPO)
+ * 4. EMPAREJAMIENTOS CRUZADOS HÍBRIDOS (CRUCES CON CIERRE DE POTENCIAS DE 2 Y REPESCA)
  */
 export function generateHybridCrossSeedings(
   groups: GroupDistributionResult[],
   qualifiersPerGroup: number
 ): { homeSeed: string; awaySeed: string }[] {
-  const seedings: { homeSeed: string; awaySeed: string }[] = [];
-
-  for (let i = 0; i < groups.length; i++) {
-    const currentGroup = groups[i].groupName;
-    const nextGroup = groups[(i + 1) % groups.length].groupName;
-
-    for (let q = 1; q <= qualifiersPerGroup; q++) {
-      const opposingPos = qualifiersPerGroup - q + 1;
-      seedings.push({
-        homeSeed: `1° de ${currentGroup}`,
-        awaySeed: `${opposingPos}° de ${nextGroup}`,
-      });
-    }
-  }
-
-  return seedings;
+  const structure = calculateHybridPlayoffStructure(groups.length, qualifiersPerGroup);
+  return structure.seedPairs;
 }

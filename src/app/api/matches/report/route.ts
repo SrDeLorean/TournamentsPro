@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     const effectiveGameSlug = competition?.gameSlug || data.gameSlug || 'eafc26';
 
     const isAdminOrOrg = actor.role === 'Administrador' || actor.role === 'Organizador';
+    const isOfficialApi = Boolean(data.reportMode === 'API' || data.isApiVerified);
 
     const winnerTeamId = homeScore > awayScore
       ? (match.homeTeamId || match.teamHomeId)
@@ -47,10 +48,33 @@ export async function POST(request: Request) {
         ? (match.awayTeamId || match.teamAwayId)
         : null;
 
+    // Verificar si el equipo rival ya había reportado
+    const hasPreviousReportFromRival =
+      match.reportedByUserId &&
+      match.reportedByUserId !== actor.userId &&
+      match.reportedScoreHome !== null &&
+      match.reportedScoreHome !== undefined &&
+      match.reportedScoreAway !== null &&
+      match.reportedScoreAway !== undefined;
+
+    const scoresMatch =
+      hasPreviousReportFromRival &&
+      match.reportedScoreHome === homeScore &&
+      match.reportedScoreAway === awayScore;
+
+    const hasConflict =
+      hasPreviousReportFromRival && !scoresMatch;
+
+    // Todos los reportes necesarios están completos si:
+    // 1. Es Admin u Organizador con autoridad oficial directa
+    // 2. Es reporte verificado por API oficial
+    // 3. Ambos capitanes enviaron reporte y los marcadores coinciden (Consenso)
+    const shouldFinalize = isAdminOrOrg || isOfficialApi || scoresMatch;
+
     await dbProvider.matches.update(matchId, {
       reportedScoreHome: homeScore,
       reportedScoreAway: awayScore,
-      ...(isAdminOrOrg
+      ...(shouldFinalize
         ? {
             scoreHome: homeScore,
             scoreAway: awayScore,
@@ -61,53 +85,21 @@ export async function POST(request: Request) {
             status: 'POR_REVISAR',
           }),
       reportedByUserId: actor.userId,
-      ...(data.proofUrl ? { proofUrl: data.proofUrl } : {})
+      ...(data.proofUrl ? { proofUrl: data.proofUrl } : {}),
     });
 
-    // Si es admin/organizador y hay ganador en partido de llaves, auto-avanzar a siguiente llave
-    if (isAdminOrOrg && winnerTeamId && match.nextMatchId) {
-      const winnerName = winnerTeamId === (match.homeTeamId || match.teamHomeId) ? match.homeTeamName : match.awayTeamName;
-      const nextSlot = match.nextMatchSlot || 'HOME';
-      const isBo3Next = /-j1$/i.test(match.nextMatchId);
-      const isTwoLegNext = /-ida$/i.test(match.nextMatchId);
-
+    // Auto-avanzar automáticamente a la siguiente llave / playoff si el partido quedó finalizado
+    let autoAdvanceInfo = null;
+    if (shouldFinalize) {
       try {
-        if (isBo3Next) {
-          const nextJ1 = match.nextMatchId;
-          const nextJ2 = match.nextMatchId.replace(/-j1$/i, '-j2');
-          const nextJ3 = match.nextMatchId.replace(/-j1$/i, '-j3');
-          if (nextSlot === 'AWAY') {
-            await dbProvider.matches.update(nextJ1, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
-            await dbProvider.matches.update(nextJ3, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
-            await dbProvider.matches.update(nextJ2, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
-          } else {
-            await dbProvider.matches.update(nextJ1, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
-            await dbProvider.matches.update(nextJ3, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
-            await dbProvider.matches.update(nextJ2, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
-          }
-        } else if (isTwoLegNext) {
-          const nextIda = match.nextMatchId;
-          const nextVuelta = match.nextMatchId.replace(/-ida$/i, '-vuelta');
-          if (nextSlot === 'AWAY') {
-            await dbProvider.matches.update(nextIda, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
-            await dbProvider.matches.update(nextVuelta, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
-          } else {
-            await dbProvider.matches.update(nextIda, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
-            await dbProvider.matches.update(nextVuelta, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
-          }
-        } else {
-          if (nextSlot === 'AWAY') {
-            await dbProvider.matches.update(match.nextMatchId, { awayTeamId: winnerTeamId, awayTeamName: winnerName, teamAwayId: winnerTeamId });
-          } else {
-            await dbProvider.matches.update(match.nextMatchId, { homeTeamId: winnerTeamId, homeTeamName: winnerName, teamHomeId: winnerTeamId });
-          }
-        }
+        const { processMatchAutoAdvance } = await import('@/lib/services/match-auto-advance');
+        autoAdvanceInfo = await processMatchAutoAdvance(matchId);
       } catch (advErr) {
-        console.warn('No se pudo auto-avanzar ganador a la siguiente llave:', advErr);
+        console.warn('Advertencia en auto-avance automático de partido:', advErr);
       }
     }
 
-    // Notificar a los capitanes involucrados, excepto al propio reportante.
+    // Notificaciones contextuadas según el resultado del reporte
     try {
       const involvedTeamIds = Array.from(new Set([
         match.homeTeamId || match.teamHomeId,
@@ -116,13 +108,28 @@ export async function POST(request: Request) {
       const involvedTeams = await Promise.all(
         involvedTeamIds.map((teamId) => dbProvider.teams.findById(teamId)),
       );
+
+      let notifTitle = 'Resultado de Partido Reportado';
+      let notifDesc = `Se ha registrado el marcador ${match.homeTeamName || 'Local'} (${homeScore}) vs (${awayScore}) ${match.awayTeamName || 'Visitante'}.`;
+
+      if (scoresMatch) {
+        notifTitle = '¡Partido Oficializado por Consenso!';
+        notifDesc = `Ambos equipos reportaron el mismo marcador (${homeScore} - ${awayScore}). El partido está finalizado y el ganador ha avanzado en el fixture.`;
+      } else if (hasConflict) {
+        notifTitle = 'Alerta: Discrepancia en Reporte de Partido';
+        notifDesc = `Existe una diferencia entre los resultados reportados por los equipos. La organización intervendrá para arbitrar el encuentro.`;
+      } else if (isOfficialApi) {
+        notifTitle = 'Partido Oficializado vía API';
+        notifDesc = `El resultado (${homeScore} - ${awayScore}) ha sido verificado automáticamente por la API oficial del juego.`;
+      }
+
       await Promise.all(involvedTeams.map(async (team) => {
-        if (team?.captainId && team.captainId !== actor.userId) {
+        if (team?.captainId && (scoresMatch || team.captainId !== actor.userId)) {
           await dbProvider.notifications.create({
             userId: team.captainId,
             type: 'MATCH',
-            title: 'Resultado de Partido Reportado',
-            description: `Se ha registrado el marcador ${match.homeTeamName || 'Local'} (${homeScore}) vs (${awayScore}) ${match.awayTeamName || 'Visitante'}.`,
+            title: notifTitle,
+            description: notifDesc,
             actionUrl: `/${effectiveGameSlug}/partidos`,
             isRead: false,
           });
@@ -139,7 +146,6 @@ export async function POST(request: Request) {
         if (!rawGamertag) continue;
         const cleanGamertag = String(rawGamertag).split('#')[0].replace('@', '').trim();
         
-        // Find user by gamertag or create a temporary association
         let user = await dbProvider.users.findByGamertag(cleanGamertag);
         if (!user) {
           const users = await dbProvider.users.findAll({ where: { name: cleanGamertag } });
@@ -164,7 +170,6 @@ export async function POST(request: Request) {
         );
       }
     } 
-    // Fallback: Si solo reportaron el MVP manual
     else if (mvpName && dynamicStats) {
       const cleanGamertag = mvpName.replace('@', '').trim();
       let user = await dbProvider.users.findByGamertag(cleanGamertag);
@@ -184,7 +189,25 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ success: true, message: 'Reporte enviado a revisión' });
+    let responseMessage = 'Reporte enviado a revisión';
+    if (scoresMatch) {
+      responseMessage = '¡Consenso alcanzado! Ambos reportes coinciden: el partido ha finalizado y el ganador avanzó automáticamente.';
+    } else if (isOfficialApi) {
+      responseMessage = 'Resultado sincronizado vía API oficial: partido finalizado y auto-avance completado.';
+    } else if (isAdminOrOrg) {
+      responseMessage = 'Resultado oficializado por la administración: partido finalizado y auto-avance completado.';
+    } else if (hasConflict) {
+      responseMessage = 'Reporte registrado, pero existe discrepancia con el reporte previo del rival. Enviado a arbitraje.';
+    } else {
+      responseMessage = 'Reporte registrado con éxito. Esperando confirmación del rival o revisión del organizador.';
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: responseMessage,
+      finalized: shouldFinalize,
+      autoAdvance: autoAdvanceInfo,
+    });
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;

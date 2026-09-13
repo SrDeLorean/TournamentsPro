@@ -183,7 +183,7 @@ async function generateMatchesForFormat(
   playoffMatchMode?: 'PartidoUnico' | 'IdaVuelta' | 'MejorDe3'
 ): Promise<number> {
   const { getMatchdayDateTime } = await import('@/lib/fixture-date-scheduler');
-  const { distributeTeamsIntoGroups, generatePlayoffBracket } = await import('@/lib/matchmaking-bracket');
+  const { distributeTeamsIntoGroups, generatePlayoffBracket, calculateHybridPlayoffStructure } = await import('@/lib/matchmaking-bracket');
   
   const compClean = competitionId.replace(/[^a-zA-Z0-9]/g, '').slice(-12);
   
@@ -294,7 +294,8 @@ async function generateMatchesForFormat(
       }
     }
 
-    const playoffTeamCount = groupCount * qualifiersPerGroup;
+    const hybridStructure = calculateHybridPlayoffStructure(groupCount, qualifiersPerGroup);
+    const playoffTeamCount = hybridStructure.bracketSize;
     // Fase de Playoffs en formato Híbrido: soporta PartidoUnico, IdaVuelta o MejorDe3
     const playoffMode = playoffMatchMode || matchMode;
     const playoffNodes = generatePlayoffBracket(competitionId, teams.slice(0, playoffTeamCount), playoffMode, true, groupCount, qualifiersPerGroup);

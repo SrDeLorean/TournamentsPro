@@ -11,6 +11,7 @@ import {
   distributeTeamsIntoGroups,
   generatePlayoffBracket,
   generateHybridCrossSeedings,
+  calculateHybridPlayoffStructure,
   TeamItem,
   GroupDistributionResult,
 } from '@/lib/matchmaking-bracket';
@@ -198,7 +199,8 @@ export function generateFixtureSchedule(
       }
     });
 
-    const playoffTeamCount = groupCount * qualifiersPerGroup;
+    const hybridStructure = calculateHybridPlayoffStructure(groupCount, qualifiersPerGroup);
+    const playoffTeamCount = hybridStructure.bracketSize;
     // Playoff de Híbrido: soporta PartidoUnico, IdaVuelta o MejorDe3
     const effectivePlayoffMatchMode = playoffMatchMode || matchMode;
     const playoffNodes = generatePlayoffBracket(
@@ -365,7 +367,8 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
     groupCount
   );
 
-  // Cruces de Sembrados Híbridos
+  // Cierre Matemático de Playoff y Cruces de Sembrados Híbridos
+  const hybridPlayoffStructure = calculateHybridPlayoffStructure(groupCount, qualifiersPerGroup);
   const hybridSeedings = generateHybridCrossSeedings(groupDistributionPreview, qualifiersPerGroup);
 
   // Verificar si hay resultados reportados reales por usuarios en partidos guardados
@@ -896,6 +899,65 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
                   </div>
                 </div>
 
+                {/* 🏆 Cierre Matemático de Playoff eSports (Potencias de 2 & Wildcards) */}
+                <div className={`p-4 rounded-xl border transition-all ${
+                  hybridPlayoffStructure.wildcardCount > 0
+                    ? 'bg-[var(--app-accent-2-soft)]/40 border-[var(--app-accent-2)]/60 shadow-lg'
+                    : 'bg-[var(--app-surface-2)]/80 border-[var(--text-heading)]/10'
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--text-heading)]/10 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[var(--app-accent-2)]" />
+                      <span className="text-xs font-black uppercase text-[var(--text-heading)] tracking-wider">
+                        Cierre Matemático de Playoff: {hybridPlayoffStructure.bracketSize} Clubes ({hybridPlayoffStructure.initialRoundName})
+                      </span>
+                    </div>
+                    <Badge className={
+                      hybridPlayoffStructure.wildcardCount > 0
+                        ? 'bg-[var(--app-accent-2)] text-[var(--accent-contrast)] text-[10px] font-bold uppercase'
+                        : 'bg-[var(--app-positive)]/20 text-[var(--app-positive)] border-[var(--app-positive)]/40 text-[10px] font-bold uppercase'
+                    }>
+                      {hybridPlayoffStructure.wildcardCount > 0
+                        ? `+${hybridPlayoffStructure.wildcardCount} ${hybridPlayoffStructure.wildcardLabel}`
+                        : 'Cuadro Par Perfecto'}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 text-[11px] font-[family-name:var(--font-active)]">
+                    <div className="p-2.5 rounded-lg bg-[var(--app-canvas)]/60 border border-[var(--text-heading)]/5 space-y-0.5">
+                      <span className="text-[10px] uppercase text-[var(--text-muted)] font-bold block">Pase Directo:</span>
+                      <span className="text-xs font-black text-[var(--app-accent)]">
+                        {hybridPlayoffStructure.directQualifiers} Equipos ({groupCount} grupos × {qualifiersPerGroup})
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-[var(--app-canvas)]/60 border border-[var(--text-heading)]/5 space-y-0.5">
+                      <span className="text-[10px] uppercase text-[var(--text-muted)] font-bold block">Llave Objetivo:</span>
+                      <span className="text-xs font-black text-[var(--text-heading)]">
+                        {hybridPlayoffStructure.bracketSize} Equipos ({hybridPlayoffStructure.initialRoundName})
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-[var(--app-canvas)]/60 border border-[var(--text-heading)]/5 space-y-0.5">
+                      <span className="text-[10px] uppercase text-[var(--text-muted)] font-bold block">Repesca / Wildcard:</span>
+                      <span className={`text-xs font-black ${
+                        hybridPlayoffStructure.wildcardCount > 0 ? 'text-[var(--app-accent-2)]' : 'text-[var(--app-positive)]'
+                      }`}>
+                        {hybridPlayoffStructure.wildcardCount > 0
+                          ? `${hybridPlayoffStructure.wildcardCount} Cupo(s) (${hybridPlayoffStructure.wildcardLabel})`
+                          : '0 (No se requiere repesca)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {hybridPlayoffStructure.wildcardCount > 0 && (
+                    <div className="mt-3 p-2.5 rounded-lg bg-[var(--app-accent-2-soft)]/30 border border-[var(--app-accent-2)]/30 text-[10px] text-[var(--text-secondary)] font-[family-name:var(--font-active)] flex items-start gap-2">
+                      <span className="text-xs">ℹ️</span>
+                      <p>
+                        Al haber <strong>{hybridPlayoffStructure.directQualifiers} clasificados directos</strong> (cifra impar o no divisible en potencias de 2: 2, 4, 8, 16...), el motor agrega automáticamente <strong>{hybridPlayoffStructure.wildcardCount} cupo(s) por repesca ({hybridPlayoffStructure.wildcardLabel})</strong> según la tabla global de posiciones (PTS &gt; DG &gt; GF &gt; PG) para cerrar las llaves de {hybridPlayoffStructure.initialRoundName} sin dejar equipos sin match.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 {/* Previsualización del Reparto Asimétrico de Cupos por Grupo */}
                 <div className="p-4 rounded-xl bg-[var(--app-canvas)]/80 border border-[var(--text-heading)]/10 space-y-3">
                   <span className="text-[11px] font-[family-name:var(--font-active)] font-bold uppercase text-[var(--text-secondary)] block flex items-center gap-2">
@@ -923,15 +985,33 @@ export function FixtureGenerator({ competition, enrolledTeams, matches = [] }: F
 
                 {/* Previsualización de Cruces Híbridos */}
                 <div className="p-3.5 rounded-xl bg-[var(--app-accent-2-soft)]/40 border border-[var(--app-accent-2)]/30 space-y-2">
-                  <span className="text-[10px] font-[family-name:var(--font-active)] font-bold uppercase text-[var(--app-accent-2)] block">
-                    ⚔️ Cruces Sembrados de Playoff ({hybridSeedings.length} Enfrentamientos Iniciales):
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {hybridSeedings.map((s, idx) => (
-                      <span key={idx} className="px-2.5 py-1 rounded bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/40 text-[10px] font-[family-name:var(--font-active)] text-[var(--text-heading)]">
-                        <strong className="text-[var(--app-accent)]">{s.homeSeed}</strong> VS <strong className="text-[var(--app-positive)]">{s.awaySeed}</strong>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-[family-name:var(--font-active)] font-bold uppercase text-[var(--app-accent-2)] block">
+                      ⚔️ Cruces Sembrados de Playoff ({hybridSeedings.length} Enfrentamientos en {hybridPlayoffStructure.initialRoundName}):
+                    </span>
+                    {hybridPlayoffStructure.wildcardCount > 0 && (
+                      <span className="text-[10px] font-bold text-[var(--app-accent-2)] flex items-center gap-1">
+                        ✦ Incluye {hybridPlayoffStructure.wildcardLabel}
                       </span>
-                    ))}
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {hybridSeedings.map((s, idx) => {
+                      const isHomeWildcard = s.homeSeed.toLowerCase().includes('mejor');
+                      const isAwayWildcard = s.awaySeed.toLowerCase().includes('mejor');
+                      return (
+                        <span key={idx} className="px-2.5 py-1.5 rounded-lg bg-[var(--app-surface-2)] border border-[var(--app-accent-2)]/40 text-[10px] font-[family-name:var(--font-active)] text-[var(--text-heading)] flex items-center gap-1.5 shadow-sm">
+                          <span className="text-[var(--text-muted)] font-[family-name:var(--font-active)] text-[9px]">L{idx + 1}:</span>
+                          <strong className={isHomeWildcard ? 'text-[var(--app-accent-2)] underline decoration-dotted' : 'text-[var(--app-accent)]'}>
+                            {s.homeSeed}
+                          </strong>
+                          <span className="text-[var(--text-muted)] text-[9px] font-black">VS</span>
+                          <strong className={isAwayWildcard ? 'text-[var(--app-accent-2)] underline decoration-dotted' : 'text-[var(--app-positive)]'}>
+                            {s.awaySeed}
+                          </strong>
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

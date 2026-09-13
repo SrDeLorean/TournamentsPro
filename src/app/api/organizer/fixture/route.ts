@@ -203,33 +203,56 @@ export async function POST(request: Request) {
         }
       }
 
-      // Playoffs del Torneo Híbrido (Semifinales, Gran Final 🏆 y Segunda Final 🥉)
-      const dateSF = getScheduledStr(14, 20, 0);
-      const dateFinals = getScheduledStr(21, 21, 0);
+      // Playoffs del Torneo Híbrido
+      const qPerGroup = Number((body as any).qualifiersPerGroup || (body as any).qualifiers_per_group || resource.qualifiersPerGroup || 2);
 
-      await insertMatch({
-        id: `match-${tournamentId}-sf1`,
-        round: 10, matchday: 10, roundName: 'SEMIFINAL 1', groupName: 'PLAYOFF',
-        homeId: groupA[0] || teamIds[0], awayId: groupB[1] || teamIds[1], scheduledAt: dateSF, scheduledTime: '20:00'
-      });
+      if (qPerGroup === 1) {
+        // Final Directa entre el 1° del Grupo A y el 1° del Grupo B
+        const dateFinal = getScheduledStr(14, 21, 0);
+        await insertMatch({
+          id: `match-${tournamentId}-final`,
+          round: 10, matchday: 10, roundName: 'GRAN FINAL 🏆', groupName: 'PLAYOFF',
+          homeId: groupA[0] || teamIds[0], awayId: groupB[0] || teamIds[1],
+          homeName: '1° de Grupo A', awayName: '1° de Grupo B',
+          scheduledAt: dateFinal, scheduledTime: '21:00'
+        });
+      } else {
+        // Semifinales, Gran Final 🏆 y Tercer Lugar 🥉
+        const dateSF = getScheduledStr(14, 20, 0);
+        const dateFinals = getScheduledStr(21, 21, 0);
 
-      await insertMatch({
-        id: `match-${tournamentId}-sf2`,
-        round: 10, matchday: 10, roundName: 'SEMIFINAL 2', groupName: 'PLAYOFF',
-        homeId: groupB[0] || teamIds[1], awayId: groupA[1] || teamIds[0], scheduledAt: dateSF, scheduledTime: '20:30'
-      });
+        await insertMatch({
+          id: `match-${tournamentId}-sf1`,
+          round: 10, matchday: 10, roundName: 'SEMIFINAL 1', groupName: 'PLAYOFF',
+          homeId: groupA[0] || teamIds[0], awayId: groupB[1] || teamIds[1],
+          homeName: '1° de Grupo A', awayName: '2° de Grupo B',
+          scheduledAt: dateSF, scheduledTime: '20:00'
+        });
 
-      await insertMatch({
-        id: `match-${tournamentId}-3rd`,
-        round: 11, matchday: 11, roundName: 'TERCER LUGAR 🥉', groupName: 'PLAYOFF',
-        homeId: groupA[1] || teamIds[0], awayId: groupB[1] || teamIds[1], scheduledAt: dateFinals, scheduledTime: '21:00'
-      });
+        await insertMatch({
+          id: `match-${tournamentId}-sf2`,
+          round: 10, matchday: 10, roundName: 'SEMIFINAL 2', groupName: 'PLAYOFF',
+          homeId: groupB[0] || teamIds[1], awayId: groupA[1] || teamIds[0],
+          homeName: '1° de Grupo B', awayName: '2° de Grupo A',
+          scheduledAt: dateSF, scheduledTime: '20:30'
+        });
 
-      await insertMatch({
-        id: `match-${tournamentId}-final`,
-        round: 11, matchday: 11, roundName: 'GRAN FINAL 🏆', groupName: 'PLAYOFF',
-        homeId: groupA[0] || teamIds[0], awayId: groupB[0] || teamIds[1], scheduledAt: dateFinals, scheduledTime: '22:00'
-      });
+        await insertMatch({
+          id: `match-${tournamentId}-3rd`,
+          round: 11, matchday: 11, roundName: 'TERCER LUGAR 🥉', groupName: 'PLAYOFF',
+          homeId: groupA[1] || teamIds[0], awayId: groupB[1] || teamIds[1],
+          homeName: '2° de Grupo A', awayName: '2° de Grupo B',
+          scheduledAt: dateFinals, scheduledTime: '21:00'
+        });
+
+        await insertMatch({
+          id: `match-${tournamentId}-final`,
+          round: 11, matchday: 11, roundName: 'GRAN FINAL 🏆', groupName: 'PLAYOFF',
+          homeId: groupA[0] || teamIds[0], awayId: groupB[0] || teamIds[1],
+          homeName: '1° de Grupo A', awayName: '1° de Grupo B',
+          scheduledAt: dateFinals, scheduledTime: '22:00'
+        });
+      }
 
     } else {
       // ⚽ Round Robin (Liga) Generator Algorithm

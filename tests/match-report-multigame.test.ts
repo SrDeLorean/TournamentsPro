@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { matchReportBodySchema } from '@/lib/api-schemas';
 
 describe('Multi-Game Match Reporting Rules & Squad Size Restrictions', () => {
   // 1. EA FC 26 Rules: 11 players per team, or 1 or 2 per team
@@ -110,3 +111,93 @@ describe('External Game APIs Integration Responses', () => {
     expect(mockFC26Roster[10].stats.goals).toBe(2);
   });
 });
+
+describe('3 Match Reporting Modalities (Simple, Mediana, Completa API)', () => {
+  it('validates Modo Simple payload (only scores and matchId, no rosters required)', () => {
+    const simplePayload = {
+      matchId: 'm-simple-101',
+      homeScore: 3,
+      awayScore: 1,
+      reportMode: 'SIMPLE',
+      proofUrl: 'https://storage.tournamentspro.com/proofs/simple-101.jpg',
+    };
+
+    const parsed = matchReportBodySchema.safeParse(simplePayload);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.reportMode).toBe('SIMPLE');
+      expect(parsed.data.homeScore).toBe(3);
+      expect(parsed.data.awayScore).toBe(1);
+      expect(parsed.data.participantsStats).toBeUndefined();
+    }
+  });
+
+  it('validates Modo Mediana payload (squad rosters + stats + MVP)', () => {
+    const medianaPayload = {
+      matchId: 'm-mediana-202',
+      homeScore: 2,
+      awayScore: 0,
+      reportMode: 'MEDIANA',
+      mvpName: 'Striker9',
+      participantsStats: [
+        {
+          gamertag: 'Striker9',
+          team: 'home',
+          position: 'DC',
+          isMvp: true,
+          stats: { goals: 2, assists: 0, rating: 9.1 },
+        },
+        {
+          gamertag: 'Defender4',
+          team: 'away',
+          position: 'DFC',
+          isMvp: false,
+          stats: { goals: 0, tackles: 5, rating: 6.8 },
+        },
+      ],
+      gameSlug: 'eafc26',
+    };
+
+    const parsed = matchReportBodySchema.safeParse(medianaPayload);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.reportMode).toBe('MEDIANA');
+      expect(parsed.data.mvpName).toBe('Striker9');
+      expect(parsed.data.participantsStats).toHaveLength(2);
+    }
+  });
+
+  it('validates Modo Completo (API) payload (API verified flag + synchronized roster)', () => {
+    const apiPayload = {
+      matchId: 'm-api-303',
+      homeScore: 13,
+      awayScore: 9,
+      reportMode: 'API',
+      isApiVerified: true,
+      gameSlug: 'valorant',
+      participantsStats: [
+        {
+          gamertag: 'TenZ#VCT',
+          team: 'home',
+          isMvp: true,
+          stats: { kills: 24, deaths: 12, assists: 6, acs: 310 },
+        },
+        {
+          gamertag: 'Derke#FNC',
+          team: 'away',
+          isMvp: false,
+          stats: { kills: 18, deaths: 14, assists: 4, acs: 245 },
+        },
+      ],
+    };
+
+    const parsed = matchReportBodySchema.safeParse(apiPayload);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.reportMode).toBe('API');
+      expect(parsed.data.isApiVerified).toBe(true);
+      expect(parsed.data.participantsStats).toHaveLength(2);
+    }
+  });
+});
+
